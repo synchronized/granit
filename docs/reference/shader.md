@@ -19,10 +19,8 @@ Shader 是离线生成的阶段入口。跨后端资产同时保存 SPIR-V 与 W
 公共 API 不读取该格式。
 
 仓库测试所需的清单和同名 sidecar 由 `granit_test_shader_assets` 目标生成到构建目录；源码目录只
-保存输入表示。发布资产仍可作为已验证制品提交。HLSL 变体通过可重复的 `--define NAME=VALUE`
-生成，定义会排序并进入缓存身份，避免参数顺序造成重复缓存或宏变化误命中旧产物。CMake 调用方
-可使用 `granit_add_hlsl_shader_object` 声明源码、Stage、入口和 `DEFINES`，并把三个输出作为构建
-依赖。
+保存输入表示。正式资产使用 HLSL Library 源清单和 `granit_add_hlsl_shader_library` 构建，变体
+Define 会排序并进入缓存身份，避免参数顺序造成重复缓存或宏变化误命中旧产物。
 
 直接描述入口仍适合内建 Shader、测试和自行管理载荷的调用方：
 

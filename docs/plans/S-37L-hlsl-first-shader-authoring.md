@@ -9,8 +9,8 @@
 生成的后端载荷。S-37L1 已完成源清单、逻辑名称与确定性索引模型；S-37L2 已完成高层 Builder、
 CLI 与 CMake 入口；S-37L3 已完成 Material 逻辑引用与构建期索引解析；S-37L4 已完成 PBR、
 Unlit、Canvas、Shadow、Tone Mapping、Debug 和 Smoke 资产迁移。S-37L5 已将命令行和公共
-Compiler 收敛为 HLSL，且已删除 `shader_source_language` 和成对载荷导入接口；后续继续内化
-Shader Object 写入与缓存接口。其余工作在当前 0.21
+Compiler 收敛为 HLSL，且已删除 `shader_source_language`、成对载荷导入接口及公开的 Shader
+Object 写入与缓存接口；后续继续清理低层 Library 链接入口和已提交的派生载荷。其余工作在当前 0.21
 特性分支连续实施，每个阶段形成独立本地提交。
 
 ## 背景与目标

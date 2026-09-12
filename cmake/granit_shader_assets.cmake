@@ -24,13 +24,13 @@ function(granit_add_test_shader_object_from_payloads)
   set(${ARG_OUTPUT_VAR} "${object};${object}.spv;${object}.wgsl" PARENT_SCOPE)
 endfunction()
 
-function(granit_add_hlsl_shader_object)
+function(granit_add_test_shader_object_from_hlsl)
   set(options)
   set(one_value_args NAME SOURCE ENTRY STAGE OUTPUT_DIR OUTPUT_VAR)
   set(multi_value_args DEFINES)
   cmake_parse_arguments(ARG "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
   if(NOT ARG_NAME OR NOT ARG_SOURCE OR NOT ARG_ENTRY OR NOT ARG_STAGE OR NOT ARG_OUTPUT_DIR)
-    message(FATAL_ERROR "granit_add_hlsl_shader_object 缺少必要参数")
+    message(FATAL_ERROR "granit_add_test_shader_object_from_hlsl 缺少必要参数")
   endif()
   if(NOT GRANIT_DXC_EXECUTABLE OR NOT GRANIT_TINT_EXECUTABLE)
     message(FATAL_ERROR "从 HLSL 生成跨后端资产需要 DXC 和 Tint")
@@ -48,7 +48,12 @@ function(granit_add_hlsl_shader_object)
       "$<TARGET_FILE:granit_shader_tool>" compile --dxc "${GRANIT_DXC_EXECUTABLE}"
       --tint "${GRANIT_TINT_EXECUTABLE}" --input "${ARG_SOURCE}" --entry "${ARG_ENTRY}"
       --stage "${ARG_STAGE}" --spirv-output "${object}.spv" --wgsl-output "${object}.wgsl"
-      --object "${object}" --object-backend all ${define_arguments}
+      ${define_arguments}
+    COMMAND
+      "$<TARGET_FILE:granit_shader_tool>" fixture-object --spirv "${object}.spv"
+      --wgsl "${object}.wgsl" --entry "${ARG_ENTRY}" --stage "${ARG_STAGE}"
+      --output "${object}" --source "${ARG_SOURCE}" --dxc "${GRANIT_DXC_EXECUTABLE}"
+      --tint "${GRANIT_TINT_EXECUTABLE}" ${define_arguments}
     DEPENDS granit_shader_tool "${ARG_SOURCE}"
     COMMENT "从 HLSL 生成 Shader Object ${ARG_NAME}.grshaderobj"
     VERBATIM
@@ -66,7 +71,7 @@ function(granit_add_test_shader_object)
     if(ARG_HLSL_ENTRY)
       set(hlsl_entry "${ARG_HLSL_ENTRY}")
     endif()
-    granit_add_hlsl_shader_object(
+    granit_add_test_shader_object_from_hlsl(
       NAME "${ARG_NAME}"
       SOURCE "${ARG_SOURCE}"
       ENTRY "${hlsl_entry}"

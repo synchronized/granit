@@ -6,7 +6,6 @@
 
 #include <granit/tools/shader_compiler.hpp>
 #include <granit/tools/shader_library_builder.hpp>
-#include <granit/tools/shader_object_builder.hpp>
 #include <granit/tools/shader_reflection.hpp>
 
 #endif

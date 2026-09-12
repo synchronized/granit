@@ -30,8 +30,8 @@
 - ShaderTools 统一 WGSL/HLSL Compiler API，并移除 GLSL/glslang 前端、工具链配置和打包内容。
 - ShaderTools 将编译结果与反射拆为独立句柄和头文件；C++ 反射字段改用强类型枚举，编译结果可直接
   查询 SPIR-V 与 WGSL 载荷。
-- ShaderTools 将单 Shader 中间结果统一为 `.grshaderobj`，新增独立 Object Builder C/C++ API，
-  CLI 和 CMake 统一使用 `object`、`--object` 与 `--object-backend`。
+- ShaderTools 将 `.grshaderobj` 收敛为 Library Builder 私有缓存格式；公共 Compiler 只负责编译和
+  诊断，标准 CLI/CMake 作者入口只接受 HLSL 与 Library 源清单。
 - ShaderTools 新增独立 Library Builder C/C++ API；`granit_shader_tool` 按命令拆分实现，Library
   命令只负责把参数转换为 SDK 描述并映射退出码。
 - Shader、Texture、Environment、Material Archive 和 Pipeline Warmup 共用 Core 内容摘要类型与

@@ -33,8 +33,7 @@ granit_shader_tool library --object vertex.grshaderobj --object fragment.grshade
 granit_shader_tool compile --dxc path/to/dxc --tint path/to/tint `
   --input shader.hlsl --entry fragment_main --stage fragment `
   --define GRANIT_PBR_TEXTURE_MASK=31 --define GRANIT_PBR_LIGHTS=1 `
-  --spirv-output shader.spv --wgsl-output shader.wgsl `
-  --object shader.grshaderobj --dxc-revision <revision> --tint-revision <revision>
+  --spirv-output shader.spv --wgsl-output shader.wgsl
 ```
 
 `inspect` 按稳定顺序输出入口和资源绑定元数据；`inspect --json` 额外输出描述符、阶段接口、
@@ -50,12 +49,9 @@ S-37 后续阶段接入。
 不读取构建机 GPU；当前两个 portable 目标都只包含基线能力，因此可选特性为 `none`。
 
 `compile` 调用显式提供的 DXC 与 Tint，同时生成 Vulkan 1.3 SPIR-V 和 WebGPU portable WGSL。
-`--define NAME=VALUE` 可以重复；工具按名称排序后传给 DXC，并将完整定义集合纳入资产缓存键。
+`--define NAME=VALUE` 可以重复；工具按名称排序后传给 DXC。
 重复名称、非法标识符和空值会在启动编译器前失败。
-使用 `--object` 时自动记录两项工具二进制 SHA-256，也可用 revision 参数显式覆盖；
-`--object-backend` 可按发布目标裁剪 sidecar。全后端资产
-缓存以原始 HLSL 和完整编译上下文为身份，命中时会在启动 DXC/Tint 前恢复两个产物；单后端裁剪
-暂不执行编译前恢复，因为资产未保存另一后端的输出。
+Shader Object 写入与缓存只由 `build-library` 在内部管理。
 
 `granit_material_tool inspect <package.grmat> --json` 验证最终二进制材质包并把稳定诊断 JSON 输出
 到标准输出。使用 `--output <path>` 可以写入文件；Renderer 不读取该 JSON。

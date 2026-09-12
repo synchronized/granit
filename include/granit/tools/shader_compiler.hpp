@@ -7,7 +7,6 @@
 #include <granit/core/result.hpp>
 #include <granit/core/shader_types.hpp>
 #include <granit/tools/shader_compiler.h>
-#include <granit/tools/shader_object_builder.hpp>
 #include <granit/tools/shader_reflection.hpp>
 
 #include <cstddef>
@@ -96,12 +95,6 @@ public:
     if (granit_shader_tools_compilation_get_wgsl(handle_, &source, &length) != GRANIT_SUCCESS)
       return {};
     return {source, static_cast<std::size_t>(length)};
-  }
-  [[nodiscard]] std::pair<::granit::result, bool>
-  write_object(const granit_shader_tools_object_desc& desc) const noexcept {
-    uint32_t cache_hit = 0;
-    const auto status = granit_shader_tools_compilation_write_object(handle_, &desc, &cache_hit);
-    return {::granit::from_native(status), cache_hit != 0};
   }
   void reset() noexcept {
     if (handle_ != 0) {

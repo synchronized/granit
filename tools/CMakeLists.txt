@@ -56,6 +56,8 @@ if(GRANIT_BUILD_SHADER_TOOLS OR GRANIT_BUILD_TOOLS OR (GRANIT_BUILD_TESTING AND 
     granit_shader_tools
     shader_tools_api.cpp
     shader_library/builder.cpp
+    shader_library/object_cache.cpp
+    shader_library/object_cache.h
     shader_library/source_builder.cpp
   )
   add_library(granit::shader_tools ALIAS granit_shader_tools)
@@ -70,8 +72,6 @@ if(GRANIT_BUILD_SHADER_TOOLS OR GRANIT_BUILD_TOOLS OR (GRANIT_BUILD_TESTING AND 
         "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_compiler.hpp"
         "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_library_builder.h"
         "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_library_builder.hpp"
-        "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_object_builder.h"
-        "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_object_builder.hpp"
         "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_reflection.h"
         "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_reflection.hpp"
         "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_tools.h"
@@ -560,16 +560,6 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING AND GRANIT_DXC_EXECUTABLE)
         "${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.hlsl"
         "${CMAKE_CURRENT_BINARY_DIR}/shader-hlsl-api-test"
     )
-    add_test(
-      NAME granit.shader_tool.hlsl_object
-      COMMAND
-        "${CMAKE_COMMAND}" -DTOOL=$<TARGET_FILE:granit_shader_tool>
-        -DDXC=${GRANIT_DXC_EXECUTABLE} -DTINT=${GRANIT_TINT_EXECUTABLE}
-        -DINPUT=${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.hlsl
-        -DOUTPUT_DIR=${CMAKE_CURRENT_BINARY_DIR}/shader-hlsl-cli-test -P
-        "${PROJECT_SOURCE_DIR}/cmake/check_hlsl_shader_cache.cmake"
-    )
-
   endif()
 
   if(GRANIT_SPIRV_VAL_EXECUTABLE)

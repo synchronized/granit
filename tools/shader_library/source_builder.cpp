@@ -4,6 +4,7 @@
 #include <granit/tools/shader_compiler.h>
 #include <granit/tools/shader_library_builder.h>
 
+#include "object_cache.h"
 #include "shader_format/shader_library.h"
 #include "shader_format/shader_object.h"
 #include "source_manifest.h"
@@ -253,32 +254,25 @@ granit_shader_tools_build_library_from_manifest(const granit_shader_tools_source
       const auto wgsl_string = path_text(wgsl);
       const auto options = compile_options(definitions);
 
-      granit_shader_tools_object_cache_desc restore{};
-      restore.struct_size = sizeof(restore);
-      restore.source_path = source_string.data();
-      restore.source_path_length = source_string.size();
-      restore.wgsl_output_path = wgsl_string.data();
-      restore.wgsl_output_path_length = wgsl_string.size();
-      restore.spirv_output_path = spirv_string.data();
-      restore.spirv_output_path_length = spirv_string.size();
-      restore.object_path = object_string.data();
-      restore.object_path_length = object_string.size();
-      restore.entry_point = item.shader->entry_point.data();
-      restore.entry_point_length = item.shader->entry_point.size();
-      restore.stage = static_cast<granit_shader_stage>(item.shader->stage);
-      restore.tint_revision = revisions.data();
-      restore.tint_revision_length = revisions.size();
-      restore.target_environment = target_environment.data();
-      restore.target_environment_length = target_environment.size();
-      restore.compile_options = options.data();
-      restore.compile_options_length = options.size();
-      restore.backend_mask = static_cast<granit_shader_backend_flags>(manifest.target_backends);
-      std::uint32_t object_hit = 0;
-      status = granit_shader_tools_restore_object_cache(&restore, &object_hit);
+      const granit::tools::shader_object_cache_context object_context{
+          .source_path = source,
+          .wgsl_path = wgsl,
+          .spirv_path = spirv,
+          .object_path = object,
+          .entry_point = item.shader->entry_point,
+          .stage = item.shader->stage,
+          .tool_identity = revisions,
+          .target_environment = target_environment,
+          .compile_options = options,
+          .backend_mask = static_cast<granit_shader_backend_flags>(manifest.target_backends),
+          .required_features = 0,
+      };
+      bool object_hit = false;
+      status = granit::tools::restore_shader_object_cache(object_context, object_hit);
       if (status != GRANIT_SUCCESS)
         return status;
 
-      if (object_hit == 0) {
+      if (!object_hit) {
         std::vector<granit_shader_tools_define> native_defines;
         native_defines.reserve(definitions.size());
         for (const auto& define : definitions) {
@@ -307,29 +301,7 @@ granit_shader_tools_build_library_from_manifest(const granit_shader_tools_source
         status = granit_shader_tools_compiler_compile(compiler.value, &compile, &compilation.value);
         if (status != GRANIT_SUCCESS)
           return status;
-        granit_shader_tools_object_desc object_desc{};
-        object_desc.struct_size = sizeof(object_desc);
-        object_desc.source_path = source_string.data();
-        object_desc.source_path_length = source_string.size();
-        object_desc.wgsl_path = wgsl_string.data();
-        object_desc.wgsl_path_length = wgsl_string.size();
-        object_desc.spirv_path = spirv_string.data();
-        object_desc.spirv_path_length = spirv_string.size();
-        object_desc.output_path = object_string.data();
-        object_desc.output_path_length = object_string.size();
-        object_desc.tint_revision = revisions.data();
-        object_desc.tint_revision_length = revisions.size();
-        object_desc.target_environment = target_environment.data();
-        object_desc.target_environment_length = target_environment.size();
-        object_desc.compile_options = options.data();
-        object_desc.compile_options_length = options.size();
-        object_desc.backend_mask =
-            static_cast<granit_shader_backend_flags>(manifest.target_backends);
-        object_desc.entry_point = item.shader->entry_point.data();
-        object_desc.entry_point_length = item.shader->entry_point.size();
-        object_desc.stage = static_cast<granit_shader_stage>(item.shader->stage);
-        status = granit_shader_tools_compilation_write_object(compilation.value, &object_desc,
-                                                              &object_hit);
+        status = granit::tools::write_shader_object_cache(object_context, object_hit);
         if (status != GRANIT_SUCCESS)
           return status;
         all_objects_hit = false;

@@ -28,8 +28,7 @@ void print_usage() {
                "--input <shader.hlsl> --entry <name> --stage <vertex|fragment|compute> "
                "--spirv-output <shader.spv> --wgsl-output <shader.wgsl> "
                "[--define <NAME=VALUE>]... "
-               "[--object <shader.grshaderobj> [--dxc-revision <revision>] "
-               "[--tint-revision <revision>] --object-backend <all|vulkan|webgpu>]\n";
+               "[--define <name=value>]...\n";
 }
 
 } // namespace

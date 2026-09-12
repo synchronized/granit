@@ -57,25 +57,6 @@ bool valid_string(const char* value, uint64_t length) { return value != nullptr 
 
 const char* stage_name(uint32_t stage);
 
-bool valid_object_desc(const granit_shader_tools_object_desc* desc) {
-  return desc != nullptr && desc->struct_size >= sizeof(*desc) &&
-         valid_string(desc->source_path, desc->source_path_length) &&
-         valid_string(desc->wgsl_path, desc->wgsl_path_length) &&
-         valid_string(desc->spirv_path, desc->spirv_path_length) &&
-         valid_string(desc->output_path, desc->output_path_length) &&
-         valid_string(desc->tint_revision, desc->tint_revision_length) &&
-         valid_string(desc->target_environment, desc->target_environment_length) &&
-         valid_string(desc->compile_options, desc->compile_options_length) &&
-         valid_string(desc->entry_point, desc->entry_point_length) &&
-         desc->source_path_length != 0 && desc->wgsl_path_length != 0 &&
-         desc->spirv_path_length != 0 && desc->output_path_length != 0 &&
-         desc->tint_revision_length != 0 && desc->target_environment_length != 0 &&
-         desc->entry_point_length != 0 && desc->reserved == 0 &&
-         stage_name(desc->stage) != nullptr && desc->backend_mask != 0 &&
-         (desc->backend_mask & ~GRANIT_SHADER_BACKEND_ALL_BITS) == 0 &&
-         (desc->required_features & ~GRANIT_SHADER_FEATURE_ALL_BITS) == 0;
-}
-
 bool valid_define_name(std::string_view name) {
   if (name.empty() ||
       !(std::isalpha(static_cast<unsigned char>(name.front())) || name.front() == '_'))
@@ -328,8 +309,8 @@ granit_result granit_shader_tools_compiler_compile(granit_shader_tools_compiler 
   const auto compiler_value = find_compiler(compiler);
   if (compiler_value == nullptr)
     return GRANIT_ERROR_INVALID_HANDLE;
-  if (desc == nullptr || desc->struct_size < sizeof(*desc) ||
-      stage_name(desc->stage) == nullptr || desc->target_backends == 0 ||
+  if (desc == nullptr || desc->struct_size < sizeof(*desc) || stage_name(desc->stage) == nullptr ||
+      desc->target_backends == 0 ||
       (desc->target_backends & ~GRANIT_SHADER_BACKEND_ALL_BITS) != 0 ||
       !valid_string(desc->input_path, desc->input_path_length) ||
       !valid_string(desc->entry_point, desc->entry_point_length) ||
@@ -374,7 +355,7 @@ granit_result granit_shader_tools_compiler_compile(granit_shader_tools_compiler 
     const auto spirv_output = copy_path(desc->spirv_output_path, desc->spirv_output_path_length);
     const auto wgsl_output = copy_path(desc->wgsl_output_path, desc->wgsl_output_path_length);
     granit::tools::hlsl_compile_options options{
-        compiler_value->dxc, compiler_value->tint, input, entry_point, stage, spirv_output,
+        compiler_value->dxc, compiler_value->tint,  input, entry_point, stage, spirv_output,
         wgsl_output,         std::move(definitions)};
     auto exit_code = granit::tools::compile_hlsl_shader(options, info, output, diagnostic);
     if (exit_code == 0 && !validate_binding_expectations(*desc, info, diagnostic)) {
@@ -712,171 +693,6 @@ granit_result granit_shader_tools_reflection_get_json(granit_shader_tools_reflec
   *json = value->reflection_json.data();
   *length = value->reflection_json.size();
   return GRANIT_SUCCESS;
-}
-
-granit_result
-granit_shader_tools_compilation_write_object(granit_shader_tools_compilation compilation,
-                                             const granit_shader_tools_object_desc* desc,
-                                             uint32_t* cache_hit) {
-  if (cache_hit == nullptr)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  *cache_hit = 0;
-  const auto value = find_compilation(compilation);
-  if (!value)
-    return GRANIT_ERROR_INVALID_HANDLE;
-  if (!valid_object_desc(desc))
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  // portable 目标当前没有已验证的可选 Shader 特性。
-  if (desc->required_features != 0)
-    return GRANIT_ERROR_UNSUPPORTED;
-  if (value->status != GRANIT_SUCCESS || value->reflection_json.empty())
-    return GRANIT_ERROR_INITIALIZATION_FAILED;
-  if (value->stage != desc->stage ||
-      value->entry_point !=
-          std::string_view{desc->entry_point, static_cast<std::size_t>(desc->entry_point_length)})
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  try {
-    const auto source = read_text_file(copy_path(desc->source_path, desc->source_path_length));
-    const auto wgsl_path = copy_path(desc->wgsl_path, desc->wgsl_path_length);
-    const auto spirv_path = copy_path(desc->spirv_path, desc->spirv_path_length);
-    const auto wgsl = read_text_file(wgsl_path);
-    const auto spirv = read_binary_file(spirv_path);
-    if (source.empty() || wgsl.empty() || spirv.empty())
-      return GRANIT_ERROR_INVALID_ARGUMENT;
-    granit::tools::shader_info packaged_info;
-    std::ostringstream inspect_output;
-    std::ostringstream inspect_diagnostic;
-    if (!granit::tools::inspect_shader(spirv_path, false, packaged_info, inspect_output,
-                                       inspect_diagnostic) ||
-        granit::tools::serialize_shader_info_json(packaged_info) != value->reflection_json)
-      return GRANIT_ERROR_INVALID_ARGUMENT;
-    const auto stage = stage_name(value->stage);
-    if (stage == nullptr)
-      return GRANIT_ERROR_INTERNAL;
-    const auto tint_revision = copy_string(desc->tint_revision, desc->tint_revision_length);
-    const auto target = copy_string(desc->target_environment, desc->target_environment_length);
-    const auto options = copy_string(desc->compile_options, desc->compile_options_length);
-    const auto source_kind =
-        std::string_view{desc->source_path, static_cast<std::size_t>(desc->source_path_length)} ==
-                std::string_view{desc->wgsl_path, static_cast<std::size_t>(desc->wgsl_path_length)}
-            ? "wgsl"
-            : "hlsl";
-    const auto key = granit::detail::shader_format::make_shader_cache_key(
-        {source, source_kind, value->entry_point, stage, tint_revision, target, options,
-         desc->required_features});
-    std::vector<std::byte> object;
-    if (granit::detail::shader_format::encode_shader_object(
-            {wgsl, spirv, value->reflection_json, key, desc->backend_mask, desc->required_features,
-             static_cast<granit::shader_stage>(value->stage), value->entry_point},
-            object) != granit::detail::shader_format::shader_object_error::success)
-      return GRANIT_ERROR_INVALID_ARGUMENT;
-    bool hit = false;
-    if (granit::tools::store_shader_object(copy_path(desc->output_path, desc->output_path_length),
-                                           object, wgsl, spirv, hit) !=
-        granit::detail::shader_format::shader_object_error::success)
-      return GRANIT_ERROR_INITIALIZATION_FAILED;
-    *cache_hit = hit ? 1U : 0U;
-    return GRANIT_SUCCESS;
-  } catch (const std::bad_alloc&) {
-    return GRANIT_ERROR_OUT_OF_MEMORY;
-  } catch (...) {
-    return GRANIT_ERROR_INTERNAL;
-  }
-}
-
-granit_result
-granit_shader_tools_restore_object_cache(const granit_shader_tools_object_cache_desc* desc,
-                                         uint32_t* cache_hit) {
-  if (cache_hit == nullptr)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  *cache_hit = 0;
-  if (desc == nullptr || desc->struct_size < sizeof(*desc) ||
-      !valid_string(desc->source_path, desc->source_path_length) ||
-      !valid_string(desc->wgsl_output_path, desc->wgsl_output_path_length) ||
-      !valid_string(desc->spirv_output_path, desc->spirv_output_path_length) ||
-      !valid_string(desc->object_path, desc->object_path_length) ||
-      !valid_string(desc->entry_point, desc->entry_point_length) ||
-      !valid_string(desc->tint_revision, desc->tint_revision_length) ||
-      !valid_string(desc->target_environment, desc->target_environment_length) ||
-      !valid_string(desc->compile_options, desc->compile_options_length) ||
-      desc->source_path_length == 0 || desc->spirv_output_path_length == 0 ||
-      desc->object_path_length == 0 || desc->entry_point_length == 0 ||
-      desc->tint_revision_length == 0 || desc->target_environment_length == 0)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (desc->backend_mask == 0 || (desc->backend_mask & ~GRANIT_SHADER_BACKEND_ALL_BITS) != 0)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  if ((desc->required_features & ~GRANIT_SHADER_FEATURE_ALL_BITS) != 0)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto stage = stage_name(desc->stage);
-  if (stage == nullptr)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  try {
-    const auto source = read_text_file(copy_path(desc->source_path, desc->source_path_length));
-    if (source.empty())
-      return GRANIT_ERROR_INVALID_ARGUMENT;
-    const auto object_path = copy_path(desc->object_path, desc->object_path_length);
-    const auto object_bytes = read_binary_file(object_path);
-    granit::detail::shader_format::shader_object_view object;
-    if (granit::detail::shader_format::decode_shader_object(object_bytes, object) !=
-        granit::detail::shader_format::shader_object_error::success)
-      return GRANIT_SUCCESS;
-    uint32_t packaged_backends = 0;
-    if (granit::detail::shader_format::find_shader_object_variant(
-            object, granit::detail::shader_format::shader_object_backend::vulkan,
-            granit::shader_profile::portable) != nullptr)
-      packaged_backends |= GRANIT_SHADER_BACKEND_VULKAN_BIT;
-    if (granit::detail::shader_format::find_shader_object_variant(
-            object, granit::detail::shader_format::shader_object_backend::webgpu,
-            granit::shader_profile::portable) != nullptr)
-      packaged_backends |= GRANIT_SHADER_BACKEND_WEBGPU_BIT;
-    if (packaged_backends != desc->backend_mask)
-      return GRANIT_SUCCESS;
-    const auto source_is_wgsl = desc->wgsl_output_path_length == 0;
-    const auto key = granit::detail::shader_format::make_shader_cache_key(
-        {source, source_is_wgsl ? "wgsl" : "hlsl",
-         copy_string(desc->entry_point, desc->entry_point_length), stage,
-         copy_string(desc->tint_revision, desc->tint_revision_length),
-         copy_string(desc->target_environment, desc->target_environment_length),
-         copy_string(desc->compile_options, desc->compile_options_length),
-         desc->required_features});
-    if (key != object.cache_key)
-      return GRANIT_SUCCESS;
-    const auto* variant = granit::detail::shader_format::find_shader_object_variant(
-        object, granit::detail::shader_format::shader_object_backend::vulkan,
-        granit::shader_profile::portable);
-    if (variant == nullptr || variant->code_format != granit::shader_code_format::spirv ||
-        variant->required_features != desc->required_features)
-      return GRANIT_SUCCESS;
-    auto wgsl_sidecar_path = object_path;
-    wgsl_sidecar_path += ".wgsl";
-    auto spirv_sidecar_path = object_path;
-    spirv_sidecar_path += ".spv";
-    const auto* webgpu_variant = granit::detail::shader_format::find_shader_object_variant(
-        object, granit::detail::shader_format::shader_object_backend::webgpu,
-        granit::shader_profile::portable);
-    const auto packaged_wgsl =
-        webgpu_variant == nullptr ? std::string{} : read_text_file(wgsl_sidecar_path);
-    const auto packaged_spirv = read_binary_file(spirv_sidecar_path);
-    if (granit::detail::shader_format::validate_shader_object_payloads(object, packaged_wgsl,
-                                                                       packaged_spirv) !=
-            granit::detail::shader_format::shader_object_error::success ||
-        (source_is_wgsl && webgpu_variant != nullptr && packaged_wgsl != source))
-      return GRANIT_SUCCESS;
-    if (!write_binary_file(copy_path(desc->spirv_output_path, desc->spirv_output_path_length),
-                           packaged_spirv))
-      return GRANIT_ERROR_INITIALIZATION_FAILED;
-    if (!source_is_wgsl && webgpu_variant != nullptr &&
-        !write_binary_file(copy_path(desc->wgsl_output_path, desc->wgsl_output_path_length),
-                           std::span{reinterpret_cast<const std::byte*>(packaged_wgsl.data()),
-                                     packaged_wgsl.size()}))
-      return GRANIT_ERROR_INITIALIZATION_FAILED;
-    *cache_hit = 1;
-    return GRANIT_SUCCESS;
-  } catch (const std::bad_alloc&) {
-    return GRANIT_ERROR_OUT_OF_MEMORY;
-  } catch (...) {
-    return GRANIT_ERROR_INTERNAL;
-  }
 }
 
 granit_result

@@ -10,7 +10,6 @@
 #include <granit/core/result.h>
 #include <granit/core/shader_features.h>
 #include <granit/core/shader_types.h>
-#include <granit/tools/shader_object_builder.h>
 #include <granit/tools/shader_reflection.h>
 #include <granit/tools/shader_tools_export.h>
 
@@ -153,14 +152,6 @@ GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_compilation_get_spirv(
 /** 查询编译生成或规范化的 WGSL；视图在编译结果销毁前有效。 */
 GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_compilation_get_wgsl(
     granit_shader_tools_compilation compilation, const char** source, uint64_t* length);
-
-/**
- * 将稳定反射清单写入 output_path，并将 WGSL、SPIR-V 分别写入同名 .wgsl、.spv sidecar。
- * cache_hit 仅在清单和两个 sidecar 均逐字节相同时写为 1，否则写为 0。
- */
-GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_compilation_write_object(
-    granit_shader_tools_compilation compilation, const granit_shader_tools_object_desc* desc,
-    uint32_t* cache_hit);
 
 /** 查询内置目标档位支持的静态特性；当前 backend 使用 ASSET_BACKEND 单值。 */
 GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_get_target_capabilities(
