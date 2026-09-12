@@ -404,7 +404,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     NAME granit.shader_tool.compile_diagnostic
     COMMAND
       "${CMAKE_COMMAND}" "-DTOOL=$<TARGET_FILE:granit_shader_tool>"
-      "-DINPUT=${PROJECT_SOURCE_DIR}/tests/fixtures/shaders/s10c_triangle.wgsl"
+      "-DINPUT=${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_untextured.hlsl"
       "-DOUTPUT=${CMAKE_CURRENT_BINARY_DIR}/must-not-exist.spv" -P
       "${PROJECT_SOURCE_DIR}/cmake/check_shader_tool_diagnostic.cmake"
   )

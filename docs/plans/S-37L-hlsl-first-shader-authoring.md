@@ -8,8 +8,9 @@
 **实现中。** Granit 的离线 Shader 作者语言收敛为 HLSL；WGSL 与 SPIR-V 继续作为 ShaderTools
 生成的后端载荷。S-37L1 已完成源清单、逻辑名称与确定性索引模型；S-37L2 已完成高层 Builder、
 CLI 与 CMake 入口；S-37L3 已完成 Material 逻辑引用与构建期索引解析；S-37L4 已完成 PBR、
-Unlit、Canvas、Shadow、Tone Mapping、Debug 和 Smoke 资产迁移。下一阶段将删除多源作者入口。
-其余工作在当前 0.21 特性分支连续实施，每个阶段形成独立本地提交。
+Unlit、Canvas、Shadow、Tone Mapping、Debug 和 Smoke 资产迁移。S-37L5 已将命令行单 Shader 编译
+入口收敛为 HLSL，后续继续删除公开 WGSL Compiler 与成对载荷导入接口。其余工作在当前 0.21
+特性分支连续实施，每个阶段形成独立本地提交。
 
 ## 背景与目标
 

@@ -89,7 +89,7 @@ HLSL portable 路径需要资产构建机安装 DXC 与 Tint，但应用运行�
 - `granit_shader_tools_compile_desc.defines` 仅用于 HLSL，接收显式长度的名称和值。名称必须是合法标识符，
   值不能为空，同名定义会被拒绝；SDK 按名称排序后传给 DXC。CLI 对应参数为可重复的
   `--define NAME=VALUE`。排序后的完整定义集合属于编译上下文并进入缓存键。
-- 命令行 `compile-hlsl` 暴露相同路径，并可直接写入、裁剪 `.grshaderobj` 资产。写资产时必须
+- 命令行 `compile` 暴露相同路径，并可直接写入、裁剪 `.grshaderobj` 资产。写资产时必须
   显式记录 DXC 与 Tint 修订号。全后端资产缓存命中时会在启动两个编译器前直接恢复 SPIR-V 和
   WGSL；单后端裁剪目前仍执行完整编译，避免声称恢复了未被资产保存的另一后端产物。
 - 缓存键基于原始源码语言、原始源码内容、入口点、阶段、工具修订号、目标、选项和必需特性。

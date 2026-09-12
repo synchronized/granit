@@ -45,7 +45,7 @@ function(granit_add_hlsl_shader_object)
     OUTPUT "${object}" "${object}.spv" "${object}.wgsl"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${ARG_OUTPUT_DIR}"
     COMMAND
-      "$<TARGET_FILE:granit_shader_tool>" compile-hlsl --dxc "${GRANIT_DXC_EXECUTABLE}"
+      "$<TARGET_FILE:granit_shader_tool>" compile --dxc "${GRANIT_DXC_EXECUTABLE}"
       --tint "${GRANIT_TINT_EXECUTABLE}" --input "${ARG_SOURCE}" --entry "${ARG_ENTRY}"
       --stage "${ARG_STAGE}" --spirv-output "${object}.spv" --wgsl-output "${object}.wgsl"
       --object "${object}" --object-backend all ${define_arguments}

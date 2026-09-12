@@ -17,7 +17,7 @@ set(common_arguments
     test-tint --object-backend all --define SECOND_VALUE=2 --define FIRST_VALUE=1)
 
 execute_process(
-  COMMAND "${TOOL}" compile-hlsl --dxc "${DXC}" --tint "${TINT}" ${common_arguments}
+  COMMAND "${TOOL}" compile --dxc "${DXC}" --tint "${TINT}" ${common_arguments}
   RESULT_VARIABLE build_result
   OUTPUT_VARIABLE build_output
   ERROR_VARIABLE build_error
@@ -28,7 +28,7 @@ endif()
 
 file(REMOVE "${spirv}" "${wgsl}")
 execute_process(
-  COMMAND "${TOOL}" compile-hlsl --dxc missing-dxc --tint missing-tint ${common_arguments}
+  COMMAND "${TOOL}" compile --dxc missing-dxc --tint missing-tint ${common_arguments}
   RESULT_VARIABLE restore_result
   OUTPUT_VARIABLE restore_output
   ERROR_VARIABLE restore_error
@@ -38,7 +38,7 @@ if(NOT restore_result EQUAL 0 OR NOT EXISTS "${spirv}" OR NOT EXISTS "${wgsl}")
 endif()
 
 execute_process(
-  COMMAND "${TOOL}" compile-hlsl --dxc missing-dxc --tint missing-tint
+  COMMAND "${TOOL}" compile --dxc missing-dxc --tint missing-tint
           ${common_arguments} --define THIRD_VALUE=3
   RESULT_VARIABLE changed_result
   OUTPUT_QUIET
