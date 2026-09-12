@@ -12,13 +12,6 @@
 
 namespace granit::shader_tools {
 
-inline std::pair<::granit::result, bool>
-build_library(const granit_shader_tools_library_desc& desc) noexcept {
-  uint32_t cache_hit = 0;
-  const auto status = granit_shader_tools_build_library(&desc, &cache_hit);
-  return {::granit::from_native(status), cache_hit != 0};
-}
-
 struct source_library_desc {
   std::string_view manifest_path;
   std::string_view dxc_path;

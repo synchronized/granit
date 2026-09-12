@@ -62,11 +62,8 @@ HLSL portable 路径需要资产构建机安装 DXC 与 Tint，但应用运行�
   恢复所需产物，未命中时编译并原子更新缓存。Object 写入和缓存恢复不属于公共 API。
 - 当前 sidecar 分别代表 WebGPU portable WGSL 和 Vulkan portable SPIR-V。资产按后端打包裁剪和
   多能力档位选择属于 [S-20](../plans/S-20-shader-asset-variants.md)。
-- 命令行 `library` 可将多个已验证 Shader Object 确定性链接为 `.grshlib`，按 SHA-256 去重
-  载荷，并以 `--target all|vulkan|webgpu` 生成全后端或裁剪结果。`.grshlib` 是 Core 的公共运行时
-  资产；`.grshaderobj` 与 sidecar 只保留在工具私有的中间产物或缓存中。
-- `granit_shader_tools_build_library` 接收 Object 路径数组、目标后端集合和输出路径，执行与 CLI
-  相同的严格校验、裁剪、去重、确定性编码及原子写入；输出逐字节未变化时报告缓存命中。
+- `.grshlib` 是 Core 的公共运行时资产；`.grshaderobj` 的链接、裁剪、去重和原子写入只由
+  Library Builder 在工具内部执行。
 - `granit_shader_tools_build_library_from_manifest` 是 HLSL-first 的高层构建入口。它读取
   `.grshlib.json`，按逻辑名称和变体编译 HLSL，管理私有 `.grshaderobj` 缓存，并一次写出
   `.grshlib` 与 `.grshidx.json`。C++ 包装使用 `source_library_desc`；CLI 对应 `build-library`。

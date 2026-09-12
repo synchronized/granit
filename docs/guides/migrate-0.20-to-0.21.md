@@ -35,18 +35,19 @@ surface.initialize(
 
 ## 改用 Shader Library
 
-用 `granit_shader_tool library` 在离线构建中把材质引用的 Shader Asset 链接为 Library：
+为 HLSL 源码编写 `.grshlib.json` 清单，再用 `build-library` 在离线构建中生成 Library 和逻辑名称
+索引：
 
 ```powershell
-granit_shader_tool library `
-  --object path/to/standard.vert.grshaderobj `
-  --object path/to/standard.frag.grshaderobj `
-  --target all `
-  --output path/to/standard.grshlib
+granit_shader_tool build-library `
+  --manifest path/to/standard.grshlib.json `
+  --dxc path/to/dxc --tint path/to/tint `
+  --cache path/to/cache `
+  --output path/to/standard.grshlib `
+  --index path/to/standard.grshidx.json
 ```
 
-`--target all` 同时保存 Vulkan SPIR-V 和 WebGPU WGSL；按平台发包时可改用 `vulkan` 或 `webgpu`
-裁剪。`.grshaderobj` 与 sidecar 是工具链中间输入，不再复制到运行时或安装目录。
+目标后端在源清单中声明；`.grshaderobj` 与 sidecar 只存在于工具缓存，不复制到运行时或安装目录。
 
 应用读取或映射完整 `.grshlib` 后创建 Library。归档内存必须保持地址和内容不变，直到 Material、
 由 Library 创建的 Shader 和 Pipeline 都释放，并成功销毁 Library：

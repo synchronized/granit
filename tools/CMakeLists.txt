@@ -56,6 +56,7 @@ if(GRANIT_BUILD_SHADER_TOOLS OR GRANIT_BUILD_TOOLS OR (GRANIT_BUILD_TESTING AND 
     granit_shader_tools
     shader_tools_api.cpp
     shader_library/builder.cpp
+    shader_library/builder.h
     shader_library/object_cache.cpp
     shader_library/object_cache.h
     shader_library/source_builder.cpp
@@ -136,6 +137,7 @@ if(TARGET granit_shader_tools)
     shader_cli/commands/library.cpp
     shader_cli/commands/object.cpp
     shader_cli/commands/targets.cpp
+    shader_library/builder.cpp
   )
   target_sources(
     granit_shader_tool
@@ -257,24 +259,6 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     COMMAND granit_shader_library_source_test
   )
 
-  add_executable(
-    granit_shader_library_builder_api_test
-    "${PROJECT_SOURCE_DIR}/tests/tools/shader_library_builder_api_test.cpp"
-  )
-  target_compile_features(granit_shader_library_builder_api_test PRIVATE cxx_std_20)
-  target_link_libraries(granit_shader_library_builder_api_test PRIVATE granit::shader_tools)
-  add_dependencies(granit_shader_library_builder_api_test granit_shader_tool_test_objects)
-  granit_target_compile_warnings(granit_shader_library_builder_api_test)
-  granit_target_output_directories(granit_shader_library_builder_api_test)
-  add_test(
-    NAME granit.shader_tools.library_builder_api
-    COMMAND
-      granit_shader_library_builder_api_test
-      "${granit_shader_tool_test_object_dir}/minimal.vert.grshaderobj"
-      "${granit_shader_tool_test_object_dir}/minimal.frag.grshaderobj"
-      "${CMAKE_CURRENT_BINARY_DIR}/shader-library-builder-api-test-cache"
-  )
-
   if(TARGET granit_shader_tools)
     add_executable(
       granit_shader_tools_c_test "${PROJECT_SOURCE_DIR}/tests/tools/shader_tools_c_test.c"
@@ -341,7 +325,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
       "${CMAKE_CURRENT_BINARY_DIR}/object-id-test/minimal_shader_ids.inc")
   add_test(
     NAME granit.shader_tool.object_ids
-    COMMAND granit_shader_tool object-ids
+    COMMAND granit_shader_tool fixture-object-ids
             --object
             "minimal_vertex_id=${granit_shader_tool_test_object_dir}/minimal.vert.grshaderobj"
             --output "${granit_shader_object_id_output}"
@@ -365,7 +349,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_test(
     NAME granit.shader_tool.library
     COMMAND
-      granit_shader_tool library
+      granit_shader_tool fixture-library
       --object "${granit_shader_tool_test_object_dir}/minimal.vert.grshaderobj"
       --object "${granit_shader_tool_test_object_dir}/minimal.frag.grshaderobj"
       --target all

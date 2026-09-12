@@ -28,8 +28,6 @@ granit_shader_tool verify shader.spv
 granit_shader_tool targets
 granit_shader_tool capabilities --target vulkan-portable
 granit_shader_tool capabilities --target webgpu-portable
-granit_shader_tool library --object vertex.grshaderobj --object fragment.grshaderobj `
-  --target all --output shaders.grshlib
 granit_shader_tool compile --dxc path/to/dxc --tint path/to/tint `
   --input shader.hlsl --entry fragment_main --stage fragment `
   --define GRANIT_PBR_TEXTURE_MASK=31 --define GRANIT_PBR_LIGHTS=1 `
@@ -41,10 +39,6 @@ Compute Workgroup 和 Override 常量的结构化调试视图；`verify` 执行�
 完整 SPIR-V 合法性由 DXC、Tint 的 `--validate` 和可选 `spirv-val` 共同负责。工具不进入 Granit
 核心动态库及安装导出。
 所有调用都必须使用显式子命令；早期原型的单参数入口不再保留。
-`library` 将一个或多个 `.grshaderobj` 及其 sidecar 确定性链接为 `.grshlib`。输入顺序不影响
-输出；相同载荷按 SHA-256 去重。`--target` 可取 `all`、`vulkan` 或 `webgpu`，单后端目标
-不会读取或写入另一后端载荷。当前该命令用于 0.21.0 资产管线建设，运行时公共 Library API 将在
-S-37 后续阶段接入。
 `targets` 列出工具内置的目标契约，`capabilities` 查询目标档位允许的可选特性。结果描述发布目标，
 不读取构建机 GPU；当前两个 portable 目标都只包含基线能力，因此可选特性为 `none`。
 

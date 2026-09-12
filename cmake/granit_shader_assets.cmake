@@ -94,49 +94,6 @@ function(granit_add_test_shader_object)
   set(${ARG_OUTPUT_VAR} "${output}" PARENT_SCOPE)
 endfunction()
 
-function(granit_add_shader_library)
-  set(options ALL)
-  set(one_value_args NAME OUTPUT REFERENCE TARGET)
-  set(multi_value_args OBJECTS)
-  cmake_parse_arguments(ARG "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
-  if(NOT ARG_NAME OR NOT ARG_OUTPUT OR NOT ARG_OBJECTS OR NOT ARG_TARGET)
-    message(FATAL_ERROR "granit_add_shader_library 缺少必要参数")
-  endif()
-
-  set(object_arguments)
-  set(dependencies granit_shader_tool)
-  foreach(object IN LISTS ARG_OBJECTS)
-    list(APPEND object_arguments --object "${object}")
-    list(APPEND dependencies "${object}" "${object}.spv" "${object}.wgsl")
-  endforeach()
-  get_filename_component(output_directory "${ARG_OUTPUT}" DIRECTORY)
-  set(stamp "${ARG_OUTPUT}.verified")
-  set(commands
-      COMMAND "${CMAKE_COMMAND}" -E make_directory "${output_directory}"
-      COMMAND "$<TARGET_FILE:granit_shader_tool>" library ${object_arguments}
-              --target all --output "${ARG_OUTPUT}")
-  if(ARG_REFERENCE)
-    list(APPEND commands
-         COMMAND "${CMAKE_COMMAND}" -E compare_files "${ARG_OUTPUT}" "${ARG_REFERENCE}")
-    list(APPEND dependencies "${ARG_REFERENCE}")
-  endif()
-  list(APPEND commands COMMAND "${CMAKE_COMMAND}" -E touch "${stamp}")
-  add_custom_command(
-    OUTPUT "${stamp}"
-    BYPRODUCTS "${ARG_OUTPUT}"
-    ${commands}
-    DEPENDS ${dependencies}
-    COMMENT "链接 Shader Library ${ARG_NAME}"
-    COMMAND_EXPAND_LISTS
-    VERBATIM
-  )
-  if(ARG_ALL)
-    add_custom_target(${ARG_TARGET} ALL DEPENDS "${stamp}")
-  else()
-    add_custom_target(${ARG_TARGET} DEPENDS "${stamp}")
-  endif()
-endfunction()
-
 function(granit_add_hlsl_shader_library)
   set(options ALL)
   set(one_value_args NAME MANIFEST OUTPUT INDEX CACHE_DIR TARGET REFERENCE INDEX_REFERENCE)

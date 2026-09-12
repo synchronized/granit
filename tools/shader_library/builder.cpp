@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/tools/shader_library_builder.h>
+#include "builder.h"
 
 #include "shader_format/shader_library.h"
 
 #include <algorithm>
 #include <atomic>
 #include <cstdint>
-#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <new>
@@ -25,15 +24,6 @@
 #endif
 
 namespace {
-
-bool valid_string(const char* value, uint64_t length) { return value != nullptr || length == 0; }
-
-std::filesystem::path copy_path(const char* value, uint64_t length) {
-  std::u8string utf8(static_cast<std::size_t>(length), u8'\0');
-  if (length != 0)
-    std::memcpy(utf8.data(), value, static_cast<std::size_t>(length));
-  return std::filesystem::path{utf8};
-}
 
 std::vector<std::byte> read_file(const std::filesystem::path& path) {
   std::ifstream stream(path, std::ios::binary | std::ios::ate);
@@ -98,44 +88,34 @@ struct owned_object {
 
 } // namespace
 
-extern "C" granit_result
-granit_shader_tools_build_library(const granit_shader_tools_library_desc* desc,
-                                  uint32_t* cache_hit) {
-  if (cache_hit == nullptr)
+namespace granit::tools {
+
+granit_result link_shader_library(std::span<const std::filesystem::path> object_paths,
+                                  granit_shader_backend_flags target_backends,
+                                  const std::filesystem::path& output_path,
+                                  bool& cache_hit) noexcept {
+  cache_hit = false;
+  if (object_paths.empty() || output_path.empty() || target_backends == 0 ||
+      (target_backends & ~GRANIT_SHADER_BACKEND_ALL_BITS) != 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  *cache_hit = 0;
-  if (desc == nullptr || desc->struct_size < sizeof(*desc) || desc->reserved != 0 ||
-      desc->reserved2 != 0 || desc->objects == nullptr || desc->object_count == 0 ||
-      !valid_string(desc->output_path, desc->output_path_length) || desc->output_path_length == 0 ||
-      desc->target_backends == 0 || (desc->target_backends & ~GRANIT_SHADER_BACKEND_ALL_BITS) != 0)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  for (uint64_t index = 0; index < desc->object_count; ++index) {
-    const auto& object = desc->objects[index];
-    if (object.struct_size < sizeof(object) || object.reserved != 0 ||
-        !valid_string(object.path, object.path_length) || object.path_length == 0)
-      return GRANIT_ERROR_INVALID_ARGUMENT;
-  }
   try {
     std::vector<owned_object> owned;
-    owned.reserve(static_cast<std::size_t>(desc->object_count));
-    for (uint64_t index = 0; index < desc->object_count; ++index) {
-      const auto object_path =
-          copy_path(desc->objects[index].path, desc->objects[index].path_length);
+    owned.reserve(object_paths.size());
+    for (const auto& object_path : object_paths) {
       owned_object object{.manifest = read_file(object_path), .wgsl = {}, .spirv = {}};
-      if ((desc->target_backends & GRANIT_SHADER_BACKEND_WEBGPU_BIT) != 0) {
+      if ((target_backends & GRANIT_SHADER_BACKEND_WEBGPU_BIT) != 0) {
         auto path = object_path;
         path += ".wgsl";
         object.wgsl = read_file(path);
       }
-      if ((desc->target_backends & GRANIT_SHADER_BACKEND_VULKAN_BIT) != 0) {
+      if ((target_backends & GRANIT_SHADER_BACKEND_VULKAN_BIT) != 0) {
         auto path = object_path;
         path += ".spv";
         object.spirv = read_file(path);
       }
       if (object.manifest.empty() ||
-          ((desc->target_backends & GRANIT_SHADER_BACKEND_WEBGPU_BIT) != 0 &&
-           object.wgsl.empty()) ||
-          ((desc->target_backends & GRANIT_SHADER_BACKEND_VULKAN_BIT) != 0 && object.spirv.empty()))
+          ((target_backends & GRANIT_SHADER_BACKEND_WEBGPU_BIT) != 0 && object.wgsl.empty()) ||
+          ((target_backends & GRANIT_SHADER_BACKEND_VULKAN_BIT) != 0 && object.spirv.empty()))
         return GRANIT_ERROR_INVALID_ARGUMENT;
       owned.push_back(std::move(object));
     }
@@ -144,19 +124,17 @@ granit_shader_tools_build_library(const granit_shader_tools_library_desc* desc,
     for (const auto& object : owned)
       sources.push_back({object.manifest, object.wgsl, object.spirv});
     std::vector<std::byte> library;
-    if (granit::detail::shader_format::encode_shader_library({sources, desc->target_backends},
-                                                             library) !=
+    if (granit::detail::shader_format::encode_shader_library({sources, target_backends}, library) !=
         granit::detail::shader_format::shader_library_error::success)
       return GRANIT_ERROR_INVALID_ARGUMENT;
-    const auto output = copy_path(desc->output_path, desc->output_path_length);
-    if (std::ranges::equal(read_file(output), library)) {
-      *cache_hit = 1;
+    if (std::ranges::equal(read_file(output_path), library)) {
+      cache_hit = true;
       return GRANIT_SUCCESS;
     }
     std::error_code error;
-    if (!output.parent_path().empty())
-      std::filesystem::create_directories(output.parent_path(), error);
-    if (error || !write_file_atomically(output, library))
+    if (!output_path.parent_path().empty())
+      std::filesystem::create_directories(output_path.parent_path(), error);
+    if (error || !write_file_atomically(output_path, library))
       return GRANIT_ERROR_INITIALIZATION_FAILED;
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
@@ -165,3 +143,5 @@ granit_shader_tools_build_library(const granit_shader_tools_library_desc* desc,
     return GRANIT_ERROR_INTERNAL;
   }
 }
+
+} // namespace granit::tools

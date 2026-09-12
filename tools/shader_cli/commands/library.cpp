@@ -6,6 +6,7 @@
 #include <granit/tools/shader_tools.hpp>
 
 #include "shader_format/shader_object.h"
+#include "shader_library/builder.h"
 #include "shader_library/source_manifest.h"
 
 #include <algorithm>
@@ -104,7 +105,7 @@ int build_shader_library(int argc, char** argv) {
   return 0;
 }
 
-int link_shader_library(int argc, char** argv) {
+int link_shader_fixture_library(int argc, char** argv) {
   const auto object_paths = option_values(argc, argv, "--object");
   const auto target = option_value(argc, argv, "--target");
   const auto output_path = option_value(argc, argv, "--output");
@@ -116,26 +117,13 @@ int link_shader_library(int argc, char** argv) {
   const auto backend_mask = *target == "all"      ? GRANIT_SHADER_BACKEND_ALL_BITS
                             : *target == "vulkan" ? GRANIT_SHADER_BACKEND_VULKAN_BIT
                                                   : GRANIT_SHADER_BACKEND_WEBGPU_BIT;
-  std::vector<granit_shader_tools_library_object_desc> objects;
+  std::vector<std::filesystem::path> objects;
   objects.reserve(object_paths.size());
-  for (const auto& path : object_paths) {
-    objects.push_back({.struct_size = sizeof(granit_shader_tools_library_object_desc),
-                       .reserved = 0,
-                       .path = path.data(),
-                       .path_length = path.size()});
-  }
-  const granit_shader_tools_library_desc desc{
-      .struct_size = sizeof(granit_shader_tools_library_desc),
-      .reserved = 0,
-      .objects = objects.data(),
-      .object_count = objects.size(),
-      .target_backends = backend_mask,
-      .reserved2 = 0,
-      .output_path = output_path->data(),
-      .output_path_length = output_path->size(),
-  };
-  const auto [status, cache_hit] = granit::shader_tools::build_library(desc);
-  if (status.failed()) {
+  for (const auto& path : object_paths)
+    objects.emplace_back(path);
+  bool cache_hit = false;
+  if (granit::tools::link_shader_library(objects, backend_mask, *output_path, cache_hit) !=
+      GRANIT_SUCCESS) {
     std::cerr << "无法链接 Shader Library\n";
     return 1;
   }
@@ -144,18 +132,18 @@ int link_shader_library(int argc, char** argv) {
   return 0;
 }
 
-int emit_shader_object_ids(int argc, char** argv) {
+int emit_shader_fixture_object_ids(int argc, char** argv) {
   auto object_specs = option_values(argc, argv, "--object");
   const auto output_path = option_value(argc, argv, "--output");
   if (object_specs.empty() || !output_path) {
-    std::cerr << "object-ids 需要一个或多个 --object <name=path> 和 --output\n";
+    std::cerr << "fixture-object-ids 需要一个或多个 --object <name=path> 和 --output\n";
     return 2;
   }
   std::ranges::sort(object_specs);
   std::ostringstream content;
   content << "// SPDX-License-Identifier: MIT\n"
              "// Copyright (c) 2026 Granit contributors\n\n"
-             "// 由 granit_shader_tool object-ids 生成。\n\n"
+             "// 由 granit_shader_tool fixture-object-ids 生成。\n\n"
           << std::hex << std::setfill('0');
   std::string previous_name;
   for (const auto& spec : object_specs) {
@@ -164,7 +152,7 @@ int emit_shader_object_ids(int argc, char** argv) {
     const auto valid_name =
         separator != std::string::npos && separator + 1 < spec.size() && valid_identifier(name);
     if (!valid_name || name == previous_name) {
-      std::cerr << "object-ids 的名称必须是唯一 C++ 标识符：" << spec << '\n';
+      std::cerr << "fixture-object-ids 的名称必须是唯一 C++ 标识符：" << spec << '\n';
       return 2;
     }
     const auto object_path = spec.substr(separator + 1);

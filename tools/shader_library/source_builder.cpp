@@ -4,6 +4,7 @@
 #include <granit/tools/shader_compiler.h>
 #include <granit/tools/shader_library_builder.h>
 
+#include "builder.h"
 #include "object_cache.h"
 #include "shader_format/shader_library.h"
 #include "shader_format/shader_object.h"
@@ -235,7 +236,7 @@ granit_shader_tools_build_library_from_manifest(const granit_shader_tools_source
     }
     std::ranges::sort(expanded, {}, &expanded_shader::name);
 
-    std::vector<std::string> object_paths;
+    std::vector<std::filesystem::path> object_paths;
     object_paths.reserve(expanded.size());
     granit::tools::shader_library_index index{.library = manifest.name};
     bool all_objects_hit = true;
@@ -314,28 +315,13 @@ granit_shader_tools_build_library_from_manifest(const granit_shader_tools_source
         return GRANIT_ERROR_INTERNAL;
       index.shaders.push_back(
           {item.name, object_view.content_id, item.shader->stage, item.shader->entry_point});
-      object_paths.push_back(object_string);
+      object_paths.push_back(object);
     }
 
-    std::vector<granit_shader_tools_library_object_desc> objects;
-    objects.reserve(object_paths.size());
-    for (const auto& path : object_paths)
-      objects.push_back(
-          {sizeof(granit_shader_tools_library_object_desc), 0, path.data(), path.size()});
-    const std::string_view output_path{desc->output_path,
-                                       static_cast<std::size_t>(desc->output_path_length)};
-    const granit_shader_tools_library_desc library_desc{
-        sizeof(granit_shader_tools_library_desc),
-        0,
-        objects.data(),
-        objects.size(),
-        static_cast<granit_shader_backend_flags>(manifest.target_backends),
-        0,
-        output_path.data(),
-        output_path.size(),
-    };
-    std::uint32_t library_hit = 0;
-    status = granit_shader_tools_build_library(&library_desc, &library_hit);
+    bool library_hit = false;
+    status = granit::tools::link_shader_library(
+        object_paths, static_cast<granit_shader_backend_flags>(manifest.target_backends),
+        copy_path(desc->output_path, desc->output_path_length), library_hit);
     if (status != GRANIT_SUCCESS)
       return status;
 
@@ -353,7 +339,7 @@ granit_shader_tools_build_library_from_manifest(const granit_shader_tools_source
     if (!write_text_if_changed(copy_path(desc->index_path, desc->index_path_length), index_json,
                                index_hit))
       return GRANIT_ERROR_INITIALIZATION_FAILED;
-    *cache_hit = all_objects_hit && library_hit != 0 && index_hit ? 1U : 0U;
+    *cache_hit = all_objects_hit && library_hit && index_hit ? 1U : 0U;
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
