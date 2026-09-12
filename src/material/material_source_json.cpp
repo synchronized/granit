@@ -503,8 +503,11 @@ source_json_error parse_variant(std::span<const material_shader_reference> shade
     });
     if (found == shader_references.end())
       return source_json_error::invalid_schema;
-    material_shader_code code{
-        .stage = found->stage, .entry_point = found->entry_point, .asset_id = found->content_id};
+    material_shader_code code{.stage = found->stage,
+                              .entry_point = found->entry_point,
+                              .asset_id = found->content_id,
+                              .spirv = {},
+                              .wgsl = {}};
     variant.shaders.push_back(std::move(code));
   }
   return source_json_error::none;

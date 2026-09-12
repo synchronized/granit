@@ -230,7 +230,8 @@ granit_shader_tools_build_library_from_manifest(const granit_shader_tools_source
 
     std::vector<std::filesystem::path> object_paths;
     object_paths.reserve(expanded.size());
-    granit::tools::shader_library_index index{.library = manifest.name};
+    granit::tools::shader_library_index index{
+        .library = manifest.name, .library_digest = {}, .shaders = {}};
     bool all_objects_hit = true;
     const std::vector<granit::tools::shader_library_source_define> no_defines;
     for (const auto& item : expanded) {
