@@ -31,7 +31,6 @@ int build_shader_object(int argc, char** argv) {
       .struct_size = sizeof(granit_shader_tools_object_desc),
       .source_path = wgsl_path->data(),
       .source_path_length = wgsl_path->size(),
-      .source_language = GRANIT_SHADER_SOURCE_LANGUAGE_WGSL,
       .wgsl_path = wgsl_path->data(),
       .wgsl_path_length = wgsl_path->size(),
       .spirv_path = spirv_path->data(),

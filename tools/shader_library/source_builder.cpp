@@ -257,7 +257,6 @@ granit_shader_tools_build_library_from_manifest(const granit_shader_tools_source
       restore.struct_size = sizeof(restore);
       restore.source_path = source_string.data();
       restore.source_path_length = source_string.size();
-      restore.source_language = GRANIT_SHADER_SOURCE_LANGUAGE_HLSL;
       restore.wgsl_output_path = wgsl_string.data();
       restore.wgsl_output_path_length = wgsl_string.size();
       restore.spirv_output_path = spirv_string.data();
@@ -312,7 +311,6 @@ granit_shader_tools_build_library_from_manifest(const granit_shader_tools_source
         object_desc.struct_size = sizeof(object_desc);
         object_desc.source_path = source_string.data();
         object_desc.source_path_length = source_string.size();
-        object_desc.source_language = GRANIT_SHADER_SOURCE_LANGUAGE_HLSL;
         object_desc.wgsl_path = wgsl_string.data();
         object_desc.wgsl_path_length = wgsl_string.size();
         object_desc.spirv_path = spirv_string.data();

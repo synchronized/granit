@@ -16,7 +16,6 @@ typedef struct granit_shader_tools_object_desc {
   uint32_t struct_size;
   const char* source_path;
   uint64_t source_path_length;
-  granit_shader_source_language source_language;
   const char* wgsl_path;
   uint64_t wgsl_path_length;
   const char* spirv_path;
@@ -42,7 +41,6 @@ typedef struct granit_shader_tools_object_cache_desc {
   uint32_t struct_size;
   const char* source_path;
   uint64_t source_path_length;
-  granit_shader_source_language source_language;
   const char* wgsl_output_path;
   uint64_t wgsl_output_path_length;
   const char* spirv_output_path;

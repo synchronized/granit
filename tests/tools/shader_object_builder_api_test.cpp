@@ -41,7 +41,6 @@ int main(int argc, char** argv) {
   object.struct_size = sizeof(object);
   object.source_path = argv[2];
   object.source_path_length = std::strlen(argv[2]);
-  object.source_language = GRANIT_SHADER_SOURCE_LANGUAGE_WGSL;
   object.wgsl_path = argv[2];
   object.wgsl_path_length = std::strlen(argv[2]);
   object.spirv_path = argv[1];
@@ -76,7 +75,6 @@ int main(int argc, char** argv) {
   cache.struct_size = sizeof(cache);
   cache.source_path = argv[2];
   cache.source_path_length = std::strlen(argv[2]);
-  cache.source_language = GRANIT_SHADER_SOURCE_LANGUAGE_WGSL;
   cache.spirv_output_path = restored.data();
   cache.spirv_output_path_length = restored.size();
   cache.object_path = output.data();

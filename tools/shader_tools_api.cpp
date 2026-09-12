@@ -56,7 +56,6 @@ std::atomic<uint64_t> next_compiler{1};
 bool valid_string(const char* value, uint64_t length) { return value != nullptr || length == 0; }
 
 const char* stage_name(uint32_t stage);
-const char* source_language_name(uint32_t language);
 
 bool valid_object_desc(const granit_shader_tools_object_desc* desc) {
   return desc != nullptr && desc->struct_size >= sizeof(*desc) &&
@@ -72,7 +71,6 @@ bool valid_object_desc(const granit_shader_tools_object_desc* desc) {
          desc->spirv_path_length != 0 && desc->output_path_length != 0 &&
          desc->tint_revision_length != 0 && desc->target_environment_length != 0 &&
          desc->entry_point_length != 0 && desc->reserved == 0 &&
-         source_language_name(desc->source_language) != nullptr &&
          stage_name(desc->stage) != nullptr && desc->backend_mask != 0 &&
          (desc->backend_mask & ~GRANIT_SHADER_BACKEND_ALL_BITS) == 0 &&
          (desc->required_features & ~GRANIT_SHADER_FEATURE_ALL_BITS) == 0;
@@ -189,17 +187,6 @@ const char* stage_name(uint32_t stage) {
     return "fragment";
   case GRANIT_SHADER_STAGE_COMPUTE:
     return "compute";
-  default:
-    return nullptr;
-  }
-}
-
-const char* source_language_name(uint32_t language) {
-  switch (language) {
-  case GRANIT_SHADER_SOURCE_LANGUAGE_WGSL:
-    return "wgsl";
-  case GRANIT_SHADER_SOURCE_LANGUAGE_HLSL:
-    return "hlsl";
   default:
     return nullptr;
   }
@@ -769,9 +756,14 @@ granit_shader_tools_compilation_write_object(granit_shader_tools_compilation com
     const auto tint_revision = copy_string(desc->tint_revision, desc->tint_revision_length);
     const auto target = copy_string(desc->target_environment, desc->target_environment_length);
     const auto options = copy_string(desc->compile_options, desc->compile_options_length);
+    const auto source_kind =
+        std::string_view{desc->source_path, static_cast<std::size_t>(desc->source_path_length)} ==
+                std::string_view{desc->wgsl_path, static_cast<std::size_t>(desc->wgsl_path_length)}
+            ? "wgsl"
+            : "hlsl";
     const auto key = granit::detail::shader_format::make_shader_cache_key(
-        {source, source_language_name(desc->source_language), value->entry_point, stage,
-         tint_revision, target, options, desc->required_features});
+        {source, source_kind, value->entry_point, stage, tint_revision, target, options,
+         desc->required_features});
     std::vector<std::byte> object;
     if (granit::detail::shader_format::encode_shader_object(
             {wgsl, spirv, value->reflection_json, key, desc->backend_mask, desc->required_features,
@@ -843,10 +835,7 @@ granit_shader_tools_restore_object_cache(const granit_shader_tools_object_cache_
       !valid_string(desc->compile_options, desc->compile_options_length) ||
       desc->source_path_length == 0 || desc->spirv_output_path_length == 0 ||
       desc->object_path_length == 0 || desc->entry_point_length == 0 ||
-      desc->tint_revision_length == 0 || desc->target_environment_length == 0 ||
-      source_language_name(desc->source_language) == nullptr ||
-      (desc->source_language != GRANIT_SHADER_SOURCE_LANGUAGE_WGSL &&
-       desc->wgsl_output_path_length == 0))
+      desc->tint_revision_length == 0 || desc->target_environment_length == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   if (desc->backend_mask == 0 || (desc->backend_mask & ~GRANIT_SHADER_BACKEND_ALL_BITS) != 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -876,8 +865,9 @@ granit_shader_tools_restore_object_cache(const granit_shader_tools_object_cache_
       packaged_backends |= GRANIT_SHADER_BACKEND_WEBGPU_BIT;
     if (packaged_backends != desc->backend_mask)
       return GRANIT_SUCCESS;
+    const auto source_is_wgsl = desc->wgsl_output_path_length == 0;
     const auto key = granit::detail::shader_format::make_shader_cache_key(
-        {source, source_language_name(desc->source_language),
+        {source, source_is_wgsl ? "wgsl" : "hlsl",
          copy_string(desc->entry_point, desc->entry_point_length), stage,
          copy_string(desc->tint_revision, desc->tint_revision_length),
          copy_string(desc->target_environment, desc->target_environment_length),
@@ -904,13 +894,12 @@ granit_shader_tools_restore_object_cache(const granit_shader_tools_object_cache_
     if (granit::detail::shader_format::validate_shader_object_payloads(object, packaged_wgsl,
                                                                        packaged_spirv) !=
             granit::detail::shader_format::shader_object_error::success ||
-        (desc->source_language == GRANIT_SHADER_SOURCE_LANGUAGE_WGSL && webgpu_variant != nullptr &&
-         packaged_wgsl != source))
+        (source_is_wgsl && webgpu_variant != nullptr && packaged_wgsl != source))
       return GRANIT_SUCCESS;
     if (!write_binary_file(copy_path(desc->spirv_output_path, desc->spirv_output_path_length),
                            packaged_spirv))
       return GRANIT_ERROR_INITIALIZATION_FAILED;
-    if (desc->source_language != GRANIT_SHADER_SOURCE_LANGUAGE_WGSL &&
+    if (!source_is_wgsl && webgpu_variant != nullptr &&
         !write_binary_file(copy_path(desc->wgsl_output_path, desc->wgsl_output_path_length),
                            std::span{reinterpret_cast<const std::byte*>(packaged_wgsl.data()),
                                      packaged_wgsl.size()}))

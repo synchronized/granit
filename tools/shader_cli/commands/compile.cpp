@@ -95,7 +95,6 @@ int compile_shader(int argc, char** argv) {
     cache.struct_size = sizeof(cache);
     cache.source_path = input->data();
     cache.source_path_length = input->size();
-    cache.source_language = GRANIT_SHADER_SOURCE_LANGUAGE_HLSL;
     cache.wgsl_output_path = wgsl_output->data();
     cache.wgsl_output_path_length = wgsl_output->size();
     cache.spirv_output_path = spirv_output->data();
@@ -152,7 +151,6 @@ int compile_shader(int argc, char** argv) {
   object_desc.struct_size = sizeof(object_desc);
   object_desc.source_path = input->data();
   object_desc.source_path_length = input->size();
-  object_desc.source_language = GRANIT_SHADER_SOURCE_LANGUAGE_HLSL;
   object_desc.wgsl_path = wgsl_output->data();
   object_desc.wgsl_path_length = wgsl_output->size();
   object_desc.spirv_path = spirv_output->data();

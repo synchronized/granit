@@ -9,7 +9,7 @@
 生成的后端载荷。S-37L1 已完成源清单、逻辑名称与确定性索引模型；S-37L2 已完成高层 Builder、
 CLI 与 CMake 入口；S-37L3 已完成 Material 逻辑引用与构建期索引解析；S-37L4 已完成 PBR、
 Unlit、Canvas、Shadow、Tone Mapping、Debug 和 Smoke 资产迁移。S-37L5 已将命令行和公共
-Compiler 收敛为 HLSL，后续继续删除成对载荷导入接口并内化 `shader_source_language`。其余工作在当前 0.21
+Compiler 收敛为 HLSL，并已删除 `shader_source_language`；后续继续删除成对载荷导入接口。其余工作在当前 0.21
 特性分支连续实施，每个阶段形成独立本地提交。
 
 ## 背景与目标
@@ -56,7 +56,7 @@ Material 源清单 ────────────────────�
 ### HLSL 是唯一离线作者语言
 
 安装后的 ShaderTools Compiler 只接收 HLSL。`shader_source_language`、WGSL 编译分支和公开
-`source_language` 字段在迁移完成后删除。每个逻辑 Shader 只有一份 HLSL 源码，不允许用手写
+`source_language` 字段已经删除。每个逻辑 Shader 只有一份 HLSL 源码，不允许用手写
 WGSL 覆盖某个后端。
 
 Shader 必须符合 `portable` 档位：显式声明资源 binding，使用两端都能转换和验证的语言能力，并

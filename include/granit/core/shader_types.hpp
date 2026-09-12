@@ -22,11 +22,6 @@ enum class shader_code_format : std::uint32_t {
   spirv = GRANIT_SHADER_CODE_FORMAT_SPIRV,
 };
 
-enum class shader_source_language : std::uint32_t {
-  wgsl = GRANIT_SHADER_SOURCE_LANGUAGE_WGSL,
-  hlsl = GRANIT_SHADER_SOURCE_LANGUAGE_HLSL,
-};
-
 enum class shader_backend : std::uint32_t {
   none = 0,
   vulkan = GRANIT_SHADER_BACKEND_VULKAN_BIT,
