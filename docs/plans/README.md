@@ -182,17 +182,16 @@ D-03-graphics-pipeline.md
 - [S-36：0.20.0 示例框架与跨平台 Model Viewer 稳定化](S-36-0.20.0-example-framework-and-model-viewer.md)——
   已完成；交互、帧延迟、示例分层、目录迁移、双后端视觉与发布验收均已闭合。
 - [S-37：0.21.0 Shader Library 与后端无关材质](S-37-0.21.0-shader-library-and-material-boundary.md)——
-  实现中；主体实现及 Windows、Vulkan、Emscripten、浏览器 WebGPU 本地验收已完成，待远端
-  Linux、SDK 和不可变 Release Candidate 验收。
-- [S-37H：WebGPU Provider 边界收敛](S-37H-webgpu-provider-boundary-collapse.md)——本地实现与验证
-  已完成；已删除浏览器静态后端遗留的 Provider ABI、函数表、dispatch、domain adapter 和冗余
-  owner，并按领域拆分后端私有设备实现，等待远端 Linux 与发布验收。
-- [S-37K：Shader 工具接口与组织收敛](S-37K-shader-tooling-api-structure.md)——本地完成；已完成共享
+  已完成；主体实现以及 Windows、Linux、Vulkan、Emscripten、浏览器 WebGPU、远端 SDK 和不可变
+  Release Candidate 验收均已通过。
+- [S-37H：WebGPU Provider 边界收敛](S-37H-webgpu-provider-boundary-collapse.md)——已完成；已删除
+  浏览器静态后端遗留的 Provider ABI、函数表、dispatch、domain adapter 和冗余 owner，并按领域
+  拆分后端私有设备实现，通过远端 Linux 与发布验收。
+- [S-37K：Shader 工具接口与组织收敛](S-37K-shader-tooling-api-structure.md)——已完成；已完成共享
   类型、统一 Compiler、Compilation/Reflection、私有 Shader Object、Library Builder、CLI、CMake
   适配与本地发布验收。
-- [S-37L：HLSL-first Shader 作者入口](S-37L-hlsl-first-shader-authoring.md)——本地部分完成；L1 至
-  L5 已完成作者入口、内建资产和旧接口收敛，L6 已通过 Windows、安装 Consumer、Emscripten
-  构建与真实 Chrome WebGPU 验收，等待 Linux 复验。
+- [S-37L：HLSL-first Shader 作者入口](S-37L-hlsl-first-shader-authoring.md)——已完成；L1 至 L6 已
+  完成作者入口、内建资产、旧接口和发布边界收敛，并通过完整跨平台与候选包验收。
 
 ## 状态
 

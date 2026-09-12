@@ -5,7 +5,7 @@
 
 ## 状态
 
-**实现中。** Granit 的离线 Shader 作者语言收敛为 HLSL；WGSL 与 SPIR-V 继续作为 ShaderTools
+**已完成。** Granit 的离线 Shader 作者语言收敛为 HLSL；WGSL 与 SPIR-V 继续作为 ShaderTools
 生成的后端载荷。S-37L1 已完成源清单、逻辑名称与确定性索引模型；S-37L2 已完成高层 Builder、
 CLI 与 CMake 入口；S-37L3 已完成 Material 逻辑引用与构建期索引解析；S-37L4 已完成 PBR、
 Unlit、Canvas、Shadow、Tone Mapping、Debug 和 Smoke 资产迁移。S-37L5 已将命令行和公共
@@ -13,10 +13,8 @@ Compiler 收敛为 HLSL，且已删除 `shader_source_language`、成对载荷�
 Object 写入与缓存接口，低层 Library 链接入口也已内化；产品 Shader 目录中的派生载荷已删除，
 无工具链测试所需的快照集中到 `tests/fixtures/generated`。S-37L6 已建立 ShaderTools 导出快照、
 C/C++ 安装 Consumer 与构建期 Shader 产物安装门禁；私有 Object 命令也已移出标准 CLI。其余
-跨平台验收在当前 0.21 特性分支连续实施。Windows 共享与静态完整测试、两种链接模式的安装
-Consumer、Emscripten 构建及其宿主测试已经通过；真实 Chrome WebGPU 的多帧渲染、像素、质量与
-光照切换、输入、Resize、异步 Pipeline、取消回滚和资源缺失诊断也已通过。Linux 验收仍待对应
-环境执行。每个阶段形成独立本地提交。
+跨平台验收已完成。Windows 与 Linux 共享/静态完整测试、安装 Consumer、Emscripten、真实 Chrome
+WebGPU、Shader Toolchain Packages 和不可变 Release Candidate 均已通过。每个阶段形成独立提交。
 
 ## 背景与目标
 
