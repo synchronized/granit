@@ -77,10 +77,11 @@ public:
             {value.output, static_cast<std::size_t>(value.output_length)},
             {value.diagnostic, static_cast<std::size_t>(value.diagnostic_length)}};
   }
-  [[nodiscard]] std::pair<::granit::result, class reflection> reflection() const noexcept {
+  [[nodiscard]] std::pair<::granit::result, ::granit::shader_tools::reflection>
+  reflection() const noexcept {
     granit_shader_tools_reflection handle = 0;
     const auto status = granit_shader_tools_compilation_get_reflection(handle_, &handle);
-    return {::granit::from_native(status), class reflection{handle}};
+    return {::granit::from_native(status), ::granit::shader_tools::reflection{handle}};
   }
   [[nodiscard]] std::span<const std::byte> spirv() const noexcept {
     const void* data = nullptr;

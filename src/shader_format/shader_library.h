@@ -64,7 +64,7 @@ struct shader_library_payload {
 };
 
 struct shader_library_view {
-  content_digest content_digest{};
+  ::granit::content_digest content_digest{};
   granit_shader_backend_flags backend_mask = 0;
   std::vector<shader_library_shader> shaders;
   std::vector<shader_library_payload> payloads;
