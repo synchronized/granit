@@ -10,8 +10,8 @@
 CLI 与 CMake 入口；S-37L3 已完成 Material 逻辑引用与构建期索引解析；S-37L4 已完成 PBR、
 Unlit、Canvas、Shadow、Tone Mapping、Debug 和 Smoke 资产迁移。S-37L5 已将命令行和公共
 Compiler 收敛为 HLSL，且已删除 `shader_source_language`、成对载荷导入接口及公开的 Shader
-Object 写入与缓存接口，低层 Library 链接入口也已内化；后续继续清理已提交的派生载荷。其余工作
-在当前 0.21
+Object 写入与缓存接口，低层 Library 链接入口也已内化；产品 Shader 目录中的派生载荷已删除，
+无工具链测试所需的快照集中到 `tests/fixtures/generated`。其余工作在当前 0.21
 特性分支连续实施，每个阶段形成独立本地提交。
 
 ## 背景与目标
@@ -172,7 +172,8 @@ CMake 对项目公开一个对应函数。CMake 只声明输入、输出和依�
 - HLSL 的 Vulkan SPIR-V、portable 中间 SPIR-V 和最终 WGSL 具有一致入口、阶段与绑定契约。
 - PBR 各纹理掩码及 Shadow/IBL/Lights 组合由同一 HLSL 源码生成，并覆盖现有渲染路径。
 - Material 源文件只使用逻辑名称；最终 `.grmat` 不携带索引路径、Library 名称或作者格式字符串。
-- 源码树不再包含作为 Shader 作者输入的 `.wgsl`、提交的 `.spv` 或 `.grshaderobj`。
+- 产品 Shader 目录不再包含作为作者输入的 `.wgsl`、提交的 `.spv` 或 `.grshaderobj`；测试夹具可
+  保留不参与安装和发布的后端载荷快照。
 - 公共 ShaderTools 头、导出符号和 C/C++ Consumer 不再出现 `shader_source_language` 或 WGSL 编译
   入口；Core 运行时仍完整支持生成的 WGSL 载荷。
 - Windows 共享/静态、Linux GCC/Clang、Emscripten、浏览器 WebGPU、构建树及安装 Consumer 通过。

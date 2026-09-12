@@ -271,7 +271,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     add_test(
       NAME granit.shader_tools.c_api
       COMMAND granit_shader_tools_c_test
-              "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.frag.spv"
+              "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/pipeline/tone_mapping.frag.spv"
     )
 
     add_executable(
@@ -284,8 +284,8 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     add_test(
       NAME granit.shader_tools.cpp_api
       COMMAND granit_shader_tools_cpp_test
-              "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.frag.spv"
-              "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.spv"
+              "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/pipeline/tone_mapping.frag.spv"
+              "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/unlit/unlit.vert.spv"
               "${PROJECT_SOURCE_DIR}/tests/assets/minimal.comp.spv"
     )
 
@@ -294,7 +294,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_test(
     NAME granit.shader_tool.tone_mapping_reflect
     COMMAND granit_shader_tool inspect
-            "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.frag.spv"
+            "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/pipeline/tone_mapping.frag.spv"
   )
   set_tests_properties(
     granit.shader_tool.tone_mapping_reflect
@@ -304,7 +304,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_test(
     NAME granit.shader_tool.tone_mapping_json
     COMMAND granit_shader_tool inspect --json
-            "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.frag.spv"
+            "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/pipeline/tone_mapping.frag.spv"
   )
   set_tests_properties(
     granit.shader_tool.tone_mapping_json
@@ -315,7 +315,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     NAME granit.shader_tool.verify
     COMMAND
       granit_shader_tool verify
-      "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.frag.spv"
+      "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/pipeline/tone_mapping.frag.spv"
   )
   set_tests_properties(
     granit.shader_tool.verify
@@ -371,7 +371,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_test(
     NAME granit.shader_tool.pbr_ibl_reflect
     COMMAND granit_shader_tool inspect
-            "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_ibl_untextured.frag.spv"
+            "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/pbr/pbr_ibl_untextured.frag.spv"
   )
   set_tests_properties(
     granit.shader_tool.pbr_ibl_reflect
@@ -382,7 +382,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     NAME granit.shader_tool.pbr_shadow_ibl_reflect
     COMMAND
       granit_shader_tool inspect
-      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_untextured.frag.spv"
+      "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/pbr/pbr_shadow_ibl_untextured.frag.spv"
   )
   set_tests_properties(
     granit.shader_tool.pbr_shadow_ibl_reflect
@@ -394,13 +394,13 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     NAME granit.shader_tool.pbr_shadow_ibl_lights_reflect
     COMMAND
       granit_shader_tool inspect
-      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.spv"
+      "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/pbr/pbr_shadow_ibl_lights_untextured.frag.spv"
   )
 
   add_test(
     NAME granit.shader_tool.pbr_lights_reflect
     COMMAND granit_shader_tool inspect
-            "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_lights_untextured.frag.spv"
+            "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/pbr/pbr_lights_untextured.frag.spv"
   )
   set_tests_properties(
     granit.shader_tool.pbr_lights_reflect
@@ -410,7 +410,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_test(
     NAME granit.shader_tool.pbr_ibl_lights_reflect
     COMMAND granit_shader_tool inspect
-            "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_ibl_lights_untextured.frag.spv"
+            "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/pbr/pbr_ibl_lights_untextured.frag.spv"
   )
   set_tests_properties(
     granit.shader_tool.pbr_ibl_lights_reflect
@@ -420,7 +420,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_test(
     NAME granit.shader_tool.pbr_shadow_lights_reflect
     COMMAND granit_shader_tool inspect
-            "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_lights_untextured.frag.spv"
+            "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/pbr/pbr_shadow_lights_untextured.frag.spv"
   )
   set_tests_properties(
     granit.shader_tool.pbr_shadow_lights_reflect
@@ -436,7 +436,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_test(
     NAME granit.shader_tool.unlit_reflect
     COMMAND granit_shader_tool inspect
-            "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_alpha_cutoff.frag.spv"
+            "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/unlit/unlit_alpha_cutoff.frag.spv"
   )
   set_tests_properties(
     granit.shader_tool.unlit_reflect
@@ -566,8 +566,8 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING AND GRANIT_DXC_EXECUTABLE)
     NAME granit.shader_tools.cpp_override_api
     COMMAND
       granit_shader_tools_cpp_test
-      "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.frag.spv"
-      "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.spv"
+      "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/pipeline/tone_mapping.frag.spv"
+      "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/unlit/unlit.vert.spv"
       "${PROJECT_SOURCE_DIR}/tests/assets/minimal.comp.spv" "${GRANIT_MATERIAL_FIXTURE}"
   )
 elseif(GRANIT_BUILD_TESTING AND BUILD_TESTING)

@@ -200,8 +200,8 @@ function(granit_prepare_test_shader_assets)
     granit_add_test_shader_object(
       NAME "${name}"
       SOURCE "${pbr_source}"
-      SPIRV "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/${name}.spv"
-      WGSL "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/${name}.wgsl"
+      SPIRV "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/pbr/${name}.spv"
+      WGSL "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/pbr/${name}.wgsl"
       ENTRY vertex_main
       STAGE vertex
       OUTPUT_DIR "${pbr_output}"
@@ -228,8 +228,8 @@ function(granit_prepare_test_shader_assets)
     granit_add_test_shader_object(
       NAME "${name}"
       SOURCE "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.hlsl"
-      SPIRV "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/${name}.spv"
-      WGSL "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/${name}.wgsl"
+      SPIRV "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/unlit/${name}.spv"
+      WGSL "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/unlit/${name}.wgsl"
       ENTRY "${entry}"
       STAGE "${shader_stage}"
       OUTPUT_DIR "${unlit_output}"
@@ -271,8 +271,8 @@ function(granit_prepare_test_shader_assets)
     granit_add_test_shader_object(
       NAME "${name}"
       SOURCE "${pbr_source}"
-      SPIRV "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/${name}.spv"
-      WGSL "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/${name}.wgsl"
+      SPIRV "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/pbr/${name}.spv"
+      WGSL "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/pbr/${name}.wgsl"
       ENTRY fragment_main
       STAGE fragment
       OUTPUT_DIR "${pbr_output}"
@@ -293,8 +293,8 @@ function(granit_prepare_test_shader_assets)
     granit_add_test_shader_object(
       NAME "tone_mapping.${stage}"
       SOURCE "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.hlsl"
-      SPIRV "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.${stage}.spv"
-      WGSL "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.wgsl"
+      SPIRV "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/pipeline/tone_mapping.${stage}.spv"
+      WGSL "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/pipeline/tone_mapping.wgsl"
       ENTRY "${entry}"
       STAGE "${shader_stage}"
       OUTPUT_DIR "${pipeline_output}"
