@@ -187,9 +187,11 @@ D-03-graphics-pipeline.md
 - [S-37H：WebGPU Provider 边界收敛](S-37H-webgpu-provider-boundary-collapse.md)——本地实现与验证
   已完成；已删除浏览器静态后端遗留的 Provider ABI、函数表、dispatch、domain adapter 和冗余
   owner，并按领域拆分后端私有设备实现，等待远端 Linux 与发布验收。
-- [S-37K：Shader 工具接口与组织收敛](S-37K-shader-tooling-api-structure.md)——实现中；已完成共享
-  类型和统一 Compiler API，后续将收敛 Compilation/Reflection、私有 Shader Object、Library
-  Builder、CLI 和 CMake 适配边界。
+- [S-37K：Shader 工具接口与组织收敛](S-37K-shader-tooling-api-structure.md)——本地完成；已完成共享
+  类型、统一 Compiler、Compilation/Reflection、私有 Shader Object、Library Builder、CLI、CMake
+  适配与本地发布验收。
+- [S-37L：HLSL-first Shader 作者入口](S-37L-hlsl-first-shader-authoring.md)——已确认；将作者输入收敛
+  为 HLSL 与 Library 源清单，由工具生成 WGSL、SPIR-V、内容 ID 和 Material 构建索引。
 
 ## 状态
 
