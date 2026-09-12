@@ -342,7 +342,6 @@ granit_result granit_shader_tools_compiler_compile(granit_shader_tools_compiler 
   if (compiler_value == nullptr)
     return GRANIT_ERROR_INVALID_HANDLE;
   if (desc == nullptr || desc->struct_size < sizeof(*desc) ||
-      source_language_name(desc->source_language) == nullptr ||
       stage_name(desc->stage) == nullptr || desc->target_backends == 0 ||
       (desc->target_backends & ~GRANIT_SHADER_BACKEND_ALL_BITS) != 0 ||
       !valid_string(desc->input_path, desc->input_path_length) ||
@@ -350,15 +349,10 @@ granit_result granit_shader_tools_compiler_compile(granit_shader_tools_compiler 
       !valid_string(desc->spirv_output_path, desc->spirv_output_path_length) ||
       !valid_string(desc->wgsl_output_path, desc->wgsl_output_path_length) ||
       desc->input_path_length == 0 || desc->entry_point_length == 0 ||
-      desc->spirv_output_path_length == 0 || !valid_binding_expectations(*desc))
+      desc->spirv_output_path_length == 0 || desc->wgsl_output_path_length == 0 ||
+      !valid_binding_expectations(*desc))
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (desc->source_language != GRANIT_SHADER_SOURCE_LANGUAGE_HLSL && desc->define_count != 0)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (desc->source_language == GRANIT_SHADER_SOURCE_LANGUAGE_HLSL &&
-      desc->wgsl_output_path_length == 0)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (compiler_value->tint.empty() ||
-      (desc->source_language == GRANIT_SHADER_SOURCE_LANGUAGE_HLSL && compiler_value->dxc.empty()))
+  if (compiler_value->tint.empty() || compiler_value->dxc.empty())
     return GRANIT_ERROR_NOT_READY;
   try {
     std::vector<std::pair<std::string, std::string>> definitions;
@@ -392,17 +386,10 @@ granit_result granit_shader_tools_compiler_compile(granit_shader_tools_compiler 
     const auto stage = stage_name(desc->stage);
     const auto spirv_output = copy_path(desc->spirv_output_path, desc->spirv_output_path_length);
     const auto wgsl_output = copy_path(desc->wgsl_output_path, desc->wgsl_output_path_length);
-    int exit_code = 1;
-    if (desc->source_language == GRANIT_SHADER_SOURCE_LANGUAGE_WGSL) {
-      granit::tools::compile_options options{compiler_value->tint, input, entry_point, stage,
-                                             spirv_output};
-      exit_code = granit::tools::compile_shader(options, info, output, diagnostic);
-    } else if (desc->source_language == GRANIT_SHADER_SOURCE_LANGUAGE_HLSL) {
-      granit::tools::hlsl_compile_options options{
-          compiler_value->dxc, compiler_value->tint,  input, entry_point, stage, spirv_output,
-          wgsl_output,         std::move(definitions)};
-      exit_code = granit::tools::compile_hlsl_shader(options, info, output, diagnostic);
-    }
+    granit::tools::hlsl_compile_options options{
+        compiler_value->dxc, compiler_value->tint, input, entry_point, stage, spirv_output,
+        wgsl_output,         std::move(definitions)};
+    auto exit_code = granit::tools::compile_hlsl_shader(options, info, output, diagnostic);
     if (exit_code == 0 && !validate_binding_expectations(*desc, info, diagnostic)) {
       std::error_code filesystem_error;
       std::filesystem::remove(spirv_output, filesystem_error);
@@ -418,9 +405,7 @@ granit_result granit_shader_tools_compiler_compile(granit_shader_tools_compiler 
     value->diagnostic = std::move(diagnostic).str();
     if (exit_code == 0) {
       value->spirv = read_binary_file(spirv_output);
-      value->wgsl = desc->source_language == GRANIT_SHADER_SOURCE_LANGUAGE_WGSL
-                        ? read_text_file(input)
-                        : read_text_file(wgsl_output);
+      value->wgsl = read_text_file(wgsl_output);
       if (value->spirv.empty() || value->wgsl.empty()) {
         value->status = GRANIT_ERROR_INITIALIZATION_FAILED;
         value->diagnostic += "无法读取编译产物\n";

@@ -3,8 +3,8 @@
 
 # ShaderTools SDK
 
-ShaderTools 是供编辑器、资产构建器和命令行工具直接链接的可选组件。它通过统一 Compiler 调用
-锁定版本的 DXC 与 Tint，将 WGSL 或 HLSL 编译为离线 Shader 产物，并检查
+ShaderTools 是供编辑器、资产构建器和命令行工具直接链接的可选组件。它通过 Compiler 调用
+锁定版本的 DXC 与 Tint，将 HLSL 编译为离线 Shader 产物，并检查
 SPIR-V 的入口点、阶段和反射；它不进入核心渲染库的传递依赖。
 
 ## 构建与链接
@@ -49,13 +49,12 @@ HLSL portable 路径需要资产构建机安装 DXC 与 Tint，但应用运行�
 - C11 的编译、反射、Object Builder 和 Library Builder 入口分别位于对应的
   `<granit/tools/shader_*.h>`；`.hpp` 提供 C++20 包装。`shader_tools.h/.hpp` 只作为聚合入口。
 - `granit_shader_tools_compiler_create` 创建可复用 Compiler，配置包含 DXC 与 Tint 路径；
-  `granit_shader_tools_compiler_compile` 通过 `source_language` 选择前端。C++ 包装对应移动独占的
-  `compiler` 和统一 `compile_desc`。旧的语言专用描述与编译入口已删除。
-- WGSL 通过 Tint 生成 portable SPIR-V；HLSL 通过 DXC 生成 SPIR-V，再由 Tint 生成 portable
-  WGSL。统一编译描述始终要求 SPIR-V 输出路径，HLSL 还要求 WGSL
-  输出路径。`target_backends` 声明后续产物面向的非零后端集合。
+  `granit_shader_tools_compiler_compile` 固定接收 HLSL。C++ 包装对应移动独占的 `compiler` 和
+  `compile_desc`，编译描述不再携带源码语言。
+- Compiler 通过 DXC 生成 Vulkan SPIR-V，再由 Tint 生成 portable WGSL。编译描述始终要求
+  SPIR-V 与 WGSL 输出路径；`target_backends` 声明后续产物面向的非零后端集合。
 - Compiler 在创建时复制工具路径，可供多个线程并发编译；销毁必须等待使用该句柄的调用结束。
-  缺少当前语言所需工具配置时，编译返回 `not_ready`，未知语言、阶段、目标位或无效路径返回
+  缺少 DXC 或 Tint 配置时，编译返回 `not_ready`，未知阶段、目标位或无效路径返回
   `invalid_argument`。`granit_shader_tools_inspect_spirv` 独立检查已有 SPIR-V，并直接返回 Reflection，
   不创建 Compilation。
 - `granit_shader_tools_compilation` 持有一次源码编译的状态、诊断和 SPIR-V/WGSL 载荷；
@@ -86,14 +85,14 @@ HLSL portable 路径需要资产构建机安装 DXC 与 Tint，但应用运行�
   一致。临时文件不会进入资产。DXC 或 Tint 拒绝源代码及其能力时，调用返回
   `initialization_failed`、保留工具诊断并删除不完整产物，不会降低 Vulkan sidecar 的目标版本，
   也不会静默降级为仅 Vulkan 资产。
-- `granit_shader_tools_compile_desc.defines` 仅用于 HLSL，接收显式长度的名称和值。名称必须是合法标识符，
+- `granit_shader_tools_compile_desc.defines` 接收显式长度的名称和值。名称必须是合法标识符，
   值不能为空，同名定义会被拒绝；SDK 按名称排序后传给 DXC。CLI 对应参数为可重复的
   `--define NAME=VALUE`。排序后的完整定义集合属于编译上下文并进入缓存键。
 - 命令行 `compile` 暴露相同路径，并可直接写入、裁剪 `.grshaderobj` 资产。写资产时必须
   显式记录 DXC 与 Tint 修订号。全后端资产缓存命中时会在启动两个编译器前直接恢复 SPIR-V 和
   WGSL；单后端裁剪目前仍执行完整编译，避免声称恢复了未被资产保存的另一后端产物。
-- 缓存键基于原始源码语言、原始源码内容、入口点、阶段、工具修订号、目标、选项和必需特性。
-  因此相同文本分别作为 WGSL 或 HLSL 输入时不会错误共享缓存。
+- 私有 Object 缓存键基于源码种类、原始源码内容、入口点、阶段、工具修订号、目标、选项和必需
+  特性；源码种类字段将在旧 Object Builder 删除时一并内化。
 - `granit_shader_tools_object_desc.backend_mask` 必须选择 Vulkan、WebGPU 或二者；写入时会删除同名
   的未选后端 sidecar，清单仅记录实际保留的变体。缓存描述的 `backend_mask` 表示期望的精确
   变体集合，清单集合不同也会正常未命中；两个字段均不能为零。

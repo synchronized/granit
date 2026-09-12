@@ -5,7 +5,7 @@
 
 ## 状态
 
-**本地完成。** S-37K1 已完成共享 Shader 类型收敛；S-37K2 已完成统一 Compiler 配置、编译描述和
+**本地完成，作者语言部分已由 [S-37L](S-37L-hlsl-first-shader-authoring.md) 取代。** S-37K1 已完成共享 Shader 类型收敛；S-37K2 已完成统一 Compiler 配置、编译描述和
 单一编译入口；S-37K2A 已完成通用内容摘要收敛；S-37K3 已完成 Compilation 与 Reflection
 边界；S-37K4 已完成 Shader Object 边界；S-37K5 已完成 Library Builder 与 CLI 拆分；S-37K6
 已完成资产、安装与本地发布验收。

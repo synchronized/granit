@@ -380,38 +380,6 @@ bool inspect_shader(const std::filesystem::path& path, bool emit, shader_info& i
   return info.stage != "unsupported" && !info.entry_point.empty();
 }
 
-int compile_shader(const compile_options& options, shader_info& info, std::ostream& output,
-                   std::ostream& error) {
-  std::error_code filesystem_error;
-  std::filesystem::remove(options.output, filesystem_error);
-  process_result process;
-  const std::vector<std::string> arguments{
-      options.tint.string(),   "--format",          "spirv",
-      "--entry-point",         options.entry_point, "--output-name",
-      options.output.string(), "--validate",        options.input.string()};
-  if (!run_process(arguments, process)) {
-    error << "无法启动 Tint：" << options.tint.string() << '\n';
-    return 1;
-  }
-  output << process.standard_output;
-  error << process.standard_error;
-  if (process.exit_code != 0) {
-    std::filesystem::remove(options.output, filesystem_error);
-    error << "Tint 编译失败，入口点：" << options.entry_point << "，阶段：" << options.stage
-          << "，退出码：" << process.exit_code << '\n';
-    return 1;
-  }
-  if (!inspect_shader(options.output, false, info, output, error) ||
-      info.entry_point != options.entry_point || info.stage != options.stage) {
-    std::filesystem::remove(options.output, filesystem_error);
-    error << "Tint 产物的入口点或阶段与请求不一致\n";
-    return 1;
-  }
-  output << "已生成 " << options.output.string() << "（" << info.entry_point << ", " << info.stage
-         << "）\n";
-  return 0;
-}
-
 int compile_hlsl_shader(const hlsl_compile_options& options, shader_info& info,
                         std::ostream& output, std::ostream& error) {
   std::error_code filesystem_error;

@@ -57,13 +57,9 @@ typedef struct granit_shader_tools_define {
 #define GRANIT_SHADER_TOOLS_DEFINE_INIT                                                            \
   {(uint32_t)sizeof(granit_shader_tools_define), UINT32_C(0), 0, UINT64_C(0), 0, UINT64_C(0)}
 
-/**
- * 统一 Shader 编译描述；Compiler 根据 source_language 选择前端。
- * spirv_output_path 始终必填；HLSL 还必须提供 wgsl_output_path。
- */
+/** HLSL 编译描述；spirv_output_path 与 wgsl_output_path 均必填。 */
 typedef struct granit_shader_tools_compile_desc {
   uint32_t struct_size;
-  granit_shader_source_language source_language;
   granit_shader_stage stage;
   /** 产物面向的后端非零位集合；当前编译路径会生成后续打包所需的全部中间载荷。 */
   granit_shader_backend_flags target_backends;
@@ -75,7 +71,7 @@ typedef struct granit_shader_tools_compile_desc {
   uint64_t spirv_output_path_length;
   const char* wgsl_output_path;
   uint64_t wgsl_output_path_length;
-  /** 仅 HLSL 使用；实现按名称排序并拒绝重复项。 */
+  /** 实现按名称排序并拒绝重复项。 */
   const granit_shader_tools_define* defines;
   uint32_t define_count;
   uint32_t validate_binding_set;
@@ -85,7 +81,6 @@ typedef struct granit_shader_tools_compile_desc {
 
 #define GRANIT_SHADER_TOOLS_COMPILE_DESC_INIT                                                      \
   {(uint32_t)sizeof(granit_shader_tools_compile_desc),                                             \
-   GRANIT_SHADER_SOURCE_LANGUAGE_WGSL,                                                             \
    GRANIT_SHADER_STAGE_VERTEX,                                                                     \
    GRANIT_SHADER_BACKEND_ALL_BITS,                                                                 \
    0,                                                                                              \
@@ -124,7 +119,7 @@ GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_compiler_create(
     const granit_shader_tools_compiler_desc* desc, granit_shader_tools_compiler* compiler);
 
 /**
- * 使用 Compiler 编译 WGSL 或 HLSL。只要编译已启动便返回 Compilation，诊断由其持有。
+ * 使用 Compiler 编译 HLSL。只要编译已启动便返回 Compilation，诊断由其持有。
  * Compiler 可由多个线程并发调用，描述中的字符串和数组只需在调用期间有效。
  */
 GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_compiler_compile(

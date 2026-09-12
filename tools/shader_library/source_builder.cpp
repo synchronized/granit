@@ -288,7 +288,6 @@ granit_shader_tools_build_library_from_manifest(const granit_shader_tools_source
         }
         const granit_shader_tools_compile_desc compile{
             .struct_size = sizeof(granit_shader_tools_compile_desc),
-            .source_language = GRANIT_SHADER_SOURCE_LANGUAGE_HLSL,
             .stage = static_cast<granit_shader_stage>(item.shader->stage),
             .target_backends = static_cast<granit_shader_backend_flags>(manifest.target_backends),
             .input_path = source_string.data(),

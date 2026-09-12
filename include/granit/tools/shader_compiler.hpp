@@ -32,7 +32,6 @@ struct shader_define {
 
 struct compile_desc {
   std::string_view input_path;
-  shader_source_language source_language{shader_source_language::wgsl};
   shader_stage stage{shader_stage::vertex};
   std::string_view entry_point{"main"};
   shader_backend target_backends{shader_backend::all};
@@ -161,7 +160,6 @@ public:
       }
       const granit_shader_tools_compile_desc native{
           .struct_size = sizeof(granit_shader_tools_compile_desc),
-          .source_language = static_cast<granit_shader_source_language>(desc.source_language),
           .stage = static_cast<granit_shader_stage>(desc.stage),
           .target_backends = static_cast<granit_shader_backend_flags>(desc.target_backends),
           .input_path = desc.input_path.data(),

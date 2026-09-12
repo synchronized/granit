@@ -50,6 +50,8 @@ int main(int argc, char** argv) {
   compile_desc.stage = GRANIT_SHADER_STAGE_FRAGMENT;
   compile_desc.spirv_output_path = argv[1];
   compile_desc.spirv_output_path_length = (uint64_t)strlen(argv[1]);
+  compile_desc.wgsl_output_path = argv[1];
+  compile_desc.wgsl_output_path_length = (uint64_t)strlen(argv[1]);
   if (granit_shader_tools_compiler_compile(compiler, &compile_desc, &compilation) !=
           GRANIT_ERROR_NOT_READY ||
       compilation != 0 || granit_shader_tools_compiler_destroy(compiler) != GRANIT_SUCCESS ||

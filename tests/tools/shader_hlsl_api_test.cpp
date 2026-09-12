@@ -43,7 +43,6 @@ int main(int argc, char** argv) {
   const granit::shader_tools::shader_define definitions[]{{.name = "TEST_VALUE", .value = "1"}};
   granit::shader_tools::compile_desc desc;
   desc.input_path = input;
-  desc.source_language = granit::shader_source_language::hlsl;
   desc.stage = granit::shader_stage::fragment;
   desc.entry_point = "fragment_main";
   desc.spirv_output_path = spirv;

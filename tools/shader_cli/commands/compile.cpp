@@ -135,7 +135,6 @@ int compile_shader(int argc, char** argv) {
   }
   granit::shader_tools::compile_desc desc;
   desc.input_path = *input;
-  desc.source_language = granit::shader_source_language::hlsl;
   desc.stage = static_cast<granit::shader_stage>(stage_value);
   desc.entry_point = *entry;
   desc.target_backends = static_cast<granit::shader_backend>(backend_mask);
