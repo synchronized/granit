@@ -15,6 +15,21 @@ set_target_properties(granit_spirv_reflect PROPERTIES FOLDER "ThirdParty/SPIRV-R
 find_package(Threads REQUIRED)
 
 add_library(
+  granit_shader_library_source OBJECT
+  shader_library/source_manifest.cpp
+  shader_library/source_manifest.h
+)
+target_compile_features(granit_shader_library_source PUBLIC cxx_std_20)
+target_include_directories(
+  granit_shader_library_source
+  PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}" "${PROJECT_SOURCE_DIR}/include"
+)
+granit_target_compile_warnings(granit_shader_library_source)
+set_target_properties(
+  granit_shader_library_source PROPERTIES FOLDER "Tools" POSITION_INDEPENDENT_CODE YES
+)
+
+add_library(
   granit_shader_tools_core OBJECT
   shader_tools_core.cpp
   shader_tools_core.h
@@ -67,6 +82,7 @@ if(GRANIT_BUILD_SHADER_TOOLS OR GRANIT_BUILD_TOOLS OR (GRANIT_BUILD_TESTING AND 
     granit_shader_tools
     PRIVATE
       $<TARGET_OBJECTS:granit_shader_object_storage>
+      $<TARGET_OBJECTS:granit_shader_library_source>
       $<TARGET_OBJECTS:granit_internal_shader_format>
       $<TARGET_OBJECTS:granit_shader_tools_core>
       $<TARGET_OBJECTS:granit_spirv_reflect>
@@ -208,6 +224,24 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   granit_target_compile_warnings(granit_shader_library_test)
   granit_target_output_directories(granit_shader_library_test)
   add_test(NAME granit.shader_tools.library_codec COMMAND granit_shader_library_test)
+
+  add_executable(
+    granit_shader_library_source_test
+    "${PROJECT_SOURCE_DIR}/tests/tools/shader_library_source_manifest_test.cpp"
+    $<TARGET_OBJECTS:granit_shader_library_source>
+  )
+  target_compile_features(granit_shader_library_source_test PRIVATE cxx_std_20)
+  target_include_directories(
+    granit_shader_library_source_test
+    PRIVATE "${PROJECT_SOURCE_DIR}/tools" "${PROJECT_SOURCE_DIR}/include"
+  )
+  target_link_libraries(granit_shader_library_source_test PRIVATE Catch2::Catch2WithMain)
+  granit_target_compile_warnings(granit_shader_library_source_test)
+  granit_target_output_directories(granit_shader_library_source_test)
+  add_test(
+    NAME granit.shader_tools.library_source_manifest
+    COMMAND granit_shader_library_source_test
+  )
 
   add_executable(
     granit_shader_library_builder_api_test
