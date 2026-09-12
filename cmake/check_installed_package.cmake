@@ -24,6 +24,18 @@ function(granit_check_package name expected_success)
   if(NOT expected_success AND result EQUAL 0)
     message(FATAL_ERROR "${name} 应配置失败，但意外成功")
   endif()
+  if(expected_success)
+    execute_process(
+      COMMAND "${CMAKE_COMMAND}" --build "${GRANIT_TEST_BINARY_DIR}/${name}"
+      RESULT_VARIABLE build_result
+      OUTPUT_VARIABLE build_output
+      ERROR_VARIABLE build_error
+    )
+    if(NOT build_result EQUAL 0)
+      message(FATAL_ERROR
+              "${name} 应构建成功，但返回 ${build_result}\n${build_output}\n${build_error}")
+    endif()
+  endif()
 endfunction()
 
 granit_check_package(core_only TRUE -DGRANIT_REQUEST_VERSION=0.21)

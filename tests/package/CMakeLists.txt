@@ -2,7 +2,7 @@
 # Copyright (c) 2026 Granit contributors
 
 cmake_minimum_required(VERSION 3.23)
-project(granit_package_selection LANGUAGES C)
+project(granit_package_selection LANGUAGES C CXX)
 
 set(GRANIT_REQUEST_VERSION "0.1" CACHE STRING "请求的 Granit 包版本")
 set(GRANIT_REQUEST_COMPONENT "" CACHE STRING "请求的 Granit component；空值只请求 Core")
@@ -77,6 +77,14 @@ elseif(GRANIT_REQUEST_COMPONENT STREQUAL "Input")
   endif()
 elseif(GRANIT_REQUEST_COMPONENT STREQUAL "ShaderTools")
   set(expected_target granit::shader_tools)
+  add_executable(granit_shader_tools_c_consumer shader_tools_c_consumer.c)
+  target_compile_features(granit_shader_tools_c_consumer PRIVATE c_std_11)
+  target_link_libraries(granit_shader_tools_c_consumer PRIVATE granit::shader_tools)
+  set_target_properties(granit_shader_tools_c_consumer PROPERTIES LINKER_LANGUAGE CXX)
+
+  add_executable(granit_shader_tools_cpp_consumer shader_tools_cpp_consumer.cpp)
+  target_compile_features(granit_shader_tools_cpp_consumer PRIVATE cxx_std_20)
+  target_link_libraries(granit_shader_tools_cpp_consumer PRIVATE granit::shader_tools)
 elseif(GRANIT_REQUEST_COMPONENT STREQUAL "IntegrationSDL3")
   set(expected_target granit::integration_sdl3)
 elseif(GRANIT_REQUEST_COMPONENT STREQUAL "IntegrationImGui")
