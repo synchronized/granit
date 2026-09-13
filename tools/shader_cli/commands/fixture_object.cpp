@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "asset_tools_shader_core.h"
 #include "shader_cli/arguments.h"
 #include "shader_cli/fixture_commands.h"
 #include "shader_format/shader_cache_key.h"
 #include "shader_format/shader_object.h"
 #include "shader_object_storage.h"
-#include "shader_tools_core.h"
 
 #include <algorithm>
 #include <cstddef>

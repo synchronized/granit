@@ -15,7 +15,7 @@ const char* object_backend_name(uint32_t backend) {
 } // namespace
 
 int print_target_capabilities(granit::shader_backend backend) {
-  const auto [status, capabilities] = granit::shader_tools::target_capabilities(backend);
+  const auto [status, capabilities] = granit::asset_tools::shader::target_capabilities(backend);
   if (status.failed()) {
     std::cerr << "不支持请求的 Shader 目标档位\n";
     return 1;

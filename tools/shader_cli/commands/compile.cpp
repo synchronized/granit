@@ -33,8 +33,7 @@ bool parse_defines(const std::vector<std::string>& arguments,
 } // namespace
 
 int compile_shader(int argc, char** argv) {
-  const auto dxc = option_value(argc, argv, "--dxc");
-  const auto tint = option_value(argc, argv, "--tint");
+  const auto toolchain = option_value(argc, argv, "--toolchain");
   const auto input = option_value(argc, argv, "--input");
   const auto entry = option_value(argc, argv, "--entry");
   const auto stage = option_value(argc, argv, "--stage");
@@ -42,27 +41,27 @@ int compile_shader(int argc, char** argv) {
   const auto wgsl_output = option_value(argc, argv, "--wgsl-output");
   std::vector<std::pair<std::string, std::string>> definitions;
   const auto define_arguments = option_values(argc, argv, "--define");
-  if (!dxc || !tint || !input || !entry || !stage || !spirv_output || !wgsl_output ||
+  if (!toolchain || !input || !entry || !stage || !spirv_output || !wgsl_output ||
       (*stage != "vertex" && *stage != "fragment" && *stage != "compute") ||
       !parse_defines(define_arguments, definitions)) {
-    std::cerr << "compile 需要 --dxc、--tint、--input、--entry、--stage、"
+    std::cerr << "compile 需要 --toolchain、--input、--entry、--stage、"
                  "--spirv-output 和 --wgsl-output\n";
     return 2;
   }
   const auto stage_value = *stage == "vertex"     ? GRANIT_SHADER_STAGE_VERTEX
                            : *stage == "fragment" ? GRANIT_SHADER_STAGE_FRAGMENT
                                                   : GRANIT_SHADER_STAGE_COMPUTE;
-  std::vector<granit::shader_tools::shader_define> shader_definitions;
+  std::vector<granit::asset_tools::shader::shader_define> shader_definitions;
   shader_definitions.reserve(definitions.size());
   for (const auto& [name, value] : definitions) {
     shader_definitions.push_back({.name = name, .value = value});
   }
-  granit::shader_tools::compiler compiler;
-  if (compiler.initialize({*dxc, *tint}).failed()) {
+  granit::asset_tools::shader::compiler compiler;
+  if (compiler.initialize({*toolchain}).failed()) {
     std::cerr << "Shader Compiler 创建失败\n";
     return 1;
   }
-  granit::shader_tools::compile_desc desc;
+  granit::asset_tools::shader::compile_desc desc;
   desc.input_path = *input;
   desc.stage = static_cast<granit::shader_stage>(stage_value);
   desc.entry_point = *entry;

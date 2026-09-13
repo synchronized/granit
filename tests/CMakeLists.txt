@@ -122,7 +122,7 @@ if(BUILD_SHARED_LIBS)
       GRANIT_ABI_RENDER_PIPELINE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.17.0/render_pipeline_symbols.txt"
       GRANIT_ABI_WINDOW_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.5.0/window_symbols.txt"
       GRANIT_ABI_INPUT_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/input_symbols.txt"
-      GRANIT_ABI_ASSET_TOOLS_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.21.0/shader_tools_symbols.txt"
+      GRANIT_ABI_ASSET_TOOLS_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.22.0/asset_tools_symbols.txt"
   )
   target_include_directories(
     granit_abi_exports_test
@@ -162,7 +162,7 @@ if(BUILD_SHARED_LIBS)
         set(snapshot_version 0.17.0)
       endif()
       if(component STREQUAL "asset_tools")
-        set(snapshot_version 0.21.0)
+        set(snapshot_version 0.22.0)
       endif()
       add_test(
         NAME "granit.abi.exports.${component}"
@@ -197,7 +197,7 @@ if(BUILD_SHARED_LIBS)
     )
     granit_add_abi_export_snapshot_test(input granit_input input_symbols.txt)
     granit_add_abi_export_snapshot_test(
-      asset_tools granit_asset_tools shader_tools_symbols.txt
+      asset_tools granit_asset_tools asset_tools_symbols.txt
     )
   endif()
 endif()
@@ -468,7 +468,7 @@ target_compile_definitions(
     GRANIT_UNLIT_SHADER_DIR="${GRANIT_UNLIT_TEST_SHADER_DIR}"
 )
 add_dependencies(
-  granit_pipeline_test granit_shader_tool_test_objects granit_test_shader_assets
+  granit_pipeline_test granit_shader_fixture_objects granit_test_shader_assets
 )
 granit_target_compile_warnings(granit_pipeline_test)
 granit_target_output_directories(granit_pipeline_test)
@@ -512,7 +512,7 @@ target_compile_definitions(
     GRANIT_PBR_MATERIAL_ASSET="${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat"
 )
 add_dependencies(
-  granit_material_test granit_shader_tool_test_objects granit_test_shader_assets
+  granit_material_test granit_shader_fixture_objects granit_test_shader_assets
 )
 granit_target_compile_warnings(granit_material_test)
 add_test(NAME granit.material COMMAND granit_material_test)
@@ -574,7 +574,7 @@ target_compile_definitions(
     GRANIT_TEST_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/assets"
     GRANIT_TEST_ARTIFACT_DIR="${CMAKE_BINARY_DIR}/test-artifacts"
 )
-add_dependencies(granit_renderer_test granit_shader_tool_test_objects)
+add_dependencies(granit_renderer_test granit_shader_fixture_objects)
 granit_target_compile_warnings(granit_renderer_test)
 add_test(NAME granit.renderer COMMAND granit_renderer_test)
 add_test(

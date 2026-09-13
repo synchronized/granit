@@ -79,6 +79,7 @@ granit_check_package(exact TRUE -DGRANIT_REQUEST_VERSION=0.21.0 -DGRANIT_REQUEST
 granit_check_package(newer_minor FALSE -DGRANIT_REQUEST_VERSION=0.22)
 granit_check_package(incompatible_major FALSE -DGRANIT_REQUEST_VERSION=1.0)
 granit_check_package(unknown_component FALSE -DGRANIT_REQUEST_COMPONENT=Unknown)
+granit_check_package(removed_shader_tools FALSE -DGRANIT_REQUEST_COMPONENT=ShaderTools)
 
 message(STATUS
         "安装包选包检查通过：Core 隔离、独立 component、0.x 次版本和未知 component 均符合预期")

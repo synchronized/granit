@@ -42,6 +42,20 @@ if(EXISTS "${install_prefix}/lib/cmake/granit/granitAssetToolsTargets.cmake")
       message(FATAL_ERROR "AssetTools 安装结果缺少公共头：${asset_tools_header}")
     endif()
   endforeach()
+  foreach(
+    obsolete_asset_tools_file
+    IN ITEMS
+      include/granit/tools/shader_tools.h
+      include/granit/tools/shader_tools.hpp
+      include/granit/tools/shader_tools_export.h
+      lib/cmake/granit/granitShaderToolsTargets.cmake
+      bin/granit_shader_tool
+      bin/granit_shader_tool.exe
+  )
+    if(EXISTS "${install_prefix}/${obsolete_asset_tools_file}")
+      message(FATAL_ERROR "AssetTools 安装结果仍包含旧文件：${obsolete_asset_tools_file}")
+    endif()
+  endforeach()
 endif()
 
 file(GLOB_RECURSE installed_files RELATIVE "${install_prefix}" "${install_prefix}/*")

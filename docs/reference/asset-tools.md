@@ -17,14 +17,15 @@ find_package(granit CONFIG REQUIRED COMPONENTS AssetTools)
 target_link_libraries(editor PRIVATE granit::asset_tools)
 ```
 
-`GRANIT_BUILD_TOOLS=ON` 也会构建该 SDK，因为 `granit_asset_tool` 是它的命令行薄适配层。编译器
-可执行文件路径在创建 Compiler 时配置并复制到句柄中，不会成为公共链接依赖。
+`GRANIT_BUILD_TOOLS=ON` 也会构建该 SDK，因为 `granit_asset_tool` 是它的命令行薄适配层。Shader
+Compiler 只接收工具链根目录，按固定的 `bin/dxc` 与 `bin/tint` 布局解析工具，不会形成公共链接
+依赖。
 
 HLSL portable 路径需要资产构建机安装 DXC 与 Tint，但应用运行时和 Granit 核心 SDK 均不需要
-它们。配置时优先设置 `GRANIT_SHADER_TOOLCHAIN_ROOT`，其 `bin` 目录应包含两个工具；也可分别
-设置 `GRANIT_DXC_EXECUTABLE` 与 `GRANIT_TINT_EXECUTABLE`。未设置统一根目录时，DXC 还会从
-`VULKAN_SDK` 和 PATH 查找，Tint 从 PATH 查找。配置阶段会检查锁定版本及 Tint 所需转换能力，不符合契约的工具不会用于
-端到端测试。
+它们。标准 SDK、CLI 和 CMake 资产入口统一使用 `GRANIT_SHADER_TOOLCHAIN_ROOT`，其 `bin` 目录
+必须包含两个工具。配置模块仍可探测单独安装的 DXC 与 Tint，以报告本机能力；没有统一根目录时
+不会启动跨后端 HLSL 资产构建。配置阶段会检查锁定版本及 Tint 所需转换能力，不符合契约的工具
+不会用于端到端测试。
 
 当前 Windows 工具链契约锁定 DXC `1.8.0.4973`，Linux 工具链契约锁定 DXC 构建
 `4973-8f559587`。两者均锁定 Dawn/Tint
@@ -48,17 +49,17 @@ Library Builder 自动将 DXC 与 Tint 二进制的 SHA-256 身份纳入缓存�
 - C11 的编译、反射和 Library Builder 入口分别位于对应的
   `<granit/tools/shader_*.h>`；`.hpp` 提供 C++20 包装。`asset_tools.h/.hpp` 是 AssetTools 的聚合
   入口，后续资产领域继续使用各自独立头文件。
-- `granit_shader_tools_compiler_create` 创建可复用 Compiler，配置包含 DXC 与 Tint 路径；
-  `granit_shader_tools_compiler_compile` 固定接收 HLSL。C++ 包装对应移动独占的 `compiler` 和
+- `granit_asset_tools_shader_compiler_create` 创建可复用 Compiler，配置只包含 Toolchain 根目录；
+  `granit_asset_tools_shader_compiler_compile` 固定接收 HLSL。C++ 包装对应移动独占的 `compiler` 和
   `compile_desc`，编译描述不再携带源码语言。
 - Compiler 通过 DXC 生成 Vulkan SPIR-V，再由 Tint 生成 portable WGSL。编译描述始终要求
   SPIR-V 与 WGSL 输出路径；`target_backends` 声明后续产物面向的非零后端集合。
-- Compiler 在创建时复制工具路径，可供多个线程并发编译；销毁必须等待使用该句柄的调用结束。
-  缺少 DXC 或 Tint 配置时，编译返回 `not_ready`，未知阶段、目标位或无效路径返回
-  `invalid_argument`。`granit_shader_tools_inspect_spirv` 独立检查已有 SPIR-V，并直接返回 Reflection，
-  不创建 Compilation。
-- `granit_shader_tools_compilation` 持有一次源码编译的状态、诊断和 SPIR-V/WGSL 载荷；
-  `granit_shader_tools_compilation_get_reflection` 返回独立拥有的 Reflection，销毁 Compilation 后仍可
+- Compiler 在创建时复制根目录并验证固定工具布局，可供多个线程并发编译；销毁必须等待使用该
+  句柄的调用结束。缺少 DXC 或 Tint 时创建返回 `not_ready`，空根目录、未知阶段、目标位或无效
+  路径返回 `invalid_argument`。`granit_asset_tools_shader_inspect_spirv` 独立检查已有 SPIR-V，
+  并直接返回 Reflection，不创建 Compilation。
+- `granit_asset_tools_shader_compilation` 持有一次源码编译的状态、诊断和 SPIR-V/WGSL 载荷；
+  `granit_asset_tools_shader_compilation_get_reflection` 返回独立拥有的 Reflection，销毁 Compilation 后仍可
   查询。两种句柄由不同句柄表校验，不能混用。
 - Library Builder 在启动编译器前校验输入、编译上下文和 Object 摘要；命中时从私有 sidecar
   恢复所需产物，未命中时编译并原子更新缓存。Object 写入和缓存恢复不属于公共 API。
@@ -66,7 +67,7 @@ Library Builder 自动将 DXC 与 Tint 二进制的 SHA-256 身份纳入缓存�
   多能力档位选择属于 [S-20](../plans/S-20-shader-asset-variants.md)。
 - `.grshlib` 是 Core 的公共运行时资产；`.grshaderobj` 的链接、裁剪、去重和原子写入只由
   Library Builder 在工具内部执行。
-- `granit_shader_tools_build_library_from_manifest` 是 HLSL-first 的高层构建入口。它读取
+- `granit_asset_tools_shader_build_library_from_manifest` 是 HLSL-first 的高层构建入口。它读取
   `.grshlib.json`，按逻辑名称和变体编译 HLSL，管理私有 `.grshaderobj` 缓存，并一次写出
   `.grshlib` 与 `.grshidx.json`。C++ 包装使用 `source_library_desc`；CLI 对应 `build-library`。
   `cache_hit` 只在全部 Object、Library 和索引均未变化时为真。
@@ -80,25 +81,25 @@ Library Builder 自动将 DXC 与 Tint 二进制的 SHA-256 身份纳入缓存�
   一致。临时文件不会进入资产。DXC 或 Tint 拒绝源代码及其能力时，调用返回
   `initialization_failed`、保留工具诊断并删除不完整产物，不会降低 Vulkan sidecar 的目标版本，
   也不会静默降级为仅 Vulkan 资产。
-- `granit_shader_tools_compile_desc.defines` 接收显式长度的名称和值。名称必须是合法标识符，
+- `granit_asset_tools_shader_compile_desc.defines` 接收显式长度的名称和值。名称必须是合法标识符，
   值不能为空，同名定义会被拒绝；SDK 按名称排序后传给 DXC。CLI 对应参数为可重复的
   `--define NAME=VALUE`。排序后的完整定义集合属于编译上下文并进入缓存键。
 - 命令行 `compile` 用于单次 HLSL 编译和诊断，只输出 SPIR-V 与 WGSL。正式资产通过
   `build-library` 构建，由 Builder 管理工具身份、Object 缓存和最终 Library。
 - HLSL-first Library Builder 的私有 Object 缓存键基于源码内容、入口点、阶段、工具修订号、目标、
   选项和必需特性。
-- `granit_shader_tools_get_target_capabilities` 查询工具内置目标档位的静态契约，不读取构建机 GPU。
+- `granit_asset_tools_shader_get_target_capabilities` 查询工具内置目标档位的静态契约，不读取构建机 GPU。
   CLI 的 `targets` 列出目标，`capabilities --target <name>` 查询对应能力。当前提供
   `vulkan-portable` 和 `webgpu-portable`，二者均不声明额外可选特性。
 - Library Builder 将目标后端和必需特性纳入缓存键与变体记录。
-- `granit_shader_tools_reflection_get_binding_count` 和 `granit_shader_tools_reflection_get_binding` 按
+- `granit_asset_tools_shader_reflection_get_binding_count` 和 `granit_asset_tools_shader_reflection_get_binding` 按
   Group、Binding 数字顺序返回结构化绑定。记录包含资源类型、访问模式、数组数量和 Buffer
   最小绑定尺寸。
 - Vertex 输入和 Fragment 输出按 Location、Component 排序，记录标量类型、位宽及向量宽度；
   Compute 入口点可查询固定 Workgroup 的 X/Y/Z 大小。内建接口变量不会进入用户接口列表。
 - Override／Specialization Constant 按常量 ID 排序，记录名称、标量类型、位宽和默认值原始位模式；
   `default_value_size` 指明原始值占用的有效字节数。
-- `granit_shader_tools_reflection_get_json` 返回与结构化查询字段一致、稳定排序的 UTF-8 JSON；
+- `granit_asset_tools_shader_reflection_get_json` 返回与结构化查询字段一致、稳定排序的 UTF-8 JSON；
   C++ 包装通过 `reflection::reflection_json()` 提供只读视图。Binding 类型、访问模式和标量类型在
   C++ 中使用强类型枚举。
   C++ 查询和构建函数使用 `granit::result` 返回操作状态，可通过 `ok()`、`failed()` 或显式布尔
@@ -109,7 +110,7 @@ Library Builder 自动将 DXC 与 Tint 二进制的 SHA-256 身份纳入缓存�
   `expected_bindings`。SDK 会按 Group/Binding 比较最终 SPIR-V；缺失、多余或重复记录都会失败，
   编译失败时删除输出文件。零值关闭该检查。
 - 参数有效后，即使编译或检查失败也可能返回非零句柄。调用者应读取 `status` 和诊断，最后按类型
-  调用 `granit_shader_tools_compilation_destroy` 或 `granit_shader_tools_reflection_destroy`；C++ 包装
+  调用 `granit_asset_tools_shader_compilation_destroy` 或 `granit_asset_tools_shader_reflection_destroy`；C++ 包装
   会自动销毁。
 - 查询得到的字符串和载荷视图由 SDK 持有，在所属句柄销毁前有效，调用者不得释放或修改。不得让
   查询与同一句柄的销毁并发执行。

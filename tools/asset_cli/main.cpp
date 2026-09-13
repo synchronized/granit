@@ -17,11 +17,11 @@ void print_usage() {
                "  granit_asset_tool shader capabilities "
                "--target <vulkan-portable|webgpu-portable>\n"
                "  granit_asset_tool shader build-library --manifest <library.grshlib.json> "
-               "--dxc <path> --tint <path> --cache <directory> --output <library.grshlib> "
+               "--toolchain <root> --cache <directory> --output <library.grshlib> "
                "--index <library.grshidx.json>\n"
                "  granit_asset_tool shader index-ids --index <library.grshidx.json> "
                "--shader <name=logical-name>... --output <shader-ids.inc>\n"
-               "  granit_asset_tool shader compile --dxc <path> --tint <path> "
+               "  granit_asset_tool shader compile --toolchain <root> "
                "--input <shader.hlsl> --entry <name> --stage <vertex|fragment|compute> "
                "--spirv-output <shader.spv> --wgsl-output <shader.wgsl> "
                "[--define <name=value>]...\n";

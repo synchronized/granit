@@ -10,27 +10,26 @@
 #include <tuple>
 
 int main(int argc, char** argv) {
-  if (argc != 5)
+  if (argc != 4)
     return 1;
-  const std::filesystem::path root{argv[4]};
+  const std::filesystem::path root{argv[3]};
   const auto cache = (root / "objects").string();
   const auto library = (root / "fixture.grshlib").string();
   const auto index = (root / "fixture.grshidx.json").string();
   std::error_code error;
   std::filesystem::remove_all(root, error);
-  granit::shader_tools::source_library_desc desc{
-      .manifest_path = argv[3],
-      .dxc_path = argv[1],
-      .tint_path = argv[2],
+  granit::asset_tools::shader::source_library_desc desc{
+      .manifest_path = argv[2],
+      .toolchain_root = argv[1],
       .cache_path = cache,
       .output_path = library,
       .index_path = index,
   };
-  auto [status, cache_hit] = granit::shader_tools::build_library_from_manifest(desc);
+  auto [status, cache_hit] = granit::asset_tools::shader::build_library_from_manifest(desc);
   if (status.failed() || cache_hit || !std::filesystem::exists(library) ||
       !std::filesystem::exists(index))
     return 2;
-  std::tie(status, cache_hit) = granit::shader_tools::build_library_from_manifest(desc);
+  std::tie(status, cache_hit) = granit::asset_tools::shader::build_library_from_manifest(desc);
   if (status.failed() || !cache_hit)
     return 3;
   std::ifstream stream{index, std::ios::binary};
@@ -40,7 +39,7 @@ int main(int argc, char** argv) {
       json.find("content_digest") == std::string::npos)
     return 4;
   desc.manifest_path = "missing.grshlib.json";
-  std::tie(status, cache_hit) = granit::shader_tools::build_library_from_manifest(desc);
+  std::tie(status, cache_hit) = granit::asset_tools::shader::build_library_from_manifest(desc);
   if (status != granit::result::invalid_argument || cache_hit)
     return 5;
   std::filesystem::remove_all(root, error);

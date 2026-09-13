@@ -76,24 +76,22 @@ bool write_if_changed(const std::filesystem::path& destination, std::string_view
 
 int build_shader_library(int argc, char** argv) {
   const auto manifest = option_value(argc, argv, "--manifest");
-  const auto dxc = option_value(argc, argv, "--dxc");
-  const auto tint = option_value(argc, argv, "--tint");
+  const auto toolchain = option_value(argc, argv, "--toolchain");
   const auto cache = option_value(argc, argv, "--cache");
   const auto output = option_value(argc, argv, "--output");
   const auto index = option_value(argc, argv, "--index");
-  if (!manifest || !dxc || !tint || !cache || !output || !index) {
-    std::cerr << "build-library 需要 --manifest、--dxc、--tint、--cache、--output 和 --index\n";
+  if (!manifest || !toolchain || !cache || !output || !index) {
+    std::cerr << "build-library 需要 --manifest、--toolchain、--cache、--output 和 --index\n";
     return 2;
   }
-  const granit::shader_tools::source_library_desc desc{
+  const granit::asset_tools::shader::source_library_desc desc{
       .manifest_path = *manifest,
-      .dxc_path = *dxc,
-      .tint_path = *tint,
+      .toolchain_root = *toolchain,
       .cache_path = *cache,
       .output_path = *output,
       .index_path = *index,
   };
-  const auto [status, cache_hit] = granit::shader_tools::build_library_from_manifest(desc);
+  const auto [status, cache_hit] = granit::asset_tools::shader::build_library_from_manifest(desc);
   if (status.failed()) {
     std::cerr << "无法从源清单构建 Shader Library：" << *manifest << '\n';
     return 1;

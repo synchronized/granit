@@ -46,50 +46,51 @@ std::string json_string(std::string_view value) {
   return std::move(output).str();
 }
 
-const char* binding_type_name(granit::shader_tools::binding_type type) {
+const char* binding_type_name(granit::asset_tools::shader::binding_type type) {
   switch (type) {
-  case granit::shader_tools::binding_type::uniform_buffer:
+  case granit::asset_tools::shader::binding_type::uniform_buffer:
     return "uniform_buffer";
-  case granit::shader_tools::binding_type::storage_buffer:
+  case granit::asset_tools::shader::binding_type::storage_buffer:
     return "storage_buffer";
-  case granit::shader_tools::binding_type::sampled_texture:
+  case granit::asset_tools::shader::binding_type::sampled_texture:
     return "sampled_texture";
-  case granit::shader_tools::binding_type::storage_texture:
+  case granit::asset_tools::shader::binding_type::storage_texture:
     return "storage_texture";
-  case granit::shader_tools::binding_type::sampler:
+  case granit::asset_tools::shader::binding_type::sampler:
     return "sampler";
   default:
     return "unsupported";
   }
 }
 
-const char* binding_access_name(granit::shader_tools::binding_access access) {
+const char* binding_access_name(granit::asset_tools::shader::binding_access access) {
   switch (access) {
-  case granit::shader_tools::binding_access::read:
+  case granit::asset_tools::shader::binding_access::read:
     return "read";
-  case granit::shader_tools::binding_access::write:
+  case granit::asset_tools::shader::binding_access::write:
     return "write";
-  case granit::shader_tools::binding_access::read_write:
+  case granit::asset_tools::shader::binding_access::read_write:
     return "read_write";
   default:
     return "unsupported";
   }
 }
 
-const char* scalar_type_name(granit::shader_tools::scalar_type type) {
+const char* scalar_type_name(granit::asset_tools::shader::scalar_type type) {
   switch (type) {
-  case granit::shader_tools::scalar_type::floating_point:
+  case granit::asset_tools::shader::scalar_type::floating_point:
     return "float";
-  case granit::shader_tools::scalar_type::signed_integer:
+  case granit::asset_tools::shader::scalar_type::signed_integer:
     return "sint";
-  case granit::shader_tools::scalar_type::unsigned_integer:
+  case granit::asset_tools::shader::scalar_type::unsigned_integer:
     return "uint";
   default:
     return "unsupported";
   }
 }
 
-void print_interface_variable(const granit::shader_tools::interface_variable_info& variable) {
+void print_interface_variable(
+    const granit::asset_tools::shader::interface_variable_info& variable) {
   std::cout << "{\"location\": " << variable.location << ", \"component\": " << variable.component
             << ", \"scalar_type\": " << json_string(scalar_type_name(variable.scalar_type))
             << ", \"bit_width\": " << variable.bit_width
@@ -97,8 +98,8 @@ void print_interface_variable(const granit::shader_tools::interface_variable_inf
             << ", \"name\": " << json_string(variable.name) << '}';
 }
 
-void print_json(const granit::shader_tools::reflection& result,
-                const granit::shader_tools::reflection_info& info, const char* stage) {
+void print_json(const granit::asset_tools::shader::reflection& result,
+                const granit::asset_tools::shader::reflection_info& info, const char* stage) {
   std::cout << "{\n  \"schema\": 1,\n  \"entry_point\": " << json_string(info.entry_point)
             << ",\n  \"stage\": " << json_string(stage) << ",\n  \"bindings\": [";
   for (uint64_t index = 0; index < result.binding_count(); ++index) {
@@ -150,11 +151,11 @@ void print_json(const granit::shader_tools::reflection& result,
 } // namespace
 
 int inspect_shader(const char* path, bool verify, bool json) {
-  granit_shader_tools_inspect_desc desc{};
+  granit_asset_tools_shader_inspect_desc desc{};
   desc.struct_size = sizeof(desc);
   desc.input_path = path;
   desc.input_path_length = std::char_traits<char>::length(path);
-  auto [status, result] = granit::shader_tools::inspect_spirv(desc);
+  auto [status, result] = granit::asset_tools::shader::inspect_spirv(desc);
   const auto info = result.info();
   const auto stage = info.stage == granit::shader_stage::vertex     ? "vertex"
                      : info.stage == granit::shader_stage::fragment ? "fragment"

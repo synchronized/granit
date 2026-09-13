@@ -28,7 +28,7 @@ granit_asset_tool shader verify shader.spv
 granit_asset_tool shader targets
 granit_asset_tool shader capabilities --target vulkan-portable
 granit_asset_tool shader capabilities --target webgpu-portable
-granit_asset_tool shader compile --dxc path/to/dxc --tint path/to/tint `
+granit_asset_tool shader compile --toolchain path/to/granit-shader-toolchain `
   --input shader.hlsl --entry fragment_main --stage fragment `
   --define GRANIT_PBR_TEXTURE_MASK=31 --define GRANIT_PBR_LIGHTS=1 `
   --spirv-output shader.spv --wgsl-output shader.wgsl

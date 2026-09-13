@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "shader_tools_core.h"
+#include "asset_tools_shader_core.h"
 
 #include "child_process.h"
 
