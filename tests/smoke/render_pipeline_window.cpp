@@ -55,7 +55,7 @@ std::vector<char> load_package() {
 }
 
 granit_result create_scene(granit_renderer renderer, std::uint32_t width, std::uint32_t height,
-                           granit_scene_snapshot* scene) {
+                           bool with_renderable, granit_scene_snapshot* scene) {
   granit_scene_view view{};
   view.view = identity();
   view.projection = identity();
@@ -75,10 +75,12 @@ granit_result create_scene(granit_renderer renderer, std::uint32_t width, std::u
   granit_scene_snapshot_desc desc = GRANIT_SCENE_SNAPSHOT_DESC_INIT;
   desc.views = &view;
   desc.view_count = 1;
-  desc.renderables = &renderable;
-  desc.renderable_count = 1;
-  desc.directional_lights = &light;
-  desc.directional_light_count = 1;
+  if (with_renderable) {
+    desc.renderables = &renderable;
+    desc.renderable_count = 1;
+    desc.directional_lights = &light;
+    desc.directional_light_count = 1;
+  }
   return granit_scene_snapshot_create(renderer, &desc, scene);
 }
 
@@ -175,9 +177,14 @@ int main(int argument_count, char** arguments) {
         granit_render_pipeline_create(renderer.native_handle(), &pipeline_desc, &pipeline));
   }
   granit_scene_snapshot scene = GRANIT_NULL_HANDLE;
+  granit_scene_snapshot empty_scene = GRANIT_NULL_HANDLE;
   if (result.ok()) {
     result = granit::from_native(
-        create_scene(renderer.native_handle(), info.width, info.height, &scene));
+        create_scene(renderer.native_handle(), info.width, info.height, true, &scene));
+  }
+  if (result.ok()) {
+    result = granit::from_native(
+        create_scene(renderer.native_handle(), info.width, info.height, false, &empty_scene));
   }
   if (result.failed()) {
     std::cerr << "初始化失败：" << granit::result_message(result) << '\n';
@@ -217,9 +224,15 @@ int main(int argument_count, char** arguments) {
       if (result.failed())
         break;
       static_cast<void>(granit_scene_snapshot_destroy(renderer.native_handle(), scene));
+      static_cast<void>(granit_scene_snapshot_destroy(renderer.native_handle(), empty_scene));
       scene = GRANIT_NULL_HANDLE;
+      empty_scene = GRANIT_NULL_HANDLE;
       result = granit::from_native(
-          create_scene(renderer.native_handle(), info.width, info.height, &scene));
+          create_scene(renderer.native_handle(), info.width, info.height, true, &scene));
+      if (result.ok()) {
+        result = granit::from_native(
+            create_scene(renderer.native_handle(), info.width, info.height, false, &empty_scene));
+      }
       recreate = false;
       ++completed_recreates;
       if (result.failed())
@@ -240,13 +253,14 @@ int main(int argument_count, char** arguments) {
     result = swapchain.backbuffer(frame.image_index, backbuffer, backbuffer_view);
     if (result.ok()) {
       granit_render_pipeline_render_desc desc = GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT;
-      desc.scene = scene;
+      const bool empty_frame = smoke_test && rendered_frames == 0;
+      desc.scene = empty_frame ? empty_scene : scene;
       desc.output = backbuffer_view;
       desc.output_format = static_cast<granit_texture_format>(info.format);
       desc.width = info.width;
       desc.height = info.height;
-      desc.draw_binding_count = 1;
-      desc.draw_bindings = &binding;
+      desc.draw_binding_count = empty_frame ? 0 : 1;
+      desc.draw_bindings = empty_frame ? nullptr : &binding;
       desc.frame = frame.handle;
       result = granit::from_native(
           granit_render_pipeline_render(renderer.native_handle(), pipeline, &desc));
@@ -268,6 +282,7 @@ int main(int argument_count, char** arguments) {
 
   static_cast<void>(granit_render_pipeline_destroy(renderer.native_handle(), pipeline));
   static_cast<void>(granit_scene_snapshot_destroy(renderer.native_handle(), scene));
+  static_cast<void>(granit_scene_snapshot_destroy(renderer.native_handle(), empty_scene));
   static_cast<void>(granit_material_destroy(renderer.native_handle(), material));
   static_cast<void>(granit_mesh_destroy(renderer.native_handle(), mesh));
   if (IsWindow(window) != FALSE)

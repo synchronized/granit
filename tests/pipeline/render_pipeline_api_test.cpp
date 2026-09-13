@@ -354,6 +354,7 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
                                      .height = 16}) == granit::result::success);
   REQUIRE(output_view.initialize(renderer.native_handle(), output_texture.native_handle()) ==
           granit::result::success);
+
   REQUIRE(second_output_texture.initialize(renderer.native_handle(),
                                            {.format = granit::texture_format::rgba8_srgb,
                                             .usage = granit::texture_usage::color_attachment |
@@ -669,6 +670,33 @@ TEST_CASE("Render Pipeline在没有可见物体时仍清屏并执行覆盖层") 
   REQUIRE(output_view.initialize(renderer.native_handle(), output_texture.native_handle()) ==
           granit::result::success);
 
+  granit::texture canvas_texture;
+  granit::texture_view canvas_texture_view;
+  granit::sampler canvas_sampler;
+  REQUIRE(canvas_texture.initialize(renderer.native_handle(),
+                                    {.format = granit::texture_format::rgba8_unorm,
+                                     .usage = granit::texture_usage::sampled |
+                                              granit::texture_usage::transfer_destination,
+                                     .width = 1,
+                                     .height = 1}) == granit::result::success);
+  constexpr std::array<std::uint8_t, 4> canvas_pixel{0, 255, 0, 255};
+  REQUIRE(canvas_texture.write(std::as_bytes(std::span{canvas_pixel}), {}, {}) ==
+          granit::result::success);
+  REQUIRE(canvas_texture_view.initialize(
+              renderer.native_handle(), canvas_texture.native_handle()) == granit::result::success);
+  REQUIRE(canvas_sampler.initialize(renderer.native_handle(), {}) == granit::result::success);
+  granit_canvas_draw_list_desc canvas_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
+  granit::canvas_draw_list canvas;
+  REQUIRE(canvas.initialize(renderer.native_handle(), canvas_desc) == granit::result::success);
+  granit_canvas_rect_desc rect = GRANIT_CANVAS_RECT_DESC_INIT;
+  rect.x = 2;
+  rect.y = 2;
+  rect.width = 4;
+  rect.height = 4;
+  rect.state.texture = canvas_texture_view.native_handle();
+  rect.state.sampler = canvas_sampler.native_handle();
+  REQUIRE(canvas.append_rect(rect) == granit::result::success);
+
   granit_scene_view view{};
   view.view = identity();
   view.projection = identity();
@@ -689,6 +717,7 @@ TEST_CASE("Render Pipeline在没有可见物体时仍清屏并执行覆盖层") 
   render_desc.width = size;
   render_desc.height = size;
   render_desc.clear_color = {0.25F, 0.5F, 1.0F, 1.0F};
+  render_desc.canvas = canvas.native_handle();
 
   granit_scene_renderable culled{};
   culled.model = identity();
@@ -753,10 +782,14 @@ TEST_CASE("Render Pipeline在没有可见物体时仍清屏并执行覆盖层") 
 
   void* mapped = nullptr;
   REQUIRE(readback.map(0, size * size * 4, &mapped) == granit::result::success);
-  const auto* pixel = static_cast<const uint8_t*>(mapped);
-  CHECK(pixel[0] > 150);
-  CHECK(pixel[1] > pixel[0]);
-  CHECK(pixel[2] > pixel[1]);
+  const auto* pixels = static_cast<const uint8_t*>(mapped);
+  const auto* background = pixels + (7 * size + 7) * 4;
+  const auto* canvas_color = pixels + (3 * size + 3) * 4;
+  CHECK(background[0] > 150);
+  CHECK(background[1] > background[0]);
+  CHECK(background[2] > background[1]);
+  CHECK(canvas_color[1] > canvas_color[0]);
+  CHECK(canvas_color[1] > canvas_color[2]);
   REQUIRE(readback.unmap() == granit::result::success);
 }
 
