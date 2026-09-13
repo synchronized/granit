@@ -11,14 +11,14 @@
 #include <granit/core/shader_features.h>
 #include <granit/core/shader_types.h>
 #include <granit/tools/shader_reflection.h>
-#include <granit/tools/shader_tools_export.h>
+#include <granit/tools/asset_tools_export.h>
 
 /** Shader 编译结果句柄。零值无效。 */
 typedef uint64_t granit_shader_tools_compilation;
 /** Shader Compiler 句柄。零值无效。 */
 typedef uint64_t granit_shader_tools_compiler;
 
-/** ShaderTools 内置目标档位的静态能力；与构建机 GPU 无关。 */
+/** AssetTools Shader 领域内置目标档位的静态能力；与构建机 GPU 无关。 */
 typedef struct granit_shader_tools_target_capabilities {
   uint32_t struct_size;
   granit_shader_backend_flags backend;
@@ -114,44 +114,44 @@ extern "C" {
 #endif
 
 /** 创建 Compiler；工具路径会复制到句柄中，创建返回后调用方可释放输入字符串。 */
-GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_compiler_create(
+GRANIT_ASSET_TOOLS_API granit_result granit_shader_tools_compiler_create(
     const granit_shader_tools_compiler_desc* desc, granit_shader_tools_compiler* compiler);
 
 /**
  * 使用 Compiler 编译 HLSL。只要编译已启动便返回 Compilation，诊断由其持有。
  * Compiler 可由多个线程并发调用，描述中的字符串和数组只需在调用期间有效。
  */
-GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_compiler_compile(
+GRANIT_ASSET_TOOLS_API granit_result granit_shader_tools_compiler_compile(
     granit_shader_tools_compiler compiler, const granit_shader_tools_compile_desc* desc,
     granit_shader_tools_compilation* compilation);
 
 /** 销毁 Compiler。零值和已经销毁的句柄返回 GRANIT_ERROR_INVALID_HANDLE。 */
-GRANIT_SHADER_TOOLS_API granit_result
+GRANIT_ASSET_TOOLS_API granit_result
 granit_shader_tools_compiler_destroy(granit_shader_tools_compiler compiler);
 
 /** 查询结果。输出结构必须设置 struct_size。该函数线程安全。 */
-GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_compilation_get_info(
+GRANIT_ASSET_TOOLS_API granit_result granit_shader_tools_compilation_get_info(
     granit_shader_tools_compilation compilation, granit_shader_tools_compilation_info* info);
 
 /** 获取编译结果对应的独立反射句柄；该句柄可晚于编译结果销毁。 */
-GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_compilation_get_reflection(
+GRANIT_ASSET_TOOLS_API granit_result granit_shader_tools_compilation_get_reflection(
     granit_shader_tools_compilation compilation, granit_shader_tools_reflection* reflection);
 
 /** 查询编译生成的 SPIR-V；视图在编译结果销毁前有效。 */
-GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_compilation_get_spirv(
+GRANIT_ASSET_TOOLS_API granit_result granit_shader_tools_compilation_get_spirv(
     granit_shader_tools_compilation compilation, const void** data, uint64_t* size);
 
 /** 查询编译生成或规范化的 WGSL；视图在编译结果销毁前有效。 */
-GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_compilation_get_wgsl(
+GRANIT_ASSET_TOOLS_API granit_result granit_shader_tools_compilation_get_wgsl(
     granit_shader_tools_compilation compilation, const char** source, uint64_t* length);
 
 /** 查询内置目标档位支持的静态特性；当前 backend 使用 ASSET_BACKEND 单值。 */
-GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_get_target_capabilities(
+GRANIT_ASSET_TOOLS_API granit_result granit_shader_tools_get_target_capabilities(
     granit_shader_backend_flags backend, granit_shader_profile profile,
     granit_shader_tools_target_capabilities* capabilities);
 
 /** 销毁 Compilation。零值和已经销毁的句柄返回 GRANIT_ERROR_INVALID_HANDLE。 */
-GRANIT_SHADER_TOOLS_API granit_result
+GRANIT_ASSET_TOOLS_API granit_result
 granit_shader_tools_compilation_destroy(granit_shader_tools_compilation compilation);
 
 #ifdef __cplusplus

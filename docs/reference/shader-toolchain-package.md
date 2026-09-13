@@ -99,7 +99,7 @@ cmake \
 
 仓库的 `Shader Toolchain Packages` 手动 Actions 工作流固定 Vulkan SDK 下载地址、归档 SHA-256、
 Dawn 修订和全部工具版本。Windows 与 Linux 分别构建 Tint、组装精简目录、执行包内清单校验，
-再以 `locked` 策略运行 HLSL 双后端 ShaderTools 测试，最后上传带独立 SHA-256 文件的临时
+再以 `locked` 策略运行 HLSL 双后端 AssetTools 测试，最后上传带独立 SHA-256 文件的临时
 Artifact。当前锁定产物已作为独立预发行版本发布；后续工具升级仍须先完成两平台远端验证和
 许可证复核，再发布新标签，不能覆盖已有归档。
 
@@ -116,7 +116,7 @@ Windows x64 与 Linux x64 可以显式运行下载脚本。脚本选择当前宿
 cmake -DDESTINATION=<缓存目录> -P cmake/download_shader_toolchain.cmake
 ```
 
-随后使用脚本输出的目录配置 ShaderTools，并同时声明锁定的 Tint 修订：
+随后使用脚本输出的目录配置 AssetTools，并同时声明锁定的 Tint 修订：
 
 ```sh
 cmake -S . -B build \

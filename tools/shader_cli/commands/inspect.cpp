@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "shader_cli/commands.h"
-#include <granit/tools/shader_tools.hpp>
+#include <granit/tools/asset_tools.hpp>
 
 #include <iostream>
 #include <sstream>

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-// 由 granit_shader_tool index-ids 生成。
+// 由 granit_asset_tool shader index-ids 生成。
 
 constexpr std::array<std::byte, 32> shadow_depth_fragment_id{
   std::byte{0xd8},

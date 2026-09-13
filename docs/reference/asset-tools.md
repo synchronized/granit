@@ -1,22 +1,23 @@
 <!-- SPDX-License-Identifier: MIT -->
 <!-- Copyright (c) 2026 Granit contributors -->
 
-# ShaderTools SDK
+# AssetTools SDK
 
-ShaderTools 是供编辑器、资产构建器和命令行工具直接链接的可选组件。它通过 Compiler 调用
-锁定版本的 DXC 与 Tint，将 HLSL 编译为离线 Shader 产物，并检查
-SPIR-V 的入口点、阶段和反射；它不进入核心渲染库的传递依赖。
+AssetTools 是供编辑器、资产构建器和命令行工具直接链接的可选组件。当前已接入的 Shader
+领域通过 Compiler 调用锁定版本的 DXC 与 Tint，将 HLSL 编译为离线 Shader 产物，并检查
+SPIR-V 的入口点、阶段和反射。Material、Texture 与 Environment Builder 将在后续阶段迁入；
+AssetTools 不进入核心渲染库的传递依赖。
 
 ## 构建与链接
 
-配置时启用 `GRANIT_BUILD_SHADER_TOOLS=ON`，安装后通过独立组件链接：
+配置时启用 `GRANIT_BUILD_ASSET_TOOLS=ON`，安装后通过独立组件链接：
 
 ```cmake
-find_package(granit 0.3 CONFIG REQUIRED COMPONENTS ShaderTools)
-target_link_libraries(editor PRIVATE granit::shader_tools)
+find_package(granit CONFIG REQUIRED COMPONENTS AssetTools)
+target_link_libraries(editor PRIVATE granit::asset_tools)
 ```
 
-`GRANIT_BUILD_TOOLS=ON` 也会构建该 SDK，因为 `granit_shader_tool` 是它的命令行薄适配层。编译器
+`GRANIT_BUILD_TOOLS=ON` 也会构建该 SDK，因为 `granit_asset_tool` 是它的命令行薄适配层。编译器
 可执行文件路径在创建 Compiler 时配置并复制到句柄中，不会成为公共链接依赖。
 
 HLSL portable 路径需要资产构建机安装 DXC 与 Tint，但应用运行时和 Granit 核心 SDK 均不需要
@@ -45,7 +46,8 @@ Library Builder 自动将 DXC 与 Tint 二进制的 SHA-256 身份纳入缓存�
 ## 接口与生命周期
 
 - C11 的编译、反射和 Library Builder 入口分别位于对应的
-  `<granit/tools/shader_*.h>`；`.hpp` 提供 C++20 包装。`shader_tools.h/.hpp` 只作为聚合入口。
+  `<granit/tools/shader_*.h>`；`.hpp` 提供 C++20 包装。`asset_tools.h/.hpp` 是 AssetTools 的聚合
+  入口，后续资产领域继续使用各自独立头文件。
 - `granit_shader_tools_compiler_create` 创建可复用 Compiler，配置包含 DXC 与 Tint 路径；
   `granit_shader_tools_compiler_compile` 固定接收 HLSL。C++ 包装对应移动独占的 `compiler` 和
   `compile_desc`，编译描述不再携带源码语言。
@@ -70,7 +72,7 @@ Library Builder 自动将 DXC 与 Tint 二进制的 SHA-256 身份纳入缓存�
   `cache_hit` 只在全部 Object、Library 和索引均未变化时为真。
 - CMake 的 `granit_add_hlsl_shader_library` 接收 `MANIFEST`、`SOURCES`、`OUTPUT`、`INDEX` 和
   `CACHE_DIR`。`SOURCES` 只声明构建依赖；清单解析、变体规范化、缓存身份和资产编码仍由
-  ShaderTools 处理。可选的 `REFERENCE` 与 `INDEX_REFERENCE` 用于逐字节校验发布快照。
+  AssetTools 处理。可选的 `REFERENCE` 与 `INDEX_REFERENCE` 用于逐字节校验发布快照。
 - CLI 的 `index-ids` 从 `.grshidx.json` 按逻辑名称生成 C++ 内容 ID 常量，供内嵌资产代码使用；
   它不读取或暴露私有 `.grshaderobj` 缓存路径。
 - HLSL portable 路径让 DXC 直接生成最终 Vulkan 1.3 SPIR-V；另行生成临时 Vulkan 1.1 /
@@ -114,7 +116,7 @@ Library Builder 自动将 DXC 与 Tint 二进制的 SHA-256 身份纳入缓存�
 - 所有函数捕获内部异常，不允许异常穿过 C ABI。无效参数、无效句柄、内存不足和工具失败均以
   `granit_result` 返回。
 
-命令行可使用 `granit_shader_tool inspect --json shader.spv` 输出稳定排序的 JSON 调试视图。普通
+命令行可使用 `granit_asset_tool shader inspect --json shader.spv` 输出稳定排序的 JSON 调试视图。普通
 `inspect` 的 CSV 文本保持兼容，但程序不应解析该文本，应使用结构化 SDK 查询或反射 JSON 视图。
 
 Compilation 提供编译状态、入口点、Shader 阶段、标准输出、诊断以及编译载荷；Reflection 提供

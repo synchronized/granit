@@ -10,17 +10,18 @@ namespace {
 
 void print_usage() {
   std::cerr << "用法：\n"
-               "  granit_shader_tool inspect <shader.spv>\n"
-               "  granit_shader_tool inspect --json <shader.spv>\n"
-               "  granit_shader_tool verify <shader.spv>\n"
-               "  granit_shader_tool targets\n"
-               "  granit_shader_tool capabilities --target <vulkan-portable|webgpu-portable>\n"
-               "  granit_shader_tool build-library --manifest <library.grshlib.json> "
+               "  granit_asset_tool shader inspect <shader.spv>\n"
+               "  granit_asset_tool shader inspect --json <shader.spv>\n"
+               "  granit_asset_tool shader verify <shader.spv>\n"
+               "  granit_asset_tool shader targets\n"
+               "  granit_asset_tool shader capabilities "
+               "--target <vulkan-portable|webgpu-portable>\n"
+               "  granit_asset_tool shader build-library --manifest <library.grshlib.json> "
                "--dxc <path> --tint <path> --cache <directory> --output <library.grshlib> "
                "--index <library.grshidx.json>\n"
-               "  granit_shader_tool index-ids --index <library.grshidx.json> "
+               "  granit_asset_tool shader index-ids --index <library.grshidx.json> "
                "--shader <name=logical-name>... --output <shader-ids.inc>\n"
-               "  granit_shader_tool compile --dxc <path> --tint <path> "
+               "  granit_asset_tool shader compile --dxc <path> --tint <path> "
                "--input <shader.hlsl> --entry <name> --stage <vertex|fragment|compute> "
                "--spirv-output <shader.spv> --wgsl-output <shader.wgsl> "
                "[--define <name=value>]...\n";
@@ -28,7 +29,7 @@ void print_usage() {
 
 } // namespace
 
-int main(int argc, char** argv) {
+int run_shader_command(int argc, char** argv) {
   using namespace granit::shader_cli;
   if (argc == 2 && std::string_view{argv[1]} == "targets") {
     std::cout << "vulkan-portable\nwebgpu-portable\n";
@@ -54,6 +55,13 @@ int main(int argc, char** argv) {
     return build_shader_library(argc, argv);
   if (argc >= 2 && std::string_view{argv[1]} == "index-ids")
     return emit_shader_index_ids(argc, argv);
+  print_usage();
+  return 2;
+}
+
+int main(int argc, char** argv) {
+  if (argc >= 2 && std::string_view{argv[1]} == "shader")
+    return run_shader_command(argc - 1, argv + 1);
   print_usage();
   return 2;
 }

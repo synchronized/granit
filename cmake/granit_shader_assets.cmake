@@ -45,7 +45,7 @@ function(granit_add_test_shader_object_from_hlsl)
     OUTPUT "${object}" "${object}.spv" "${object}.wgsl"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${ARG_OUTPUT_DIR}"
     COMMAND
-      "$<TARGET_FILE:granit_shader_tool>" compile --dxc "${GRANIT_DXC_EXECUTABLE}"
+      "$<TARGET_FILE:granit_asset_tool>" shader compile --dxc "${GRANIT_DXC_EXECUTABLE}"
       --tint "${GRANIT_TINT_EXECUTABLE}" --input "${ARG_SOURCE}" --entry "${ARG_ENTRY}"
       --stage "${ARG_STAGE}" --spirv-output "${object}.spv" --wgsl-output "${object}.wgsl"
       ${define_arguments}
@@ -54,7 +54,7 @@ function(granit_add_test_shader_object_from_hlsl)
       --wgsl "${object}.wgsl" --entry "${ARG_ENTRY}" --stage "${ARG_STAGE}"
       --output "${object}" --source "${ARG_SOURCE}" --dxc "${GRANIT_DXC_EXECUTABLE}"
       --tint "${GRANIT_TINT_EXECUTABLE}" ${define_arguments}
-    DEPENDS granit_shader_tool granit_shader_fixture_tool "${ARG_SOURCE}"
+    DEPENDS granit_asset_tool granit_shader_fixture_tool "${ARG_SOURCE}"
     COMMENT "从 HLSL 生成 Shader Object ${ARG_NAME}.grshaderobj"
     VERBATIM
   )
@@ -113,10 +113,10 @@ function(granit_add_hlsl_shader_library)
       COMMAND "${CMAKE_COMMAND}" -E make_directory "${ARG_CACHE_DIR}" "${output_directory}"
               "${index_directory}"
       COMMAND
-        "$<TARGET_FILE:granit_shader_tool>" build-library --manifest "${ARG_MANIFEST}"
+        "$<TARGET_FILE:granit_asset_tool>" shader build-library --manifest "${ARG_MANIFEST}"
         --dxc "${GRANIT_DXC_EXECUTABLE}" --tint "${GRANIT_TINT_EXECUTABLE}"
         --cache "${ARG_CACHE_DIR}" --output "${ARG_OUTPUT}" --index "${ARG_INDEX}")
-  set(dependencies granit_shader_tool "${ARG_MANIFEST}" ${ARG_SOURCES})
+  set(dependencies granit_asset_tool "${ARG_MANIFEST}" ${ARG_SOURCES})
   if(ARG_REFERENCE)
     list(APPEND commands COMMAND "${CMAKE_COMMAND}" -E compare_files "${ARG_OUTPUT}"
                                  "${ARG_REFERENCE}")

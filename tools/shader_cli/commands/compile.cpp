@@ -3,7 +3,7 @@
 
 #include "shader_cli/arguments.h"
 #include "shader_cli/commands.h"
-#include <granit/tools/shader_tools.hpp>
+#include <granit/tools/asset_tools.hpp>
 
 #include <algorithm>
 #include <iostream>

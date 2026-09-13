@@ -51,12 +51,12 @@ granit_check_package(window TRUE -DGRANIT_REQUEST_VERSION=0.21
                      -DGRANIT_REQUEST_COMPONENT=Window)
 granit_check_package(input TRUE -DGRANIT_REQUEST_VERSION=0.21
                      -DGRANIT_REQUEST_COMPONENT=Input)
-if(EXISTS "${GRANIT_INSTALL_PREFIX}/lib/cmake/granit/granitShaderToolsTargets.cmake")
-  granit_check_package(shader_tools TRUE -DGRANIT_REQUEST_VERSION=0.21
-                       -DGRANIT_REQUEST_COMPONENT=ShaderTools)
+if(EXISTS "${GRANIT_INSTALL_PREFIX}/lib/cmake/granit/granitAssetToolsTargets.cmake")
+  granit_check_package(asset_tools TRUE -DGRANIT_REQUEST_VERSION=0.21
+                       -DGRANIT_REQUEST_COMPONENT=AssetTools)
 else()
-  granit_check_package(shader_tools_unavailable FALSE -DGRANIT_REQUEST_VERSION=0.21
-                       -DGRANIT_REQUEST_COMPONENT=ShaderTools)
+  granit_check_package(asset_tools_unavailable FALSE -DGRANIT_REQUEST_VERSION=0.21
+                       -DGRANIT_REQUEST_COMPONENT=AssetTools)
 endif()
 granit_check_package(older_0_7 FALSE -DGRANIT_REQUEST_VERSION=0.7)
 granit_check_package(older_0_8 FALSE -DGRANIT_REQUEST_VERSION=0.8)

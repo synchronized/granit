@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/tools/shader_tools.hpp>
+#include <granit/tools/asset_tools.hpp>
 
 int main() {
   const auto [result, capabilities] = granit::shader_tools::target_capabilities(

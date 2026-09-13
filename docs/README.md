@@ -109,7 +109,7 @@
 
 ### 命令与 Pipeline
 
-- [ShaderTools SDK](reference/shader-tools.md)
+- [AssetTools SDK](reference/asset-tools.md)
 - [Shader 工具链包清单](reference/shader-toolchain-package.md)
 - [Command Recorder](reference/command-recorder.md)
 - [Frame Context](reference/frame-context.md)

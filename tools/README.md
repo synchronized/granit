@@ -8,7 +8,7 @@
 ```powershell
 cmake --preset windows-clang-debug -DGRANIT_BUILD_TOOLS=ON `
   -DGRANIT_SHADER_TOOLCHAIN_ROOT=path/to/shader-toolchain
-cmake --build --preset windows-clang-debug --target granit_shader_tool
+cmake --build --preset windows-clang-debug --target granit_asset_tool
 ```
 
 统一工具链根目录的 `bin` 应包含锁定版本的 `dxc` 和 `tint`。也可以分别传入
@@ -17,18 +17,18 @@ cmake --build --preset windows-clang-debug --target granit_shader_tool
 
 默认 `GRANIT_SHADER_TOOLCHAIN_POLICY=compatible`：版本不同会警告，但通过真实能力探测后仍可用。
 官方可复现构建使用 `locked`，新版本试验可临时使用 `unchecked`。完整约束见
-[ShaderTools SDK](../docs/reference/shader-tools.md)。
+[AssetTools SDK](../docs/reference/asset-tools.md)。
 
-`granit_shader_tool` 提供以下入口：
+`granit_asset_tool` 当前提供 Shader 领域入口：
 
 ```powershell
-granit_shader_tool inspect shader.spv
-granit_shader_tool inspect --json shader.spv
-granit_shader_tool verify shader.spv
-granit_shader_tool targets
-granit_shader_tool capabilities --target vulkan-portable
-granit_shader_tool capabilities --target webgpu-portable
-granit_shader_tool compile --dxc path/to/dxc --tint path/to/tint `
+granit_asset_tool shader inspect shader.spv
+granit_asset_tool shader inspect --json shader.spv
+granit_asset_tool shader verify shader.spv
+granit_asset_tool shader targets
+granit_asset_tool shader capabilities --target vulkan-portable
+granit_asset_tool shader capabilities --target webgpu-portable
+granit_asset_tool shader compile --dxc path/to/dxc --tint path/to/tint `
   --input shader.hlsl --entry fragment_main --stage fragment `
   --define GRANIT_PBR_TEXTURE_MASK=31 --define GRANIT_PBR_LIGHTS=1 `
   --spirv-output shader.spv --wgsl-output shader.wgsl

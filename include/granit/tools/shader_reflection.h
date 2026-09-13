@@ -10,7 +10,7 @@
 #include <granit/core/result.h>
 #include <granit/core/shader_features.h>
 #include <granit/core/shader_types.h>
-#include <granit/tools/shader_tools_export.h>
+#include <granit/tools/asset_tools_export.h>
 
 /** Shader 反射结果句柄。零值无效。 */
 typedef uint64_t granit_shader_tools_reflection;
@@ -111,59 +111,59 @@ extern "C" {
 #endif
 
 /** 检查 SPIR-V 并返回入口点、阶段和反射文本。该函数线程安全。 */
-GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_inspect_spirv(
+GRANIT_ASSET_TOOLS_API granit_result granit_shader_tools_inspect_spirv(
     const granit_shader_tools_inspect_desc* desc, granit_shader_tools_reflection* reflection);
 
 /** 查询反射摘要。输出结构必须设置 struct_size。 */
-GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_reflection_get_info(
+GRANIT_ASSET_TOOLS_API granit_result granit_shader_tools_reflection_get_info(
     granit_shader_tools_reflection reflection, granit_shader_tools_reflection_info* info);
 
 /** 查询结构化描述符绑定数量。编译失败或无绑定时返回零。 */
-GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_reflection_get_binding_count(
+GRANIT_ASSET_TOOLS_API granit_result granit_shader_tools_reflection_get_binding_count(
     granit_shader_tools_reflection reflection, uint64_t* count);
 
 /** 按稳定的 group、binding 数字顺序查询结构化描述符绑定。 */
-GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_reflection_get_binding(
+GRANIT_ASSET_TOOLS_API granit_result granit_shader_tools_reflection_get_binding(
     granit_shader_tools_reflection reflection, uint64_t index,
     granit_shader_tools_binding_info* binding);
 
 /** 查询 Vertex 输入数量。 */
-GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_reflection_get_vertex_input_count(
+GRANIT_ASSET_TOOLS_API granit_result granit_shader_tools_reflection_get_vertex_input_count(
     granit_shader_tools_reflection reflection, uint64_t* count);
 
 /** 按 Location、Component 顺序查询 Vertex 输入。 */
-GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_reflection_get_vertex_input(
+GRANIT_ASSET_TOOLS_API granit_result granit_shader_tools_reflection_get_vertex_input(
     granit_shader_tools_reflection reflection, uint64_t index,
     granit_shader_tools_interface_variable_info* input);
 
 /** 查询 Fragment 输出数量。 */
-GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_reflection_get_fragment_output_count(
+GRANIT_ASSET_TOOLS_API granit_result granit_shader_tools_reflection_get_fragment_output_count(
     granit_shader_tools_reflection reflection, uint64_t* count);
 
 /** 按 Location、Component 顺序查询 Fragment 输出。 */
-GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_reflection_get_fragment_output(
+GRANIT_ASSET_TOOLS_API granit_result granit_shader_tools_reflection_get_fragment_output(
     granit_shader_tools_reflection reflection, uint64_t index,
     granit_shader_tools_interface_variable_info* output);
 
 /** 查询 Compute Workgroup 大小。非 Compute 阶段返回零值。 */
-GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_reflection_get_workgroup_size(
+GRANIT_ASSET_TOOLS_API granit_result granit_shader_tools_reflection_get_workgroup_size(
     granit_shader_tools_reflection reflection, granit_shader_tools_workgroup_size* size);
 
 /** 查询按常量 ID 排序的 Override 数量。 */
-GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_reflection_get_override_count(
+GRANIT_ASSET_TOOLS_API granit_result granit_shader_tools_reflection_get_override_count(
     granit_shader_tools_reflection reflection, uint64_t* count);
 
 /** 按常量 ID 顺序查询 Override。 */
-GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_reflection_get_override(
+GRANIT_ASSET_TOOLS_API granit_result granit_shader_tools_reflection_get_override(
     granit_shader_tools_reflection reflection, uint64_t index,
     granit_shader_tools_override_info* override_info);
 
 /** 查询稳定排序的 UTF-8 反射 JSON。视图在反射销毁前有效。 */
-GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_reflection_get_json(
+GRANIT_ASSET_TOOLS_API granit_result granit_shader_tools_reflection_get_json(
     granit_shader_tools_reflection reflection, const char** json, uint64_t* length);
 
 /** 销毁反射句柄。零值和已经销毁的句柄返回 GRANIT_ERROR_INVALID_HANDLE。 */
-GRANIT_SHADER_TOOLS_API granit_result
+GRANIT_ASSET_TOOLS_API granit_result
 granit_shader_tools_reflection_destroy(granit_shader_tools_reflection reflection);
 
 #ifdef __cplusplus

@@ -15,7 +15,7 @@ Shader 是离线生成的阶段入口。跨后端资产同时保存 SPIR-V 与 W
 由 Renderer 选择后端载荷。Material 同样通过稳定内容 ID 引用 Shader Library。
 
 `granit_shader_create` 用于直接代码输入、底层接口契约测试及少量内部代码。它一次接收一种代码
-格式，不提供跨后端自动选择。`.grshaderobj` 及其 sidecar 属于 ShaderTools 私有中间结果，Core
+格式，不提供跨后端自动选择。`.grshaderobj` 及其 sidecar 属于 AssetTools 私有中间结果，Core
 公共 API 不读取该格式。
 
 仓库测试所需的清单和同名 sidecar 由 `granit_test_shader_assets` 目标生成到构建目录；源码目录只

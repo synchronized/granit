@@ -22,7 +22,7 @@
 | `GRANIT_FETCH_EXAMPLE_GLTF_DEPENDENCIES` | `OFF` | 下载 Model Viewer 锁定的 glTF 私有依赖 |
 | `GRANIT_BUILD_BENCHMARKS` | `OFF` | 构建独立性能基准程序 |
 | `GRANIT_BUILD_TOOLS` | `OFF` | 单独构建离线工具；示例或 benchmark 会自动构建所需工具 |
-| `GRANIT_BUILD_SHADER_TOOLS` | `OFF` | 构建并安装可供编辑器链接的 ShaderTools SDK |
+| `GRANIT_BUILD_ASSET_TOOLS` | `OFF` | 构建并安装可供编辑器链接的 AssetTools SDK |
 | `GRANIT_ENABLE_XCB` | Linux 上 `ON` | 找到 XCB 开发头时启用私有 XCB Surface 后端 |
 | `GRANIT_ENABLE_WAYLAND` | Linux 上 `ON` | 找到 Wayland 协议工具时启用 Wayland 后端 |
 | `GRANIT_ENABLE_WARNINGS` | `ON` | 为 Granit 自有目标启用编译警告 |

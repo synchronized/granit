@@ -89,7 +89,7 @@ Timestamp 异步读取不会持有调用方结果缓冲区：先创建操作并�
 
 候选数组及其结构体只在调用期间借用。空数组、未知后端、未知档位、未知特性位或过小结构均返回
 `GRANIT_ERROR_INVALID_ARGUMENT`。当前只定义 portable 档位，具体 Shader 文件读取及摘要校验仍由
-资产层负责，Renderer 不持有文件路径或 ShaderTools 状态。C++ 包装为
+资产层负责，Renderer 不持有文件路径或 AssetTools 状态。C++ 包装为
 `renderer::select_shader_variant`，返回结果码和候选索引。
 
 调用者必须设置 `struct_size`，当前至少为 `GRANIT_RENDERER_LIMITS_VERSION_1_SIZE`。查询接受更大的

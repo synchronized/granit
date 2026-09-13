@@ -7,7 +7,7 @@
 #include <stdint.h>
 
 #include <granit/core/result.h>
-#include <granit/tools/shader_tools_export.h>
+#include <granit/tools/asset_tools_export.h>
 
 /** HLSL-first Shader Library 源构建描述。所有路径只需在调用期间有效。 */
 typedef struct granit_shader_tools_source_library_desc {
@@ -53,7 +53,7 @@ extern "C" {
  * 描述中的 UTF-8 路径仅在调用期间借用；清单或路径无效返回 INVALID_ARGUMENT，缺少工具返回
  * NOT_READY，编译或写入失败返回 INITIALIZATION_FAILED。不同输出与缓存路径可由多个线程并发构建。
  */
-GRANIT_SHADER_TOOLS_API granit_result granit_shader_tools_build_library_from_manifest(
+GRANIT_ASSET_TOOLS_API granit_result granit_shader_tools_build_library_from_manifest(
     const granit_shader_tools_source_library_desc* desc, uint32_t* cache_hit);
 
 #ifdef __cplusplus

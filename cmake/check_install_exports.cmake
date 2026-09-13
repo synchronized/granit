@@ -24,9 +24,9 @@ foreach(required_file IN LISTS required_files)
   endif()
 endforeach()
 
-if(EXISTS "${install_prefix}/lib/cmake/granit/granitShaderToolsTargets.cmake")
+if(EXISTS "${install_prefix}/lib/cmake/granit/granitAssetToolsTargets.cmake")
   foreach(
-    shader_tools_header
+    asset_tools_header
     IN ITEMS
       shader_compiler.h
       shader_compiler.hpp
@@ -34,12 +34,12 @@ if(EXISTS "${install_prefix}/lib/cmake/granit/granitShaderToolsTargets.cmake")
       shader_library_builder.hpp
       shader_reflection.h
       shader_reflection.hpp
-      shader_tools.h
-      shader_tools.hpp
-      shader_tools_export.h
+      asset_tools.h
+      asset_tools.hpp
+      asset_tools_export.h
   )
-    if(NOT EXISTS "${install_prefix}/include/granit/tools/${shader_tools_header}")
-      message(FATAL_ERROR "ShaderTools 安装结果缺少公共头：${shader_tools_header}")
+    if(NOT EXISTS "${install_prefix}/include/granit/tools/${asset_tools_header}")
+      message(FATAL_ERROR "AssetTools 安装结果缺少公共头：${asset_tools_header}")
     endif()
   endforeach()
 endif()

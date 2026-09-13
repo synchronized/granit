@@ -117,12 +117,12 @@ if(BUILD_SHARED_LIBS)
       GRANIT_ABI_RENDER_PIPELINE_LIBRARY_PATH="$<TARGET_FILE:granit_render_pipeline>"
       GRANIT_ABI_WINDOW_LIBRARY_PATH="$<TARGET_FILE:granit_window>"
       GRANIT_ABI_INPUT_LIBRARY_PATH="$<TARGET_FILE:granit_input>"
-      GRANIT_ABI_SHADER_TOOLS_LIBRARY_PATH="$<TARGET_FILE:granit_shader_tools>"
+      GRANIT_ABI_ASSET_TOOLS_LIBRARY_PATH="$<TARGET_FILE:granit_asset_tools>"
       GRANIT_ABI_CORE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.21.0/core_symbols.txt"
       GRANIT_ABI_RENDER_PIPELINE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.17.0/render_pipeline_symbols.txt"
       GRANIT_ABI_WINDOW_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.5.0/window_symbols.txt"
       GRANIT_ABI_INPUT_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/input_symbols.txt"
-      GRANIT_ABI_SHADER_TOOLS_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.21.0/shader_tools_symbols.txt"
+      GRANIT_ABI_ASSET_TOOLS_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.21.0/shader_tools_symbols.txt"
   )
   target_include_directories(
     granit_abi_exports_test
@@ -134,7 +134,7 @@ if(BUILD_SHARED_LIBS)
   )
   add_dependencies(
     granit_abi_exports_test granit granit_render_pipeline granit_window granit_input
-    granit_shader_tools
+    granit_asset_tools
   )
   granit_target_compile_warnings(granit_abi_exports_test)
   granit_target_output_directories(granit_abi_exports_test)
@@ -161,7 +161,7 @@ if(BUILD_SHARED_LIBS)
       if(component STREQUAL "render_pipeline")
         set(snapshot_version 0.17.0)
       endif()
-      if(component STREQUAL "shader_tools")
+      if(component STREQUAL "asset_tools")
         set(snapshot_version 0.21.0)
       endif()
       add_test(
@@ -197,7 +197,7 @@ if(BUILD_SHARED_LIBS)
     )
     granit_add_abi_export_snapshot_test(input granit_input input_symbols.txt)
     granit_add_abi_export_snapshot_test(
-      shader_tools granit_shader_tools shader_tools_symbols.txt
+      asset_tools granit_asset_tools shader_tools_symbols.txt
     )
   endif()
 endif()

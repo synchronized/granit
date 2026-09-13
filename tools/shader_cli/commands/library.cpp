@@ -3,7 +3,7 @@
 
 #include "shader_cli/arguments.h"
 #include "shader_cli/commands.h"
-#include <granit/tools/shader_tools.hpp>
+#include <granit/tools/asset_tools.hpp>
 
 #include "shader_library/source_manifest.h"
 
@@ -121,7 +121,7 @@ int emit_shader_index_ids(int argc, char** argv) {
   std::ostringstream content;
   content << "// SPDX-License-Identifier: MIT\n"
              "// Copyright (c) 2026 Granit contributors\n\n"
-             "// 由 granit_shader_tool index-ids 生成。\n\n"
+             "// 由 granit_asset_tool shader index-ids 生成。\n\n"
           << std::hex << std::setfill('0');
   std::string previous_name;
   for (const auto& spec : shader_specs) {

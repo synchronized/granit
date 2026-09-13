@@ -58,7 +58,7 @@ if(NOT GRANIT_REQUEST_COMPONENT)
       granit::render_pipeline
       granit::window
       granit::input
-      granit::shader_tools
+      granit::asset_tools
       granit::integration_sdl3
       granit::integration_imgui
   )
@@ -75,16 +75,16 @@ elseif(GRANIT_REQUEST_COMPONENT STREQUAL "Input")
   if(NOT TARGET granit::window)
     message(FATAL_ERROR "Input component 未导入其 Window 依赖")
   endif()
-elseif(GRANIT_REQUEST_COMPONENT STREQUAL "ShaderTools")
-  set(expected_target granit::shader_tools)
+elseif(GRANIT_REQUEST_COMPONENT STREQUAL "AssetTools")
+  set(expected_target granit::asset_tools)
   add_executable(granit_shader_tools_c_consumer shader_tools_c_consumer.c)
   target_compile_features(granit_shader_tools_c_consumer PRIVATE c_std_11)
-  target_link_libraries(granit_shader_tools_c_consumer PRIVATE granit::shader_tools)
+  target_link_libraries(granit_shader_tools_c_consumer PRIVATE granit::asset_tools)
   set_target_properties(granit_shader_tools_c_consumer PROPERTIES LINKER_LANGUAGE CXX)
 
   add_executable(granit_shader_tools_cpp_consumer shader_tools_cpp_consumer.cpp)
   target_compile_features(granit_shader_tools_cpp_consumer PRIVATE cxx_std_20)
-  target_link_libraries(granit_shader_tools_cpp_consumer PRIVATE granit::shader_tools)
+  target_link_libraries(granit_shader_tools_cpp_consumer PRIVATE granit::asset_tools)
 elseif(GRANIT_REQUEST_COMPONENT STREQUAL "IntegrationSDL3")
   set(expected_target granit::integration_sdl3)
 elseif(GRANIT_REQUEST_COMPONENT STREQUAL "IntegrationImGui")
