@@ -471,7 +471,7 @@
 
 ## 三十一、0.23.0 空帧与覆盖层可靠性
 
-**状态：实现中；S-39A～S-39C 与 S-39D 桌面路径已完成。**
+**状态：实现中；S-39A～S-39D 已完成，Gneiss 与发布验收待完成。**
 
 - **[S-39](plans/S-39-0.23.0-empty-frame-and-overlay-reliability.md) / P1**：让有效 View 在零可见
   Renderable 时仍完成清屏、Tone Mapping、Debug Draw、Canvas、Overlay 和 Frame 提交。
