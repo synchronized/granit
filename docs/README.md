@@ -51,7 +51,7 @@
 16. [0.21.0 Shader Library 与后端无关材质计划](plans/S-37-0.21.0-shader-library-and-material-boundary.md)
 17. [WebGPU Provider 边界收敛计划](plans/S-37H-webgpu-provider-boundary-collapse.md)
 18. [HLSL-first Shader 作者入口计划](plans/S-37L-hlsl-first-shader-authoring.md)
-19. [0.22.0 ShaderTools 工具链交付与自动获取计划](plans/S-38-0.22.0-shader-toolchain-acquisition.md)
+19. [0.22.0 AssetTools SDK 与工具链交付计划](plans/S-38-0.22.0-asset-tools-and-toolchain.md)
 
 ## 操作指南
 
