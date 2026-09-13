@@ -48,6 +48,7 @@
 | 二十八、0.20.0 示例框架稳定化 | 已发布 | 示例分层、交互与双后端视觉验收已完成 |
 | 二十九、0.21.0 Shader Library 与后端无关材质 | 已完成 | S-37A～S-37L 与跨平台候选包验收均已完成 |
 | 三十、0.22.0 AssetTools SDK 与工具链交付 | 已发布 | AssetTools SDK 与工具链已随 0.22.0 发布 |
+| 三十一、0.23.0 空帧与覆盖层可靠性 | 待开始 | 支持无可见物体时的清屏、UI 与 Frame 提交 |
 
 ## 一、工程与 ABI 基础
 
@@ -468,12 +469,25 @@
 - 图片解码、纹理压缩、HDR 卷积、macOS、ARM64、运行时资产编译和把工具链嵌入每个 SDK 包不属于
   本版本。
 
+## 三十一、0.23.0 空帧与覆盖层可靠性
+
+**状态：待开始；S-39A～S-39E 已确认。**
+
+- **[S-39](plans/S-39-0.23.0-empty-frame-and-overlay-reliability.md) / P1**：让有效 View 在零可见
+  Renderable 时仍完成清屏、Tone Mapping、Debug Draw、Canvas、Overlay 和 Frame 提交。
+- 统一空 Opaque submission 与 clear-only Rendering 的内部语义，不新增 UI-only 或清屏专用公共
+  API，不改变 C ABI。
+- 以离屏像素、桌面 Swapchain、浏览器 WebGPU 和 Gneiss 工程选择界面完成真实 Consumer 验收。
+- 透明 PBR、通用 Render Graph 重构、Android、Bindless 和稳定 ABI 决策不属于本版本。
+
 ## 近期执行顺序
 
-1. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
-2. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
-3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-4. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+1. 先实施 S-39A～S-39C，固定空可见集合与 clear-only 输出契约。
+2. 再实施 S-39D～S-39E，完成覆盖层、交换链、WebGPU、Gneiss 和发布验收。
+3. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
+4. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
+5. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+6. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。

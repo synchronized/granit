@@ -194,6 +194,8 @@ D-03-graphics-pipeline.md
   完成作者入口、内建资产、旧接口和发布边界收敛，并通过完整跨平台与候选包验收。
 - [S-38：0.22.0 AssetTools SDK 与工具链交付](S-38-0.22.0-asset-tools-and-toolchain.md)——已完成；
   四个资产领域、工具链交付及跨平台 Release Candidate 均已通过验收。
+- [S-39：0.23.0 空帧与覆盖层可靠性](S-39-0.23.0-empty-frame-and-overlay-reliability.md)——已确认，
+  待实施；支持零可见物体时的清屏、覆盖层与 Frame 提交，并由 Gneiss UI-only 场景验收。
 
 ## 状态
 

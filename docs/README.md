@@ -52,6 +52,7 @@
 17. [WebGPU Provider 边界收敛计划](plans/S-37H-webgpu-provider-boundary-collapse.md)
 18. [HLSL-first Shader 作者入口计划](plans/S-37L-hlsl-first-shader-authoring.md)
 19. [0.22.0 AssetTools SDK 与工具链交付计划](plans/S-38-0.22.0-asset-tools-and-toolchain.md)
+20. [0.23.0 空帧与覆盖层可靠性计划](plans/S-39-0.23.0-empty-frame-and-overlay-reliability.md)
 
 ## 操作指南
 
