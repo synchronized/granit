@@ -15,6 +15,7 @@
 
 #include <granit/core/diagnostic.hpp>
 #include <granit/core/result.hpp>
+#include <granit/core/shader_types.hpp>
 #include <granit/renderer/renderer.h>
 #include <granit/renderer/resource_types.hpp>
 
@@ -89,7 +90,7 @@ enum class shader_feature : std::uint64_t {
 
 struct renderer_shader_capabilities {
   renderer_backend backend{renderer_backend::automatic};
-  std::uint32_t profile{GRANIT_SHADER_PROFILE_PORTABLE};
+  shader_profile profile{shader_profile::portable};
   std::uint64_t supported_features{};
 
   [[nodiscard]] constexpr bool supports(shader_feature feature) const noexcept {
@@ -100,7 +101,7 @@ struct renderer_shader_capabilities {
 
 struct shader_variant_requirement {
   renderer_backend backend{renderer_backend::automatic};
-  std::uint32_t profile{GRANIT_SHADER_PROFILE_PORTABLE};
+  shader_profile profile{shader_profile::portable};
   std::uint32_t priority{};
   std::uint64_t required_features{};
 };
@@ -242,7 +243,7 @@ public:
       return query_result;
     capabilities = {
         .backend = static_cast<renderer_backend>(native.backend),
-        .profile = native.profile,
+        .profile = static_cast<shader_profile>(native.profile),
         .supported_features = native.supported_features,
     };
     return result::success;
@@ -258,7 +259,7 @@ public:
       for (const auto& variant : variants) {
         native.push_back({.struct_size = sizeof(granit_shader_variant_requirement),
                           .backend = static_cast<granit_renderer_backend>(variant.backend),
-                          .profile = variant.profile,
+                          .profile = static_cast<granit_shader_profile>(variant.profile),
                           .priority = variant.priority,
                           .required_features = variant.required_features});
       }

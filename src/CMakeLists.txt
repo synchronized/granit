@@ -5,7 +5,7 @@ add_library(granit)
 add_library(granit::granit ALIAS granit)
 granit_target_output_directories(granit)
 
-add_subdirectory(assets)
+add_subdirectory(shader_format)
 
 set(GRANIT_GENERATED_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated/include")
 set(GRANIT_GENERATED_VERSION_HEADER
@@ -21,7 +21,7 @@ configure_file(
 target_sources(
   granit
   PRIVATE
-    $<TARGET_OBJECTS:granit_internal_shader_asset_format>
+    $<TARGET_OBJECTS:granit_internal_shader_format>
     backend/contracts/access.h
     backend/contracts/binding.h
     backend/contracts/capabilities.h
@@ -58,9 +58,10 @@ target_sources(
     renderer/renderer_validation.h
     renderer/surface_validation.h
     renderer/shader_validation.h
+    renderer/shader_code_selection.h
     renderer/swapchain_validation.h
-    result.cpp
-    version.cpp
+    core/result.cpp
+    core/version.cpp
     core/handle_table.cpp
     core/async_operation_state.cpp
     core/diagnostic_sink.cpp
@@ -82,12 +83,14 @@ target_sources(
     renderer/renderer_registry_presentation.cpp
     renderer/renderer_registry_readback.cpp
     renderer/renderer_registry_rendering.cpp
+    renderer/renderer_registry_shader_library.cpp
     renderer/renderer_registry_texture.cpp
     renderer/renderer_registry_timestamp.cpp
     renderer/renderer_registry_transfer.cpp
     renderer/renderer_registry_warmup.cpp
     renderer/sampler_api.cpp
     renderer/shader_api.cpp
+    renderer/shader_library_api.cpp
     renderer/surface_api.cpp
     renderer/swapchain_api.cpp
     renderer/texture_api.cpp
@@ -103,6 +106,8 @@ target_sources(
       "${GRANIT_GENERATED_INCLUDE_DIR}"
     FILES
       "${PROJECT_SOURCE_DIR}/include/granit/core/export.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/core/content_id.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/core/content_id.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/core/diagnostic.h"
       "${PROJECT_SOURCE_DIR}/include/granit/core/diagnostic.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/buffer.h"
@@ -131,10 +136,14 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/core/result.h"
       "${PROJECT_SOURCE_DIR}/include/granit/core/result.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/core/shader_features.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/core/shader_types.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/core/shader_types.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/sampler.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/sampler.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/shader.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/shader.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/shader_library.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/shader_library.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/surface.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/surface.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/texture.h"
@@ -247,14 +256,8 @@ install(
   COMPONENT RenderPipeline
 )
 install(
-  FILES
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.vert.grshader"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.vert.grshader.spv"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.vert.grshader.wgsl"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.frag.grshader"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.frag.grshader.spv"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.frag.grshader.wgsl"
-  DESTINATION "${CMAKE_INSTALL_DATADIR}/granit/assets/shaders/pbr"
+  FILES "${PROJECT_SOURCE_DIR}/assets/libraries/pbr_standard.grshlib"
+  DESTINATION "${CMAKE_INSTALL_DATADIR}/granit/assets/libraries"
   COMPONENT RenderPipeline
 )
 install(

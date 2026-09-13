@@ -48,6 +48,9 @@
 13. [0.18.0 压缩纹理与格式能力契约计划](plans/S-34-0.18.0-compressed-textures.md)
 14. [0.19.0 纹理资产变体与流式加载计划](plans/S-35-0.19.0-texture-asset-variants.md)
 15. [0.20.0 示例框架与跨平台 Model Viewer 计划](plans/S-36-0.20.0-example-framework-and-model-viewer.md)
+16. [0.21.0 Shader Library 与后端无关材质计划](plans/S-37-0.21.0-shader-library-and-material-boundary.md)
+17. [WebGPU Provider 边界收敛计划](plans/S-37H-webgpu-provider-boundary-collapse.md)
+18. [HLSL-first Shader 作者入口计划](plans/S-37L-hlsl-first-shader-authoring.md)
 
 ## 操作指南
 
@@ -70,6 +73,7 @@
 - [从 0.17 迁移到 0.18](guides/migrate-0.17-to-0.18.md)
 - [从 0.18 迁移到 0.19](guides/migrate-0.18-to-0.19.md)
 - [从 0.19 迁移到 0.20](guides/migrate-0.19-to-0.20.md)
+- [从 0.20 迁移到 0.21](guides/migrate-0.20-to-0.21.md)
 - [从 0.8 迁移到 0.9](guides/migrate-0.8-to-0.9.md)
 - [示例程序及运行方式](guides/examples.md)
 - [运行跨后端模型查看器](guides/model-viewer.md)
@@ -109,6 +113,7 @@
 - [Command Recorder](reference/command-recorder.md)
 - [Frame Context](reference/frame-context.md)
 - [Shader Module](reference/shader.md)
+- [Shader Library](reference/shader-library.md)
 - [Graphics 与 Compute Pipeline](reference/pipeline.md)
 
 ### 高级 Render Pipeline component

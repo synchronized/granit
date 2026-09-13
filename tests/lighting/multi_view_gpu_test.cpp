@@ -8,6 +8,7 @@
 #include "material/pbr_material_schema.h"
 #include "pbr_test_support.h"
 #include "support/shader_asset_store.h"
+#include "support/tone_mapping_shader_library.h"
 
 #include <granit/granit.hpp>
 
@@ -82,11 +83,15 @@ TEST_CASE("两个View执行独立PBR与Tone Mapping") {
   CHECK(lights[0].group() != lights[1].group());
 
   granit::tests::shader_asset_store assets;
-  const auto vertex_path = std::string{GRANIT_PBR_SHADER_DIR} + "/pbr_lights.vert.grshader";
+  const auto vertex_path = std::string{GRANIT_PBR_SHADER_DIR} + "/pbr_lights.vert.grshaderobj";
   const auto fragment_path =
-      std::string{GRANIT_PBR_SHADER_DIR} + "/pbr_lights_untextured.frag.grshader";
+      std::string{GRANIT_PBR_SHADER_DIR} + "/pbr_lights_untextured.frag.grshaderobj";
   REQUIRE(assets.add(vertex_path));
   REQUIRE(assets.add(fragment_path));
+  std::vector<std::byte> shader_library_bytes;
+  granit::shader_library shader_library;
+  REQUIRE(
+      assets.initialize_library(renderer.native_handle(), shader_library_bytes, shader_library));
   const auto vertex = assets.reference(vertex_path);
   const auto fragment = assets.reference(fragment_path);
   std::array<granit::material::material_package, 2> packages;
@@ -101,8 +106,7 @@ TEST_CASE("两个View执行独立PBR与Tone Mapping") {
     REQUIRE(granit::test::build_pbr_package(packages[index], vertex, fragment));
     const std::array layouts{object_layout.native_handle(), lights[index].layout()};
     REQUIRE(materials[index].initialize(renderer.native_handle(), packages[index], layouts,
-                                        granit::tests::shader_asset_store::resolve,
-                                        &assets) == GRANIT_SUCCESS);
+                                        shader_library.native_handle()) == GRANIT_SUCCESS);
     const std::array features{granit::material::material_feature_value{
         granit::material::make_feature_id(granit::material::pbr_texture_feature_name), 0}};
     REQUIRE(
@@ -123,18 +127,10 @@ TEST_CASE("两个View执行独立PBR与Tone Mapping") {
   std::array<granit::texture, 2> outputs;
   std::array<granit::texture_view, 2> output_views;
   std::array<granit::buffer, 2> readbacks;
+  granit::tests::tone_mapping_shader_library tone_shaders;
+  REQUIRE(tone_shaders.initialize(renderer.native_handle()));
   std::array<granit::lighting::tone_mapping_resources, 2> tone_mapping;
   constexpr std::uint64_t readback_size = 32 * 32 * 4;
-  granit::tests::shader_asset_file tone_vertex;
-  granit::tests::shader_asset_file tone_fragment;
-  REQUIRE(tone_vertex
-              .load(renderer.native_handle(),
-                    std::string{GRANIT_PIPELINE_SHADER_DIR} + "/tone_mapping.vert.grshader")
-              .ok());
-  REQUIRE(tone_fragment
-              .load(renderer.native_handle(),
-                    std::string{GRANIT_PIPELINE_SHADER_DIR} + "/tone_mapping.frag.grshader")
-              .ok());
   for (std::size_t index = 0; index < colors.size(); ++index) {
     REQUIRE(colors[index].initialize(renderer.native_handle(),
                                      {.format = granit::texture_format::rgba16_float,
@@ -168,10 +164,11 @@ TEST_CASE("两个View执行独立PBR与Tone Mapping") {
                                          .usage = granit::buffer_usage::transfer_destination,
                                          .location = granit::memory_location::readback}) ==
             granit::result::success);
-    REQUIRE(tone_mapping[index].initialize_packaged_asset(
+    REQUIRE(tone_mapping[index].initialize(
                 renderer.native_handle(), color_views[index].native_handle(),
                 granit::texture_format::rgba8_unorm, {.exposure_scale = 1.0F, .encode_srgb = 1},
-                tone_vertex.desc(), tone_fragment.desc()) == GRANIT_SUCCESS);
+                tone_shaders.library(), tone_shaders.vertex_id(),
+                tone_shaders.fragment_id()) == GRANIT_SUCCESS);
     CHECK(tone_mapping[index].group() != GRANIT_NULL_HANDLE);
   }
   CHECK(tone_mapping[0].group() != tone_mapping[1].group());

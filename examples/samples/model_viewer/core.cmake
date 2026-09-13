@@ -7,29 +7,22 @@ set(granit_model_viewer_material_package
     "${CMAKE_CURRENT_BINARY_DIR}/model_viewer_pbr.grmat")
 set(granit_model_viewer_material_include
     "${CMAKE_CURRENT_BINARY_DIR}/generated/model_viewer_pbr.grmat.inc")
-set(granit_model_viewer_shader_assets
-    pbr_standard.vert.grshader
-    pbr_standard.vert.grshader.spv
-    pbr_standard.vert.grshader.wgsl
-    pbr_standard.frag.grshader
-    pbr_standard.frag.grshader.spv
-    pbr_standard.frag.grshader.wgsl
+set(granit_model_viewer_shader_library_include
+    "${CMAKE_CURRENT_BINARY_DIR}/generated/pbr_standard.grshlib.inc")
+add_custom_command(
+  OUTPUT "${granit_model_viewer_shader_library_include}"
+  COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated"
+  COMMAND
+    "${CMAKE_COMMAND}"
+    "-DINPUT=${PROJECT_SOURCE_DIR}/assets/libraries/pbr_standard.grshlib"
+    "-DOUTPUT=${granit_model_viewer_shader_library_include}"
+    -P "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+  DEPENDS
+    "${PROJECT_SOURCE_DIR}/assets/libraries/pbr_standard.grshlib"
+    "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+  COMMENT "内嵌模型查看器 PBR Shader Library"
+  VERBATIM
 )
-set(granit_model_viewer_shader_includes)
-foreach(asset IN LISTS granit_model_viewer_shader_assets)
-  set(source "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/${asset}")
-  set(output "${CMAKE_CURRENT_BINARY_DIR}/generated/${asset}.inc")
-  add_custom_command(
-    OUTPUT "${output}"
-    COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated"
-    COMMAND "${CMAKE_COMMAND}" "-DINPUT=${source}" "-DOUTPUT=${output}"
-            -P "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
-    DEPENDS "${source}" "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
-    COMMENT "内嵌模型查看器 Shader 资产 ${asset}"
-    VERBATIM
-  )
-  list(APPEND granit_model_viewer_shader_includes "${output}")
-endforeach()
 if(CMAKE_CROSSCOMPILING)
   set(
     granit_model_viewer_material_package
@@ -41,7 +34,8 @@ else()
     COMMAND
       granit_material_tool build
       "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat.json"
-      --output "${granit_model_viewer_material_package}"
+      --output "${granit_model_viewer_material_package}" --shader-index
+      "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grshidx.json"
     COMMAND
       "${CMAKE_COMMAND}" -E compare_files
       "${granit_model_viewer_material_package}"
@@ -49,12 +43,7 @@ else()
     DEPENDS
       granit_material_tool
       "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat.json"
-      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.vert.grshader"
-      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.frag.grshader"
-      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.vert.grshader.spv"
-      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.vert.grshader.wgsl"
-      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.frag.grshader.spv"
-      "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.frag.grshader.wgsl"
+      "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grshidx.json"
       "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat"
     COMMENT "生成模型查看器 PBR 材质归档"
     VERBATIM
@@ -95,8 +84,7 @@ add_library(
   "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/viewer_state.h"
   "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/viewer_input.h"
   "${granit_model_viewer_material_include}"
-  ${granit_model_viewer_shader_includes}
-  $<TARGET_OBJECTS:granit_internal_shader_asset_format>
+  "${granit_model_viewer_shader_library_include}"
 )
 add_library(granit_example_model_viewer_support ALIAS granit_model_viewer_core)
 target_compile_features(granit_model_viewer_core PUBLIC cxx_std_20)
@@ -118,7 +106,7 @@ if(NOT CMAKE_CROSSCOMPILING)
     granit_model_viewer_environment_tool
     "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/environment_tool_main.cpp"
     "${PROJECT_SOURCE_DIR}/src/pipeline/environment_asset.cpp"
-    $<TARGET_OBJECTS:granit_internal_shader_asset_format>
+    $<TARGET_OBJECTS:granit_internal_shader_format>
   )
   target_include_directories(
     granit_model_viewer_environment_tool PRIVATE "${PROJECT_SOURCE_DIR}/src"

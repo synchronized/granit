@@ -13,6 +13,7 @@
 #include "backend/contracts/compute.h"
 #include "backend/contracts/lifecycle.h"
 #include "backend/contracts/pipeline.h"
+#include "backend/contracts/presentation.h"
 #include "backend/contracts/queue.h"
 #include "backend/contracts/renderer.h"
 #include "backend/contracts/rendering.h"
@@ -21,17 +22,11 @@
 #include "backend/contracts/shader.h"
 #include "backend/contracts/timestamp.h"
 #include "backend/contracts/transfer.h"
-#include "backend/webgpu/command_adapter.h"
-#include "backend/webgpu/pipeline_adapter.h"
-#include "backend/webgpu/presentation_adapter.h"
-#include "backend/webgpu/provider_dispatch.h"
-#include "backend/webgpu/resource_adapter.h"
-#include "backend/webgpu/shader_adapter.h"
-#include "backend/webgpu/timestamp_adapter.h"
+#include "backend/webgpu/device.h"
 
 namespace granit::detail {
 
-/** 集中管理 WebGPU Provider、异步生命周期、能力快照和呈现适配器。 */
+/** 实现 WebGPU HAL 契约并管理异步生命周期、能力快照和设备资源。 */
 class webgpu_renderer_state final : public backend_renderer,
                                     public backend_presentation_renderer,
                                     public backend_queue,
@@ -41,11 +36,12 @@ class webgpu_renderer_state final : public backend_renderer,
                                     public backend_resource_renderer,
                                     public backend_transfer_command_renderer,
                                     public backend_retirement_renderer,
-                                    public backend_wgsl_shader_renderer,
+                                    public backend_shader_renderer,
                                     public backend_pipeline_layout_renderer,
                                     public backend_pipeline_renderer,
                                     public backend_pipeline_warmup_renderer,
-                                    public backend_timestamp_renderer {
+                                    public backend_timestamp_renderer,
+                                    public std::enable_shared_from_this<webgpu_renderer_state> {
 public:
   webgpu_renderer_state() = default;
   ~webgpu_renderer_state();
@@ -53,8 +49,7 @@ public:
   webgpu_renderer_state(const webgpu_renderer_state&) = delete;
   webgpu_renderer_state& operator=(const webgpu_renderer_state&) = delete;
 
-  [[nodiscard]] granit_result initialize_static(const granit_webgpu_provider_api* api,
-                                                std::uint32_t surface_types,
+  [[nodiscard]] granit_result initialize_static(std::uint32_t surface_types,
                                                 granit_diagnostic_callback diagnostic_callback,
                                                 void* diagnostic_user_data) noexcept;
   [[nodiscard]] granit_result process_backend_events() noexcept override;
@@ -73,7 +68,7 @@ public:
   texture_format_capabilities(granit_texture_format format) const noexcept override;
   [[nodiscard]] std::uint32_t domain() const noexcept override { return domain_; }
   void set_domain(std::uint32_t domain) noexcept override { domain_ = domain; }
-  [[nodiscard]] webgpu_presentation_adapter* presentation() noexcept { return presentation_.get(); }
+  [[nodiscard]] webgpu_device& native_device() noexcept { return device_; }
 
   [[nodiscard]] std::unique_ptr<backend_buffer_resource> allocate_buffer_resource() override;
   [[nodiscard]] granit_result create_buffer(const granit_buffer_desc& desc,
@@ -228,9 +223,11 @@ public:
   [[nodiscard]] granit_result
   end_rendering(backend_command_recorder_resource& recorder) noexcept override;
   [[nodiscard]] std::unique_ptr<backend_shader_resource> allocate_shader_resource() override;
-  [[nodiscard]] granit_result create_wgsl_shader(backend_shader_resource& shader,
-                                                 granit_shader_stage stage, std::string_view source,
-                                                 std::string_view entry_point) noexcept override;
+  [[nodiscard]] granit_result create_shader(backend_shader_resource& shader,
+                                            granit_shader_stage stage,
+                                            granit_shader_code_format code_format,
+                                            std::span<const std::byte> code,
+                                            std::string_view entry_point) noexcept override;
   [[nodiscard]] std::unique_ptr<backend_pipeline_layout_resource>
   allocate_pipeline_layout_resource() override;
   [[nodiscard]] granit_result
@@ -264,15 +261,8 @@ public:
 
   [[nodiscard]] std::unique_ptr<backend_surface_resource> allocate_surface_resource() override;
   [[nodiscard]] std::unique_ptr<backend_swapchain_resource> allocate_swapchain_resource() override;
-  [[nodiscard]] granit_result create_win32_surface(void*, void*,
-                                                   backend_surface_resource&) noexcept override;
-  [[nodiscard]] granit_result create_xcb_surface(void*, std::uint32_t,
-                                                 backend_surface_resource&) noexcept override;
-  [[nodiscard]] granit_result create_wayland_surface(void*, void*,
-                                                     backend_surface_resource&) noexcept override;
-  [[nodiscard]] granit_result
-  create_canvas_surface(std::string_view selector,
-                        backend_surface_resource& surface) noexcept override;
+  [[nodiscard]] granit_result create_surface(const granit_surface_desc& desc,
+                                             backend_surface_resource& surface) noexcept override;
   [[nodiscard]] granit_result create_swapchain(backend_surface_resource& surface,
                                                const backend_swapchain_desc& desc,
                                                backend_swapchain_resource& swapchain) override;
@@ -325,23 +315,173 @@ private:
                        const char* message, std::uint32_t message_length, void* user_data) noexcept;
   [[nodiscard]] granit_result refresh_state() noexcept;
   [[nodiscard]] granit_result finish_initialization() noexcept;
+  [[nodiscard]] std::unique_ptr<backend_surface_resource> presentation_allocate_surface();
+  [[nodiscard]] std::unique_ptr<backend_swapchain_resource> presentation_allocate_swapchain();
+  [[nodiscard]] granit_result
+  presentation_create_surface(const granit_surface_desc& desc,
+                              backend_surface_resource& resource) noexcept;
+  [[nodiscard]] granit_result
+  presentation_create_swapchain(backend_surface_resource& surface,
+                                const backend_swapchain_desc& desc,
+                                backend_swapchain_resource& swapchain) noexcept;
+  [[nodiscard]] granit_result
+  presentation_recreate_swapchain(backend_swapchain_resource& swapchain,
+                                  const backend_swapchain_desc& desc) noexcept;
+  [[nodiscard]] granit_result
+  presentation_get_swapchain_info(backend_swapchain_resource& swapchain,
+                                  backend_swapchain_info& info) noexcept;
+  [[nodiscard]] granit_result
+  presentation_acquire_swapchain(backend_swapchain_resource& swapchain,
+                                 backend_acquired_swapchain_frame& frame) noexcept;
+  [[nodiscard]] granit_result presentation_present_swapchain(backend_swapchain_resource& swapchain,
+                                                             bool& needs_recreate) noexcept;
+  [[nodiscard]] granit_result presentation_cancel_swapchain(backend_swapchain_resource& swapchain,
+                                                            bool& needs_recreate) noexcept;
+  [[nodiscard]] webgpu_texture_view
+  presentation_native_view(backend_texture_view_resource& view) noexcept;
+  [[nodiscard]] std::unique_ptr<backend_command_recorder_resource> command_allocate_recorder();
+  [[nodiscard]] granit_result command_begin(backend_command_recorder_resource& resource) noexcept;
+  [[nodiscard]] granit_result
+  command_begin_rendering(backend_command_recorder_resource& resource, webgpu_texture_view target,
+                          webgpu_texture_view resolve_target, webgpu_load_operation load,
+                          webgpu_store_operation store, const float clear[4],
+                          webgpu_texture_view depth_target, webgpu_load_operation depth_load,
+                          webgpu_store_operation depth_store, float clear_depth) noexcept;
+  [[nodiscard]] granit_result command_bind_pipeline(backend_command_recorder_resource& resource,
+                                                    webgpu_render_pipeline pipeline) noexcept;
+  [[nodiscard]] granit_result
+  command_bind_graphics_groups(backend_command_recorder_resource& resource,
+                               webgpu_pipeline_layout layout, std::uint32_t first_group,
+                               std::span<const webgpu_bind_group> groups,
+                               std::span<const std::uint32_t> dynamic_offsets) noexcept;
+  [[nodiscard]] granit_result command_begin_compute(backend_command_recorder_resource&) noexcept;
+  [[nodiscard]] granit_result command_bind_compute_pipeline(backend_command_recorder_resource&,
+                                                            webgpu_compute_pipeline) noexcept;
+  [[nodiscard]] granit_result command_bind_compute_groups(backend_command_recorder_resource&,
+                                                          webgpu_pipeline_layout, std::uint32_t,
+                                                          std::span<const webgpu_bind_group>,
+                                                          std::span<const std::uint32_t>) noexcept;
+  [[nodiscard]] granit_result command_dispatch(backend_command_recorder_resource&, std::uint32_t,
+                                               std::uint32_t, std::uint32_t) noexcept;
+  [[nodiscard]] granit_result command_end_compute(backend_command_recorder_resource&) noexcept;
+  [[nodiscard]] granit_result
+  command_bind_vertex_buffers(backend_command_recorder_resource& resource, std::uint32_t first,
+                              std::span<const webgpu_vertex_buffer_binding> bindings) noexcept;
+  [[nodiscard]] granit_result command_bind_index_buffer(backend_command_recorder_resource& resource,
+                                                        webgpu_buffer buffer, std::uint64_t offset,
+                                                        webgpu_index_format format) noexcept;
+  [[nodiscard]] granit_result
+  command_set_viewports(backend_command_recorder_resource& resource, std::uint32_t first,
+                        std::span<const webgpu_viewport> viewports) noexcept;
+  [[nodiscard]] granit_result
+  command_set_scissors(backend_command_recorder_resource& resource, std::uint32_t first,
+                       std::span<const webgpu_scissor> scissors) noexcept;
+  [[nodiscard]] granit_result
+  command_copy_texture_to_buffer(backend_command_recorder_resource& resource,
+                                 webgpu_texture texture, webgpu_buffer buffer, std::uint32_t width,
+                                 std::uint32_t height, std::uint32_t bytes_per_row) noexcept;
+  [[nodiscard]] granit_result
+  command_copy_buffer(backend_command_recorder_resource& resource, webgpu_buffer source,
+                      webgpu_buffer destination,
+                      std::span<const webgpu_buffer_copy_region> regions) noexcept;
+  [[nodiscard]] granit_result
+  command_copy_buffer_to_texture(backend_command_recorder_resource& resource, webgpu_buffer source,
+                                 webgpu_texture destination,
+                                 const webgpu_texture_buffer_copy& region) noexcept;
+  [[nodiscard]] granit_result
+  command_copy_texture_to_buffer(backend_command_recorder_resource& resource, webgpu_texture source,
+                                 webgpu_buffer destination,
+                                 const webgpu_texture_buffer_copy& region) noexcept;
+  [[nodiscard]] granit_result
+  command_copy_texture(backend_command_recorder_resource& resource, webgpu_texture source,
+                       webgpu_texture destination,
+                       const webgpu_texture_copy_region& region) noexcept;
+  [[nodiscard]] granit_result command_fill_buffer(backend_command_recorder_resource& resource,
+                                                  webgpu_buffer buffer, std::uint64_t offset,
+                                                  std::uint64_t size, std::uint32_t value) noexcept;
+  [[nodiscard]] granit_result
+  command_generate_mipmaps(backend_command_recorder_resource& resource, webgpu_texture texture,
+                           const webgpu_texture_mipmap_range& range) noexcept;
+  [[nodiscard]] granit_result command_draw(backend_command_recorder_resource& resource,
+                                           std::uint32_t vertex_count, std::uint32_t instance_count,
+                                           std::uint32_t first_vertex,
+                                           std::uint32_t first_instance) noexcept;
+  [[nodiscard]] granit_result
+  command_draw_indexed(backend_command_recorder_resource& resource, std::uint32_t index_count,
+                       std::uint32_t instance_count, std::uint32_t first_index,
+                       std::int32_t vertex_offset, std::uint32_t first_instance) noexcept;
+  [[nodiscard]] granit_result
+  command_end_rendering(backend_command_recorder_resource& resource) noexcept;
+  [[nodiscard]] bool command_is_recording(backend_command_recorder_resource& resource) noexcept;
+  [[nodiscard]] granit_result command_end(backend_command_recorder_resource& resource) noexcept;
+  [[nodiscard]] granit_result command_submit(backend_command_recorder_resource& resource) noexcept;
+  [[nodiscard]] granit_result command_reset(backend_command_recorder_resource& resource) noexcept;
+  [[nodiscard]] webgpu_command_recorder
+  command_native_recorder(backend_command_recorder_resource& resource) noexcept;
 
-  webgpu_provider_dispatch provider_;
-  granit_webgpu_provider_instance instance_{};
+  [[nodiscard]] webgpu_shader native_shader(backend_shader_resource& resource) const noexcept;
+  [[nodiscard]] webgpu_buffer native_buffer(backend_buffer_resource& resource) const noexcept;
+  [[nodiscard]] webgpu_texture native_texture(backend_texture_resource& resource) const noexcept;
+  [[nodiscard]] webgpu_texture_view
+  native_texture_view(backend_texture_view_resource& resource) const noexcept;
+  [[nodiscard]] webgpu_bind_group_layout
+  native_bind_group_layout(backend_bind_group_layout_resource& resource) const noexcept;
+  [[nodiscard]] webgpu_bind_group
+  native_bind_group(backend_bind_group_resource& resource) const noexcept;
+  [[nodiscard]] std::unique_ptr<backend_pipeline_layout_resource> allocate_pipeline_layout();
+  [[nodiscard]] std::unique_ptr<backend_graphics_pipeline_resource> allocate_graphics_pipeline();
+  [[nodiscard]] std::unique_ptr<backend_compute_pipeline_resource> allocate_compute_pipeline();
+  [[nodiscard]] granit_result
+  create_pipeline_layout(std::span<const webgpu_bind_group_layout> layouts,
+                         backend_pipeline_layout_resource& resource) noexcept;
+  [[nodiscard]] webgpu_pipeline_layout
+  native_pipeline_layout(backend_pipeline_layout_resource& resource) const noexcept;
+  [[nodiscard]] granit_result create_compute_pipeline(backend_compute_pipeline_resource& resource,
+                                                      webgpu_pipeline_layout layout,
+                                                      webgpu_shader shader) noexcept;
+  [[nodiscard]] granit_result
+  begin_compute_pipeline_warmup(webgpu_pipeline_layout layout, webgpu_shader shader,
+                                webgpu_pipeline_warmup& warmup) noexcept;
+  [[nodiscard]] webgpu_compute_pipeline
+  native_compute_pipeline(backend_compute_pipeline_resource& resource) const noexcept;
+  [[nodiscard]] granit_result create_graphics_pipeline(
+      backend_graphics_pipeline_resource& resource, backend_pipeline_layout_resource& layout,
+      webgpu_shader vertex_shader, webgpu_shader fragment_shader,
+      std::span<const granit_vertex_buffer_layout> vertex_buffers,
+      granit_texture_format color_format, granit_texture_format depth_stencil_format,
+      granit_sample_count sample_count, const granit_primitive_state& primitive,
+      const granit_depth_state& depth, const granit_depth_bias_state* depth_bias,
+      const granit_color_blend_state& color_blend) noexcept;
+  [[nodiscard]] granit_result begin_graphics_pipeline_warmup(
+      backend_pipeline_layout_resource& layout, webgpu_shader vertex_shader,
+      webgpu_shader fragment_shader, std::span<const granit_vertex_buffer_layout> vertex_buffers,
+      granit_texture_format color_format, granit_texture_format depth_stencil_format,
+      granit_sample_count sample_count, const granit_primitive_state& primitive,
+      const granit_depth_state& depth, const granit_depth_bias_state* depth_bias,
+      const granit_color_blend_state& color_blend, webgpu_pipeline_warmup& warmup) noexcept;
+  [[nodiscard]] granit_result create_graphics_pipeline_impl(
+      backend_graphics_pipeline_resource* resource, backend_pipeline_layout_resource& layout,
+      webgpu_shader vertex_shader, webgpu_shader fragment_shader,
+      std::span<const granit_vertex_buffer_layout> vertex_buffers,
+      granit_texture_format color_format, granit_texture_format depth_stencil_format,
+      granit_sample_count sample_count, const granit_primitive_state& primitive,
+      const granit_depth_state& depth, const granit_depth_bias_state* depth_bias,
+      const granit_color_blend_state& color_blend, webgpu_pipeline_warmup* warmup) noexcept;
+  [[nodiscard]] webgpu_render_pipeline
+  native_graphics_pipeline(backend_graphics_pipeline_resource& resource) const noexcept;
+  [[nodiscard]] webgpu_timestamp_query_pool
+  native_timestamp_query_pool(backend_timestamp_query_pool_resource& resource) const noexcept;
+
+  webgpu_device device_;
   granit_diagnostic_callback diagnostic_callback_{};
   void* diagnostic_user_data_{};
   backend_lifecycle_status lifecycle_{};
   backend_capabilities capabilities_{};
   std::uint32_t surface_types_{};
-  std::uint32_t provider_surface_types_{};
+  std::uint32_t device_surface_types_{};
   std::uint32_t domain_{};
   submission_serial next_submission_serial_{1};
-  std::unique_ptr<webgpu_presentation_adapter> presentation_;
-  std::unique_ptr<webgpu_resource_adapter> resources_;
-  std::unique_ptr<webgpu_shader_adapter> shaders_;
-  std::unique_ptr<webgpu_pipeline_adapter> pipelines_;
-  std::unique_ptr<webgpu_command_adapter> commands_;
-  std::unique_ptr<webgpu_timestamp_adapter> timestamps_;
+  bool capabilities_initialized_{};
 };
 
 } // namespace granit::detail

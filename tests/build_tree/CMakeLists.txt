@@ -24,11 +24,16 @@ if(NOT TARGET granit::render_pipeline)
   message(FATAL_ERROR "构建树缺少 granit::render_pipeline")
 endif()
 foreach(asset IN ITEMS
-    shaders/pbr/pbr_standard.vert.grshader
-    shaders/pbr/pbr_standard.frag.grshader
+    libraries/pbr_standard.grshlib
     materials/pbr_standard.grmat
     environments/studio_small_03.grenv)
   if(NOT EXISTS "${granit_RENDER_PIPELINE_ASSET_DIR}/${asset}")
     message(FATAL_ERROR "构建树 RenderPipeline 缺少资产：${asset}")
   endif()
 endforeach()
+file(GLOB_RECURSE legacy_shader_assets
+     "${granit_RENDER_PIPELINE_ASSET_DIR}/*.grshaderobj"
+     "${granit_RENDER_PIPELINE_ASSET_DIR}/*.grshaderobj.*")
+if(legacy_shader_assets)
+  message(FATAL_ERROR "构建树 RenderPipeline 仍公开旧 Shader Asset：${legacy_shader_assets}")
+endif()

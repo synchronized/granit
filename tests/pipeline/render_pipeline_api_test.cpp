@@ -17,8 +17,8 @@
 
 #include "lighting/tone_mapping_resources.h"
 #include "material/material_package_archive.h"
-#include "support/shader_asset_file.h"
 #include "support/shader_asset_store.h"
+#include "support/tone_mapping_shader_library.h"
 
 #include <catch2/catch_all.hpp>
 
@@ -45,11 +45,12 @@ granit_matrix4 identity() { return {{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0
 granit::tests::shader_asset_store& shader_assets() {
   static granit::tests::shader_asset_store store;
   static const bool loaded =
-      store.add(std::string{GRANIT_TEST_ASSET_DIR} + "/minimal.vert.grshader") &&
-      store.add(std::string{GRANIT_TEST_ASSET_DIR} + "/minimal.frag.grshader") &&
-      store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} + "/pbr_shadow_ibl_lights.vert.grshader") &&
+      store.add(std::string{GRANIT_SHADER_OBJECT_FIXTURE_DIR} + "/minimal.vert.grshaderobj") &&
+      store.add(std::string{GRANIT_SHADER_OBJECT_FIXTURE_DIR} + "/minimal.frag.grshaderobj") &&
       store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} +
-                "/pbr_shadow_ibl_lights_untextured.frag.grshader");
+                "/pbr_shadow_ibl_lights.vert.grshaderobj") &&
+      store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} +
+                "/pbr_shadow_ibl_lights_untextured.frag.grshaderobj");
   REQUIRE(loaded);
   return store;
 }
@@ -60,10 +61,10 @@ std::vector<std::byte> build_material_archive() {
   desc.variants.push_back(
       {.pass = make_feature_id("opaque"),
        .features = {},
-       .shaders = {shader_assets().reference(std::string{GRANIT_TEST_ASSET_DIR} +
-                                             "/minimal.vert.grshader"),
-                   shader_assets().reference(std::string{GRANIT_TEST_ASSET_DIR} +
-                                             "/minimal.frag.grshader")},
+       .shaders = {shader_assets().reference(std::string{GRANIT_SHADER_OBJECT_FIXTURE_DIR} +
+                                             "/minimal.vert.grshaderobj"),
+                   shader_assets().reference(std::string{GRANIT_SHADER_OBJECT_FIXTURE_DIR} +
+                                             "/minimal.frag.grshaderobj")},
        .pipeline = {}});
   material_package package;
   REQUIRE(material_package::build(std::move(desc), package) == package_error::none);
@@ -93,9 +94,9 @@ std::vector<std::byte> build_automatic_material_archive() {
       .pass = make_feature_id("opaque"),
       .features = {{make_feature_id("pbr_texture_mask"), 0}},
       .shaders = {shader_assets().reference(std::string{GRANIT_PIPELINE_ASSET_DIR} +
-                                            "/pbr_shadow_ibl_lights.vert.grshader"),
+                                            "/pbr_shadow_ibl_lights.vert.grshaderobj"),
                   shader_assets().reference(std::string{GRANIT_PIPELINE_ASSET_DIR} +
-                                            "/pbr_shadow_ibl_lights_untextured.frag.grshader")},
+                                            "/pbr_shadow_ibl_lights_untextured.frag.grshaderobj")},
       .pipeline = {}};
   variant.pipeline.primitive.front_face = GRANIT_FRONT_FACE_CLOCKWISE;
   variant.pipeline.primitive.cull_mode = GRANIT_CULL_MODE_BACK;
@@ -392,13 +393,18 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   REQUIRE(scene.initialize(renderer.native_handle(), scene_desc) == granit::result::success);
 
   const auto archive = build_material_archive();
+  std::vector<std::byte> shader_library_bytes;
+  REQUIRE(shader_assets().build_library(shader_library_bytes));
+  granit::shader_library shader_library;
+  REQUIRE(shader_library.initialize(renderer.native_handle(), shader_library_bytes) ==
+          granit::result::success);
   granit_material_desc material_desc = GRANIT_MATERIAL_DESC_INIT;
   material_desc.archive_data = archive.data();
   material_desc.archive_size = archive.size();
-  material_desc.shader_resolver = granit::tests::shader_asset_store::resolve;
-  material_desc.shader_resolver_user_data = &shader_assets();
+  material_desc.shader_library = shader_library.native_handle();
   granit::material_instance material;
   REQUIRE(material.initialize(renderer.native_handle(), material_desc) == granit::result::success);
+  CHECK(shader_library.reset() == granit::result::resource_in_use);
 
   granit::buffer vertex_buffer;
   granit::mesh mesh;
@@ -691,11 +697,15 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
           GRANIT_SUCCESS);
 
   const auto archive = build_material_archive();
+  std::vector<std::byte> shader_library_bytes;
+  REQUIRE(shader_assets().build_library(shader_library_bytes));
+  granit::shader_library shader_library;
+  REQUIRE(shader_library.initialize(renderer.native_handle(), shader_library_bytes) ==
+          granit::result::success);
   granit_material_desc material_desc = GRANIT_MATERIAL_DESC_INIT;
   material_desc.archive_data = archive.data();
   material_desc.archive_size = archive.size();
-  material_desc.shader_resolver = granit::tests::shader_asset_store::resolve;
-  material_desc.shader_resolver_user_data = &shader_assets();
+  material_desc.shader_library = shader_library.native_handle();
   granit_material material = GRANIT_NULL_HANDLE;
   REQUIRE(granit_material_create(renderer.native_handle(), &material_desc, &material) ==
           GRANIT_SUCCESS);
@@ -853,21 +863,14 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
                            {.bytes_per_row = 8}, {}) == granit::result::success);
   REQUIRE(manual_hdr_view.initialize(renderer.native_handle(), manual_hdr.native_handle()) ==
           granit::result::success);
-  granit::tests::shader_asset_file tone_vertex;
-  granit::tests::shader_asset_file tone_fragment;
-  REQUIRE(tone_vertex
-              .load(renderer.native_handle(),
-                    std::string{GRANIT_PIPELINE_SHADER_DIR} + "/tone_mapping.vert.grshader")
-              .ok());
-  REQUIRE(tone_fragment
-              .load(renderer.native_handle(),
-                    std::string{GRANIT_PIPELINE_SHADER_DIR} + "/tone_mapping.frag.grshader")
-              .ok());
+  granit::tests::tone_mapping_shader_library tone_shaders;
+  REQUIRE(tone_shaders.initialize(renderer.native_handle()));
   granit::lighting::tone_mapping_resources manual_tone_mapping;
-  REQUIRE(manual_tone_mapping.initialize_packaged_asset(
-              renderer.native_handle(), manual_hdr_view.native_handle(),
-              granit::texture_format::rgba8_unorm, {.exposure_scale = 1.0F, .encode_srgb = 1},
-              tone_vertex.desc(), tone_fragment.desc()) == GRANIT_SUCCESS);
+  REQUIRE(manual_tone_mapping.initialize(renderer.native_handle(), manual_hdr_view.native_handle(),
+                                         granit::texture_format::rgba8_unorm,
+                                         {.exposure_scale = 1.0F, .encode_srgb = 1},
+                                         tone_shaders.library(), tone_shaders.vertex_id(),
+                                         tone_shaders.fragment_id()) == GRANIT_SUCCESS);
   granit::texture manual_output;
   granit::texture_view manual_output_view;
   REQUIRE(manual_output.initialize(renderer.native_handle(),

@@ -79,15 +79,16 @@ TEST_CASE("XCB Surface 可以完成 Swapchain 清屏和 Present", "[swapchain][x
     SKIP("当前环境没有可用的 XCB display");
 
   granit::renderer renderer;
-  const auto renderer_result = renderer.initialize(
-      {.application_name = "granit-xcb-swapchain-tests", .surface_types = granit::surface_type::xcb});
+  const auto renderer_result =
+      renderer.initialize({.application_name = "granit-xcb-swapchain-tests",
+                           .surface_types = granit::surface_type::xcb});
   if (environment_unavailable(renderer_result))
     SKIP("当前环境不支持 Vulkan XCB Swapchain");
   REQUIRE(renderer_result == granit::result::success);
 
   granit::surface surface;
-  REQUIRE(surface.initialize_xcb(renderer.native_handle(),
-                                 {.connection = window.connection(), .window = window.window()}) ==
+  REQUIRE(surface.initialize(renderer.native_handle(),
+                             granit::surface_desc::xcb(window.connection(), window.window())) ==
           granit::result::success);
 
   granit::swapchain swapchain;

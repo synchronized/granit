@@ -133,8 +133,8 @@ bool make_metadata(granit::material::material_metadata& metadata) {
 bool make_package(granit::tests::shader_asset_store& assets, std::uint32_t variant_count,
                   granit::material::material_package& package) {
   using namespace granit::material;
-  const auto vertex_path = std::string{GRANIT_BENCHMARK_ASSET_DIR} + "/triangle.vert.grshader";
-  const auto fragment_path = std::string{GRANIT_BENCHMARK_ASSET_DIR} + "/triangle.frag.grshader";
+  const auto vertex_path = std::string{GRANIT_BENCHMARK_ASSET_DIR} + "/triangle.vert.grshaderobj";
+  const auto fragment_path = std::string{GRANIT_BENCHMARK_ASSET_DIR} + "/triangle.frag.grshaderobj";
   if (!assets.add(vertex_path) || !assets.add(fragment_path))
     return false;
   const auto vertex = assets.reference(vertex_path);
@@ -214,9 +214,16 @@ int main(int argc, char** argv) {
     const granit_renderer_desc renderer_desc = GRANIT_RENDERER_DESC_INIT;
     if (granit_renderer_create(&renderer_desc, &renderer) != GRANIT_SUCCESS)
       return 3;
+    std::vector<std::byte> shader_library_bytes;
+    granit::shader_library shader_library;
+    if (!assets.initialize_library(renderer, shader_library_bytes, shader_library)) {
+      static_cast<void>(granit_renderer_destroy(renderer));
+      return 4;
+    }
     granit::material::material_template_gpu gpu_template;
-    if (gpu_template.initialize(renderer, package, {}, granit::tests::shader_asset_store::resolve,
-                                &assets) != GRANIT_SUCCESS) {
+    if (gpu_template.initialize(renderer, package, {}, shader_library.native_handle()) !=
+        GRANIT_SUCCESS) {
+      static_cast<void>(shader_library.reset());
       static_cast<void>(granit_renderer_destroy(renderer));
       return 4;
     }
@@ -229,6 +236,7 @@ int main(int argc, char** argv) {
     granit_graphics_pipeline pipeline = GRANIT_NULL_HANDLE;
     if (gpu_template.acquire_pipeline(request, pipeline) != GRANIT_SUCCESS) {
       static_cast<void>(gpu_template.reset());
+      static_cast<void>(shader_library.reset());
       static_cast<void>(granit_renderer_destroy(renderer));
       return 5;
     }
@@ -240,6 +248,7 @@ int main(int argc, char** argv) {
           return result == GRANIT_SUCCESS && cached == pipeline;
         });
     static_cast<void>(gpu_template.reset());
+    static_cast<void>(shader_library.reset());
     static_cast<void>(granit_renderer_destroy(renderer));
   }
   return succeeded ? 0 : 1;

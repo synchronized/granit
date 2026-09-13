@@ -77,7 +77,8 @@ int main(int argc, char** argv) {
   }
   granit::surface surface;
   if (result.ok())
-    result = surface.initialize_win32(renderer.native_handle(), {instance, native_window});
+    result = surface.initialize(renderer.native_handle(),
+                                granit::surface_desc::win32(instance, native_window));
 
   std::uint32_t width = 800;
   std::uint32_t height = 600;

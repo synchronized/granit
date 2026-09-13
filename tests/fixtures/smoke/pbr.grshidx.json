@@ -1,0 +1,9 @@
+{
+  "format_version": 1,
+  "library": "pbr",
+  "content_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+  "shaders": [
+    {"name": "pbr.fragment/untextured", "content_id": "8fea6d234eaf4c06209fb124827629ed8e402e567e0b9a0cc665ce2e8d737bad", "stage": "fragment", "entry_point": "fragment_main"},
+    {"name": "pbr.vertex/shadow_ibl_lights", "content_id": "ea3971dca882d7b207efe9f01f38ec2222a846991b951562b2a6d69b51113cf1", "stage": "vertex", "entry_point": "vertex_main"}
+  ]
+}

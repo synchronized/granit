@@ -10,9 +10,11 @@
 #include <span>
 #include <vector>
 
+#include <granit/core/content_id.hpp>
+
 namespace granit::material {
 
-inline constexpr std::uint32_t material_archive_version_major = 4;
+inline constexpr std::uint32_t material_archive_version_major = 5;
 inline constexpr std::uint32_t material_archive_version_minor = 0;
 inline constexpr std::uint32_t material_archive_endian_tag = UINT32_C(0x01020304);
 inline constexpr std::uint32_t material_archive_header_size = 96;
@@ -65,7 +67,7 @@ enum class archive_error : std::uint8_t {
   out_of_memory,
 };
 
-using material_archive_hash = std::array<std::byte, 32>;
+using material_archive_hash = content_digest;
 
 struct material_archive_header {
   std::uint32_t version_major = 0;

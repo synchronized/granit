@@ -1,7 +1,8 @@
 {
-  "format_version": 4,
+  "format_version": 6,
   "target_environment": "cross_backend",
   "binding_model": "bind_group",
+  "binding_groups": ["frame", "material", "object", "lighting"],
   "material": {
     "constant_buffer_size": 16,
     "parameters": [
@@ -39,8 +40,8 @@
         "color_blend": {"enabled": false}
       },
       "shaders": [
-        {"asset": "minimal.vert.grshader"},
-        {"asset": "minimal.frag.grshader"}
+        {"library": "fixture", "shader": "main.vertex"},
+        {"library": "fixture", "shader": "main.fragment"}
       ]
     }
   ]

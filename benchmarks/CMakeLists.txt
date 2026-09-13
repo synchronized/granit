@@ -58,7 +58,11 @@ target_compile_definitions(
     GRANIT_BENCHMARK_REVISION="${granit_benchmark_revision}"
     GRANIT_BENCHMARK_SYSTEM="${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}"
 )
+target_include_directories(granit_renderer_benchmarks PRIVATE "${PROJECT_SOURCE_DIR}/src")
 target_link_libraries(granit_renderer_benchmarks PRIVATE granit::granit)
+target_sources(
+  granit_renderer_benchmarks PRIVATE $<TARGET_OBJECTS:granit_internal_shader_format>
+)
 add_dependencies(granit_renderer_benchmarks granit_test_shader_assets)
 granit_target_compile_warnings(granit_renderer_benchmarks)
 granit_target_output_directories(granit_renderer_benchmarks)
@@ -102,7 +106,11 @@ target_compile_definitions(
     GRANIT_BENCHMARK_REVISION="${granit_benchmark_revision}"
     GRANIT_BENCHMARK_SYSTEM="${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}"
 )
+target_include_directories(granit_material_benchmarks PRIVATE "${PROJECT_SOURCE_DIR}/src")
 target_link_libraries(granit_material_benchmarks PRIVATE granit::material)
+target_sources(
+  granit_material_benchmarks PRIVATE $<TARGET_OBJECTS:granit_internal_shader_format>
+)
 add_dependencies(granit_material_benchmarks granit_test_shader_assets)
 granit_target_compile_warnings(granit_material_benchmarks)
 granit_target_output_directories(granit_material_benchmarks)
@@ -194,10 +202,12 @@ add_custom_command(
   COMMAND
     granit_material_tool build
     "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit_canvas.grmat.json"
-    --output "${granit_canvas_benchmark_package}"
+    --output "${granit_canvas_benchmark_package}" --shader-index
+    "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/canvas.grshidx.json"
   DEPENDS
     granit_material_tool
     "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit_canvas.grmat.json"
+    "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/canvas.grshidx.json"
   VERBATIM
 )
 add_executable(granit_canvas_gpu_benchmarks canvas_gpu_main.cpp "${granit_canvas_benchmark_package}")
@@ -280,16 +290,12 @@ add_custom_command(
   COMMAND
     granit_material_tool build
     "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/render_pipeline_workload.grmat.json"
-    --output "${granit_render_pipeline_benchmark_package}"
+    --output "${granit_render_pipeline_benchmark_package}" --shader-index
+    "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/pbr.grshidx.json"
   DEPENDS
     granit_material_tool
     "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/render_pipeline_workload.grmat.json"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights.vert.grshader"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights.vert.grshader.spv"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights.vert.grshader.wgsl"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.grshader"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.grshader.spv"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.grshader.wgsl"
+    "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/pbr.grshidx.json"
   VERBATIM
 )
 add_executable(
@@ -310,18 +316,18 @@ target_compile_definitions(
     GRANIT_BENCHMARK_SYSTEM="${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}"
     GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
     GRANIT_RENDER_PIPELINE_SMOKE_PACKAGE="${granit_render_pipeline_benchmark_package}"
-    GRANIT_PIPELINE_ASSET_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/pbr"
+    GRANIT_PIPELINE_ASSET_DIR="${GRANIT_PBR_TEST_SHADER_DIR}"
 )
 target_link_libraries(granit_render_pipeline_benchmarks PRIVATE granit::render_pipeline)
 target_include_directories(
   granit_render_pipeline_benchmarks PRIVATE "${PROJECT_SOURCE_DIR}/src"
                                              "${PROJECT_SOURCE_DIR}/tests"
 )
-add_dependencies(granit_render_pipeline_benchmarks granit_material_tool)
+add_dependencies(granit_render_pipeline_benchmarks granit_material_tool granit_test_shader_assets)
 target_sources(
   granit_render_pipeline_benchmarks
   PRIVATE "${granit_render_pipeline_benchmark_package}"
-          $<TARGET_OBJECTS:granit_internal_shader_asset_format>
+          $<TARGET_OBJECTS:granit_internal_shader_format>
 )
 granit_target_compile_warnings(granit_render_pipeline_benchmarks)
 granit_target_output_directories(granit_render_pipeline_benchmarks)

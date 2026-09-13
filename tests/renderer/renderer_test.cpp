@@ -457,7 +457,7 @@ TEST_CASE("C++ renderer 提供 move-only RAII", "[renderer][cpp_api]") {
   granit::renderer_shader_capabilities shader_capabilities;
   REQUIRE(renderer.get_shader_capabilities(shader_capabilities) == granit::result::success);
   CHECK(shader_capabilities.backend == granit::renderer_backend::vulkan);
-  CHECK(shader_capabilities.profile == GRANIT_SHADER_PROFILE_PORTABLE);
+  CHECK(shader_capabilities.profile == granit::shader_profile::portable);
   CHECK_FALSE(shader_capabilities.supports(granit::shader_feature::float16));
   const std::array shader_variants{
       granit::shader_variant_requirement{.backend = granit::renderer_backend::webgpu,

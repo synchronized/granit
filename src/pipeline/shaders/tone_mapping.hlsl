@@ -12,7 +12,9 @@ struct vertex_output {
   float inverse_width;
   float inverse_height;
   uint enable_fxaa;
-  uint3 reserved;
+  uint reserved_0;
+  uint reserved_1;
+  uint reserved_2;
 };
 [[vk::binding(1, 0)]] Texture2D<float4> hdr_color;
 [[vk::binding(2, 0)]] SamplerState hdr_sampler;

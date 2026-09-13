@@ -42,6 +42,7 @@ struct result {
   static const result out_of_date;
   static const result not_ready;
   static const result cancelled;
+  static const result resource_in_use;
 
 private:
   granit_result value_ = GRANIT_ERROR_UNKNOWN;
@@ -63,14 +64,11 @@ inline constexpr result result::surface_lost{GRANIT_ERROR_SURFACE_LOST};
 inline constexpr result result::out_of_date{GRANIT_ERROR_OUT_OF_DATE};
 inline constexpr result result::not_ready{GRANIT_ERROR_NOT_READY};
 inline constexpr result result::cancelled{GRANIT_ERROR_CANCELLED};
+inline constexpr result result::resource_in_use{GRANIT_ERROR_RESOURCE_IN_USE};
 
-[[nodiscard]] constexpr granit_result to_native(result value) noexcept {
-  return value.native();
-}
+[[nodiscard]] constexpr granit_result to_native(result value) noexcept { return value.native(); }
 
-[[nodiscard]] constexpr result from_native(granit_result value) noexcept {
-  return result{value};
-}
+[[nodiscard]] constexpr result from_native(granit_result value) noexcept { return result{value}; }
 
 [[nodiscard]] inline std::string_view result_message(result value) noexcept {
   return value.message();

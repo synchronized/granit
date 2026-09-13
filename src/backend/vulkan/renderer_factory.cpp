@@ -5,7 +5,7 @@
 #include "renderer/renderer_registry.h"
 #include "core/diagnostic_sink.h"
 
-#include "backend/vulkan/vulkan_renderer_state.h"
+#include "backend/vulkan/renderer_state.h"
 
 #include <new>
 #include <string>

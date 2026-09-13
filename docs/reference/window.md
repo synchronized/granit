@@ -88,16 +88,17 @@ void* hwnd = 0;
 granit_window_get_win32(system, window, &instance, &hwnd);
 ```
 
-查询只借出原生值，Window 仍拥有 HWND。应用使用这些值调用 `granit_surface_create_win32`，并保证按
-Swapchain、Surface、Window、Window System 的顺序销毁。
+查询只借出原生值，Window 仍拥有 HWND。应用使用这些值填入
+`granit_surface_desc::source.win32` 并调用 `granit_surface_create`，同时保证按 Swapchain、
+Surface、Window、Window System 的顺序销毁。
 
 在 Win32 Window 上查询 XCB 或 Wayland 值返回 `GRANIT_ERROR_UNSUPPORTED`，输出参数清零。
 XCB Window 可通过 `granit_window_get_xcb` 借用 connection 和 `xcb_window_t` 数值，并交给
-`granit_surface_create_xcb`。未设置或无法连接 `DISPLAY` 时，创建 Window System 返回
+统一的 `granit_surface_create`。未设置或无法连接 `DISPLAY` 时，创建 Window System 返回
 `GRANIT_ERROR_BACKEND_UNAVAILABLE`。
 
 Wayland Window 可通过 `granit_window_get_wayland` 借用 `wl_display*` 和 `wl_surface*`，并交给
-`granit_surface_create_wayland`。Window 拥有 xdg-shell 角色及原生 Surface，调用方不得自行销毁。
+统一的 `granit_surface_create`。Window 拥有 xdg-shell 角色及原生 Surface，调用方不得自行销毁。
 自动后端在 `WAYLAND_DISPLAY` 存在时优先选择 Wayland，否则选择 XCB；应用也可在 Window System
 描述中明确指定后端。
 

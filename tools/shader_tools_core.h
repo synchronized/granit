@@ -65,14 +65,6 @@ struct shader_info {
   std::uint32_t workgroup_size_z = 0;
 };
 
-struct compile_options {
-  std::filesystem::path tint;
-  std::filesystem::path input;
-  std::string entry_point;
-  std::string stage;
-  std::filesystem::path output;
-};
-
 struct hlsl_compile_options {
   std::filesystem::path dxc;
   std::filesystem::path tint;
@@ -84,24 +76,10 @@ struct hlsl_compile_options {
   std::vector<std::pair<std::string, std::string>> definitions;
 };
 
-struct glsl_compile_options {
-  std::filesystem::path glslang;
-  std::filesystem::path tint;
-  std::filesystem::path input;
-  std::string entry_point;
-  std::string stage;
-  std::filesystem::path spirv_output;
-  std::filesystem::path wgsl_output;
-};
-
 bool inspect_shader(const std::filesystem::path& path, bool emit, shader_info& info,
                     std::ostream& output, std::ostream& error);
 std::string serialize_shader_info_json(const shader_info& info);
-int compile_shader(const compile_options& options, shader_info& info, std::ostream& output,
-                   std::ostream& error);
 int compile_hlsl_shader(const hlsl_compile_options& options, shader_info& info,
-                        std::ostream& output, std::ostream& error);
-int compile_glsl_shader(const glsl_compile_options& options, shader_info& info,
                         std::ostream& output, std::ostream& error);
 
 } // namespace granit::tools

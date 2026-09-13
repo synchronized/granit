@@ -1,0 +1,24 @@
+{
+  "format_version": 1,
+  "name": "debug_draw",
+  "target_profile": "portable",
+  "target_backends": ["vulkan", "webgpu"],
+  "shaders": [
+    {
+      "name": "world.vertex",
+      "source": "world.hlsl",
+      "stage": "vertex",
+      "entry_point": "vertex_main"
+    },
+    {
+      "name": "world.fragment",
+      "source": "world.hlsl",
+      "stage": "fragment",
+      "entry_point": "fragment_main",
+      "variants": [
+        {"name": "linear", "defines": {"GRANIT_DEBUG_ENCODE_SRGB": "0"}},
+        {"name": "encode_srgb", "defines": {"GRANIT_DEBUG_ENCODE_SRGB": "1"}}
+      ]
+    }
+  ]
+}

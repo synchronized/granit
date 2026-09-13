@@ -20,7 +20,8 @@ validate_shader_desc_common(const granit_shader_desc* desc) noexcept {
   if (desc == nullptr || desc->struct_size < GRANIT_SHADER_DESC_SIZE ||
       desc->entry_point == nullptr || desc->entry_point_length == 0 ||
       desc->entry_point_length > maximum_shader_entry_point_length || desc->reserved != 0 ||
-      desc->stage < GRANIT_SHADER_STAGE_VERTEX || desc->stage > GRANIT_SHADER_STAGE_COMPUTE ||
+      desc->reserved_2 != 0 || desc->stage < GRANIT_SHADER_STAGE_VERTEX ||
+      desc->stage > GRANIT_SHADER_STAGE_COMPUTE ||
       std::memchr(desc->entry_point, '\0', desc->entry_point_length) != nullptr) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
@@ -46,11 +47,21 @@ validate_shader_desc_common(const granit_shader_desc* desc) noexcept {
   if (common != GRANIT_SUCCESS) {
     return common;
   }
-  if (desc->wgsl == nullptr || desc->wgsl_length == 0 || desc->wgsl_length > maximum_shader_size ||
-      std::memchr(desc->wgsl, '\0', static_cast<std::size_t>(desc->wgsl_length)) != nullptr) {
+  if (desc->code == nullptr || desc->code_size == 0 || desc->code_size > maximum_shader_size ||
+      std::memchr(desc->code, '\0', static_cast<std::size_t>(desc->code_size)) != nullptr) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   return GRANIT_SUCCESS;
+}
+
+[[nodiscard]] inline granit_result validate_shader_desc(const granit_shader_desc* desc) noexcept {
+  if (desc == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (desc->code_format == GRANIT_SHADER_CODE_FORMAT_SPIRV)
+    return validate_shader_spirv(desc);
+  if (desc->code_format == GRANIT_SHADER_CODE_FORMAT_WGSL)
+    return validate_shader_wgsl(desc);
+  return GRANIT_ERROR_INVALID_ARGUMENT;
 }
 
 } // namespace granit::detail

@@ -7,5 +7,7 @@
 
 static_assert(std::is_move_constructible_v<granit::surface>);
 static_assert(!std::is_copy_constructible_v<granit::surface>);
-static_assert(sizeof(granit::xcb_surface_desc::window) == sizeof(std::uint32_t));
-static_assert(std::is_same_v<decltype(granit::canvas_surface_desc::selector), std::string_view>);
+static_assert(std::is_same_v<decltype(granit::surface_desc::xcb(nullptr, std::uint32_t{})),
+                             granit::surface_desc>);
+static_assert(std::is_same_v<decltype(granit::surface_desc::canvas(std::string_view{})),
+                             granit::surface_desc>);

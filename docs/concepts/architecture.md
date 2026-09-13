@@ -151,9 +151,9 @@ Registry 不保存 `Vk*` 或 `WGPU*` 类型，不负责后端同步和描述转�
 细粒度操作增加动态库或虚函数调用。
 
 Registry 只通过 `backend_shader_renderer`、`backend_pipeline_renderer` 和
-`backend_presentation_renderer` 等职责接口访问 WebGPU，不直接取得 WebGPU Adapter 对象。WebGPU
-支持的 Pipeline 描述范围和格式转换由 Pipeline Adapter 判断；Emscripten WebGPU 的内部实现细节
-不得回流到公共 API 或 Registry。
+`backend_presentation_renderer` 等职责接口访问 WebGPU，不直接取得 WebGPU 原生对象。WebGPU
+支持的 Pipeline 描述范围和格式转换由 `webgpu_renderer_state` 的对应领域实现判断；Emscripten
+WebGPU 的内部实现细节不得回流到公共 API 或 Registry。
 
 当前 Renderer 内部边界分为三层，`backend` 一词在各层的含义不能混用：
 
@@ -166,12 +166,13 @@ Registry 只通过 `backend_shader_renderer`、`backend_pipeline_renderer` 和
 `backend_interfaces` 在 Renderer 注册时一次性发现并保存能力接口。资源、命令、Pipeline 和呈现
 路径只读取该不可变快照，不在每次调用时通过 RTTI 重新探测。资源、Queue、命令、呈现和延迟回收
 属于正式后端的必需能力；Pipeline Cache、时间戳和调试名称允许后端不实现，并通过既有“不支持”
-结果表达。Emscripten WebGPU Provider 及其静态分发表只属于 WebGPU 实现目录，不是插件 ABI，
-也不是与 `backend_*` 平行的第二套 HAL。
+结果表达。Emscripten WebGPU 不再保留 domain adapter、Provider ABI 或分发表；
+`webgpu_renderer_state` 按资源、Shader、Pipeline、命令、Timestamp 和呈现领域实现 HAL，并调用后端
+私有设备操作。共享设备状态集中拥有 Instance、Adapter、Device、Queue、异步状态和强类型内部句柄。
 
 桌面与 Emscripten 复用同一组 Registry 编译单元，不维护浏览器专用的资源表或命令实现。
 Renderer 创建按后端拆成独立工厂编译单元：桌面默认工厂构造 Vulkan 状态，浏览器工厂静态绑定
-WebGPU Provider；平台选择不进入通用 Registry 实现。Vulkan 与 WebGPU 工厂最终都调用同一个
+WebGPU renderer state；平台选择不进入通用 Registry 实现。Vulkan 与 WebGPU 工厂最终都调用同一个
 Registry 后端注册入口，由该入口分配 domain、建立能力快照并发布公共 Renderer 句柄。
 
 Vulkan 与 WebGPU 不必提供完全对称的内部能力。共同语义由 Registry 校验，设备差异通过不可变

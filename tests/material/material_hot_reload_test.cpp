@@ -151,10 +151,14 @@ TEST_CASE("材质资产热替换保留解析上下文并在解析失败时回退
   REQUIRE(initialized.ok());
   granit::tests::shader_asset_store assets;
   const auto directory = std::filesystem::path{GRANIT_SMOKE_SHADER_DIR};
-  const auto vertex_path = directory / "triangle.vert.grshader";
-  const auto fragment_path = directory / "triangle.frag.grshader";
+  const auto vertex_path = directory / "triangle.vert.grshaderobj";
+  const auto fragment_path = directory / "triangle.frag.grshaderobj";
   REQUIRE(assets.add(vertex_path));
   REQUIRE(assets.add(fragment_path));
+  std::vector<std::byte> library_bytes;
+  REQUIRE(assets.build_library(library_bytes));
+  granit::shader_library library;
+  REQUIRE(library.initialize(renderer.native_handle(), library_bytes) == granit::result::success);
   const auto package = [&] {
     using namespace granit::material;
     material_package_desc desc;
@@ -172,34 +176,31 @@ TEST_CASE("材质资产热替换保留解析上下文并在解析失败时回退
       .variant = granit::material::make_variant_key({}),
       .color_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM};
   std::shared_ptr<granit::material::material_runtime_template> fallback;
-  REQUIRE(granit::material::material_runtime_template::create(
-              renderer.native_handle(), package(), fallback,
-              granit::tests::shader_asset_store::resolve, &assets) == GRANIT_SUCCESS);
+  REQUIRE(granit::material::material_runtime_template::create(renderer.native_handle(), package(),
+                                                              fallback, library.native_handle()) ==
+          GRANIT_SUCCESS);
   granit::material::material_hot_reload_slot slot{fallback};
-  REQUIRE(slot.reload(renderer.native_handle(), package(),
-                      granit::tests::shader_asset_store::resolve, &assets)
-              .result == GRANIT_SUCCESS);
+  REQUIRE(slot.reload(renderer.native_handle(), package(), library.native_handle()).result ==
+          GRANIT_SUCCESS);
   auto old_snapshot = slot.snapshot();
   REQUIRE(slot.resolve_pipeline(request).result == GRANIT_SUCCESS);
 
-  // Pipeline 延迟创建时仍必须能使用模板借用的解析器。
+  // Pipeline 延迟创建时仍必须能使用模板借用的 Library。
   REQUIRE(slot.reload(renderer.native_handle(), package()).result == GRANIT_SUCCESS);
   const auto failed = slot.resolve_pipeline(request);
   CHECK(failed.result == GRANIT_SUCCESS);
   CHECK(failed.used_fallback);
   CHECK(failed.primary_result == GRANIT_ERROR_NOT_READY);
-  REQUIRE(slot.reload(renderer.native_handle(), package(),
-                      granit::tests::shader_asset_store::resolve, &assets)
-              .result == GRANIT_SUCCESS);
+  REQUIRE(slot.reload(renderer.native_handle(), package(), library.native_handle()).result ==
+          GRANIT_SUCCESS);
   CHECK_FALSE(slot.resolve_pipeline(request).used_fallback);
   granit_graphics_pipeline old_pipeline = GRANIT_NULL_HANDLE;
   REQUIRE(old_snapshot->gpu().acquire_pipeline(request, old_pipeline) == GRANIT_SUCCESS);
   CHECK(old_pipeline != GRANIT_NULL_HANDLE);
 }
 
-TEST_CASE("测试资产存储允许仅部署当前后端并缓存清单元数据") {
-  const auto source =
-      std::filesystem::path{GRANIT_SMOKE_SHADER_DIR} / "triangle.vert.grshader";
+TEST_CASE("测试资产存储允许按目标构建单后端 Library 并缓存清单元数据") {
+  const auto source = std::filesystem::path{GRANIT_SMOKE_SHADER_DIR} / "triangle.vert.grshaderobj";
   const auto folder = std::filesystem::temp_directory_path() /
                       ("granit-shader-asset-" +
                        std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
@@ -208,12 +209,12 @@ TEST_CASE("测试资产存储允许仅部署当前后端并缓存清单元数据
     std::filesystem::path folder;
     ~cleanup() {
       std::error_code ignored;
-      std::filesystem::remove(folder / "vertex.grshader.spv", ignored);
-      std::filesystem::remove(folder / "vertex.grshader", ignored);
+      std::filesystem::remove(folder / "vertex.grshaderobj.spv", ignored);
+      std::filesystem::remove(folder / "vertex.grshaderobj", ignored);
       std::filesystem::remove(folder, ignored);
     }
   } guard{folder};
-  const auto path = folder / "vertex.grshader";
+  const auto path = folder / "vertex.grshaderobj";
   REQUIRE(std::filesystem::copy_file(source, path));
   REQUIRE(std::filesystem::copy_file(source.string() + ".spv", path.string() + ".spv"));
   granit::tests::shader_asset_store assets;
@@ -223,15 +224,11 @@ TEST_CASE("测试资产存储允许仅部署当前后端并缓存清单元数据
   // reference 使用已验证的缓存，不再次读取可能已卸载的资产文件。
   REQUIRE(std::filesystem::remove(path));
   CHECK(assets.reference(path).asset_id == reference.asset_id);
-  granit_shader_asset_desc resolved = GRANIT_SHADER_ASSET_DESC_INIT;
-  const auto* id = reinterpret_cast<const std::uint8_t*>(reference.asset_id.data());
-  CHECK(granit::tests::shader_asset_store::resolve(&assets, id, GRANIT_RENDERER_BACKEND_VULKAN,
-                                                   GRANIT_SHADER_PROFILE_PORTABLE,
-                                                   &resolved) == GRANIT_SUCCESS);
-  CHECK(resolved.manifest_size > 0);
-  CHECK(resolved.sidecar_size > 0);
-  CHECK(granit::tests::shader_asset_store::resolve(&assets, id, GRANIT_RENDERER_BACKEND_WEBGPU,
-                                                   GRANIT_SHADER_PROFILE_PORTABLE,
-                                                   &resolved) == GRANIT_ERROR_NOT_READY);
-  CHECK_FALSE(assets.add(folder / "missing.grshader"));
+  std::vector<std::byte> library_bytes;
+  CHECK(assets.build_library(library_bytes, GRANIT_SHADER_BACKEND_VULKAN_BIT));
+  granit::shader_library_info info;
+  REQUIRE(granit::inspect_shader_library(library_bytes, info) == granit::result::success);
+  CHECK(info.backends == granit::shader_backend::vulkan);
+  CHECK_FALSE(assets.build_library(library_bytes, GRANIT_SHADER_BACKEND_WEBGPU_BIT));
+  CHECK_FALSE(assets.add(folder / "missing.grshaderobj"));
 }

@@ -18,6 +18,8 @@ static void result_messages_cover_failure_and_unknown_codes(void) {
   TEST_ASSERT_EQUAL_STRING("invalid argument",
                            granit_result_message(GRANIT_ERROR_INVALID_ARGUMENT));
   TEST_ASSERT_EQUAL_STRING("operation cancelled", granit_result_message(GRANIT_ERROR_CANCELLED));
+  TEST_ASSERT_EQUAL_STRING("resource is still in use",
+                           granit_result_message(GRANIT_ERROR_RESOURCE_IN_USE));
   TEST_ASSERT_EQUAL_STRING("unrecognized result", granit_result_message(INT32_C(-999)));
 }
 

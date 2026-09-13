@@ -1,7 +1,8 @@
 {
-  "format_version": 4,
+  "format_version": 6,
   "target_environment": "cross_backend",
   "binding_model": "bind_group",
+  "binding_groups": ["frame", "material", "object"],
   "material": {
     "constant_buffer_size": 32,
     "parameters": [
@@ -35,8 +36,8 @@
         }
       },
       "shaders": [
-        {"asset": "../../../assets/shaders/unlit/unlit_canvas.vert.grshader"},
-        {"asset": "../../../assets/shaders/unlit/unlit_canvas.frag.grshader"}
+        {"library": "canvas", "shader": "canvas.vertex", "variant": "textured_vertex_color"},
+        {"library": "canvas", "shader": "canvas.fragment", "variant": "textured_vertex_color"}
       ]
     },
     {
@@ -63,8 +64,8 @@
         }
       },
       "shaders": [
-        {"asset": "../../../assets/shaders/unlit/unlit_canvas.vert.grshader"},
-        {"asset": "../../../assets/shaders/unlit/unlit_canvas_encode_srgb.frag.grshader"}
+        {"library": "canvas", "shader": "canvas.vertex", "variant": "textured_vertex_color"},
+        {"library": "canvas", "shader": "canvas.fragment", "variant": "textured_vertex_color_encode_srgb"}
       ]
     }
   ]

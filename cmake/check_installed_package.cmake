@@ -6,6 +6,10 @@ if(NOT DEFINED GRANIT_SOURCE_DIR OR NOT DEFINED GRANIT_INSTALL_PREFIX OR
   message(FATAL_ERROR "必须提供 GRANIT_SOURCE_DIR、GRANIT_INSTALL_PREFIX 和 GRANIT_TEST_BINARY_DIR")
 endif()
 
+if(NOT DEFINED GRANIT_TEST_CONFIGURATION)
+  set(GRANIT_TEST_CONFIGURATION Release)
+endif()
+
 function(granit_check_package name expected_success)
   execute_process(
     COMMAND
@@ -13,6 +17,7 @@ function(granit_check_package name expected_success)
       -S "${GRANIT_SOURCE_DIR}/tests/package"
       -B "${GRANIT_TEST_BINARY_DIR}/${name}"
       "-DCMAKE_PREFIX_PATH=${GRANIT_INSTALL_PREFIX}"
+      "-DCMAKE_BUILD_TYPE=${GRANIT_TEST_CONFIGURATION}"
       ${ARGN}
     RESULT_VARIABLE result
     OUTPUT_VARIABLE output
@@ -24,20 +29,33 @@ function(granit_check_package name expected_success)
   if(NOT expected_success AND result EQUAL 0)
     message(FATAL_ERROR "${name} 应配置失败，但意外成功")
   endif()
+  if(expected_success)
+    execute_process(
+      COMMAND "${CMAKE_COMMAND}" --build "${GRANIT_TEST_BINARY_DIR}/${name}"
+              --config "${GRANIT_TEST_CONFIGURATION}"
+      RESULT_VARIABLE build_result
+      OUTPUT_VARIABLE build_output
+      ERROR_VARIABLE build_error
+    )
+    if(NOT build_result EQUAL 0)
+      message(FATAL_ERROR
+              "${name} 应构建成功，但返回 ${build_result}\n${build_output}\n${build_error}")
+    endif()
+  endif()
 endfunction()
 
-granit_check_package(core_only TRUE -DGRANIT_REQUEST_VERSION=0.20)
-granit_check_package(render_pipeline TRUE -DGRANIT_REQUEST_VERSION=0.20
+granit_check_package(core_only TRUE -DGRANIT_REQUEST_VERSION=0.21)
+granit_check_package(render_pipeline TRUE -DGRANIT_REQUEST_VERSION=0.21
                      -DGRANIT_REQUEST_COMPONENT=RenderPipeline)
-granit_check_package(window TRUE -DGRANIT_REQUEST_VERSION=0.20
+granit_check_package(window TRUE -DGRANIT_REQUEST_VERSION=0.21
                      -DGRANIT_REQUEST_COMPONENT=Window)
-granit_check_package(input TRUE -DGRANIT_REQUEST_VERSION=0.20
+granit_check_package(input TRUE -DGRANIT_REQUEST_VERSION=0.21
                      -DGRANIT_REQUEST_COMPONENT=Input)
 if(EXISTS "${GRANIT_INSTALL_PREFIX}/lib/cmake/granit/granitShaderToolsTargets.cmake")
-  granit_check_package(shader_tools TRUE -DGRANIT_REQUEST_VERSION=0.20
+  granit_check_package(shader_tools TRUE -DGRANIT_REQUEST_VERSION=0.21
                        -DGRANIT_REQUEST_COMPONENT=ShaderTools)
 else()
-  granit_check_package(shader_tools_unavailable FALSE -DGRANIT_REQUEST_VERSION=0.20
+  granit_check_package(shader_tools_unavailable FALSE -DGRANIT_REQUEST_VERSION=0.21
                        -DGRANIT_REQUEST_COMPONENT=ShaderTools)
 endif()
 granit_check_package(older_0_7 FALSE -DGRANIT_REQUEST_VERSION=0.7)
@@ -56,8 +74,9 @@ granit_check_package(older_0_16 FALSE -DGRANIT_REQUEST_VERSION=0.16)
 granit_check_package(older_0_17 FALSE -DGRANIT_REQUEST_VERSION=0.17)
 granit_check_package(older_0_18 FALSE -DGRANIT_REQUEST_VERSION=0.18)
 granit_check_package(older_0_19 FALSE -DGRANIT_REQUEST_VERSION=0.19)
-granit_check_package(exact TRUE -DGRANIT_REQUEST_VERSION=0.20.0 -DGRANIT_REQUEST_EXACT=ON)
-granit_check_package(newer_minor FALSE -DGRANIT_REQUEST_VERSION=0.21)
+granit_check_package(older_0_20 FALSE -DGRANIT_REQUEST_VERSION=0.20)
+granit_check_package(exact TRUE -DGRANIT_REQUEST_VERSION=0.21.0 -DGRANIT_REQUEST_EXACT=ON)
+granit_check_package(newer_minor FALSE -DGRANIT_REQUEST_VERSION=0.22)
 granit_check_package(incompatible_major FALSE -DGRANIT_REQUEST_VERSION=1.0)
 granit_check_package(unknown_component FALSE -DGRANIT_REQUEST_COMPONENT=Unknown)
 

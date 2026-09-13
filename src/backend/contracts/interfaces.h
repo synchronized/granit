@@ -37,16 +37,14 @@ struct backend_interfaces {
   std::shared_ptr<backend_pipeline_renderer> pipelines;
   std::shared_ptr<backend_pipeline_warmup_renderer> pipeline_warmup;
   std::shared_ptr<backend_pipeline_cache_renderer> pipeline_cache;
-  std::shared_ptr<backend_wgsl_shader_renderer> wgsl_shaders;
-  std::shared_ptr<backend_spirv_shader_renderer> spirv_shaders;
+  std::shared_ptr<backend_shader_renderer> shaders;
   std::shared_ptr<backend_retirement_renderer> retirement;
   std::shared_ptr<backend_timestamp_renderer> timestamps;
 
   /** 返回两个正式后端都必须实现的最小能力集合是否完整。 */
   [[nodiscard]] bool has_required_capabilities() const noexcept {
     return renderer && resources && presentation && queue && commands && graphics && compute &&
-           transfer && pipeline_layouts && pipelines && (wgsl_shaders || spirv_shaders) &&
-           retirement;
+           transfer && pipeline_layouts && pipelines && shaders && retirement;
   }
 };
 
@@ -69,8 +67,7 @@ discover_backend_interfaces(const std::shared_ptr<backend_renderer>& renderer) {
   interfaces.pipeline_warmup =
       std::dynamic_pointer_cast<backend_pipeline_warmup_renderer>(renderer);
   interfaces.pipeline_cache = std::dynamic_pointer_cast<backend_pipeline_cache_renderer>(renderer);
-  interfaces.wgsl_shaders = std::dynamic_pointer_cast<backend_wgsl_shader_renderer>(renderer);
-  interfaces.spirv_shaders = std::dynamic_pointer_cast<backend_spirv_shader_renderer>(renderer);
+  interfaces.shaders = std::dynamic_pointer_cast<backend_shader_renderer>(renderer);
   interfaces.retirement = std::dynamic_pointer_cast<backend_retirement_renderer>(renderer);
   interfaces.timestamps = std::dynamic_pointer_cast<backend_timestamp_renderer>(renderer);
   return interfaces;

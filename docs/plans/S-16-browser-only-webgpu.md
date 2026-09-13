@@ -73,7 +73,8 @@ Registry、Shader 资产与浏览器模型查看器。
 
 ## 风险与未决问题
 
-- Emscripten 实现暂时保留后端目录内的静态 Provider 分发表，便于隔离原生 `wgpu*` 类型；它不再是
-  动态插件 ABI，也不会进入桌面目标。后续仅在性能数据证明存在瓶颈时再合并该内部调用层。
+- Emscripten 实现曾保留后端目录内的静态 Provider 分发表；该过渡边界已由
+  [S-37H](S-37H-webgpu-provider-boundary-collapse.md) 删除，原生 `wgpu*` 类型继续由后端私有 Context
+  隔离。
 - `backend_library_path` 已从尚未发布的公共描述结构删除，ABI 布局测试已同步更新。
 - 浏览器问题不再能用桌面 Dawn 复现，调试依赖 Chrome/Edge WebGPU、浏览器日志和截图回归。

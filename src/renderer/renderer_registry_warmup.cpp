@@ -4,8 +4,8 @@
 #include "renderer/renderer_registry.h"
 #include "renderer/renderer_registry_records.h"
 
-#include "assets/shader_asset.h"
 #include "core/async_operation_state.h"
+#include "core/sha256.h"
 
 #include <algorithm>
 #include <cstring>
@@ -20,9 +20,8 @@ template <typename Entry> void refresh_graphics_pointers(Entry& entry) {
   desc.color_formats = entry.color_formats.empty() ? nullptr : entry.color_formats.data();
   desc.vertex_buffer_layouts = entry.vertex_buffers.empty() ? nullptr : entry.vertex_buffers.data();
   for (std::size_t index = 0; index < entry.vertex_buffers.size(); ++index) {
-    entry.vertex_buffers[index].attributes = entry.vertex_attributes[index].empty()
-                                                  ? nullptr
-                                                  : entry.vertex_attributes[index].data();
+    entry.vertex_buffers[index].attributes =
+        entry.vertex_attributes[index].empty() ? nullptr : entry.vertex_attributes[index].data();
   }
   desc.depth = desc.depth == nullptr ? nullptr : &entry.depth;
   desc.depth_bias = desc.depth_bias == nullptr ? nullptr : &entry.depth_bias;
@@ -44,9 +43,10 @@ template <typename T> void append_structure(std::vector<std::byte>& bytes, const
 
 } // namespace
 
-granit_result renderer_registry::create_pipeline_warmup_batch(
-    granit_renderer renderer, const granit_pipeline_warmup_batch_desc& desc,
-    granit_pipeline_warmup_batch& batch) {
+granit_result
+renderer_registry::create_pipeline_warmup_batch(granit_renderer renderer,
+                                                const granit_pipeline_warmup_batch_desc& desc,
+                                                granit_pipeline_warmup_batch& batch) {
   try {
     std::lock_guard lock{mutex_};
     const auto owner = backend_renderers_.find(renderer);
@@ -121,8 +121,7 @@ granit_result renderer_registry::add_graphics_pipeline_warmup(
       entry.depth_bias = *desc.depth_bias;
     refresh_graphics_pointers(entry);
     std::lock_guard lock{record->mutex};
-    if (record->max_operation_count != 0 &&
-        record->entries.size() >= record->max_operation_count)
+    if (record->max_operation_count != 0 && record->entries.size() >= record->max_operation_count)
       return GRANIT_ERROR_OUT_OF_MEMORY;
     result_index = static_cast<std::uint32_t>(record->entries.size());
     record->entries.push_back(std::move(entry));
@@ -150,8 +149,7 @@ granit_result renderer_registry::add_compute_pipeline_warmup(
   }
   try {
     std::lock_guard lock{record->mutex};
-    if (record->max_operation_count != 0 &&
-        record->entries.size() >= record->max_operation_count)
+    if (record->max_operation_count != 0 && record->entries.size() >= record->max_operation_count)
       return GRANIT_ERROR_OUT_OF_MEMORY;
     pipeline_warmup_entry entry;
     entry.type = GRANIT_PIPELINE_WARMUP_TYPE_COMPUTE;
@@ -164,9 +162,10 @@ granit_result renderer_registry::add_compute_pipeline_warmup(
   }
 }
 
-granit_result renderer_registry::get_pipeline_warmup_batch_info(
-    granit_renderer renderer, granit_pipeline_warmup_batch batch,
-    granit_pipeline_warmup_batch_info& info) {
+granit_result
+renderer_registry::get_pipeline_warmup_batch_info(granit_renderer renderer,
+                                                  granit_pipeline_warmup_batch batch,
+                                                  granit_pipeline_warmup_batch_info& info) {
   std::shared_ptr<pipeline_warmup_batch_record> record;
   {
     std::lock_guard lock{mutex_};
@@ -272,7 +271,7 @@ granit_result renderer_registry::make_pipeline_warmup_key(
                    reinterpret_cast<const std::byte*>(compute->entry_point.data() +
                                                       compute->entry_point.size()));
     }
-    const auto digest = granit::tools::shader_bytes_sha256(bytes);
+    const auto digest = granit::detail::sha256_bytes(bytes);
     for (std::size_t index = 0; index < digest.size(); ++index)
       key[index] = static_cast<std::uint8_t>(digest[index]);
     return GRANIT_SUCCESS;
@@ -281,9 +280,10 @@ granit_result renderer_registry::make_pipeline_warmup_key(
   }
 }
 
-granit_result renderer_registry::submit_pipeline_warmup_batch_async(
-    granit_renderer renderer, granit_pipeline_warmup_batch batch,
-    granit_async_operation& operation) {
+granit_result
+renderer_registry::submit_pipeline_warmup_batch_async(granit_renderer renderer,
+                                                      granit_pipeline_warmup_batch batch,
+                                                      granit_async_operation& operation) {
   try {
     std::shared_ptr<pipeline_warmup_batch_record> record;
     {
@@ -407,8 +407,7 @@ granit_result renderer_registry::submit_pipeline_warmup_batch_async(
                 entry.retained_vertex_shader->entry_point.c_str(),
                 *entry.retained_fragment_shader->native,
                 entry.retained_fragment_shader->entry_point.c_str(),
-                {entry.graphics.vertex_buffer_layouts,
-                 entry.graphics.vertex_buffer_layout_count},
+                {entry.graphics.vertex_buffer_layouts, entry.graphics.vertex_buffer_layout_count},
                 entry.graphics.primitive,
                 entry.depth,
                 entry.graphics.depth_bias,
@@ -449,8 +448,8 @@ granit_result renderer_registry::submit_pipeline_warmup_batch_async(
       if (payload->next_index == payload->entries.size())
         state->complete(GRANIT_SUCCESS);
     };
-    return register_async_operation(renderer, std::move(state), operation, poll,
-                                    std::move(payload), async_operation_kind::pipeline_warmup_batch);
+    return register_async_operation(renderer, std::move(state), operation, poll, std::move(payload),
+                                    async_operation_kind::pipeline_warmup_batch);
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {
@@ -486,8 +485,8 @@ granit_result renderer_registry::get_pipeline_warmup_result(
   return GRANIT_SUCCESS;
 }
 
-granit_result renderer_registry::reset_pipeline_warmup_batch(
-    granit_renderer renderer, granit_pipeline_warmup_batch batch) {
+granit_result renderer_registry::reset_pipeline_warmup_batch(granit_renderer renderer,
+                                                             granit_pipeline_warmup_batch batch) {
   std::shared_ptr<pipeline_warmup_batch_record> record;
   {
     std::lock_guard lock{mutex_};
@@ -503,16 +502,16 @@ granit_result renderer_registry::reset_pipeline_warmup_batch(
   return GRANIT_SUCCESS;
 }
 
-granit_result renderer_registry::destroy_pipeline_warmup_batch(
-    granit_renderer renderer, granit_pipeline_warmup_batch batch) {
+granit_result renderer_registry::destroy_pipeline_warmup_batch(granit_renderer renderer,
+                                                               granit_pipeline_warmup_batch batch) {
   std::lock_guard lock{mutex_};
   const auto owner = backend_renderers_.find(renderer);
   const auto found = pipeline_warmup_batches_.find(batch);
   if (owner == backend_renderers_.end() || found == pipeline_warmup_batches_.end() ||
       found->second->owner != owner->second)
     return GRANIT_ERROR_INVALID_HANDLE;
-  const auto result = handles_.erase(batch, resource_type::pipeline_warmup_batch,
-                                     owner->second->domain());
+  const auto result =
+      handles_.erase(batch, resource_type::pipeline_warmup_batch, owner->second->domain());
   if (result == GRANIT_SUCCESS)
     pipeline_warmup_batches_.erase(found);
   return result;

@@ -343,6 +343,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
   std::vector<std::shared_ptr<texture_record>> native_textures;
   std::vector<std::shared_ptr<sampler_record>> native_samplers;
   std::vector<std::shared_ptr<shader_record>> native_shaders;
+  std::vector<std::shared_ptr<shader_library_record>> native_shader_libraries;
   std::vector<std::shared_ptr<pipeline_layout_record>> native_pipeline_layouts;
   std::vector<std::shared_ptr<bind_group_layout_record>> native_bind_group_layouts;
   std::vector<std::shared_ptr<bind_group_record>> native_bind_groups;
@@ -406,6 +407,12 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
       for (const auto& [handle, record] : shaders_) {
         if (record->owner == state) {
           lifecycle.add(lifecycle_resource_type::shader, handle,
+                        record->metadata.creation_sequence);
+        }
+      }
+      for (const auto& [handle, record] : shader_libraries_) {
+        if (record->owner == state) {
+          lifecycle.add(lifecycle_resource_type::shader_library, handle,
                         record->metadata.creation_sequence);
         }
       }
@@ -638,6 +645,16 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
         ++shader;
       }
     }
+    for (auto library = shader_libraries_.begin(); library != shader_libraries_.end();) {
+      if (library->second->owner == state) {
+        native_shader_libraries.push_back(std::move(library->second));
+        static_cast<void>(
+            handles_.erase(library->first, resource_type::shader_library, state->domain()));
+        library = shader_libraries_.erase(library);
+      } else {
+        ++library;
+      }
+    }
     for (auto view = texture_views_.begin(); view != texture_views_.end();) {
       if (view->second->owner == state) {
         native_texture_views.push_back(std::move(view->second));
@@ -714,6 +731,7 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
   native_pipeline_layouts.clear();
   native_bind_group_layouts.clear();
   native_shaders.clear();
+  native_shader_libraries.clear();
   // 析构可能等待 GPU 空闲，不应占用全局 registry 锁。
   state.reset();
   return GRANIT_SUCCESS;

@@ -6,10 +6,12 @@ if(NOT DEFINED TOOL OR NOT DEFINED INPUT OR NOT DEFINED OUTPUT)
 endif()
 
 file(REMOVE "${OUTPUT}")
+set(wgsl_output "${OUTPUT}.wgsl")
+file(REMOVE "${wgsl_output}")
 execute_process(
   COMMAND
-    "${TOOL}" compile --tint "${TOOL}" --input "${INPUT}" --entry vs_main --stage vertex
-    --output "${OUTPUT}"
+    "${TOOL}" compile --dxc "${TOOL}" --tint "${TOOL}" --input "${INPUT}"
+    --entry vertex_main --stage vertex --spirv-output "${OUTPUT}" --wgsl-output "${wgsl_output}"
   RESULT_VARIABLE result
   OUTPUT_VARIABLE standard_output
   ERROR_VARIABLE standard_error
@@ -19,9 +21,9 @@ if(NOT result EQUAL 1)
 endif()
 # Windows CMake 捕获 UTF-8 子进程输出时可能按活动代码页显示；只匹配稳定 ASCII 事实。
 if(NOT standard_error MATCHES "granit_shader_tool inspect" OR
-   NOT standard_error MATCHES "Tint")
-  message(FATAL_ERROR "未捕获完整 Tint 子进程诊断：${standard_error}")
+   NOT standard_error MATCHES "DXC")
+  message(FATAL_ERROR "未捕获完整 DXC 子进程诊断：${standard_error}")
 endif()
-if(EXISTS "${OUTPUT}")
-  message(FATAL_ERROR "Tint 编译失败后仍保留输出文件")
+if(EXISTS "${OUTPUT}" OR EXISTS "${wgsl_output}")
+  message(FATAL_ERROR "DXC 编译失败后仍保留输出文件")
 endif()

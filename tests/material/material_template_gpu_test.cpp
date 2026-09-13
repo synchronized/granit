@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "material/material_gpu_instance.h"
 #include "material/material_template_gpu.h"
 #include "support/shader_asset_store.h"
 
@@ -11,6 +12,7 @@
 
 #include <array>
 #include <barrier>
+#include <bit>
 #include <cstdint>
 #include <cstring>
 #include <fstream>
@@ -43,9 +45,17 @@ std::string load_text(const char* name) {
   return {std::istreambuf_iterator<char>{stream}, {}};
 }
 
-granit::material::material_package build_package() {
+granit::material::material_package
+build_package(granit::material::package_binding_groups binding_groups =
+                  granit::material::package_binding_group_frame |
+                  granit::material::package_binding_group_material) {
   using namespace granit::material;
   material_package_desc desc;
+  desc.metadata.constant_buffer_size = 16;
+  desc.metadata.parameters = {
+      {.name = "color", .type = parameter_type::float4, .default_value = {}},
+  };
+  desc.binding_groups = binding_groups;
   desc.variants.push_back({.pass = make_feature_id("opaque"),
                            .features = {},
                            .shaders = {{.stage = package_shader_stage::vertex,
@@ -69,15 +79,16 @@ granit::material::material_package build_package() {
 
 granit::material::material_package build_asset_package() {
   using namespace granit::material;
-  const auto asset_dir = std::string{GRANIT_TEST_ASSET_DIR};
+  const auto asset_dir = std::string{GRANIT_SHADER_OBJECT_FIXTURE_DIR};
   material_package_desc desc;
+  desc.binding_groups = package_binding_group_frame | package_binding_group_material;
   granit::tests::shader_asset_store store;
-  REQUIRE(store.add(asset_dir + "/minimal.vert.grshader"));
-  REQUIRE(store.add(asset_dir + "/minimal.frag.grshader"));
+  REQUIRE(store.add(asset_dir + "/minimal.vert.grshaderobj"));
+  REQUIRE(store.add(asset_dir + "/minimal.frag.grshaderobj"));
   desc.variants.push_back({.pass = make_feature_id("opaque"),
                            .features = {},
-                           .shaders = {store.reference(asset_dir + "/minimal.vert.grshader"),
-                                       store.reference(asset_dir + "/minimal.frag.grshader")},
+                           .shaders = {store.reference(asset_dir + "/minimal.vert.grshaderobj"),
+                                       store.reference(asset_dir + "/minimal.frag.grshaderobj")},
                            .pipeline = {}});
   desc.variants.back().pipeline.vertex_buffers = {
       {.stride = 12,
@@ -136,6 +147,20 @@ TEST_CASE("材质模板延迟创建并复用 Graphics Pipeline") {
   CHECK(reused == first);
   CHECK(material.cached_pipeline_count() == 1);
 
+  granit::material::material_gpu_instance instance;
+  REQUIRE(instance.initialize(renderer.native_handle(), material.material_layout(),
+                              package.metadata()) == GRANIT_SUCCESS);
+  const auto color = std::bit_cast<std::array<std::byte, 16>>(std::array{0.25F, 0.5F, 0.75F, 1.0F});
+  REQUIRE(instance.set(granit::material::make_parameter_id("color"),
+                       granit::material::parameter_type::float4,
+                       color) == granit::material::metadata_error::none);
+  REQUIRE(instance.flush() == GRANIT_SUCCESS);
+  CHECK(material.cached_pipeline_count() == 1);
+  REQUIRE(material.acquire_pipeline(request, reused) == GRANIT_SUCCESS);
+  CHECK(reused == first);
+  CHECK(material.cached_pipeline_count() == 1);
+  REQUIRE(instance.reset() == GRANIT_SUCCESS);
+
   auto missing = request;
   missing.variant += 1;
   CHECK(material.acquire_pipeline(missing, reused) == GRANIT_ERROR_NOT_READY);
@@ -162,7 +187,7 @@ TEST_CASE("材质模板在Group0和1后追加高层布局") {
           granit::result::success);
   const std::array additional{object_layout.native_handle(), shadow_layout.native_handle()};
 
-  const auto package = build_package();
+  const auto package = build_package(granit::material::package_binding_groups_all);
   granit::material::material_template_gpu material;
   REQUIRE(material.initialize(renderer.native_handle(), package, additional) == GRANIT_SUCCESS);
   CHECK(material.pipeline_layout() != GRANIT_NULL_HANDLE);

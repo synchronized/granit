@@ -61,12 +61,13 @@ Mesh 复制顶点布局和绘制范围，但只借用 Vertex Buffer。因此 Ver
 
 CMake 在构建 Smoke 时使用 `granit_material_tool`，把
 `tests/fixtures/smoke/render_pipeline_untextured.grmat.json` 编译为材质归档。程序读取归档，并在创建
-Material 时把 `base_color` 初始化为红色系颜色。归档通过内容 ID 引用 `.grshader`；示例 resolver
-从已驻留资产中选择 Vulkan SPIR-V 或 WebGPU WGSL sidecar。
+Material 时把 `base_color` 初始化为红色系颜色。示例把构建生成的 Shader 载荷链接为 `.grshlib`；
+材质归档通过内容 ID 引用其中的 Shader，Material 只接收对应 Library 句柄，Renderer 选择 Vulkan
+SPIR-V 或 WebGPU WGSL 载荷。
 
 参数名先通过 `granit_material_parameter_id` 转换为稳定 ID，再与类型、数据和尺寸一起提交。
-归档字节只需在创建调用期间有效；resolver 状态需保持到 Material 销毁，因为 Pipeline 按需创建。
-格式和更新规则见 [Material 参考](../reference/material.md)。
+材质归档字节只需在创建调用期间有效；Shader Library 归档字节及句柄需保持到 Material 销毁，
+因为 Pipeline 按需创建。格式和更新规则见 [Material 参考](../reference/material.md)。
 
 ## 5. 生成 Scene Snapshot
 

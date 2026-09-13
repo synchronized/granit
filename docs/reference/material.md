@@ -36,8 +36,16 @@ RenderPipeline 资产根目录下的 `materials/pbr_standard.grmat` 是对应的
 
 - 使用 `GRANIT_MATERIAL_DESC_INIT` 初始化创建描述。
 - `archive_data` 及其长度描述材质归档；数据只需在创建调用期间有效。
-- v4 归档只保存 Shader Asset 内容 ID。`shader_resolver` 在首次需要对应 Pipeline 时同步取得
-  `.grshader` 清单和当前后端 sidecar；缺少解析器或依赖返回 `GRANIT_ERROR_NOT_READY`。
+- v5 归档只保存 Shader 内容 ID。`shader_library` 指定包含这些 Shader 的 Library；Renderer 在
+  首次需要对应 Pipeline 时选择当前后端载荷。缺少 Library 或内容 ID 返回
+  `GRANIT_ERROR_NOT_READY`。
+- 源 JSON 的 `binding_groups` 显式声明 Pipeline Layout 使用的连续绑定组。顺序固定为 `frame`、
+  `material`、`object`、`lighting`；前两组必需，使用 `lighting` 时也必须包含 `object`。Unlit 通常
+  使用前三组，标准 PBR 使用全部四组。
+- v6 源 JSON 的每个 Shader 引用声明 `library`、`shader` 和可选的 `variant` 逻辑名称。Material
+  Tool 必须通过一个或多个 `--shader-index <file.grshidx.json>` 参数读取 Shader Library Builder
+  生成的索引，并在打包时解析为内容 ID、阶段和入口点。未知名称、重复 Library 或无效阶段组合会
+  使构建失败；最终 v5 归档不保存逻辑名称或索引路径。
 - `initial_updates` 在创建时整体应用；任何一步失败都不会产生 Material 句柄。
 - `granit_material_update` 批量更新参数。整批更新具有事务性：失败时保留原状态。
 - 空更新批次合法，可用于显式刷新或保持统一调用路径。
@@ -45,12 +53,28 @@ RenderPipeline 资产根目录下的 `materials/pbr_standard.grmat` 是对应的
 参数 ID 必须来自同一材质布局，类型和数据尺寸必须与归档元数据一致。Texture View 和 Sampler
 必须属于同一 Renderer，并在 Material 使用期间保持有效。
 
+## 静态功能与动态参数
+
+材质归档使用 Pass 和 Feature 组成稳定变体键。只有会改变 Shader 代码、绑定布局、顶点输入或
+固定 Pipeline 状态的选择进入变体键：
+
+- `pbr_texture_mask` 决定无纹理、普通纹理或法线贴图 Shader 结构，并决定是否要求 UV0 和 Tangent；
+- Alpha 模式决定深度写入、混合和 Alpha Cutoff Shader；
+- Shadow 与 Unlit 是独立 Pass，分别选择对应 Shader 和 Pipeline 状态；
+- 阴影、IBL 和灯光等会改变 Shader 资源契约的能力属于静态功能。
+
+颜色、金属度、粗糙度、发光强度等数值，以及 Texture View 和 Sampler 句柄，都是动态参数。
+`granit_material_update` 只事务式替换常量或资源绑定，不重新选择变体，也不创建 Graphics Pipeline。
+因此，启用或禁用一种纹理功能必须选择已有的 `pbr_texture_mask` 变体；在同一纹理功能内更换贴图
+只更新资源句柄。缺少贴图时，上层资产导入器应绑定与该功能契约匹配的中性默认资源。
+
 ## 所有权与生命周期
 
 - Material 拥有自身的参数状态和 GPU 实例。
 - Material 不拥有更新中引用的 Texture View 或 Sampler。
-- Material 不拥有 resolver 返回的字节。字节只借用至一次 Shader 创建结束，但 resolver 的
-  `user_data` 和资产存储必须存活到 Material 销毁，因为 Pipeline 按需延迟创建。
+- Material 不拥有 Shader Library 或其归档字节，但在自身生命周期内保留 Library 引用。因此
+  `granit_shader_library_destroy` 会返回 `GRANIT_ERROR_RESOURCE_IN_USE`，调用方应先销毁 Material，
+  并保证归档字节保持有效且不变。
 - 销毁后句柄立即失效；重复销毁、跨 Renderer 使用或更新旧句柄返回无效句柄错误。
 
 ## 线程安全
@@ -58,4 +82,4 @@ RenderPipeline 资产根目录下的 `materials/pbr_standard.grmat` 是对应的
 不同 Material 可以并发更新。同一 Material 的更新不能彼此并发，也不能与销毁并发。渲染正在
 读取 Material 时，不应更新或销毁该 Material。
 
-resolver 由 Granit 同步调用且不会重入。若资产存储可能同时写入，调用方必须提供读取同步。
+Shader Library 的归档字节在借用期间不可修改；不同线程只可并发读取。

@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "../support/shader_asset_store.h"
+#include "../support/tone_mapping_shader_library.h"
 #include "lighting/shadow_ibl_resources.h"
 #include "lighting/tone_mapping_resources.h"
 #include "material/material_gpu_instance.h"
@@ -148,7 +149,7 @@ int main(int argc, char** argv) {
   granit::material::material_package full_package;
   granit::tests::shader_asset_store assets;
   const auto shader_reference = [&](const char* name) {
-    const auto path = std::string{GRANIT_PBR_SHADER_DIR} + "/" + name + ".grshader";
+    const auto path = std::string{GRANIT_PBR_SHADER_DIR} + "/" + name + ".grshaderobj";
     if (!assets.add(path))
       return granit::material::material_shader_code{};
     return assets.reference(path);
@@ -165,6 +166,12 @@ int main(int argc, char** argv) {
                                       shader_reference("pbr_shadow_ibl_lights_untextured.frag"));
   if (result.failed() || !packages_ready) {
     std::cerr << "无法初始化 Renderer 或构建 PBR 材质包\n";
+    return 1;
+  }
+  std::vector<std::byte> shader_library_bytes;
+  granit::shader_library shader_library;
+  if (!assets.initialize_library(renderer.native_handle(), shader_library_bytes, shader_library)) {
+    std::cerr << "无法创建 Shader Library\n";
     return 1;
   }
 
@@ -319,9 +326,8 @@ int main(int argc, char** argv) {
                                        granit_bind_group_layout lighting_layout,
                                        granit_graphics_pipeline& target_pipeline) {
     const std::array additional_layouts{object_layout.native_handle(), lighting_layout};
-    auto initialize_result =
-        granit::from_native(target.initialize(renderer.native_handle(), source, additional_layouts,
-                                              granit::tests::shader_asset_store::resolve, &assets));
+    auto initialize_result = granit::from_native(target.initialize(
+        renderer.native_handle(), source, additional_layouts, shader_library.native_handle()));
     const std::array features{granit::material::material_feature_value{
         granit::material::make_feature_id(granit::material::pbr_texture_feature_name), 0}};
     if (initialize_result.ok()) {
@@ -420,19 +426,15 @@ int main(int argc, char** argv) {
     result = recorder.initialize(renderer.native_handle());
   if (result.ok())
     result = timestamps.initialize(renderer.native_handle(), 4);
-  granit::tests::shader_asset_file tone_vertex;
-  granit::tests::shader_asset_file tone_fragment;
-  if (result.ok())
-    result = tone_vertex.load(renderer.native_handle(), std::string{GRANIT_PIPELINE_SHADER_DIR} +
-                                                            "/tone_mapping.vert.grshader");
-  if (result.ok())
-    result = tone_fragment.load(renderer.native_handle(), std::string{GRANIT_PIPELINE_SHADER_DIR} +
-                                                              "/tone_mapping.frag.grshader");
+  granit::tests::tone_mapping_shader_library tone_shaders;
+  if (result.ok() && !tone_shaders.initialize(renderer.native_handle()))
+    result = granit::result::initialization_failed;
   granit::lighting::tone_mapping_resources tone_mapping;
   if (result.ok()) {
-    result = granit::from_native(tone_mapping.initialize_packaged_asset(
+    result = granit::from_native(tone_mapping.initialize(
         renderer.native_handle(), hdr_view, granit::texture_format::rgba8_unorm,
-        {.exposure_scale = 1.0F, .encode_srgb = 1}, tone_vertex.desc(), tone_fragment.desc()));
+        {.exposure_scale = 1.0F, .encode_srgb = 1}, tone_shaders.library(),
+        tone_shaders.vertex_id(), tone_shaders.fragment_id()));
   }
   const granit::viewport viewport{0, 0, 256, 256, 0, 1};
   const granit::scissor scissor{0, 0, 256, 256};

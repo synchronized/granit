@@ -55,7 +55,7 @@ PBR 特有字段固化到通用材质接口。
 ### 离线材质包
 
 离线工具接收材质描述、Shader 源、include、宏和目标环境，输出版本化材质包。运行库只加载包内
-已经编译和验证的 SPIR-V 与 Granit 自有元数据，不依赖 DXC、glslang、shaderc 或反射库。
+已经编译和验证的 SPIR-V 与 Granit 自有元数据，不依赖源码编译器或反射库。
 
 首个原型先使用内存中的材质包结构和固定测试数据验证布局，不立即冻结磁盘二进制格式。正式文件
 格式必须具备 magic、格式版本、目标环境、内容哈希、长度校验和分区表，不能直接序列化 C/C++
@@ -72,7 +72,7 @@ PBR 特有字段固化到通用材质接口。
 
 运行时按稳定参数 ID 查询，名称只用于构建、编辑器和诊断。ID 由离线工具使用明确、版本化的哈希
 算法生成，必须检测碰撞；不能使用实现相关的 `std::hash`。参数 ID、类型、offset、size 和数组
-stride 均由离线反射元数据明确给出，运行时不重新推导 GLSL/HLSL 布局。
+stride 均由离线反射元数据明确给出，运行时不重新推导源码语言布局。
 
 常量参数写入材质 Uniform Buffer。频繁逐字段修改先写 CPU shadow buffer，并合并 dirty 区间后
 批量上传；不能让每次 setter 都创建 Buffer 或单独提交 GPU 工作。Texture/Sampler 变化才重建
@@ -162,7 +162,7 @@ SPIRV-Reflect 与 SPIRV-Headers `vulkan-sdk-1.4.350.0`。版本升级必须重�
 
 ## 首版不做
 
-- 不在运行时解析或编译 GLSL/HLSL。
+- 不在运行时解析或编译 Shader 源码。
 - 不提供可编程材质节点图或 Shader Graph。
 - 不自动推导 PBR 参数、渲染队列或透明排序。
 - H-02 首版不实现 Bindless；其 Renderer 能力边界和后续材质接入由 D-09 负责。

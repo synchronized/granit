@@ -1,8 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
-foreach(required STAGE OUTPUT DXC_VERSION GLSLANG_VERSION DAWN_VERSION TINT_REVISION TOOL_FILES
-                 LICENSE_FILES)
+foreach(required STAGE OUTPUT DXC_VERSION DAWN_VERSION TINT_REVISION TOOL_FILES LICENSE_FILES)
   if(NOT DEFINED ${required} OR "${${required}}" STREQUAL "")
     message(FATAL_ERROR "缺少 ${required}")
   endif()
@@ -62,7 +61,7 @@ foreach(relative_path IN LISTS package_files)
          "\"sha256\":\"${sha256}\",\"role\":\"${role}\"}")
 endforeach()
 
-foreach(metadata DXC_VERSION GLSLANG_VERSION DAWN_VERSION TINT_REVISION)
+foreach(metadata DXC_VERSION DAWN_VERSION TINT_REVISION)
   list(LENGTH ${metadata} metadata_length)
   if(NOT metadata_length EQUAL 1)
     message(FATAL_ERROR "${metadata} 必须是单个不含分号的版本标识")
@@ -74,7 +73,6 @@ string(CONCAT manifest
     "{\n"
     "  \"schema\":1,\n"
     "  \"dxc_version\":\"${escaped_DXC_VERSION}\",\n"
-    "  \"glslang_version\":\"${escaped_GLSLANG_VERSION}\",\n"
     "  \"dawn_version\":\"${escaped_DAWN_VERSION}\",\n"
     "  \"tint_revision\":\"${escaped_TINT_REVISION}\",\n"
     "  \"files\":[\n${file_records}\n  ]\n"

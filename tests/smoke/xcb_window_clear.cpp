@@ -106,8 +106,8 @@ int main(int argc, char** argv) {
                                      .surface_types = granit::surface_type::xcb});
   granit::surface surface;
   if (result.ok())
-    result = surface.initialize_xcb(renderer.native_handle(),
-                                    {.connection = connection, .window = window});
+    result =
+        surface.initialize(renderer.native_handle(), granit::surface_desc::xcb(connection, window));
 
   std::uint32_t width = 800;
   std::uint32_t height = 600;

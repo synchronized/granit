@@ -19,7 +19,15 @@ target_sources(
     upload_context.cpp
     version_check.cpp
     vma_implementation.cpp
-    vulkan_renderer_state.cpp
+    renderer_state.cpp
+    renderer_state_commands.cpp
+    renderer_state_pipeline.cpp
+    renderer_state_presentation.cpp
+    renderer_state_resources.cpp
+    renderer_state_submission.cpp
+    renderer_state_timestamp.cpp
+    renderer_state_transfer.cpp
+    renderer_state_utils.cpp
     renderer_factory.cpp
     $<TARGET_OBJECTS:granit_volk>
     device.h
@@ -36,7 +44,8 @@ target_sources(
     swapchain.h
     timestamp_query.h
     upload_context.h
-    vulkan_renderer_state.h
+    renderer_state.h
+    renderer_state_utils.h
 )
 
 target_include_directories(

@@ -89,11 +89,6 @@ std::vector<std::byte> load_shader(const char* name) {
   return result;
 }
 
-std::string load_text_asset(const char* name) {
-  std::ifstream stream{std::string{GRANIT_TEST_ASSET_DIR} + "/" + name};
-  return {std::istreambuf_iterator<char>{stream}, {}};
-}
-
 void count_validation_errors(granit_diagnostic_severity severity,
                              granit_diagnostic_category category, const char*, std::uint32_t,
                              void* user_data) noexcept {
@@ -376,20 +371,16 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
 
   const auto vertex_code = load_shader("dynamic_uniform.vert.spv");
   const auto fragment_code = load_shader("dynamic_uniform.frag.spv");
-  const auto vertex_wgsl = load_text_asset("dynamic_uniform.vert.wgsl");
-  const auto fragment_wgsl = load_text_asset("dynamic_uniform.frag.wgsl");
   REQUIRE_FALSE(vertex_code.empty());
   REQUIRE_FALSE(fragment_code.empty());
   granit::shader vertex;
   granit::shader fragment;
-  REQUIRE(vertex.initialize_asset(
-              renderer.native_handle(),
-              {.stage = granit::shader_stage::vertex, .spirv = vertex_code, .wgsl = vertex_wgsl}) ==
+  REQUIRE(vertex.initialize(renderer.native_handle(),
+                            {.stage = granit::shader_stage::vertex, .code = vertex_code}) ==
           granit::result::success);
-  REQUIRE(fragment.initialize_asset(renderer.native_handle(),
-                                    {.stage = granit::shader_stage::fragment,
-                                     .spirv = fragment_code,
-                                     .wgsl = fragment_wgsl}) == granit::result::success);
+  REQUIRE(fragment.initialize(renderer.native_handle(),
+                              {.stage = granit::shader_stage::fragment, .code = fragment_code}) ==
+          granit::result::success);
 
   const std::array declarations{
       granit::bind_group_layout_entry{.binding = 0,

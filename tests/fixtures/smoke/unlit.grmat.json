@@ -1,7 +1,8 @@
 {
-  "format_version": 4,
+  "format_version": 6,
   "target_environment": "cross_backend",
   "binding_model": "bind_group",
+  "binding_groups": ["frame", "material", "object"],
   "material": {
     "constant_buffer_size": 32,
     "parameters": [
@@ -19,8 +20,8 @@
         "color_blend": {"enabled": false}
       },
       "shaders": [
-        {"asset": "../../../assets/shaders/unlit/unlit.vert.grshader"},
-        {"asset": "../../../assets/shaders/unlit/unlit.frag.grshader"}
+        {"library": "unlit", "shader": "unlit.vertex"},
+        {"library": "unlit", "shader": "unlit.fragment", "variant": "opaque"}
       ]
     },
     {
@@ -33,8 +34,8 @@
         "color_blend": {"enabled": false}
       },
       "shaders": [
-        {"asset": "../../../assets/shaders/unlit/unlit.vert.grshader"},
-        {"asset": "../../../assets/shaders/unlit/unlit_alpha_cutoff.frag.grshader"}
+        {"library": "unlit", "shader": "unlit.vertex"},
+        {"library": "unlit", "shader": "unlit.fragment", "variant": "alpha_cutoff"}
       ]
     },
     {
@@ -52,8 +53,8 @@
         }
       },
       "shaders": [
-        {"asset": "../../../assets/shaders/unlit/unlit.vert.grshader"},
-        {"asset": "../../../assets/shaders/unlit/unlit.frag.grshader"}
+        {"library": "unlit", "shader": "unlit.vertex"},
+        {"library": "unlit", "shader": "unlit.fragment", "variant": "opaque"}
       ]
     }
   ]

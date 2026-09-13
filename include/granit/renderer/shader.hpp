@@ -4,114 +4,27 @@
 #ifndef GRANIT_SHADER_HPP_
 #define GRANIT_SHADER_HPP_
 
-#include <array>
 #include <cstddef>
 #include <cstdint>
-#include <cstring>
-#include <new>
 #include <span>
-#include <string>
 #include <string_view>
 #include <utility>
-#include <vector>
 
 #include <granit/core/result.hpp>
+#include <granit/core/shader_types.hpp>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/shader.h>
 
 namespace granit {
 
-enum class shader_stage : std::uint32_t {
-  vertex = GRANIT_SHADER_STAGE_VERTEX,
-  fragment = GRANIT_SHADER_STAGE_FRAGMENT,
-  compute = GRANIT_SHADER_STAGE_COMPUTE,
-};
+class shader_library;
 
 struct shader_desc {
   shader_stage stage{shader_stage::vertex};
+  shader_code_format code_format{shader_code_format::spirv};
   std::span<const std::byte> code;
   std::string_view entry_point{"main"};
 };
-
-/** 同时携带 Vulkan SPIR-V 与 WebGPU WGSL 的跨后端 Shader 描述。 */
-struct shader_asset_desc {
-  shader_stage stage{shader_stage::vertex};
-  std::span<const std::byte> spirv;
-  std::string_view wgsl;
-  std::string_view entry_point{"main"};
-};
-
-/** 由 ShaderTools 生成的清单及当前后端 sidecar 字节。 */
-struct packaged_shader_asset_desc {
-  std::span<const std::byte> manifest;
-  std::span<const std::byte> sidecar;
-};
-
-enum class shader_code_format : std::uint32_t {
-  wgsl = GRANIT_SHADER_CODE_FORMAT_WGSL,
-  spirv = GRANIT_SHADER_CODE_FORMAT_SPIRV,
-};
-
-struct shader_asset_variant_info {
-  renderer_backend backend{renderer_backend::automatic};
-  shader_code_format code_format{shader_code_format::wgsl};
-  std::uint32_t profile{};
-  std::uint64_t required_features{};
-  std::uint64_t payload_size{};
-  std::array<std::byte, GRANIT_SHADER_ASSET_ID_SIZE> payload_digest{};
-};
-
-struct shader_asset_info {
-  std::array<std::byte, GRANIT_SHADER_ASSET_ID_SIZE> content_id{};
-  std::array<std::byte, GRANIT_SHADER_ASSET_ID_SIZE> cache_key{};
-  shader_stage stage{shader_stage::vertex};
-  std::string entry_point;
-  std::vector<shader_asset_variant_info> variants;
-};
-
-/** 校验内存中的 `.grshader` 清单，并复制其稳定元数据。 */
-[[nodiscard]] inline result inspect_shader_asset(std::span<const std::byte> manifest,
-                                                 shader_asset_info& info) noexcept {
-  if (manifest.empty())
-    return result::invalid_argument;
-  granit_shader_asset_info native = GRANIT_SHADER_ASSET_INFO_INIT;
-  auto value = from_native(granit_shader_asset_inspect(manifest.data(), manifest.size(), &native));
-  if (value.failed())
-    return value;
-  try {
-    std::string entry_point(native.entry_point_length, '\0');
-    native.entry_point = entry_point.data();
-    native.entry_point_capacity = static_cast<std::uint32_t>(entry_point.size() + 1);
-    value = from_native(granit_shader_asset_inspect(manifest.data(), manifest.size(), &native));
-    if (value.failed())
-      return value;
-    shader_asset_info replacement;
-    std::memcpy(replacement.content_id.data(), native.content_id, replacement.content_id.size());
-    std::memcpy(replacement.cache_key.data(), native.cache_key, replacement.cache_key.size());
-    replacement.stage = static_cast<shader_stage>(native.stage);
-    replacement.entry_point = std::move(entry_point);
-    replacement.variants.reserve(native.variant_count);
-    for (std::uint32_t index = 0; index < native.variant_count; ++index) {
-      const auto& source = native.variants[index];
-      shader_asset_variant_info variant{
-          .backend = static_cast<renderer_backend>(source.backend),
-          .code_format = static_cast<shader_code_format>(source.code_format),
-          .profile = source.profile,
-          .required_features = source.required_features,
-          .payload_size = source.payload_size,
-      };
-      std::memcpy(variant.payload_digest.data(), source.payload_digest,
-                  variant.payload_digest.size());
-      replacement.variants.push_back(variant);
-    }
-    info = std::move(replacement);
-    return result::success;
-  } catch (const std::bad_alloc&) {
-    return result::out_of_memory;
-  } catch (...) {
-    return result::internal;
-  }
-}
 
 class shader {
 public:
@@ -136,54 +49,17 @@ public:
       return result::invalid_argument;
     if (renderer == GRANIT_NULL_HANDLE)
       return result::invalid_handle;
-    const granit_shader_desc native{.struct_size = GRANIT_SHADER_DESC_SIZE,
-                                    .stage = static_cast<granit_shader_stage>(desc.stage),
-                                    .code = desc.code.data(),
-                                    .code_size = desc.code.size(),
-                                    .entry_point = desc.entry_point.data(),
-                                    .entry_point_length =
-                                        static_cast<std::uint32_t>(desc.entry_point.size()),
-                                    .reserved = 0,
-                                    .wgsl = nullptr,
-                                    .wgsl_length = 0};
+    const granit_shader_desc native{
+        .struct_size = GRANIT_SHADER_DESC_SIZE,
+        .stage = static_cast<granit_shader_stage>(desc.stage),
+        .code_format = static_cast<granit_shader_code_format>(desc.code_format),
+        .reserved = 0,
+        .code = desc.code.data(),
+        .code_size = desc.code.size(),
+        .entry_point = desc.entry_point.data(),
+        .entry_point_length = static_cast<std::uint32_t>(desc.entry_point.size()),
+        .reserved_2 = 0};
     return initialize_native(renderer, native);
-  }
-
-  [[nodiscard]] result initialize_asset(granit_renderer renderer,
-                                        const shader_asset_desc& desc) noexcept {
-    if (valid() || desc.entry_point.size() > UINT32_MAX)
-      return result::invalid_argument;
-    if (renderer == GRANIT_NULL_HANDLE)
-      return result::invalid_handle;
-    const granit_shader_desc native{.struct_size = GRANIT_SHADER_DESC_SIZE,
-                                    .stage = static_cast<granit_shader_stage>(desc.stage),
-                                    .code = desc.spirv.data(),
-                                    .code_size = desc.spirv.size(),
-                                    .entry_point = desc.entry_point.data(),
-                                    .entry_point_length =
-                                        static_cast<std::uint32_t>(desc.entry_point.size()),
-                                    .reserved = 0,
-                                    .wgsl = desc.wgsl.data(),
-                                    .wgsl_length = desc.wgsl.size()};
-    return initialize_native(renderer, native);
-  }
-
-  [[nodiscard]] result initialize_packaged_asset(granit_renderer renderer,
-                                                 const packaged_shader_asset_desc& desc) noexcept {
-    if (valid() || desc.manifest.empty() || desc.sidecar.empty())
-      return result::invalid_argument;
-    if (renderer == GRANIT_NULL_HANDLE)
-      return result::invalid_handle;
-    const granit_shader_asset_desc native{.struct_size = GRANIT_SHADER_ASSET_DESC_SIZE,
-                                          .reserved = 0,
-                                          .manifest_data = desc.manifest.data(),
-                                          .manifest_size = desc.manifest.size(),
-                                          .sidecar_data = desc.sidecar.data(),
-                                          .sidecar_size = desc.sidecar.size()};
-    const auto value = from_native(granit_shader_create_from_asset(renderer, &native, &handle_));
-    if (value.ok())
-      renderer_ = renderer;
-    return value;
   }
 
   [[nodiscard]] result reset() noexcept {
@@ -199,6 +75,8 @@ public:
   [[nodiscard]] granit_shader native_handle() const noexcept { return handle_; }
 
 private:
+  friend class shader_library;
+
   [[nodiscard]] result initialize_native(granit_renderer renderer,
                                          const granit_shader_desc& native) noexcept {
     const auto value = granit_shader_create(renderer, &native, &handle_);

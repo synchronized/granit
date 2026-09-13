@@ -6,10 +6,13 @@
 
 #include <granit/renderer/shader.hpp>
 
+#include "shader_format/shader_object.h"
+
 #include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <string>
 #include <vector>
 
 namespace granit::tests {
@@ -23,40 +26,75 @@ inline bool read_shader_bytes(const std::filesystem::path& path, std::vector<std
   return !stream.bad() && !bytes.empty();
 }
 
-// 文件读取留在测试层；只读取实际后端的 sidecar，创建时由 Core 校验摘要和能力。
-class shader_asset_file {
-public:
-  [[nodiscard]] result load(granit_renderer renderer, const std::filesystem::path& path) {
-    manifest_.clear();
-    sidecar_.clear();
-    granit_renderer_shader_capabilities caps = GRANIT_RENDERER_SHADER_CAPABILITIES_INIT;
-    const auto status = granit_renderer_get_shader_capabilities(renderer, &caps);
-    if (status != GRANIT_SUCCESS)
-      return from_native(status);
-    if (!read_shader_bytes(path, manifest_))
-      return result::invalid_argument;
-    shader_asset_info info;
-    const auto inspected = inspect_shader_asset(manifest_, info);
-    if (inspected.failed())
-      return inspected;
-    const auto suffix = caps.backend == GRANIT_RENDERER_BACKEND_VULKAN ? ".spv" : ".wgsl";
-    if (!read_shader_bytes(path.string() + suffix, sidecar_))
-      return result::invalid_argument;
-    return result::success;
-  }
-
-  [[nodiscard]] packaged_shader_asset_desc desc() const noexcept { return {manifest_, sidecar_}; }
-
-private:
-  std::vector<std::byte> manifest_;
-  std::vector<std::byte> sidecar_;
+struct shader_asset_payload {
+  shader_stage stage{shader_stage::vertex};
+  shader_code_format code_format{shader_code_format::spirv};
+  std::string entry_point;
+  std::vector<std::byte> code;
 };
+
+// Shader Object 只在工具链测试中使用；测试层负责选择并校验后端 payload。
+inline result read_shader_asset(granit_renderer renderer, const std::filesystem::path& path,
+                                shader_asset_payload& output) {
+  granit_renderer_shader_capabilities capabilities = GRANIT_RENDERER_SHADER_CAPABILITIES_INIT;
+  const auto status = granit_renderer_get_shader_capabilities(renderer, &capabilities);
+  if (status != GRANIT_SUCCESS)
+    return from_native(status);
+  std::vector<std::byte> manifest;
+  if (!read_shader_bytes(path, manifest))
+    return result::invalid_argument;
+  granit::detail::shader_format::shader_object_view object;
+  if (granit::detail::shader_format::decode_shader_object(manifest, object) !=
+      granit::detail::shader_format::shader_object_error::success)
+    return result::invalid_argument;
+  const auto backend = capabilities.backend == GRANIT_RENDERER_BACKEND_VULKAN
+                           ? granit::detail::shader_format::shader_object_backend::vulkan
+                           : granit::detail::shader_format::shader_object_backend::webgpu;
+  const auto* variant = granit::detail::shader_format::find_shader_object_variant(
+      object, backend, granit::shader_profile::portable);
+  if (variant == nullptr || (variant->required_features & ~capabilities.supported_features) != 0)
+    return result::unsupported;
+  const auto suffix =
+      backend == granit::detail::shader_format::shader_object_backend::vulkan ? ".spv" : ".wgsl";
+  if (!read_shader_bytes(path.string() + suffix, output.code) ||
+      granit::detail::shader_format::validate_shader_object_payload(object, backend, output.code) !=
+          granit::detail::shader_format::shader_object_error::success)
+    return result::invalid_argument;
+  output.stage = object.stage;
+  output.code_format = variant->code_format;
+  output.entry_point = object.entry_point;
+  return result::success;
+}
 
 inline result load_shader_asset(granit_renderer renderer, const std::filesystem::path& path,
                                 shader& output) {
-  shader_asset_file asset;
-  const auto status = asset.load(renderer, path);
-  return status.failed() ? status : output.initialize_packaged_asset(renderer, asset.desc());
+  shader_asset_payload payload;
+  const auto status = read_shader_asset(renderer, path, payload);
+  if (status != result::success)
+    return status;
+  return output.initialize(renderer, {.stage = payload.stage,
+                                      .code_format = payload.code_format,
+                                      .code = payload.code,
+                                      .entry_point = payload.entry_point});
+}
+
+inline result load_shader_asset(granit_renderer renderer, const std::filesystem::path& path,
+                                granit_shader& output) {
+  shader_asset_payload payload;
+  const auto status = read_shader_asset(renderer, path, payload);
+  if (status != result::success)
+    return status;
+  const granit_shader_desc desc{
+      .struct_size = GRANIT_SHADER_DESC_SIZE,
+      .stage = static_cast<granit_shader_stage>(payload.stage),
+      .code_format = static_cast<granit_shader_code_format>(payload.code_format),
+      .reserved = 0,
+      .code = payload.code.data(),
+      .code_size = payload.code.size(),
+      .entry_point = payload.entry_point.data(),
+      .entry_point_length = static_cast<std::uint32_t>(payload.entry_point.size()),
+      .reserved_2 = 0};
+  return from_native(granit_shader_create(renderer, &desc, &output));
 }
 
 } // namespace granit::tests

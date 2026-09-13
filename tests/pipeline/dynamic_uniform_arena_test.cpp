@@ -73,8 +73,7 @@ TEST_CASE("动态 Uniform Arena 拒绝非法限制和溢出", "[pipeline][unifor
 
 TEST_CASE("动态 Uniform Arena 隔离帧槽并按批次增长", "[pipeline][uniform-arena][gpu]") {
   granit::renderer renderer;
-  const auto initialized =
-      renderer.initialize({.application_name = "Granit Uniform Arena Test"});
+  const auto initialized = renderer.initialize({.application_name = "Granit Uniform Arena Test"});
   if (initialized != granit::result::success)
     SKIP("当前运行环境没有满足要求的 Vulkan 设备");
 

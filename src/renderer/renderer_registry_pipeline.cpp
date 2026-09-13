@@ -4,11 +4,10 @@
 #include "renderer/renderer_registry.h"
 #include "renderer/renderer_registry_records.h"
 
+#include "core/sha256.h"
 #include "renderer/shader_validation.h"
-#include "assets/shader_asset.h"
 
 #include <algorithm>
-#include <cstring>
 #include <limits>
 #include <new>
 #include <utility>
@@ -19,42 +18,24 @@ namespace granit::detail {
 granit_result renderer_registry::create_shader_from_desc(granit_renderer renderer,
                                                          const granit_shader_desc& desc,
                                                          granit_shader& shader) {
-  const auto interfaces = acquire_backend_interfaces(renderer);
-  if (!interfaces) {
-    const auto validation = desc.wgsl != nullptr || desc.wgsl_length != 0
-                                ? validate_shader_wgsl(&desc)
-                                : validate_shader_spirv(&desc);
-    return validation == GRANIT_SUCCESS ? GRANIT_ERROR_INVALID_HANDLE : validation;
-  }
-  if (interfaces->wgsl_shaders) {
-    const auto validation = validate_shader_wgsl(&desc);
-    if (validation != GRANIT_SUCCESS)
-      return validation;
-    return create_shader_from_wgsl(
-        renderer, desc.stage, {desc.wgsl, static_cast<std::size_t>(desc.wgsl_length)},
-        {desc.entry_point, static_cast<std::size_t>(desc.entry_point_length)}, shader);
-  }
-  const auto validation = validate_shader_spirv(&desc);
+  const auto validation = validate_shader_desc(&desc);
   if (validation != GRANIT_SUCCESS)
     return validation;
-  std::vector<std::uint32_t> code(static_cast<std::size_t>(desc.code_size) / sizeof(std::uint32_t));
-  std::memcpy(code.data(), desc.code, static_cast<std::size_t>(desc.code_size));
-  return create_shader_from_spirv(renderer, desc.stage, code,
-                                  std::string_view{desc.entry_point, desc.entry_point_length},
-                                  shader);
+  return create_shader_from_code(
+      renderer, desc.stage, desc.code_format,
+      {static_cast<const std::byte*>(desc.code), static_cast<std::size_t>(desc.code_size)},
+      {desc.entry_point, static_cast<std::size_t>(desc.entry_point_length)}, shader);
 }
 
-granit_result renderer_registry::create_shader_from_spirv(granit_renderer renderer,
-                                                          granit_shader_stage stage,
-                                                          std::span<const std::uint32_t> code,
-                                                          std::string_view entry_point,
-                                                          granit_shader& shader) {
+granit_result renderer_registry::create_shader_from_code(
+    granit_renderer renderer, granit_shader_stage stage, granit_shader_code_format code_format,
+    std::span<const std::byte> code, std::string_view entry_point, granit_shader& shader) {
   try {
     const auto interfaces = acquire_backend_interfaces(renderer);
     if (!interfaces)
       return GRANIT_ERROR_INVALID_HANDLE;
     const auto& owner = interfaces->renderer;
-    const auto& shaders = interfaces->spirv_shaders;
+    const auto& shaders = interfaces->shaders;
     if (!shaders)
       return GRANIT_ERROR_UNSUPPORTED;
     auto record = std::make_shared<shader_record>();
@@ -62,58 +43,13 @@ granit_result renderer_registry::create_shader_from_spirv(granit_renderer render
     record->retirement = interfaces->retirement;
     record->stage = stage;
     record->entry_point.assign(entry_point);
-    record->content_id = granit::tools::shader_bytes_sha256(std::as_bytes(code));
-    record->native = shaders->allocate_shader_resource();
-    const auto result = shaders->create_spirv_shader(*record->native, stage, code, entry_point);
-    if (result != GRANIT_SUCCESS)
-      return result;
-    std::lock_guard lock{mutex_};
-    const auto found = backend_renderers_.find(renderer);
-    if (found == backend_renderers_.end() || found->second != owner)
-      return GRANIT_ERROR_INVALID_HANDLE;
-    record->metadata.creation_sequence = next_creation_sequence_++;
-    const auto handle = handles_.insert(record.get(), resource_type::shader, owner->domain());
-    if (handle == GRANIT_NULL_HANDLE)
-      return GRANIT_ERROR_OUT_OF_MEMORY;
-    try {
-      shaders_.emplace(handle, std::move(record));
-    } catch (...) {
-      static_cast<void>(handles_.erase(handle, resource_type::shader, owner->domain()));
-      throw;
-    }
-    shader = handle;
-    return GRANIT_SUCCESS;
-  } catch (const std::bad_alloc&) {
-    return GRANIT_ERROR_OUT_OF_MEMORY;
-  } catch (...) {
-    return GRANIT_ERROR_INTERNAL;
-  }
-}
+    record->content_id = granit::detail::sha256_bytes(code);
 
-granit_result renderer_registry::create_shader_from_wgsl(granit_renderer renderer,
-                                                         granit_shader_stage stage,
-                                                         std::string_view source,
-                                                         std::string_view entry_point,
-                                                         granit_shader& shader) {
-  try {
-    const auto interfaces = acquire_backend_interfaces(renderer);
-    if (!interfaces)
-      return GRANIT_ERROR_INVALID_HANDLE;
-    const auto& owner = interfaces->renderer;
-    const auto& shaders = interfaces->wgsl_shaders;
-    if (!shaders)
-      return GRANIT_ERROR_UNSUPPORTED;
-    auto record = std::make_shared<shader_record>();
-    record->owner = owner;
-    record->retirement = interfaces->retirement;
-    record->stage = stage;
-    record->entry_point.assign(entry_point);
-    record->content_id = granit::tools::shader_bytes_sha256(std::as_bytes(
-        std::span{source.data(), source.size()}));
     record->native = shaders->allocate_shader_resource();
     if (!record->native)
       return GRANIT_ERROR_OUT_OF_MEMORY;
-    const auto result = shaders->create_wgsl_shader(*record->native, stage, source, entry_point);
+    const auto result =
+        shaders->create_shader(*record->native, stage, code_format, code, entry_point);
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "../support/shader_asset_store.h"
 #include <granit/granit.hpp>
 #include <granit/pipeline/render_pipeline.h>
-#include "../support/shader_asset_store.h"
 
 #include <windows.h>
 
@@ -23,11 +23,10 @@ namespace {
 
 granit::tests::shader_asset_store& shader_assets() {
   static granit::tests::shader_asset_store store;
-  static const bool loaded =
-      store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} +
-                "/pbr_shadow_ibl_lights.vert.grshader") &&
-      store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} +
-                "/pbr_shadow_ibl_lights_untextured.frag.grshader");
+  static const bool loaded = store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} +
+                                       "/pbr_shadow_ibl_lights.vert.grshaderobj") &&
+                             store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} +
+                                       "/pbr_shadow_ibl_lights_untextured.frag.grshaderobj");
   if (!loaded)
     std::abort();
   return store;
@@ -107,10 +106,15 @@ int main(int argument_count, char** arguments) {
   auto result = renderer.initialize({.application_name = "Granit Render Pipeline Window",
                                      .enable_validation = true,
                                      .surface_types = granit::surface_type::win32});
+  std::vector<std::byte> shader_library_bytes;
+  granit::shader_library shader_library;
+  if (result.ok() && !shader_assets().initialize_library(renderer.native_handle(),
+                                                         shader_library_bytes, shader_library))
+    result = granit::result::initialization_failed;
   granit::surface surface;
   if (result.ok())
-    result = surface.initialize_win32(renderer.native_handle(),
-                                      {.instance = instance, .window = window});
+    result =
+        surface.initialize(renderer.native_handle(), granit::surface_desc::win32(instance, window));
   RECT client{};
   GetClientRect(window, &client);
   granit::swapchain swapchain;
@@ -156,8 +160,7 @@ int main(int argument_count, char** arguments) {
   material_desc.archive_size = archive.size();
   material_desc.initial_updates = &update;
   material_desc.initial_update_count = 1;
-  material_desc.shader_resolver = granit::tests::shader_asset_store::resolve;
-  material_desc.shader_resolver_user_data = &shader_assets();
+  material_desc.shader_library = shader_library.native_handle();
   granit_material material = GRANIT_NULL_HANDLE;
   if (result.ok() && !archive.empty()) {
     result = granit::from_native(

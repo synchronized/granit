@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "../support/shader_asset_store.h"
+#include "../support/tone_mapping_shader_library.h"
 #include "lighting/tone_mapping_resources.h"
 #include "material/pbr_material_schema.h"
 #include "pbr_test_support.h"
@@ -44,8 +45,9 @@ struct window_hdr_resources {
 
   granit::result initialize(granit_renderer renderer, std::uint32_t width, std::uint32_t height,
                             granit::texture_format output_format,
-                            const granit::packaged_shader_asset_desc& vertex_shader,
-                            const granit::packaged_shader_asset_desc& fragment_shader) {
+                            const granit::shader_library& shader_library,
+                            const granit::shader_content_id& vertex_shader_id,
+                            const granit::shader_content_id& fragment_shader_id) {
     auto result = texture.initialize(renderer, {.format = granit::texture_format::rgba16_float,
                                                 .usage = granit::texture_usage::color_attachment |
                                                          granit::texture_usage::sampled,
@@ -63,10 +65,10 @@ struct window_hdr_resources {
     if (result.ok())
       result = depth_view.initialize(renderer, depth_texture.native_handle());
     if (result.ok()) {
-      result = granit::from_native(tone_mapping.initialize_packaged_asset(
+      result = granit::from_native(tone_mapping.initialize(
           renderer, view.native_handle(), output_format,
           {.exposure_scale = 1.0F, .encode_srgb = shader_encodes_srgb(output_format) ? 1U : 0U},
-          vertex_shader, fragment_shader));
+          shader_library, vertex_shader_id, fragment_shader_id));
     }
     if (result.failed())
       static_cast<void>(reset());
@@ -213,8 +215,8 @@ int main(int argument_count, char** arguments) {
                                      .surface_types = granit::surface_type::win32});
   granit::surface surface;
   if (result.ok())
-    result = surface.initialize_win32(renderer.native_handle(),
-                                      {.instance = instance, .window = window});
+    result =
+        surface.initialize(renderer.native_handle(), granit::surface_desc::win32(instance, window));
   RECT client{};
   GetClientRect(window, &client);
   granit::swapchain swapchain;
@@ -227,27 +229,27 @@ int main(int argument_count, char** arguments) {
   if (result.ok())
     result = swapchain.query_info(info);
   granit::tests::shader_asset_store assets;
-  granit::tests::shader_asset_file tone_vertex;
-  granit::tests::shader_asset_file tone_fragment;
-  if (result.ok() &&
-      (!assets.add(std::string{GRANIT_PBR_SHADER_DIR} + "/pbr_shadow_ibl_lights.vert.grshader") ||
-       !assets.add(std::string{GRANIT_PBR_SHADER_DIR} +
-                   "/pbr_shadow_ibl_lights_untextured.frag.grshader")))
+  granit::tests::tone_mapping_shader_library tone_shaders;
+  if (result.ok() && (!assets.add(std::string{GRANIT_PBR_SHADER_DIR} +
+                                  "/pbr_shadow_ibl_lights.vert.grshaderobj") ||
+                      !assets.add(std::string{GRANIT_PBR_SHADER_DIR} +
+                                  "/pbr_shadow_ibl_lights_untextured.frag.grshaderobj")))
     result = granit::result::initialization_failed;
-  if (result.ok())
-    result = tone_vertex.load(renderer.native_handle(), std::string{GRANIT_PIPELINE_SHADER_DIR} +
-                                                            "/tone_mapping.vert.grshader");
-  if (result.ok())
-    result = tone_fragment.load(renderer.native_handle(), std::string{GRANIT_PIPELINE_SHADER_DIR} +
-                                                              "/tone_mapping.frag.grshader");
+  std::vector<std::byte> shader_library_bytes;
+  granit::shader_library shader_library;
+  if (result.ok() &&
+      !assets.initialize_library(renderer.native_handle(), shader_library_bytes, shader_library))
+    result = granit::result::initialization_failed;
+  if (result.ok() && !tone_shaders.initialize(renderer.native_handle()))
+    result = granit::result::initialization_failed;
 
   granit::material::material_package pbr_package;
   if (result.ok() && !granit::test::build_pbr_package(
                          pbr_package,
                          assets.reference(std::string{GRANIT_PBR_SHADER_DIR} +
-                                          "/pbr_shadow_ibl_lights.vert.grshader"),
+                                          "/pbr_shadow_ibl_lights.vert.grshaderobj"),
                          assets.reference(std::string{GRANIT_PBR_SHADER_DIR} +
-                                          "/pbr_shadow_ibl_lights_untextured.frag.grshader"))) {
+                                          "/pbr_shadow_ibl_lights_untextured.frag.grshaderobj"))) {
     result = granit::result::initialization_failed;
   }
   granit::test::pbr_lighting_resources pbr_lighting;
@@ -259,9 +261,8 @@ int main(int argument_count, char** arguments) {
   granit::material::material_template_gpu pbr_material;
   if (result.ok()) {
     const std::array additional_layouts{object_layout.native_handle(), pbr_lighting.layout()};
-    result = granit::from_native(
-        pbr_material.initialize(renderer.native_handle(), pbr_package, additional_layouts,
-                                granit::tests::shader_asset_store::resolve, &assets));
+    result = granit::from_native(pbr_material.initialize(
+        renderer.native_handle(), pbr_package, additional_layouts, shader_library.native_handle()));
   }
   granit_graphics_pipeline pbr_pipeline = GRANIT_NULL_HANDLE;
   if (result.ok()) {
@@ -285,7 +286,8 @@ int main(int argument_count, char** arguments) {
   window_hdr_resources resources;
   if (result.ok()) {
     result = resources.initialize(renderer.native_handle(), info.width, info.height, info.format,
-                                  tone_vertex.desc(), tone_fragment.desc());
+                                  tone_shaders.library(), tone_shaders.vertex_id(),
+                                  tone_shaders.fragment_id());
   }
   granit::frame_context frame_context;
   if (result.ok())
@@ -328,7 +330,8 @@ int main(int argument_count, char** arguments) {
         result = resources.reset();
       if (result.ok()) {
         result = resources.initialize(renderer.native_handle(), next_info.width, next_info.height,
-                                      next_info.format, tone_vertex.desc(), tone_fragment.desc());
+                                      next_info.format, tone_shaders.library(),
+                                      tone_shaders.vertex_id(), tone_shaders.fragment_id());
       }
       if (result.failed())
         break;

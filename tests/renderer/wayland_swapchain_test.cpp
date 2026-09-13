@@ -141,8 +141,8 @@ TEST_CASE("Wayland Surface 可以完成 Swapchain 清屏和 Present", "[swapchai
   REQUIRE(renderer_result == granit::result::success);
 
   granit::surface surface;
-  REQUIRE(surface.initialize_wayland(renderer.native_handle(),
-                                     {.display = window.display(), .surface = window.surface()}) ==
+  REQUIRE(surface.initialize(renderer.native_handle(),
+                             granit::surface_desc::wayland(window.display(), window.surface())) ==
           granit::result::success);
   granit::swapchain swapchain;
   REQUIRE(swapchain.initialize(renderer.native_handle(), surface.native_handle(),

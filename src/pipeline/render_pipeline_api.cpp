@@ -365,9 +365,9 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
       auto& pipeline =
           state.tone_mapping_pipelines[tone_mapping_pipeline_index(render_output.format)];
       const auto tone_result = granit::pipeline::detail::record_tone_mapping(
-          pipeline, state.renderer, context.recorder(), context.texture_view(hdr),
-          context.texture_view(output), render_output.format, render_output.width,
-          render_output.height, constants);
+          pipeline, state.renderer, state.shader_library, context.recorder(),
+          context.texture_view(hdr), context.texture_view(output), render_output.format,
+          render_output.width, render_output.height, constants);
       return tone_result;
     });
     if (result != GRANIT_SUCCESS || metrics_pool == GRANIT_NULL_HANDLE)
@@ -502,13 +502,17 @@ extern "C" granit_result granit_render_pipeline_create(granit_renderer renderer,
     state->sample_count = desc->sample_count;
     state->enable_fxaa = desc->enable_fxaa != 0;
     state->enable_specular_aa = desc->enable_specular_aa != 0;
+    auto resource_result = state->shader_library.initialize(
+        renderer, granit::pipeline::detail::render_pipeline_shader_library());
+    if (resource_result.failed())
+      return static_cast<granit_result>(resource_result);
     const auto arena_result = state->uniform_arena.initialize(renderer);
     if (arena_result != GRANIT_SUCCESS)
       return arena_result;
     const auto ibl_result = state->default_ibl.initialize(renderer);
     if (ibl_result != GRANIT_SUCCESS)
       return ibl_result;
-    auto resource_result = state->shadow_texture.initialize(
+    resource_result = state->shadow_texture.initialize(
         renderer,
         {.format = granit::texture_format::d32_float,
          .usage = granit::texture_usage::depth_stencil_attachment | granit::texture_usage::sampled,
@@ -520,18 +524,12 @@ extern "C" granit_result granit_render_pipeline_create(granit_renderer renderer,
         state->shadow_view.initialize(renderer, state->shadow_texture.native_handle());
     if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
-    resource_result = state->shadow_vertex_shader.initialize_asset(
-        renderer, {.stage = granit::shader_stage::vertex,
-                   .spirv = granit::pipeline::detail::shadow_depth_vertex_shader(),
-                   .wgsl = granit::pipeline::detail::shadow_depth_vertex_wgsl(),
-                   .entry_point = "vertex_main"});
+    resource_result = state->shader_library.create_shader(
+        granit::pipeline::detail::shadow_depth_vertex_shader_id(), state->shadow_vertex_shader);
     if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
-    resource_result = state->shadow_fragment_shader.initialize_asset(
-        renderer, {.stage = granit::shader_stage::fragment,
-                   .spirv = granit::pipeline::detail::shadow_depth_fragment_shader(),
-                   .wgsl = granit::pipeline::detail::shadow_depth_fragment_wgsl(),
-                   .entry_point = "fragment_main"});
+    resource_result = state->shader_library.create_shader(
+        granit::pipeline::detail::shadow_depth_fragment_shader_id(), state->shadow_fragment_shader);
     if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
     resource_result = state->shadow_placeholder_texture.initialize(

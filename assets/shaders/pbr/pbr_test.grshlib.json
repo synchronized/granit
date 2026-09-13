@@ -1,0 +1,24 @@
+{
+  "format_version": 1,
+  "name": "pbr_test",
+  "target_profile": "portable",
+  "target_backends": ["vulkan", "webgpu"],
+  "shaders": [
+    {
+      "name": "pbr.vertex",
+      "source": "pbr_untextured.hlsl",
+      "stage": "vertex",
+      "entry_point": "vertex_main"
+    },
+    {
+      "name": "pbr.fragment",
+      "source": "pbr_untextured.hlsl",
+      "stage": "fragment",
+      "entry_point": "fragment_main",
+      "variants": [
+        {"name": "untextured", "defines": {"GRANIT_PBR_TEXTURE_MASK": "0"}},
+        {"name": "textured", "defines": {"GRANIT_PBR_TEXTURE_MASK": "31"}}
+      ]
+    }
+  ]
+}

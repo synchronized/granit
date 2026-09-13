@@ -4,6 +4,7 @@
 #ifndef GRANIT_TEXTURE_ASSET_HPP_
 #define GRANIT_TEXTURE_ASSET_HPP_
 
+#include <granit/core/content_id.hpp>
 #include <granit/core/result.hpp>
 #include <granit/renderer/texture_asset.h>
 
@@ -17,8 +18,10 @@
 
 namespace granit {
 
+using texture_content_id = asset_content_id;
+
 struct texture_asset_info {
-  std::array<std::byte, GRANIT_TEXTURE_ASSET_ID_SIZE> content_id{};
+  texture_content_id content_id{};
   granit_texture_dimension dimension{};
   std::uint32_t width{};
   std::uint32_t height{};
@@ -67,8 +70,7 @@ struct texture_asset_selection {
     return value;
   try {
     std::vector<std::byte> replacement(static_cast<std::size_t>(required_size));
-    value = from_native(
-        granit_texture_asset_encode(&native, replacement.data(), &required_size));
+    value = from_native(granit_texture_asset_encode(&native, replacement.data(), &required_size));
     if (value)
       manifest = std::move(replacement);
     return value;

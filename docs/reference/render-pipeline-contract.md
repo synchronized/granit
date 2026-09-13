@@ -18,21 +18,23 @@
 
 安装 `RenderPipeline` component 时会同时安装公共渲染资产。安装包、`FetchContent` 和
 `add_subdirectory` 三种消费方式都提供同名 CMake 变量 `granit_RENDER_PIPELINE_ASSET_DIR`；它指向
-不依赖 Granit 私有源码目录的资产根目录。标准 PBR Shader 位于 `shaders/pbr`，标准 PBR Material
-位于 `materials/pbr_standard.grmat`。当前标准 Shader 资产包含：
+不依赖 Granit 私有源码目录的资产根目录。标准 PBR Shader Library 位于
+`libraries/pbr_standard.grshlib`，标准 PBR Material 位于 `materials/pbr_standard.grmat`。运行时
+部署集合为：
 
 ```text
-pbr_standard.vert.grshader
-pbr_standard.vert.grshader.spv
-pbr_standard.vert.grshader.wgsl
-pbr_standard.frag.grshader
-pbr_standard.frag.grshader.spv
-pbr_standard.frag.grshader.wgsl
+libraries/pbr_standard.grshlib
+materials/pbr_standard.grmat
 ```
 
-`.grshader` 是公共清单，Vulkan 使用 `.spv` sidecar，浏览器 WebGPU 使用 `.wgsl` sidecar。
-变量只负责定位资产，不改变 Core 的资源边界；应用仍负责读取、嵌入或通过自己的资产系统提供
-相应字节。构建树变量指向 Granit 二进制目录中的资产副本，因此上游不需要推导源码目录。
+Library 同时包含 Vulkan 与 WebGPU 载荷，Renderer 在运行时选择；`.grshaderobj` 及 sidecar 只属于
+离线工具链中间结果。变量只负责定位资产，不改变 Core 的资源边界；应用仍负责读取、嵌入或通过
+自己的资产系统提供相应字节。构建树变量指向 Granit 二进制目录中的资产副本，因此上游不需要
+推导源码目录。
+
+Render Pipeline 内部的 Tone Mapping、Shadow、Canvas 和 Debug Draw 也使用 Shader Library。
+这些私有 Library 随 component 内嵌，不属于安装资产，也不要求应用加载。普通本机构建从 Shader
+输入确定性生成归档并校验快照；无法执行宿主 Shader Tool 的交叉构建使用同一份已校验快照。
 
 `environments` 子目录同时提供 GRENV v3 环境资产。其所有权、完整性校验和逐帧借用规则见
 [Environment Map](environment-map.md)。
@@ -41,7 +43,7 @@ pbr_standard.frag.grshader.wgsl
 
 | 对象 | 自身拥有 | 借用及调用方责任 |
 |---|---|---|
-| Render Pipeline | 内建 Shader、默认 IBL、缓存和临时 GPU 资源 | Renderer、创建回调及 `user_data` |
+| Render Pipeline | 内建 Shader Library、Shader、默认 IBL、缓存和临时 GPU 资源 | Renderer、创建回调及 `user_data` |
 | Mesh | 复制后的布局与绘制范围 | Vertex/Index Buffer |
 | Material | 参数状态和 GPU 实例 | 参数引用的 Texture View 与 Sampler |
 | Scene Snapshot | View、Renderable 和光源的值数据副本 | 不借用外部场景对象；`payload` 只是应用值 |
@@ -83,6 +85,16 @@ pbr_standard.frag.grshader.wgsl
   只读取 `struct_size` 覆盖的已知字段；未知尾部被忽略，保留字段必须为零。
 - 兼容扩展只能在结构末尾追加字段，不得重排、改型或重新解释已有字段。稳定前若确需破坏性
   调整，必须按[版本与兼容策略](compatibility.md)更新版本、快照和迁移说明。
+
+## 坐标约定
+
+RenderPipeline 的 View 和 Material 使用同一逻辑裁剪空间，深度范围为 `0..1`。调用方提交的
+View Projection 不需要根据 Renderer backend 修改，后端适配层负责保持公开的正面绕序语义。
+Canvas 像素坐标以左上角为原点且 Y 向下，其内部投影会按后端窗口映射方向转换；这个差异不进入
+Material、场景或应用接口。
+
+纹理 UV 与裁剪空间是两个独立契约。普通二维纹理使用左上原点的 `0..1` UV；图片解码、外部纹理
+或 Render Target 若需要方向转换，应在对应上传或采样路径处理，不能通过修改相机投影补偿。
 
 ## 线程安全
 

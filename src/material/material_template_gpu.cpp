@@ -2,13 +2,11 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "material/material_template_gpu.h"
-#include "assets/shader_asset.h"
-
+#include "renderer/shader_code_selection.h"
 #include <granit/renderer/shader.h>
 
 #include <algorithm>
 #include <array>
-#include <limits>
 #include <new>
 
 namespace granit::material {
@@ -28,48 +26,19 @@ granit_shader_stage native_stage(package_shader_stage stage) noexcept {
 }
 
 granit_result create_shader(granit_renderer renderer, const material_shader_code& source,
-                            granit_material_shader_resolver resolver, void* user_data,
-                            granit_shader& shader) noexcept {
-  const auto has_asset = !std::ranges::all_of(
-      source.asset_id, [](std::byte value) { return value == std::byte{}; });
+                            granit_shader_library shader_library, granit_shader& shader) noexcept {
+  const auto has_asset =
+      !std::ranges::all_of(source.asset_id, [](std::byte value) { return value == std::byte{}; });
   if (!has_asset) {
-    granit_shader_desc desc = GRANIT_SHADER_DESC_INIT;
-    desc.stage = native_stage(source.stage);
-    desc.code = source.spirv.data();
-    desc.code_size = source.spirv.size() * sizeof(std::uint32_t);
-    desc.wgsl = source.wgsl.data();
-    desc.wgsl_length = source.wgsl.size();
-    desc.entry_point = source.entry_point.data();
-    desc.entry_point_length = static_cast<std::uint32_t>(source.entry_point.size());
-    return granit_shader_create(renderer, &desc, &shader);
+    return granit::detail::create_shader_from_portable_code(
+        renderer, native_stage(source.stage), std::as_bytes(std::span{source.spirv}), source.wgsl,
+        source.entry_point, shader);
   }
-  if (resolver == nullptr)
+  if (shader_library == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_NOT_READY;
-  granit_renderer_shader_capabilities capabilities = GRANIT_RENDERER_SHADER_CAPABILITIES_INIT;
-  const auto capability_result =
-      granit_renderer_get_shader_capabilities(renderer, &capabilities);
-  if (capability_result != GRANIT_SUCCESS)
-    return capability_result;
-  granit_shader_asset_desc desc = GRANIT_SHADER_ASSET_DESC_INIT;
-  const auto resolved = resolver(user_data,
-                                 reinterpret_cast<const std::uint8_t*>(source.asset_id.data()),
-                                 capabilities.backend, capabilities.profile,
-                                 &desc);
-  if (resolved != GRANIT_SUCCESS)
-    return resolved;
-  if (desc.manifest_data == nullptr || desc.manifest_size == 0 ||
-      desc.manifest_size > std::numeric_limits<std::size_t>::max())
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  granit::tools::shader_asset_view asset;
-  const auto manifest = std::span{static_cast<const std::byte*>(desc.manifest_data),
-                                  static_cast<std::size_t>(desc.manifest_size)};
-  if (granit::tools::decode_shader_asset(manifest, asset) !=
-          granit::tools::shader_asset_error::success ||
-      asset.content_id != source.asset_id || asset.stage != native_stage(source.stage) ||
-      asset.entry_point != source.entry_point) {
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  }
-  return granit_shader_create_from_asset(renderer, &desc, &shader);
+  return granit_shader_create_from_library(
+      renderer, shader_library, reinterpret_cast<const std::uint8_t*>(source.asset_id.data()),
+      &shader);
 }
 
 } // namespace
@@ -79,8 +48,7 @@ material_template_gpu::~material_template_gpu() { static_cast<void>(reset()); }
 granit_result
 material_template_gpu::initialize(granit_renderer renderer, const material_package& package,
                                   std::span<const granit_bind_group_layout> additional_layouts,
-                                  granit_material_shader_resolver shader_resolver,
-                                  void* shader_resolver_user_data) {
+                                  granit_shader_library shader_library) {
   std::lock_guard lock{mutex_};
   if (renderer_ != GRANIT_NULL_HANDLE || renderer == GRANIT_NULL_HANDLE ||
       package.binding_model() != package_binding_model::bind_group ||
@@ -150,14 +118,33 @@ material_template_gpu::initialize(granit_renderer renderer, const material_packa
     static_cast<void>(granit_bind_group_layout_destroy(renderer, frame_layout));
     return result;
   }
+  granit_shader library_reference_shader = GRANIT_NULL_HANDLE;
+  if (shader_library != GRANIT_NULL_HANDLE) {
+    for (const auto& variant : package.variants()) {
+      const auto source = std::ranges::find_if(variant.shaders, [](const auto& shader) {
+        return !std::ranges::all_of(shader.asset_id,
+                                    [](std::byte value) { return value == std::byte{}; });
+      });
+      if (source == variant.shaders.end())
+        continue;
+      result = create_shader(renderer, *source, shader_library, library_reference_shader);
+      if (result != GRANIT_SUCCESS) {
+        static_cast<void>(granit_pipeline_layout_destroy(renderer, pipeline_layout));
+        static_cast<void>(granit_bind_group_layout_destroy(renderer, material_layout));
+        static_cast<void>(granit_bind_group_layout_destroy(renderer, frame_layout));
+        return result;
+      }
+      break;
+    }
+  }
 
   renderer_ = renderer;
   package_ = &package;
   frame_layout_ = frame_layout;
   material_layout_ = material_layout;
   pipeline_layout_ = pipeline_layout;
-  shader_resolver_ = shader_resolver;
-  shader_resolver_user_data_ = shader_resolver_user_data;
+  shader_library_ = shader_library;
+  library_reference_shader_ = library_reference_shader;
   return GRANIT_SUCCESS;
 }
 
@@ -187,6 +174,8 @@ granit_result material_template_gpu::reset() noexcept {
   if (frame_layout_ != GRANIT_NULL_HANDLE) {
     capture(granit_bind_group_layout_destroy(renderer_, frame_layout_));
   }
+  if (library_reference_shader_ != GRANIT_NULL_HANDLE)
+    capture(granit_shader_destroy(renderer_, library_reference_shader_));
   cache_.clear();
   warmups_.clear();
   renderer_ = GRANIT_NULL_HANDLE;
@@ -194,8 +183,8 @@ granit_result material_template_gpu::reset() noexcept {
   frame_layout_ = GRANIT_NULL_HANDLE;
   material_layout_ = GRANIT_NULL_HANDLE;
   pipeline_layout_ = GRANIT_NULL_HANDLE;
-  shader_resolver_ = nullptr;
-  shader_resolver_user_data_ = nullptr;
+  shader_library_ = GRANIT_NULL_HANDLE;
+  library_reference_shader_ = GRANIT_NULL_HANDLE;
   return first_error;
 }
 
@@ -231,13 +220,11 @@ granit_result material_template_gpu::acquire_pipeline(const material_pipeline_re
     replacement.fragment_shader = warmed->fragment_shader;
     warmups_.erase(warmed);
   } else {
-    result = create_shader(renderer_, *vertex, shader_resolver_, shader_resolver_user_data_,
-                           replacement.vertex_shader);
+    result = create_shader(renderer_, *vertex, shader_library_, replacement.vertex_shader);
     if (result != GRANIT_SUCCESS) {
       return result;
     }
-    result = create_shader(renderer_, *fragment, shader_resolver_, shader_resolver_user_data_,
-                           replacement.fragment_shader);
+    result = create_shader(renderer_, *fragment, shader_library_, replacement.fragment_shader);
     if (result != GRANIT_SUCCESS) {
       static_cast<void>(granit_shader_destroy(renderer_, replacement.vertex_shader));
       return result;
@@ -324,12 +311,10 @@ granit_result material_template_gpu::add_pipeline_warmup(const material_pipeline
   const material_pipeline_request resolved{request.pass, variant_key, request.color_format,
                                            request.depth_stencil_format, request.sample_count};
   warmup_entry entry{.request = resolved};
-  auto result = create_shader(renderer_, *vertex, shader_resolver_, shader_resolver_user_data_,
-                              entry.vertex_shader);
+  auto result = create_shader(renderer_, *vertex, shader_library_, entry.vertex_shader);
   if (result != GRANIT_SUCCESS)
     return result;
-  result = create_shader(renderer_, *fragment, shader_resolver_, shader_resolver_user_data_,
-                         entry.fragment_shader);
+  result = create_shader(renderer_, *fragment, shader_library_, entry.fragment_shader);
   if (result != GRANIT_SUCCESS) {
     static_cast<void>(granit_shader_destroy(renderer_, entry.vertex_shader));
     return result;

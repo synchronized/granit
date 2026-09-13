@@ -17,6 +17,7 @@ GRANIT_ABI_ASSERT(granit_abi_null_handle, GRANIT_NULL_HANDLE == UINT64_C(0));
 GRANIT_ABI_ASSERT(granit_abi_success, GRANIT_SUCCESS == INT32_C(0));
 GRANIT_ABI_ASSERT(granit_abi_first_error, GRANIT_ERROR_UNKNOWN == INT32_C(-1));
 GRANIT_ABI_ASSERT(granit_abi_last_error, GRANIT_ERROR_CANCELLED == INT32_C(-15));
+GRANIT_ABI_ASSERT(granit_abi_resource_in_use, GRANIT_ERROR_RESOURCE_IN_USE == INT32_C(-16));
 GRANIT_ABI_ASSERT(granit_abi_renderer_api_version, GRANIT_RENDERER_API_VERSION_CURRENT == 1);
 GRANIT_ABI_ASSERT(granit_abi_renderer_status_size, sizeof(granit_renderer_status) == 16);
 GRANIT_ABI_ASSERT(granit_abi_renderer_status_v1, GRANIT_RENDERER_STATUS_VERSION_1_SIZE == 16);
@@ -151,25 +152,18 @@ GRANIT_ABI_ASSERT(granit_abi_rendering_desc_depth,
                   offsetof(granit_rendering_desc, depth_stencil_attachment) == 16);
 GRANIT_ABI_ASSERT(granit_abi_rendering_desc_area, offsetof(granit_rendering_desc, area) == 24);
 
-GRANIT_ABI_ASSERT(granit_abi_win32_surface_desc_size, sizeof(granit_win32_surface_desc) == 24);
-GRANIT_ABI_ASSERT(granit_abi_win32_surface_desc_instance,
-                  offsetof(granit_win32_surface_desc, instance) == 8);
-GRANIT_ABI_ASSERT(granit_abi_win32_surface_desc_window,
-                  offsetof(granit_win32_surface_desc, window) == 16);
-GRANIT_ABI_ASSERT(granit_abi_win32_surface_desc_v1, GRANIT_WIN32_SURFACE_DESC_VERSION_1_SIZE == 24);
-GRANIT_ABI_ASSERT(granit_abi_xcb_surface_desc_size, sizeof(granit_xcb_surface_desc) == 24);
-GRANIT_ABI_ASSERT(granit_abi_xcb_surface_desc_connection,
-                  offsetof(granit_xcb_surface_desc, connection) == 8);
-GRANIT_ABI_ASSERT(granit_abi_xcb_surface_desc_window,
-                  offsetof(granit_xcb_surface_desc, window) == 16);
-GRANIT_ABI_ASSERT(granit_abi_xcb_surface_desc_v1, GRANIT_XCB_SURFACE_DESC_VERSION_1_SIZE == 20);
-GRANIT_ABI_ASSERT(granit_abi_wayland_surface_desc_size, sizeof(granit_wayland_surface_desc) == 24);
-GRANIT_ABI_ASSERT(granit_abi_wayland_surface_desc_display,
-                  offsetof(granit_wayland_surface_desc, display) == 8);
-GRANIT_ABI_ASSERT(granit_abi_wayland_surface_desc_surface,
-                  offsetof(granit_wayland_surface_desc, surface) == 16);
-GRANIT_ABI_ASSERT(granit_abi_wayland_surface_desc_v1,
-                  GRANIT_WAYLAND_SURFACE_DESC_VERSION_1_SIZE == 24);
+GRANIT_ABI_ASSERT(granit_abi_win32_surface_source_size, sizeof(granit_win32_surface_source) == 16);
+GRANIT_ABI_ASSERT(granit_abi_xcb_surface_source_size, sizeof(granit_xcb_surface_source) == 16);
+GRANIT_ABI_ASSERT(granit_abi_wayland_surface_source_size,
+                  sizeof(granit_wayland_surface_source) == 16);
+GRANIT_ABI_ASSERT(granit_abi_canvas_surface_source_size,
+                  sizeof(granit_canvas_surface_source) == 16);
+GRANIT_ABI_ASSERT(granit_abi_surface_source_size, sizeof(granit_surface_source) == 32);
+GRANIT_ABI_ASSERT(granit_abi_surface_desc_size, sizeof(granit_surface_desc) == 48);
+GRANIT_ABI_ASSERT(granit_abi_surface_desc_type, offsetof(granit_surface_desc, surface_type) == 4);
+GRANIT_ABI_ASSERT(granit_abi_surface_desc_flags, offsetof(granit_surface_desc, flags) == 8);
+GRANIT_ABI_ASSERT(granit_abi_surface_desc_source, offsetof(granit_surface_desc, source) == 16);
+GRANIT_ABI_ASSERT(granit_abi_surface_desc_v1, GRANIT_SURFACE_DESC_VERSION_1_SIZE == 48);
 GRANIT_ABI_ASSERT(granit_abi_swapchain_desc_size, sizeof(granit_swapchain_desc) == 20);
 GRANIT_ABI_ASSERT(granit_abi_swapchain_desc_present_mode,
                   offsetof(granit_swapchain_desc, present_mode) == 16);
@@ -177,17 +171,11 @@ GRANIT_ABI_ASSERT(granit_abi_swapchain_info_size, sizeof(granit_swapchain_info) 
 GRANIT_ABI_ASSERT(granit_abi_swapchain_info_format, offsetof(granit_swapchain_info, format) == 20);
 GRANIT_ABI_ASSERT(granit_abi_swapchain_info_current, GRANIT_SWAPCHAIN_INFO_SIZE == 24);
 
-GRANIT_ABI_ASSERT(granit_abi_shader_desc_size, sizeof(granit_shader_desc) == 56);
-GRANIT_ABI_ASSERT(granit_abi_shader_desc_code, offsetof(granit_shader_desc, code) == 8);
-GRANIT_ABI_ASSERT(granit_abi_shader_desc_entry, offsetof(granit_shader_desc, entry_point) == 24);
-GRANIT_ABI_ASSERT(granit_abi_shader_desc_wgsl, offsetof(granit_shader_desc, wgsl) == 40);
-GRANIT_ABI_ASSERT(granit_abi_shader_desc_current, GRANIT_SHADER_DESC_SIZE == 56);
-GRANIT_ABI_ASSERT(granit_abi_shader_asset_desc_size, sizeof(granit_shader_asset_desc) == 40);
-GRANIT_ABI_ASSERT(granit_abi_shader_asset_desc_manifest,
-                  offsetof(granit_shader_asset_desc, manifest_data) == 8);
-GRANIT_ABI_ASSERT(granit_abi_shader_asset_desc_sidecar,
-                  offsetof(granit_shader_asset_desc, sidecar_data) == 24);
-GRANIT_ABI_ASSERT(granit_abi_shader_asset_desc_current, GRANIT_SHADER_ASSET_DESC_SIZE == 40);
+GRANIT_ABI_ASSERT(granit_abi_shader_desc_size, sizeof(granit_shader_desc) == 48);
+GRANIT_ABI_ASSERT(granit_abi_shader_desc_format, offsetof(granit_shader_desc, code_format) == 8);
+GRANIT_ABI_ASSERT(granit_abi_shader_desc_code, offsetof(granit_shader_desc, code) == 16);
+GRANIT_ABI_ASSERT(granit_abi_shader_desc_entry, offsetof(granit_shader_desc, entry_point) == 32);
+GRANIT_ABI_ASSERT(granit_abi_shader_desc_current, GRANIT_SHADER_DESC_SIZE == 48);
 GRANIT_ABI_ASSERT(granit_abi_buffer_initial_data_size, sizeof(granit_buffer_initial_data) == 24);
 GRANIT_ABI_ASSERT(granit_abi_buffer_initial_data_data,
                   offsetof(granit_buffer_initial_data, data) == 8);

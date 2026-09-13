@@ -28,6 +28,10 @@ add_test(NAME granit.smoke.texture_readback COMMAND granit_texture_readback_smok
 
 granit_add_smoke_target(granit_offscreen_triangle_smoke offscreen_triangle.cpp)
 target_link_libraries(granit_offscreen_triangle_smoke PRIVATE granit::granit)
+target_include_directories(granit_offscreen_triangle_smoke PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_sources(
+  granit_offscreen_triangle_smoke PRIVATE $<TARGET_OBJECTS:granit_internal_shader_format>
+)
 target_compile_definitions(
   granit_offscreen_triangle_smoke
   PRIVATE GRANIT_SMOKE_ASSET_DIR="${GRANIT_SMOKE_TEST_SHADER_DIR}"
@@ -36,6 +40,8 @@ add_test(NAME granit.smoke.offscreen_triangle COMMAND granit_offscreen_triangle_
 
 granit_add_smoke_target(granit_compute_smoke compute.cpp)
 target_link_libraries(granit_compute_smoke PRIVATE granit::granit)
+target_include_directories(granit_compute_smoke PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_sources(granit_compute_smoke PRIVATE $<TARGET_OBJECTS:granit_internal_shader_format>)
 target_compile_definitions(
   granit_compute_smoke PRIVATE GRANIT_SMOKE_ASSET_DIR="${GRANIT_SMOKE_TEST_SHADER_DIR}"
 )
@@ -79,16 +85,13 @@ add_custom_command(
   COMMAND
     granit_material_tool build
     "${granit_smoke_asset_dir}/render_pipeline_untextured.grmat.json"
-    --output "${granit_render_pipeline_smoke_package}"
+    --output "${granit_render_pipeline_smoke_package}" --shader-index
+    "${GRANIT_PBR_TEST_SHADER_INDEX}"
   DEPENDS
     granit_material_tool
+    granit_test_shader_assets
     "${granit_smoke_asset_dir}/render_pipeline_untextured.grmat.json"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights.vert.grshader"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.grshader"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights.vert.grshader.spv"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights.vert.grshader.wgsl"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.grshader.spv"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_shadow_ibl_lights_untextured.frag.grshader.wgsl"
+    "${GRANIT_PBR_TEST_SHADER_INDEX}"
   VERBATIM
 )
 
@@ -97,7 +100,7 @@ target_link_libraries(granit_render_pipeline_offscreen_smoke PRIVATE granit::ren
 target_compile_definitions(
   granit_render_pipeline_offscreen_smoke
   PRIVATE GRANIT_RENDER_PIPELINE_SMOKE_PACKAGE="${granit_render_pipeline_smoke_package}"
-          GRANIT_PIPELINE_ASSET_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/pbr"
+          GRANIT_PIPELINE_ASSET_DIR="${GRANIT_PBR_TEST_SHADER_DIR}"
 )
 target_include_directories(
   granit_render_pipeline_offscreen_smoke PRIVATE "${PROJECT_SOURCE_DIR}/tests"
@@ -107,7 +110,7 @@ add_dependencies(granit_render_pipeline_offscreen_smoke granit_material_tool)
 target_sources(
   granit_render_pipeline_offscreen_smoke
   PRIVATE "${granit_render_pipeline_smoke_package}"
-          $<TARGET_OBJECTS:granit_internal_shader_asset_format>
+          $<TARGET_OBJECTS:granit_internal_shader_format>
 )
 add_test(
   NAME granit.smoke.render_pipeline_offscreen
@@ -146,7 +149,7 @@ if(WIN32)
   target_compile_definitions(
     granit_render_pipeline_window_smoke
     PRIVATE GRANIT_RENDER_PIPELINE_SMOKE_PACKAGE="${granit_render_pipeline_smoke_package}"
-            GRANIT_PIPELINE_ASSET_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/pbr"
+            GRANIT_PIPELINE_ASSET_DIR="${GRANIT_PBR_TEST_SHADER_DIR}"
   )
   target_include_directories(
     granit_render_pipeline_window_smoke PRIVATE "${PROJECT_SOURCE_DIR}/tests"
@@ -156,7 +159,7 @@ if(WIN32)
   target_sources(
     granit_render_pipeline_window_smoke
     PRIVATE "${granit_render_pipeline_smoke_package}"
-            $<TARGET_OBJECTS:granit_internal_shader_asset_format>
+            $<TARGET_OBJECTS:granit_internal_shader_format>
   )
   add_test(
     NAME granit.smoke.render_pipeline_window
@@ -174,6 +177,10 @@ if(WIN32)
 
   granit_add_smoke_target(granit_window_triangle_smoke window_triangle.cpp)
   target_link_libraries(granit_window_triangle_smoke PRIVATE granit::granit user32)
+  target_include_directories(granit_window_triangle_smoke PRIVATE "${PROJECT_SOURCE_DIR}/src")
+  target_sources(
+    granit_window_triangle_smoke PRIVATE $<TARGET_OBJECTS:granit_internal_shader_format>
+  )
   target_compile_definitions(
     granit_window_triangle_smoke
     PRIVATE GRANIT_SMOKE_ASSET_DIR="${GRANIT_SMOKE_TEST_SHADER_DIR}"

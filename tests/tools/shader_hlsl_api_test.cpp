@@ -37,49 +37,40 @@ int main(int argc, char** argv) {
   const std::string dxc = argv[1];
   const std::string tint = argv[2];
   const std::string input = argv[3];
-  granit_shader_tools_hlsl_compile_desc desc{};
-  desc.struct_size = sizeof(desc);
-  desc.dxc_path = dxc.data();
-  desc.dxc_path_length = dxc.size();
-  desc.tint_path = tint.data();
-  desc.tint_path_length = tint.size();
-  desc.input_path = input.data();
-  desc.input_path_length = input.size();
+  granit::shader_tools::compiler compiler;
+  if (compiler.initialize({dxc, tint}).failed())
+    return 3;
+  const granit::shader_tools::shader_define definitions[]{{.name = "TEST_VALUE", .value = "1"}};
+  granit::shader_tools::compile_desc desc;
+  desc.input_path = input;
+  desc.stage = granit::shader_stage::fragment;
   desc.entry_point = "fragment_main";
-  desc.entry_point_length = 13;
-  desc.stage = GRANIT_SHADER_TOOLS_STAGE_FRAGMENT;
-  desc.spirv_output_path = spirv.data();
-  desc.spirv_output_path_length = spirv.size();
-  desc.wgsl_output_path = wgsl.data();
-  desc.wgsl_output_path_length = wgsl.size();
-  const granit_shader_tools_define definitions[]{{.struct_size = sizeof(granit_shader_tools_define),
-                                                  .reserved = 0,
-                                                  .name = "TEST_VALUE",
-                                                  .name_length = 10,
-                                                  .value = "1",
-                                                  .value_length = 1}};
+  desc.spirv_output_path = spirv;
+  desc.wgsl_output_path = wgsl;
   desc.defines = definitions;
-  desc.define_count = 1;
 
-  auto [status, result] = granit::shader_tools::compile_hlsl(desc);
-  if (status.failed() || result.info().stage != GRANIT_SHADER_TOOLS_STAGE_FRAGMENT ||
-      result.binding_count() != 3 || result.override_count() != 1 ||
+  auto [status, result] = compiler.compile(desc);
+  auto [reflection_status, reflection] = result.reflection();
+  if (status.failed() || reflection_status.failed() ||
+      result.info().stage != granit::shader_stage::fragment || reflection.binding_count() != 3 ||
+      reflection.override_count() != 1 || result.spirv().empty() || result.wgsl().empty() ||
       !std::filesystem::exists(spirv) || !std::filesystem::exists(wgsl) ||
       read_spirv_version(spirv) < UINT32_C(0x00010600) ||
       std::filesystem::exists(spirv + ".tint-input.spv") ||
       read_text(wgsl).find("@fragment") == std::string::npos)
     return 3;
+  result.reset();
+  if (!reflection || reflection.binding_count() != 3)
+    return 6;
 
-  const granit_shader_tools_define duplicate_definitions[]{definitions[0], definitions[0]};
+  const granit::shader_tools::shader_define duplicate_definitions[]{definitions[0], definitions[0]};
   desc.defines = duplicate_definitions;
-  desc.define_count = 2;
-  auto [duplicate_status, duplicate_result] = granit::shader_tools::compile_hlsl(desc);
+  auto [duplicate_status, duplicate_result] = compiler.compile(desc);
   if (duplicate_status != granit::result::invalid_argument || duplicate_result)
     return 4;
 
   desc.defines = definitions;
-  desc.define_count = 1;
-  desc.stage = 0;
-  auto [invalid_status, invalid_result] = granit::shader_tools::compile_hlsl(desc);
+  desc.stage = static_cast<granit::shader_stage>(0);
+  auto [invalid_status, invalid_result] = compiler.compile(desc);
   return invalid_status == granit::result::invalid_argument && !invalid_result ? 0 : 5;
 }

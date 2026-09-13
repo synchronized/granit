@@ -22,9 +22,9 @@ bool make_package(const granit::tests::shader_asset_store& assets, std::string_v
   desc.variants.push_back({.pass = make_feature_id(pass_name),
                            .features = {},
                            .shaders = {assets.reference(std::string{GRANIT_SMOKE_ASSET_DIR} +
-                                                        "/triangle.vert.grshader"),
+                                                        "/triangle.vert.grshaderobj"),
                                        assets.reference(std::string{GRANIT_SMOKE_ASSET_DIR} +
-                                                        "/triangle.frag.grshader")},
+                                                        "/triangle.frag.grshaderobj")},
                            .pipeline = {}});
   return material_package::build(std::move(desc), package) == package_error::none;
 }
@@ -33,8 +33,8 @@ bool make_package(const granit::tests::shader_asset_store& assets, std::string_v
 
 int main() {
   granit::tests::shader_asset_store assets;
-  if (!assets.add(std::string{GRANIT_SMOKE_ASSET_DIR} + "/triangle.vert.grshader") ||
-      !assets.add(std::string{GRANIT_SMOKE_ASSET_DIR} + "/triangle.frag.grshader")) {
+  if (!assets.add(std::string{GRANIT_SMOKE_ASSET_DIR} + "/triangle.vert.grshaderobj") ||
+      !assets.add(std::string{GRANIT_SMOKE_ASSET_DIR} + "/triangle.frag.grshaderobj")) {
     std::cerr << "无法读取 Smoke Shader Asset\n";
     return 1;
   }
@@ -43,6 +43,12 @@ int main() {
       renderer.initialize({.application_name = "Granit Material Hot Reload Example"});
   if (initialized.failed()) {
     std::cerr << "创建 Renderer 失败：" << granit::result_message(initialized) << '\n';
+    return 1;
+  }
+  std::vector<std::byte> shader_library_bytes;
+  granit::shader_library shader_library;
+  if (!assets.initialize_library(renderer.native_handle(), shader_library_bytes, shader_library)) {
+    std::cerr << "无法创建 Shader Library\n";
     return 1;
   }
 
@@ -59,13 +65,13 @@ int main() {
   std::shared_ptr<granit::material::material_runtime_template> fallback;
   if (granit::material::material_runtime_template::create(
           renderer.native_handle(), std::move(fallback_package), fallback,
-          granit::tests::shader_asset_store::resolve, &assets) != GRANIT_SUCCESS) {
+          shader_library.native_handle()) != GRANIT_SUCCESS) {
     std::cerr << "无法创建错误材质\n";
     return 1;
   }
   granit::material::material_hot_reload_slot slot{fallback};
   if (slot.reload(renderer.native_handle(), std::move(initial_package),
-                  granit::tests::shader_asset_store::resolve, &assets)
+                  shader_library.native_handle())
           .result != GRANIT_SUCCESS) {
     std::cerr << "无法加载初始材质\n";
     return 1;
@@ -83,7 +89,7 @@ int main() {
   std::cout << "初始材质缺少 opaque 变体，已使用错误材质\n";
 
   if (slot.reload(renderer.native_handle(), std::move(replacement_package),
-                  granit::tests::shader_asset_store::resolve, &assets)
+                  shader_library.native_handle())
           .result != GRANIT_SUCCESS) {
     std::cerr << "热替换失败，继续保留旧材质\n";
     return 1;

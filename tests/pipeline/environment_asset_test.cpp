@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "assets/shader_asset.h"
+#include "core/sha256.h"
 #include "pipeline/environment_asset.h"
 
 #include <catch2/catch_all.hpp>
@@ -41,7 +41,7 @@ std::vector<std::byte> valid_package() {
   write_u64(bytes, 40, payload_size);
   write_u32(bytes, 48, 0x3df5c28fU);
   write_u32(bytes, 52, 0xbf000000U);
-  const auto digest = granit::tools::shader_bytes_sha256(std::span{bytes}.subspan(96));
+  const auto digest = granit::detail::sha256_bytes(std::span{bytes}.subspan(96));
   std::ranges::copy(digest, bytes.begin() + 64);
   return bytes;
 }

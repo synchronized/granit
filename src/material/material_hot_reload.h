@@ -15,11 +15,10 @@ namespace granit::material {
 
 class material_runtime_template {
 public:
-  // resolver 和 user_data 由调用方保活，直到模板及所有快照销毁。
   [[nodiscard]] static granit_result
   create(granit_renderer renderer, material_package package,
          std::shared_ptr<material_runtime_template>& runtime_template,
-         granit_material_shader_resolver resolver = nullptr, void* user_data = nullptr);
+         granit_shader_library shader_library = GRANIT_NULL_HANDLE);
 
   [[nodiscard]] const material_package& package() const noexcept { return package_; }
   [[nodiscard]] material_template_gpu& gpu() noexcept { return gpu_; }
@@ -57,10 +56,10 @@ class material_hot_reload_slot {
 public:
   explicit material_hot_reload_slot(std::shared_ptr<material_runtime_template> fallback = {});
 
-  // 新模板借用解析上下文；失败时保留旧模板及其解析上下文。
-  [[nodiscard]] material_reload_result reload(granit_renderer renderer, material_package package,
-                                              granit_material_shader_resolver resolver = nullptr,
-                                              void* user_data = nullptr);
+  // 新模板借用 Shader Library；失败时保留旧模板及其 Library。
+  [[nodiscard]] material_reload_result
+  reload(granit_renderer renderer, material_package package,
+         granit_shader_library shader_library = GRANIT_NULL_HANDLE);
   [[nodiscard]] std::shared_ptr<material_runtime_template> snapshot() const;
   [[nodiscard]] material_pipeline_resolution
   resolve_pipeline(const material_pipeline_request& request) const;

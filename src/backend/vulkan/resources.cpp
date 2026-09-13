@@ -5,7 +5,7 @@
 
 #include <utility>
 
-#include "backend/vulkan/vulkan_renderer_state.h"
+#include "backend/vulkan/renderer_state.h"
 
 namespace granit::detail {
 

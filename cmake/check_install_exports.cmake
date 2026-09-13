@@ -24,6 +24,26 @@ foreach(required_file IN LISTS required_files)
   endif()
 endforeach()
 
+if(EXISTS "${install_prefix}/lib/cmake/granit/granitShaderToolsTargets.cmake")
+  foreach(
+    shader_tools_header
+    IN ITEMS
+      shader_compiler.h
+      shader_compiler.hpp
+      shader_library_builder.h
+      shader_library_builder.hpp
+      shader_reflection.h
+      shader_reflection.hpp
+      shader_tools.h
+      shader_tools.hpp
+      shader_tools_export.h
+  )
+    if(NOT EXISTS "${install_prefix}/include/granit/tools/${shader_tools_header}")
+      message(FATAL_ERROR "ShaderTools 安装结果缺少公共头：${shader_tools_header}")
+    endif()
+  endforeach()
+endif()
+
 file(GLOB_RECURSE installed_files RELATIVE "${install_prefix}" "${install_prefix}/*")
 if(NOT installed_files)
   message(FATAL_ERROR "安装前缀为空: ${install_prefix}")
@@ -32,6 +52,9 @@ foreach(installed_file IN LISTS installed_files)
   string(TOLOWER "${installed_file}" installed_file_lower)
   if(installed_file_lower MATCHES "(^|/)(tests?|3rd|catch2|unity|volk|vulkan)(/|$)")
     message(FATAL_ERROR "安装结果包含内部或第三方路径: ${installed_file}")
+  endif()
+  if(installed_file_lower MATCHES "\\.(grshaderobj|spv|wgsl|grshidx\\.json)$")
+    message(FATAL_ERROR "安装结果包含构建期 Shader 产物: ${installed_file}")
   endif()
 endforeach()
 

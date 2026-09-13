@@ -15,76 +15,69 @@
 /** 窗口输出 Surface 句柄。零值无效。 */
 typedef granit_handle granit_surface;
 
-/** Win32 Surface 创建描述。原生句柄只在函数调用期间借用。 */
-typedef struct granit_win32_surface_desc {
-  uint32_t struct_size;
+/** Win32 Surface 来源。instance 与 window 必须保持有效直到 Surface 销毁。 */
+typedef struct granit_win32_surface_source {
   void* instance;
   void* window;
-} granit_win32_surface_desc;
+} granit_win32_surface_source;
 
-#define GRANIT_WIN32_SURFACE_DESC_VERSION_1_SIZE                                                   \
-  ((uint32_t)(offsetof(granit_win32_surface_desc, window) + sizeof(void*)))
-
-#define GRANIT_WIN32_SURFACE_DESC_INIT {(uint32_t)sizeof(granit_win32_surface_desc), 0, 0}
-
-/** XCB Surface 创建描述。原生值只在函数调用期间借用。 */
-typedef struct granit_xcb_surface_desc {
-  uint32_t struct_size;
+/** XCB Surface 来源。connection 与 window 必须保持有效直到 Surface 销毁。 */
+typedef struct granit_xcb_surface_source {
   void* connection;
   uint32_t window;
-} granit_xcb_surface_desc;
+  uint32_t reserved;
+} granit_xcb_surface_source;
 
-#define GRANIT_XCB_SURFACE_DESC_VERSION_1_SIZE                                                     \
-  ((uint32_t)(offsetof(granit_xcb_surface_desc, window) + sizeof(uint32_t)))
-#define GRANIT_XCB_SURFACE_DESC_INIT {(uint32_t)sizeof(granit_xcb_surface_desc), 0, UINT32_C(0)}
-
-/** Wayland Surface 创建描述。原生对象只在函数调用期间借用。 */
-typedef struct granit_wayland_surface_desc {
-  uint32_t struct_size;
+/** Wayland Surface 来源。display 与 surface 必须保持有效直到 Surface 销毁。 */
+typedef struct granit_wayland_surface_source {
   void* display;
   void* surface;
-} granit_wayland_surface_desc;
+} granit_wayland_surface_source;
 
-#define GRANIT_WAYLAND_SURFACE_DESC_VERSION_1_SIZE                                                 \
-  ((uint32_t)(offsetof(granit_wayland_surface_desc, surface) + sizeof(void*)))
-#define GRANIT_WAYLAND_SURFACE_DESC_INIT {(uint32_t)sizeof(granit_wayland_surface_desc), 0, 0}
-
-/** 浏览器 Canvas Surface 创建描述；selector 仅在调用期间借用。 */
-typedef struct granit_canvas_surface_desc {
-  uint32_t struct_size;
-  uint32_t reserved;
+/** 浏览器 Canvas Surface 来源；selector 仅在创建调用期间借用。 */
+typedef struct granit_canvas_surface_source {
   const char* selector;
   uint32_t selector_length;
-} granit_canvas_surface_desc;
+  uint32_t reserved;
+} granit_canvas_surface_source;
 
-#define GRANIT_CANVAS_SURFACE_DESC_VERSION_1_SIZE                                                  \
-  ((uint32_t)(offsetof(granit_canvas_surface_desc, selector_length) + sizeof(uint32_t)))
-#define GRANIT_CANVAS_SURFACE_DESC_INIT                                                            \
-  {(uint32_t)sizeof(granit_canvas_surface_desc), UINT32_C(0), 0, UINT32_C(0)}
+/** Surface 平台来源。reserved_data 仅用于固定联合体尺寸。 */
+typedef union granit_surface_source {
+  uint64_t reserved_data[4];
+  granit_win32_surface_source win32;
+  granit_xcb_surface_source xcb;
+  granit_wayland_surface_source wayland;
+  granit_canvas_surface_source canvas;
+} granit_surface_source;
+
+/** 统一 Surface 创建描述；surface_type 必须恰好包含一个 GRANIT_SURFACE_TYPE_*_BIT。 */
+typedef struct granit_surface_desc {
+  uint32_t struct_size;
+  uint32_t surface_type;
+  uint32_t flags;
+  uint32_t reserved;
+  granit_surface_source source;
+} granit_surface_desc;
+
+#define GRANIT_SURFACE_DESC_VERSION_1_SIZE                                                         \
+  ((uint32_t)(offsetof(granit_surface_desc, source) + sizeof(granit_surface_source)))
+#define GRANIT_SURFACE_DESC_INIT                                                                   \
+  {                                                                                                \
+    (uint32_t)sizeof(granit_surface_desc), UINT32_C(0), UINT32_C(0), UINT32_C(0), {                \
+      {                                                                                            \
+        UINT64_C(0)                                                                                \
+      }                                                                                            \
+    }                                                                                              \
+  }
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** 从 Win32 HINSTANCE 与 HWND 创建 Surface。Renderer 必须预先启用对应支持。 */
-GRANIT_API granit_result granit_surface_create_win32(granit_renderer renderer,
-                                                     const granit_win32_surface_desc* desc,
-                                                     granit_surface* surface);
-
-/** 从 XCB connection 与 window 创建 Surface。Renderer 必须预先启用对应支持。 */
-GRANIT_API granit_result granit_surface_create_xcb(granit_renderer renderer,
-                                                   const granit_xcb_surface_desc* desc,
-                                                   granit_surface* surface);
-
-/** 从 Wayland display 与 wl_surface 创建 Surface。Renderer 必须预先启用对应支持。 */
-GRANIT_API granit_result granit_surface_create_wayland(granit_renderer renderer,
-                                                       const granit_wayland_surface_desc* desc,
-                                                       granit_surface* surface);
-
-/** 从 CSS selector 创建浏览器 Canvas Surface；空 selector 使用默认值 #canvas。 */
-GRANIT_API granit_result granit_surface_create_canvas(granit_renderer renderer,
-                                                      const granit_canvas_surface_desc* desc,
-                                                      granit_surface* surface);
+/** 从描述的平台窗口或 Canvas 创建 Surface。Renderer 必须预先启用对应来源支持。 */
+GRANIT_API granit_result granit_surface_create(granit_renderer renderer,
+                                               const granit_surface_desc* desc,
+                                               granit_surface* surface);
 
 /** 销毁属于指定 Renderer 的 Surface，并使句柄立即失效。 */
 GRANIT_API granit_result granit_surface_destroy(granit_renderer renderer, granit_surface surface);

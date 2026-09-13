@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "../support/shader_asset_store.h"
 #include <granit/granit.hpp>
 #include <granit/pipeline/render_pipeline.h>
-#include "../support/shader_asset_store.h"
 #ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
 #include "pipeline/render_pipeline_metrics.h"
 #endif
@@ -36,11 +36,10 @@ namespace {
 
 granit::tests::shader_asset_store& shader_assets() {
   static granit::tests::shader_asset_store store;
-  static const bool loaded =
-      store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} +
-                "/pbr_shadow_ibl_lights.vert.grshader") &&
-      store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} +
-                "/pbr_shadow_ibl_lights_untextured.frag.grshader");
+  static const bool loaded = store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} +
+                                       "/pbr_shadow_ibl_lights.vert.grshaderobj") &&
+                             store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} +
+                                       "/pbr_shadow_ibl_lights_untextured.frag.grshaderobj");
   if (!loaded)
     std::abort();
   return store;
@@ -191,6 +190,12 @@ int main(int argc, char** argv) {
     return 1;
   }
   auto native_renderer = renderer.native_handle();
+  std::vector<std::byte> shader_library_bytes;
+  granit::shader_library shader_library;
+  if (!shader_assets().initialize_library(native_renderer, shader_library_bytes, shader_library)) {
+    std::cerr << "创建 Shader Library 失败\n";
+    return 1;
+  }
   constexpr std::uint32_t size = 64;
 
   granit_texture output = GRANIT_NULL_HANDLE;
@@ -211,10 +216,11 @@ int main(int argc, char** argv) {
                                            0.5F,   0.0F,   0.65F, 0.5F};
   granit::buffer vertex_buffer;
   if ((vertex_buffer.initialize(native_renderer,
-                                              {.size = sizeof(positions),
-                                               .usage = granit::buffer_usage::vertex,
-                                               .location = granit::memory_location::device},
-                                              std::as_bytes(std::span{positions}))).failed()) {
+                                {.size = sizeof(positions),
+                                 .usage = granit::buffer_usage::vertex,
+                                 .location = granit::memory_location::device},
+                                std::as_bytes(std::span{positions})))
+          .failed()) {
     std::cerr << "创建顶点缓冲失败\n";
     return 1;
   }
@@ -244,8 +250,9 @@ int main(int argc, char** argv) {
                                             .usage = granit::texture_usage::sampled |
                                                      granit::texture_usage::transfer_destination};
     if ((workload_textures[index].initialize(native_renderer, texture_desc)).failed() ||
-        (workload_texture_views[index].initialize(
-            native_renderer, workload_textures[index].native_handle())).failed()) {
+        (workload_texture_views[index].initialize(native_renderer,
+                                                  workload_textures[index].native_handle()))
+            .failed()) {
       std::cerr << "创建纹理组失败\n";
       return 1;
     }
@@ -267,8 +274,7 @@ int main(int argc, char** argv) {
   granit_material_desc material_desc = GRANIT_MATERIAL_DESC_INIT;
   material_desc.archive_data = archive.data();
   material_desc.archive_size = archive.size();
-  material_desc.shader_resolver = granit::tests::shader_asset_store::resolve;
-  material_desc.shader_resolver_user_data = &shader_assets();
+  material_desc.shader_library = shader_library.native_handle();
 #ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
   material_desc.initial_update_count = 3;
 #else

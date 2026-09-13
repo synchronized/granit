@@ -17,6 +17,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include <granit/core/shader_types.hpp>
 #include <granit/renderer/async_operation.h>
 #include <granit/renderer/buffer.h>
 #include <granit/renderer/command_recorder.h>
@@ -27,6 +28,7 @@
 #include <granit/renderer/renderer.h>
 #include <granit/renderer/sampler.h>
 #include <granit/renderer/shader.h>
+#include <granit/renderer/shader_library.h>
 #include <granit/renderer/surface.h>
 #include <granit/renderer/swapchain.h>
 #include <granit/renderer/texture.h>
@@ -112,15 +114,9 @@ public:
   [[nodiscard]] std::shared_ptr<backend_renderer> acquire_backend(granit_renderer renderer);
   [[nodiscard]] std::shared_ptr<const backend_interfaces>
   acquire_backend_interfaces(granit_renderer renderer);
-  [[nodiscard]] granit_result create_win32_surface(granit_renderer renderer, void* native_instance,
-                                                   void* native_window, granit_surface& surface);
-  [[nodiscard]] granit_result create_xcb_surface(granit_renderer renderer, void* connection,
-                                                 std::uint32_t window, granit_surface& surface);
-  [[nodiscard]] granit_result create_wayland_surface(granit_renderer renderer, void* display,
-                                                     void* native_surface, granit_surface& surface);
-  [[nodiscard]] granit_result create_canvas_surface(granit_renderer renderer,
-                                                    std::string_view selector,
-                                                    granit_surface& surface);
+  [[nodiscard]] granit_result create_surface(granit_renderer renderer,
+                                             const granit_surface_desc& desc,
+                                             granit_surface& surface);
   [[nodiscard]] granit_result destroy_surface(granit_renderer renderer, granit_surface surface);
   [[nodiscard]] granit_result create_swapchain(granit_renderer renderer, granit_surface surface,
                                                const backend_swapchain_desc& desc,
@@ -183,20 +179,25 @@ public:
                                              const granit_sampler_desc& desc,
                                              granit_sampler& sampler);
   [[nodiscard]] granit_result destroy_sampler(granit_renderer renderer, granit_sampler sampler);
-  [[nodiscard]] granit_result create_shader_from_spirv(granit_renderer renderer,
-                                                       granit_shader_stage stage,
-                                                       std::span<const std::uint32_t> code,
-                                                       std::string_view entry_point,
-                                                       granit_shader& shader);
   [[nodiscard]] granit_result create_shader_from_desc(granit_renderer renderer,
                                                       const granit_shader_desc& desc,
                                                       granit_shader& shader);
-  [[nodiscard]] granit_result create_shader_from_wgsl(granit_renderer renderer,
-                                                      granit_shader_stage stage,
-                                                      std::string_view source,
-                                                      std::string_view entry_point,
-                                                      granit_shader& shader);
+  [[nodiscard]] granit_result
+  create_shader_from_code(granit_renderer renderer, granit_shader_stage stage,
+                          granit_shader_code_format code_format, std::span<const std::byte> code,
+                          std::string_view entry_point, granit_shader& shader);
   [[nodiscard]] granit_result destroy_shader(granit_renderer renderer, granit_shader shader);
+  [[nodiscard]] granit_result create_shader_library(granit_renderer renderer,
+                                                    std::span<const std::byte> archive,
+                                                    granit_shader_library& library);
+  [[nodiscard]] granit_result get_shader_library_info(granit_renderer renderer,
+                                                      granit_shader_library library,
+                                                      granit_shader_library_info& info);
+  [[nodiscard]] granit_result
+  create_shader_from_library(granit_renderer renderer, granit_shader_library library,
+                             const granit::shader_content_id& content_id, granit_shader& shader);
+  [[nodiscard]] granit_result destroy_shader_library(granit_renderer renderer,
+                                                     granit_shader_library library);
   [[nodiscard]] granit_result
   create_bind_group_layout(granit_renderer renderer,
                            std::span<const granit_bind_group_layout_entry> entries,
@@ -452,6 +453,7 @@ private:
   struct texture_view_record;
   struct sampler_record;
   struct shader_record;
+  struct shader_library_record;
   struct bind_group_layout_record;
   struct pipeline_layout_record;
   struct bind_group_record;
@@ -505,6 +507,8 @@ private:
   std::unordered_map<granit_texture_view, std::shared_ptr<texture_view_record>> texture_views_;
   std::unordered_map<granit_sampler, std::shared_ptr<sampler_record>> samplers_;
   std::unordered_map<granit_shader, std::shared_ptr<shader_record>> shaders_;
+  std::unordered_map<granit_shader_library, std::shared_ptr<shader_library_record>>
+      shader_libraries_;
   std::unordered_map<granit_pipeline_layout, std::shared_ptr<pipeline_layout_record>>
       pipeline_layouts_;
   std::unordered_map<granit_bind_group_layout, std::shared_ptr<bind_group_layout_record>>

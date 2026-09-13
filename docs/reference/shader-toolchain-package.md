@@ -12,7 +12,7 @@ Shader 工具链包使用 `shader-toolchain.json` 描述宿主平台归档中的
 工具包是独立的离线资产构建依赖，不进入 Granit 核心 SDK 或应用运行时。归档根目录通常包含：
 
 ```text
-bin/                      # DXC、glslangValidator、Tint 及必要运行库
+bin/                      # DXC、Tint 及必要运行库
 licenses/                 # 上游许可证和第三方声明
 shader-toolchain.json     # 完整性清单
 ```
@@ -34,21 +34,18 @@ cmake \
   -DSTAGE=<新的归档根目录> \
   -DGENERATOR=cmake/generate_shader_toolchain_manifest.cmake \
   -DDXC=<dxc 路径> \
-  -DGLSLANG=<glslangValidator 路径> \
   -DTINT=<tint 路径> \
   -DDXC_VERSION=<版本> \
-  -DGLSLANG_VERSION=<版本> \
   -DDAWN_VERSION=<版本> \
   -DTINT_REVISION=<源码修订> \
   "-DDXC_LICENSE_FILES=<DXC 许可证列表>" \
-  "-DGLSLANG_LICENSE_FILES=<glslang 许可证列表>" \
   "-DDAWN_LICENSE_FILES=<Dawn/Tint 许可证列表>" \
   "-DRUNTIME_FILES=<必要运行库列表>" \
   -P cmake/package_shader_toolchain.cmake
 ```
 
-三组许可证列表均不能为空。官方工作流从锁定的 DXC 与 glslang 源码标签下载完整许可证和第三方
-声明，并在组包前校验其 SHA-256；Vulkan SDK 的总许可说明不能替代这些组件材料。脚本将工具
+两组许可证列表均不能为空。官方工作流从锁定的 DXC 源码标签下载完整许可证和第三方声明，
+并在组包前校验其 SHA-256；Vulkan SDK 的总许可说明不能替代这些组件材料。脚本将工具
 标准化到 `bin/`，将许可证分别放入组件子目录；显式运行库
 在 Windows 放入 `bin/`，在 Unix 放入 `lib/`，以保留常见的相对运行库布局。目标目录必须尚不
 存在；组包在临时目录完成后才原子重命名，失败不会留下可被误认为成功产物的目标目录。
@@ -73,18 +70,17 @@ cmake \
   -DSTAGE=<归档根目录> \
   -DOUTPUT=<归档根目录>/shader-toolchain.json \
   -DDXC_VERSION=<版本> \
-  -DGLSLANG_VERSION=<版本> \
   -DDAWN_VERSION=<版本> \
   -DTINT_REVISION=<源码修订> \
-  "-DTOOL_FILES=bin/dxc;bin/glslangValidator;bin/tint" \
-  "-DLICENSE_FILES=licenses/DXC.txt;licenses/glslang.txt;licenses/Dawn.txt" \
+  "-DTOOL_FILES=bin/dxc;bin/tint" \
+  "-DLICENSE_FILES=licenses/DXC.txt;licenses/Dawn.txt" \
   -P cmake/generate_shader_toolchain_manifest.cmake
 ```
 
 `TOOL_FILES` 与 `LICENSE_FILES` 均不能为空，其中任一必需文件不存在都会失败。生成结果采用稳定路径
 排序，并通过临时文件替换目标清单。
 
-完整 Vulkan SDK 不是工具链包的一部分。它可以作为本地开发时查找 DXC 和 glslangValidator 的
+完整 Vulkan SDK 不是工具链包的一部分。它可以作为本地开发时查找 DXC 的
 可选来源，但官方可复现构建应使用经过清单验证的精简工具链包。
 
 ## 验证
@@ -103,7 +99,7 @@ cmake \
 
 仓库的 `Shader Toolchain Packages` 手动 Actions 工作流固定 Vulkan SDK 下载地址、归档 SHA-256、
 Dawn 修订和全部工具版本。Windows 与 Linux 分别构建 Tint、组装精简目录、执行包内清单校验，
-再以 `locked` 策略运行 HLSL/GLSL 双后端 ShaderTools 测试，最后上传带独立 SHA-256 文件的临时
+再以 `locked` 策略运行 HLSL 双后端 ShaderTools 测试，最后上传带独立 SHA-256 文件的临时
 Artifact。当前锁定产物已作为独立预发行版本发布；后续工具升级仍须先完成两平台远端验证和
 许可证复核，再发布新标签，不能覆盖已有归档。
 

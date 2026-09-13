@@ -142,8 +142,8 @@ int main(int argument_count, char** arguments) {
                                      .surface_types = granit::surface_type::win32});
   granit::surface surface;
   if (result.ok())
-    result = surface.initialize_win32(renderer.native_handle(),
-                                      {.instance = instance, .window = window});
+    result =
+        surface.initialize(renderer.native_handle(), granit::surface_desc::win32(instance, window));
   RECT client{};
   GetClientRect(window, &client);
   granit::swapchain swapchain;
@@ -160,11 +160,11 @@ int main(int argument_count, char** arguments) {
   if (result.ok())
     result = granit::tests::load_shader_asset(
         renderer.native_handle(),
-        std::string{GRANIT_SMOKE_ASSET_DIR} + "/window_triangle.vert.grshader", vertex_shader);
+        std::string{GRANIT_SMOKE_ASSET_DIR} + "/window_triangle.vert.grshaderobj", vertex_shader);
   if (result.ok())
     result = granit::tests::load_shader_asset(
         renderer.native_handle(),
-        std::string{GRANIT_SMOKE_ASSET_DIR} + "/window_triangle.frag.grshader", fragment_shader);
+        std::string{GRANIT_SMOKE_ASSET_DIR} + "/window_triangle.frag.grshaderobj", fragment_shader);
   granit::pipeline_layout layout;
   if (result.ok())
     result = layout.initialize(renderer.native_handle());

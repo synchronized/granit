@@ -61,6 +61,7 @@ add_library(
   granit_c_header_test
   OBJECT
     abi/layout_h.c
+    headers/content_id_h.c
     headers/diagnostic_h.c
     headers/async_operation_h.c
     headers/command_recorder_h.c
@@ -76,12 +77,15 @@ add_library(
     headers/resource_types_h.c
     headers/sampler_h.c
     headers/shader_h.c
+    headers/shader_types_h.c
+    headers/shader_library_h.c
     headers/result_h.c
     headers/surface_h.c
     headers/swapchain_h.c
     headers/texture_h.c
     headers/texture_asset_h.c
     headers/types_h.c
+    headers/version_h.c
     headers/upload_batch_h.c
     headers/readback_batch_h.c
     headers/pipeline_warmup_h.c
@@ -113,10 +117,12 @@ if(BUILD_SHARED_LIBS)
       GRANIT_ABI_RENDER_PIPELINE_LIBRARY_PATH="$<TARGET_FILE:granit_render_pipeline>"
       GRANIT_ABI_WINDOW_LIBRARY_PATH="$<TARGET_FILE:granit_window>"
       GRANIT_ABI_INPUT_LIBRARY_PATH="$<TARGET_FILE:granit_input>"
-      GRANIT_ABI_CORE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.20.0/core_symbols.txt"
+      GRANIT_ABI_SHADER_TOOLS_LIBRARY_PATH="$<TARGET_FILE:granit_shader_tools>"
+      GRANIT_ABI_CORE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.21.0/core_symbols.txt"
       GRANIT_ABI_RENDER_PIPELINE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.17.0/render_pipeline_symbols.txt"
       GRANIT_ABI_WINDOW_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.5.0/window_symbols.txt"
       GRANIT_ABI_INPUT_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/input_symbols.txt"
+      GRANIT_ABI_SHADER_TOOLS_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.21.0/shader_tools_symbols.txt"
   )
   target_include_directories(
     granit_abi_exports_test
@@ -128,6 +134,7 @@ if(BUILD_SHARED_LIBS)
   )
   add_dependencies(
     granit_abi_exports_test granit granit_render_pipeline granit_window granit_input
+    granit_shader_tools
   )
   granit_target_compile_warnings(granit_abi_exports_test)
   granit_target_output_directories(granit_abi_exports_test)
@@ -135,6 +142,10 @@ if(BUILD_SHARED_LIBS)
 
   if(MSVC)
     set(granit_abi_export_tool "${CMAKE_DUMPBIN}")
+    if(NOT granit_abi_export_tool AND CMAKE_LINKER)
+      get_filename_component(granit_msvc_tool_directory "${CMAKE_LINKER}" DIRECTORY)
+      set(granit_abi_export_tool "${granit_msvc_tool_directory}/dumpbin.exe")
+    endif()
     set(granit_abi_export_tool_kind dumpbin)
   elseif(UNIX)
     set(granit_abi_export_tool "${CMAKE_NM}")
@@ -145,10 +156,13 @@ if(BUILD_SHARED_LIBS)
     function(granit_add_abi_export_snapshot_test component target snapshot)
       set(snapshot_version 0.1.0)
       if(component STREQUAL "core")
-        set(snapshot_version 0.20.0)
+        set(snapshot_version 0.21.0)
       endif()
       if(component STREQUAL "render_pipeline")
         set(snapshot_version 0.17.0)
+      endif()
+      if(component STREQUAL "shader_tools")
+        set(snapshot_version 0.21.0)
       endif()
       add_test(
         NAME "granit.abi.exports.${component}"
@@ -182,6 +196,9 @@ if(BUILD_SHARED_LIBS)
         -P "${CMAKE_CURRENT_SOURCE_DIR}/abi/check_exported_symbols.cmake"
     )
     granit_add_abi_export_snapshot_test(input granit_input input_symbols.txt)
+    granit_add_abi_export_snapshot_test(
+      shader_tools granit_shader_tools shader_tools_symbols.txt
+    )
   endif()
 endif()
 
@@ -197,6 +214,18 @@ target_link_libraries(
 )
 granit_target_compile_warnings(granit_handle_table_test)
 add_test(NAME granit.handle_table COMMAND granit_handle_table_test)
+
+add_executable(
+  granit_sha256_test
+  core/sha256_test.cpp
+  "${PROJECT_SOURCE_DIR}/src/core/sha256.cpp"
+)
+target_include_directories(
+  granit_sha256_test PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/include"
+)
+target_link_libraries(granit_sha256_test PRIVATE Catch2::Catch2WithMain)
+granit_target_compile_warnings(granit_sha256_test)
+add_test(NAME granit.sha256 COMMAND granit_sha256_test)
 
 add_executable(
   granit_async_operation_state_test
@@ -383,7 +412,7 @@ add_executable(
   pipeline/environment_map_api_test.cpp
   pipeline/environment_asset_test.cpp
   "${PROJECT_SOURCE_DIR}/src/pipeline/environment_asset.cpp"
-  $<TARGET_OBJECTS:granit_internal_shader_asset_format>
+  $<TARGET_OBJECTS:granit_internal_shader_format>
   pipeline/mesh_api_test.cpp
   pipeline/render_pipeline_api_test.cpp
   pipeline/scene_api_test.cpp
@@ -404,19 +433,13 @@ add_custom_command(
   OUTPUT "${granit_unlit_test_package}"
   COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/assets"
   COMMAND granit_material_tool build "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit.grmat.json"
-          --output "${granit_unlit_test_package}"
+          --output "${granit_unlit_test_package}" --shader-index
+          "${GRANIT_UNLIT_TEST_SHADER_INDEX}"
   DEPENDS
     granit_material_tool
+    granit_test_shader_assets
     "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit.grmat.json"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.grshader"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.frag.grshader"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_alpha_cutoff.frag.grshader"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.grshader.spv"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.vert.grshader.wgsl"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.frag.grshader.spv"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.frag.grshader.wgsl"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_alpha_cutoff.frag.grshader.spv"
-    "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit_alpha_cutoff.frag.grshader.wgsl"
+    "${GRANIT_UNLIT_TEST_SHADER_INDEX}"
   VERBATIM
 )
 add_custom_target(granit_unlit_test_package DEPENDS "${granit_unlit_test_package}")
@@ -437,13 +460,16 @@ target_compile_options(granit_pipeline_test PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,
 target_compile_definitions(
   granit_pipeline_test
   PRIVATE
-    GRANIT_PIPELINE_ASSET_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/pbr"
+    GRANIT_PIPELINE_ASSET_DIR="${GRANIT_PBR_TEST_SHADER_DIR}"
+    GRANIT_SHADER_OBJECT_FIXTURE_DIR="${CMAKE_BINARY_DIR}/tools/test-objects"
     GRANIT_TEST_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/assets"
     GRANIT_PIPELINE_SHADER_DIR="${GRANIT_PIPELINE_TEST_SHADER_DIR}"
     GRANIT_UNLIT_TEST_PACKAGE="${granit_unlit_test_package}"
-    GRANIT_UNLIT_SHADER_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/unlit"
+    GRANIT_UNLIT_SHADER_DIR="${GRANIT_UNLIT_TEST_SHADER_DIR}"
 )
-add_dependencies(granit_pipeline_test granit_test_shader_assets)
+add_dependencies(
+  granit_pipeline_test granit_shader_tool_test_objects granit_test_shader_assets
+)
 granit_target_compile_warnings(granit_pipeline_test)
 granit_target_output_directories(granit_pipeline_test)
 add_test(NAME granit.pipeline COMMAND granit_pipeline_test)
@@ -471,7 +497,7 @@ target_include_directories(
   granit_material_test PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/tests"
 )
 target_link_libraries(granit_material_test PRIVATE granit::material Catch2::Catch2WithMain)
-target_sources(granit_material_test PRIVATE $<TARGET_OBJECTS:granit_internal_shader_asset_format>)
+target_sources(granit_material_test PRIVATE $<TARGET_OBJECTS:granit_internal_shader_format>)
 target_compile_options(
   granit_material_test
   PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
@@ -479,12 +505,15 @@ target_compile_options(
 target_compile_definitions(
   granit_material_test
   PRIVATE
+    GRANIT_SHADER_OBJECT_FIXTURE_DIR="${CMAKE_BINARY_DIR}/tools/test-objects"
     GRANIT_TEST_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/assets"
     GRANIT_SMOKE_SHADER_DIR="${GRANIT_SMOKE_TEST_SHADER_DIR}"
-    GRANIT_PBR_ASSET_DIR="${PROJECT_SOURCE_DIR}/assets/shaders/pbr"
+    GRANIT_PBR_LIBRARY_ASSET="${PROJECT_SOURCE_DIR}/assets/libraries/pbr_standard.grshlib"
     GRANIT_PBR_MATERIAL_ASSET="${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat"
 )
-add_dependencies(granit_material_test granit_test_shader_assets)
+add_dependencies(
+  granit_material_test granit_shader_tool_test_objects granit_test_shader_assets
+)
 granit_target_compile_warnings(granit_material_test)
 add_test(NAME granit.material COMMAND granit_material_test)
 
@@ -496,6 +525,7 @@ add_executable(
   renderer/renderer_test.cpp
   renderer/sampler_test.cpp
   renderer/shader_test.cpp
+  renderer/shader_library_test.cpp
   renderer/surface_test.cpp
   renderer/swapchain_test.cpp
   renderer/texture_test.cpp
@@ -526,8 +556,8 @@ target_link_libraries(
   PRIVATE
     granit::granit
     Catch2::Catch2WithMain
-    $<TARGET_OBJECTS:granit_shader_asset_storage>
-    $<TARGET_OBJECTS:granit_internal_shader_asset_format>
+    $<TARGET_OBJECTS:granit_shader_object_storage>
+    $<TARGET_OBJECTS:granit_internal_shader_format>
     $<$<PLATFORM_ID:Windows>:user32>
 )
 target_include_directories(
@@ -540,9 +570,11 @@ target_include_directories(
 target_compile_definitions(
   granit_renderer_test
   PRIVATE
+    GRANIT_SHADER_OBJECT_FIXTURE_DIR="${CMAKE_BINARY_DIR}/tools/test-objects"
     GRANIT_TEST_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/assets"
     GRANIT_TEST_ARTIFACT_DIR="${CMAKE_BINARY_DIR}/test-artifacts"
 )
+add_dependencies(granit_renderer_test granit_shader_tool_test_objects)
 granit_target_compile_warnings(granit_renderer_test)
 add_test(NAME granit.renderer COMMAND granit_renderer_test)
 add_test(
@@ -603,6 +635,7 @@ add_test(NAME granit.vulkan_backend COMMAND granit_vulkan_backend_test)
 add_library(
   granit_cpp_header_test
   OBJECT
+    headers/content_id_hpp.cpp
     headers/diagnostic_hpp.cpp
     headers/async_operation_hpp.cpp
     headers/command_recorder_hpp.cpp
@@ -617,6 +650,8 @@ add_library(
     headers/resource_types_hpp.cpp
     headers/sampler_hpp.cpp
     headers/shader_hpp.cpp
+    headers/shader_types_hpp.cpp
+    headers/shader_library_hpp.cpp
     headers/result_hpp.cpp
     headers/surface_hpp.cpp
     headers/swapchain_hpp.cpp

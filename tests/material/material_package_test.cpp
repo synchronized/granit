@@ -5,7 +5,9 @@
 
 #include <catch2/catch_all.hpp>
 
+#include <algorithm>
 #include <array>
+#include <vector>
 
 namespace {
 
@@ -25,6 +27,12 @@ material_variant_desc variant(std::initializer_list<material_feature_value> feat
           .pipeline = {}};
 }
 
+material_variant_key variant_key(std::initializer_list<material_feature_value> features) {
+  std::vector<material_feature_value> canonical{features};
+  std::ranges::sort(canonical, {}, &material_feature_value::id);
+  return make_variant_key(canonical);
+}
+
 } // namespace
 
 TEST_CASE("材质包规范化变体并按稳定键查找") {
@@ -38,6 +46,7 @@ TEST_CASE("材质包规范化变体并按稳定键查找") {
   REQUIRE(material_package::build(std::move(desc), package) == package_error::none);
   REQUIRE(package.format_version() == material_package_format_version);
   REQUIRE(package.binding_model() == package_binding_model::bind_group);
+  REQUIRE(package.binding_groups() == package_binding_groups_all);
 
   const std::array<material_feature_value, 2> canonical{
       {{alpha_mode, UINT32_C(2)}, {normal_map, UINT32_C(1)}}};
@@ -57,6 +66,10 @@ TEST_CASE("材质包拒绝不兼容版本与未实现绑定模型") {
   desc.binding_model = package_binding_model::bindless;
   CHECK(material_package::build(std::move(desc), package) ==
         package_error::unsupported_binding_model);
+
+  desc = {};
+  desc.binding_groups = package_binding_group_frame | package_binding_group_lighting;
+  CHECK(material_package::build(std::move(desc), package) == package_error::invalid_binding_groups);
 
   desc = {};
   desc.required_renderer_features = package_feature_bindless_resource_table;
@@ -125,4 +138,36 @@ TEST_CASE("同一 Pass 的所有变体必须共享 Pipeline 状态") {
   desc.variants.back().pipeline.primitive.cull_mode = GRANIT_CULL_MODE_BACK;
   material_package package;
   CHECK(material_package::build(std::move(desc), package) == package_error::invalid_pipeline_state);
+}
+
+TEST_CASE("静态功能按 Pass 和 Feature 选择变体") {
+  const auto texture_mask = make_feature_id("pbr_texture_mask");
+  const auto alpha_mode = make_feature_id("alpha_mode");
+  const auto opaque = make_feature_id("opaque");
+  const auto shadow = make_feature_id("shadow");
+  const auto unlit = make_feature_id("unlit");
+
+  material_package_desc desc;
+  desc.metadata.constant_buffer_size = 16;
+  desc.metadata.parameters = {
+      {.name = "base_color", .type = parameter_type::float4, .default_value = {}},
+  };
+  desc.variants.push_back(variant({{texture_mask, 0}, {alpha_mode, 0}}));
+  desc.variants.push_back(variant({{texture_mask, 1}, {alpha_mode, 1}}));
+  desc.variants.push_back(variant({{texture_mask, 0}, {alpha_mode, 2}}));
+  desc.variants[0].pass = opaque;
+  desc.variants[1].pass = opaque;
+  desc.variants[2].pass = shadow;
+  desc.variants.push_back(variant({{alpha_mode, 0}}));
+  desc.variants.back().pass = unlit;
+
+  material_package package;
+  REQUIRE(material_package::build(std::move(desc), package) == package_error::none);
+  CHECK(package.find(opaque, variant_key({{texture_mask, 0}, {alpha_mode, 0}})) != nullptr);
+  CHECK(package.find(opaque, variant_key({{texture_mask, 1}, {alpha_mode, 1}})) != nullptr);
+  CHECK(package.find(shadow, variant_key({{texture_mask, 0}, {alpha_mode, 2}})) != nullptr);
+  CHECK(package.find(unlit, variant_key({{alpha_mode, 0}})) != nullptr);
+
+  // base_color 属于运行时参数，不进入 Pass 或 Feature 组成的稳定变体键。
+  CHECK(package.metadata().find(make_parameter_id("base_color")) != nullptr);
 }

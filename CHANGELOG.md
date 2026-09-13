@@ -8,6 +8,45 @@
 
 ## Unreleased
 
+### 新增
+
+- 新增确定性的 `.grshlib` v1、公共 Shader Library C/C++ API，以及由 Renderer 按后端和能力选择、
+  校验并缓存 Shader 载荷的路径。
+
+### 变更
+
+- Shader Object 已退出 Core 公共接口和源码资产目录；Material 源直接记录 Shader 内容 ID、阶段与
+  入口，公共及内建 Shader Library 由构建过程生成 Object 后确定性链接。
+- Material 改为接收 Shader Library 句柄；`.grmat` v5 显式声明 Frame、Material、Object、Lighting
+  绑定组，删除按后端回调 Shader resolver 和按 Pass 名称推断布局。
+- `granit_shader_desc` 统一为 `code_format + code + code_size`，一次直接创建只接收一种代码格式；
+  跨后端选择由 Shader Library 完成。
+- 静态 Shader 功能由 Pass 与 Feature 选择，数值、纹理和 Sampler 更新不创建 Pipeline；
+  Canvas 在内部处理左上原点投影，材质和应用无需按后端修改坐标。
+- Canvas、Model Viewer、构建树和安装包直接消费 `.grshlib`。`.grshaderobj` 与 sidecar 只作为离线
+  中间结果，不再作为 RenderPipeline 运行时资产发布。
+- 浏览器 WebGPU 内部删除历史 Provider ABI、查询符号、函数表和 dispatch；domain adapter 直接
+  调用后端私有 Context，并使用互不混用的强类型资源句柄。
+- ShaderTools 统一 WGSL/HLSL Compiler API，并移除 GLSL/glslang 前端、工具链配置和打包内容。
+- ShaderTools 将编译结果与反射拆为独立句柄和头文件；C++ 反射字段改用强类型枚举，编译结果可直接
+  查询 SPIR-V 与 WGSL 载荷。
+- ShaderTools 将 `.grshaderobj` 收敛为 Library Builder 私有缓存格式；公共 Compiler 只负责编译和
+  诊断，标准 CLI/CMake 作者入口只接受 HLSL 与 Library 源清单。
+- Shader Object 导入、低层链接和 Object ID 命令移入仅测试构建的 fixture 工具，不再编入标准
+  `granit_shader_tool`。
+- `assets/shaders`、`src/pipeline/shaders` 和 `examples/assets` 删除已提交的 SPIR-V/WGSL 派生载荷；
+  无工具链构建所需的后端快照集中到不安装的测试夹具目录。
+- ShaderTools 新增独立 Library Builder C/C++ API；`granit_shader_tool` 按命令拆分实现，Library
+  命令只负责把参数转换为 SDK 描述并映射退出码。
+- Shader、Texture、Environment、Material Archive 和 Pipeline Warmup 共用 Core 内容摘要类型与
+  SHA-256 实现；领域 API 保留各自的内容 ID 和缓存键名称。
+
+### 兼容性与迁移
+
+- Core 新增五个 Shader Library 相关 C ABI 导出，Material 创建描述的保留字段改为 Library 句柄。
+  0.20 Consumer 必须重新编译并重建 `.grmat` 和 Shader 资产；完整步骤见
+  [从 0.20 迁移到 0.21](docs/guides/migrate-0.20-to-0.21.md)。
+
 ## 0.20.0 - 2026-09-10
 
 ### 新增
@@ -315,7 +354,7 @@
   写入前返回 `unsupported`。CLI 通过 `--features` 提供相同门禁。
 - ShaderTools 新增 HLSL portable 双产物编译入口，通过调用方指定的 DXC 生成 Vulkan 1.3 SPIR-V，
   并以独立的 portable 中间 SPIR-V 经锁定 Tint 生成 WGSL；转换失败时返回完整工具诊断并清理
-  不完整产物。命令行 `compile-hlsl` 可生成并按发布后端裁剪对应资产。
+  不完整产物。命令行 `compile` 可生成并按发布后端裁剪对应资产。
 - Shader 资产缓存身份新增原始源码语言与内容；HLSL 全后端资产命中时可在启动 DXC/Tint 前恢复
   Vulkan SPIR-V 和 WebGPU WGSL。
 - ShaderTools 新增 GLSL portable 编译入口，并接受满足兼容策略的编译器版本；工具版本、输入、

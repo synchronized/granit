@@ -6,23 +6,26 @@
 
 #include <cstdint>
 
+#include <granit/core/content_id.hpp>
 #include <granit/core/diagnostic.hpp>
 #include <granit/core/result.hpp>
+#include <granit/core/shader_types.hpp>
 #include <granit/core/types.hpp>
 #include <granit/granit.h>
 #include <granit/math/types.hpp>
-#include <granit/renderer/buffer.hpp>
 #include <granit/renderer/async_operation.hpp>
-#include <granit/renderer/readback_batch.hpp>
+#include <granit/renderer/buffer.hpp>
 #include <granit/renderer/command_recorder.hpp>
 #include <granit/renderer/frame_context.hpp>
 #include <granit/renderer/pipeline.hpp>
 #include <granit/renderer/pipeline_warmup.hpp>
+#include <granit/renderer/readback_batch.hpp>
 #include <granit/renderer/render_target.hpp>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/resource_types.hpp>
 #include <granit/renderer/sampler.hpp>
 #include <granit/renderer/shader.hpp>
+#include <granit/renderer/shader_library.hpp>
 #include <granit/renderer/surface.hpp>
 #include <granit/renderer/swapchain.hpp>
 #include <granit/renderer/texture.hpp>

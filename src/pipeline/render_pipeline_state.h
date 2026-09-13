@@ -14,6 +14,7 @@
 #include <granit/pipeline/render_pipeline.h>
 #include <granit/renderer/async_operation.h>
 #include <granit/renderer/shader.hpp>
+#include <granit/renderer/shader_library.hpp>
 #include <granit/renderer/texture.hpp>
 #include <granit/renderer/timestamp_query.h>
 
@@ -47,6 +48,7 @@ struct render_pipeline_state {
   granit_renderer renderer = GRANIT_NULL_HANDLE;
   granit_render_pipeline_record_callback record = nullptr;
   void* user_data = nullptr;
+  granit::shader_library shader_library;
   std::array<lighting::tone_mapping_pipeline_resources, 4> tone_mapping_pipelines;
   default_ibl_resources default_ibl;
   granit::texture shadow_texture;

@@ -187,8 +187,8 @@ int main(int argc, char** argv) {
                                      .surface_types = granit::surface_type::wayland});
   granit::surface surface;
   if (result.ok()) {
-    result = surface.initialize_wayland(renderer.native_handle(),
-                                        {.display = window.display(), .surface = window.surface()});
+    result = surface.initialize(renderer.native_handle(),
+                                granit::surface_desc::wayland(window.display(), window.surface()));
   }
   granit::swapchain swapchain;
   if (result.ok()) {

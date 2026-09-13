@@ -2,13 +2,11 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "material/material_source_json.h"
-#include "assets/shader_asset.h"
 
 #include <algorithm>
 #include <array>
 #include <charconv>
 #include <cstddef>
-#include <fstream>
 #include <limits>
 #include <map>
 #include <string>
@@ -240,36 +238,6 @@ bool u32(const json_value* value, std::uint32_t& result) {
   return true;
 }
 
-bool read_shader_asset(const std::filesystem::path& path, material_shader_code& code) {
-  constexpr std::uint64_t maximum_size = UINT64_C(16) * 1024 * 1024;
-  std::ifstream stream(path, std::ios::binary | std::ios::ate);
-  if (!stream)
-    return false;
-  const auto length = stream.tellg();
-  if (length <= 0 || static_cast<std::uint64_t>(length) > maximum_size)
-    return false;
-  std::vector<std::byte> bytes(static_cast<std::size_t>(length));
-  stream.seekg(0);
-  stream.read(reinterpret_cast<char*>(bytes.data()), length);
-  if (!stream)
-    return false;
-  granit::tools::shader_asset_view asset;
-  if (granit::tools::decode_shader_asset(bytes, asset) !=
-      granit::tools::shader_asset_error::success) {
-    return false;
-  }
-  if (asset.stage == GRANIT_SHADER_STAGE_VERTEX) {
-    code.stage = package_shader_stage::vertex;
-  } else if (asset.stage == GRANIT_SHADER_STAGE_FRAGMENT) {
-    code.stage = package_shader_stage::fragment;
-  } else {
-    return false;
-  }
-  code.entry_point = asset.entry_point;
-  code.asset_id = asset.content_id;
-  return true;
-}
-
 bool parse_parameter(const json_value& value, parameter_desc& parameter) {
   const auto* object = as<json_value::object>(&value);
   const auto* name = object == nullptr ? nullptr : as<std::string>(member(*object, "name"));
@@ -489,8 +457,8 @@ bool parse_pipeline(const json_value& value, material_pipeline_state& pipeline) 
   return true;
 }
 
-source_json_error parse_variant(const json_value& value, const std::filesystem::path& directory,
-                                material_variant_desc& variant) {
+source_json_error parse_variant(std::span<const material_shader_reference> shader_references,
+                                const json_value& value, material_variant_desc& variant) {
   const auto* object = as<json_value::object>(&value);
   const auto* pass = object == nullptr ? nullptr : as<std::string>(member(*object, "pass"));
   const auto* shaders =
@@ -521,15 +489,25 @@ source_json_error parse_variant(const json_value& value, const std::filesystem::
   }
   for (const auto& shader_value : *shaders) {
     const auto* shader = as<json_value::object>(&shader_value);
-    const auto* asset_path =
-        shader == nullptr ? nullptr : as<std::string>(member(*shader, "asset"));
-    if (asset_path == nullptr) {
+    const auto* library = shader == nullptr ? nullptr : as<std::string>(member(*shader, "library"));
+    const auto* name = shader == nullptr ? nullptr : as<std::string>(member(*shader, "shader"));
+    const auto* variant_name =
+        shader == nullptr ? nullptr : as<std::string>(member(*shader, "variant"));
+    if (library == nullptr || name == nullptr || library->empty() || name->empty() ||
+        (variant_name != nullptr && variant_name->empty())) {
       return source_json_error::invalid_schema;
     }
-    material_shader_code code;
-    if (!read_shader_asset(directory / std::filesystem::path{*asset_path}, code)) {
-      return source_json_error::referenced_file_error;
-    }
+    const auto full_name = variant_name == nullptr ? *name : *name + "/" + *variant_name;
+    const auto found = std::ranges::find_if(shader_references, [&](const auto& reference) {
+      return reference.library == *library && reference.name == full_name;
+    });
+    if (found == shader_references.end())
+      return source_json_error::invalid_schema;
+    material_shader_code code{.stage = found->stage,
+                              .entry_point = found->entry_point,
+                              .asset_id = found->content_id,
+                              .spirv = {},
+                              .wgsl = {}};
     variant.shaders.push_back(std::move(code));
   }
   return source_json_error::none;
@@ -537,9 +515,10 @@ source_json_error parse_variant(const json_value& value, const std::filesystem::
 
 } // namespace
 
-source_json_error parse_material_source_json(std::string_view json,
-                                             const std::filesystem::path& source_directory,
-                                             material_package& package) noexcept {
+source_json_error
+parse_material_source_json(std::string_view json,
+                           std::span<const material_shader_reference> shader_references,
+                           material_package& package) noexcept {
   try {
     if (json.empty() || json.size() > material_source_json_max_size) {
       return source_json_error::invalid_json;
@@ -554,20 +533,41 @@ source_json_error parse_material_source_json(std::string_view json,
         object == nullptr ? nullptr : as<std::string>(member(*object, "target_environment"));
     const auto* binding =
         object == nullptr ? nullptr : as<std::string>(member(*object, "binding_model"));
+    const auto* binding_groups =
+        object == nullptr ? nullptr : as<json_value::array>(member(*object, "binding_groups"));
     const auto* material =
         object == nullptr ? nullptr : as<json_value::object>(member(*object, "material"));
     const auto* variants =
         object == nullptr ? nullptr : as<json_value::array>(member(*object, "variants"));
     if (object == nullptr || !u32(member(*object, "format_version"), version) ||
-        target == nullptr || binding == nullptr || material == nullptr || variants == nullptr) {
+        target == nullptr || binding == nullptr || binding_groups == nullptr ||
+        material == nullptr || variants == nullptr) {
       return source_json_error::invalid_schema;
     }
-    if (version != material_package_format_version || *target != "cross_backend" ||
+    if (version != material_source_format_version || *target != "cross_backend" ||
         *binding != "bind_group") {
       return source_json_error::unsupported_value;
     }
     material_package_desc desc;
-    desc.format_version = version;
+    desc.format_version = material_package_format_version;
+    desc.binding_groups = 0;
+    constexpr std::array group_names{
+        std::pair{"frame", package_binding_group_frame},
+        std::pair{"material", package_binding_group_material},
+        std::pair{"object", package_binding_group_object},
+        std::pair{"lighting", package_binding_group_lighting},
+    };
+    for (const auto& value : *binding_groups) {
+      const auto* name = as<std::string>(&value);
+      const auto found = name == nullptr
+                             ? group_names.end()
+                             : std::ranges::find_if(group_names, [&](const auto& group) {
+                                 return group.first == *name;
+                               });
+      if (found == group_names.end() || (desc.binding_groups & found->second) != 0)
+        return source_json_error::invalid_schema;
+      desc.binding_groups |= found->second;
+    }
     if (!u32(member(*material, "constant_buffer_size"), desc.metadata.constant_buffer_size)) {
       return source_json_error::invalid_schema;
     }
@@ -584,7 +584,7 @@ source_json_error parse_material_source_json(std::string_view json,
     }
     for (const auto& value : *variants) {
       material_variant_desc variant;
-      const auto result = parse_variant(value, source_directory, variant);
+      const auto result = parse_variant(shader_references, value, variant);
       if (result != source_json_error::none) {
         return result;
       }

@@ -14,54 +14,9 @@
 
 namespace granit::detail {
 
-granit_result renderer_registry::create_win32_surface(granit_renderer renderer,
-                                                      void* native_instance, void* native_window,
-                                                      granit_surface& surface) {
-  try {
-    const auto interfaces = acquire_backend_interfaces(renderer);
-    if (!interfaces) {
-      return GRANIT_ERROR_INVALID_HANDLE;
-    }
-    const auto& owner = interfaces->renderer;
-    const auto& state = interfaces->presentation;
-
-    auto record = std::make_shared<surface_record>();
-    record->owner = owner;
-    record->renderer = state;
-    record->native = state->allocate_surface_resource();
-    const auto create_result =
-        state->create_win32_surface(native_instance, native_window, *record->native);
-    if (create_result != GRANIT_SUCCESS) {
-      return create_result;
-    }
-
-    std::lock_guard lock{mutex_};
-    const auto renderer_found = backend_renderers_.find(renderer);
-    if (renderer_found == backend_renderers_.end() || renderer_found->second != owner) {
-      return GRANIT_ERROR_INVALID_HANDLE;
-    }
-    record->metadata.creation_sequence = next_creation_sequence_++;
-    const auto handle = handles_.insert(record.get(), resource_type::surface, owner->domain());
-    if (handle == GRANIT_NULL_HANDLE) {
-      return GRANIT_ERROR_OUT_OF_MEMORY;
-    }
-    try {
-      surfaces_.emplace(handle, std::move(record));
-    } catch (...) {
-      static_cast<void>(handles_.erase(handle, resource_type::surface, owner->domain()));
-      throw;
-    }
-    surface = handle;
-    return GRANIT_SUCCESS;
-  } catch (const std::bad_alloc&) {
-    return GRANIT_ERROR_OUT_OF_MEMORY;
-  } catch (...) {
-    return GRANIT_ERROR_INTERNAL;
-  }
-}
-
-granit_result renderer_registry::create_xcb_surface(granit_renderer renderer, void* connection,
-                                                    std::uint32_t window, granit_surface& surface) {
+granit_result renderer_registry::create_surface(granit_renderer renderer,
+                                                const granit_surface_desc& desc,
+                                                granit_surface& surface) {
   try {
     const auto interfaces = acquire_backend_interfaces(renderer);
     if (!interfaces)
@@ -73,90 +28,7 @@ granit_result renderer_registry::create_xcb_surface(granit_renderer renderer, vo
     record->owner = owner;
     record->renderer = state;
     record->native = state->allocate_surface_resource();
-    const auto create_result = state->create_xcb_surface(connection, window, *record->native);
-    if (create_result != GRANIT_SUCCESS)
-      return create_result;
-
-    std::lock_guard lock{mutex_};
-    const auto renderer_found = backend_renderers_.find(renderer);
-    if (renderer_found == backend_renderers_.end() || renderer_found->second != owner)
-      return GRANIT_ERROR_INVALID_HANDLE;
-    record->metadata.creation_sequence = next_creation_sequence_++;
-    const auto handle = handles_.insert(record.get(), resource_type::surface, owner->domain());
-    if (handle == GRANIT_NULL_HANDLE)
-      return GRANIT_ERROR_OUT_OF_MEMORY;
-    try {
-      surfaces_.emplace(handle, std::move(record));
-    } catch (...) {
-      static_cast<void>(handles_.erase(handle, resource_type::surface, owner->domain()));
-      throw;
-    }
-    surface = handle;
-    return GRANIT_SUCCESS;
-  } catch (const std::bad_alloc&) {
-    return GRANIT_ERROR_OUT_OF_MEMORY;
-  } catch (...) {
-    return GRANIT_ERROR_INTERNAL;
-  }
-}
-
-granit_result renderer_registry::create_wayland_surface(granit_renderer renderer, void* display,
-                                                        void* native_surface,
-                                                        granit_surface& surface) {
-  try {
-    const auto interfaces = acquire_backend_interfaces(renderer);
-    if (!interfaces)
-      return GRANIT_ERROR_INVALID_HANDLE;
-    const auto& owner = interfaces->renderer;
-    const auto& state = interfaces->presentation;
-
-    auto record = std::make_shared<surface_record>();
-    record->owner = owner;
-    record->renderer = state;
-    record->native = state->allocate_surface_resource();
-    const auto create_result =
-        state->create_wayland_surface(display, native_surface, *record->native);
-    if (create_result != GRANIT_SUCCESS)
-      return create_result;
-
-    std::lock_guard lock{mutex_};
-    const auto renderer_found = backend_renderers_.find(renderer);
-    if (renderer_found == backend_renderers_.end() || renderer_found->second != owner)
-      return GRANIT_ERROR_INVALID_HANDLE;
-    record->metadata.creation_sequence = next_creation_sequence_++;
-    const auto handle = handles_.insert(record.get(), resource_type::surface, owner->domain());
-    if (handle == GRANIT_NULL_HANDLE)
-      return GRANIT_ERROR_OUT_OF_MEMORY;
-    try {
-      surfaces_.emplace(handle, std::move(record));
-    } catch (...) {
-      static_cast<void>(handles_.erase(handle, resource_type::surface, owner->domain()));
-      throw;
-    }
-    surface = handle;
-    return GRANIT_SUCCESS;
-  } catch (const std::bad_alloc&) {
-    return GRANIT_ERROR_OUT_OF_MEMORY;
-  } catch (...) {
-    return GRANIT_ERROR_INTERNAL;
-  }
-}
-
-granit_result renderer_registry::create_canvas_surface(granit_renderer renderer,
-                                                       std::string_view selector,
-                                                       granit_surface& surface) {
-  try {
-    const auto interfaces = acquire_backend_interfaces(renderer);
-    if (!interfaces)
-      return GRANIT_ERROR_INVALID_HANDLE;
-    const auto& owner = interfaces->renderer;
-    const auto& state = interfaces->presentation;
-
-    auto record = std::make_shared<surface_record>();
-    record->owner = owner;
-    record->renderer = state;
-    record->native = state->allocate_surface_resource();
-    const auto create_result = state->create_canvas_surface(selector, *record->native);
+    const auto create_result = state->create_surface(desc, *record->native);
     if (create_result != GRANIT_SUCCESS)
       return create_result;
 

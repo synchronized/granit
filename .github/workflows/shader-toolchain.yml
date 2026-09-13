@@ -25,13 +25,10 @@ env:
   VULKAN_SDK_WINDOWS_SHA256: baaa4f7ca11ed3d82aa1c102b21208915485bbaa473068c763daa425cca468bd
   VULKAN_SDK_LINUX_SHA256: f22a3625bd4d7a32e7a0d926ace16d5278c149e938dac63cecc00537626cbf73
   DXC_VERSION: 1.8.0.4973
-  GLSLANG_VERSION: 15.3.0
   DXC_LICENSE_URL: https://raw.githubusercontent.com/microsoft/DirectXShaderCompiler/v1.8.2505/LICENSE.TXT
   DXC_LICENSE_SHA256: 27a49e35d1da96eba18fba54bc882667ff0ff8c0254f16f2b6e165d605ba7df8
   DXC_NOTICES_URL: https://raw.githubusercontent.com/microsoft/DirectXShaderCompiler/v1.8.2505/ThirdPartyNotices.txt
   DXC_NOTICES_SHA256: 19512a5d0a015ef16d167272c164da49a604614a786206212a80ad486ed0be6d
-  GLSLANG_LICENSE_URL: https://raw.githubusercontent.com/KhronosGroup/glslang/15.3.0/LICENSE.txt
-  GLSLANG_LICENSE_SHA256: adb783e734e906d1f46db5df29991dbde84bdb0ceab502ac2febb44fe3c2b5f4
   DAWN_VERSION: v20260720.160313
   TINT_REVISION: 0bc38adde72b79013536f8ce354b639ae19ae195
   SCCACHE_GHA_ENABLED: "true"
@@ -70,8 +67,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path $root | Out-Null
           $items = @(
             @($env:DXC_LICENSE_URL, $env:DXC_LICENSE_SHA256, "$root/DXC-LICENSE.txt"),
-            @($env:DXC_NOTICES_URL, $env:DXC_NOTICES_SHA256, "$root/DXC-NOTICES.txt"),
-            @($env:GLSLANG_LICENSE_URL, $env:GLSLANG_LICENSE_SHA256, "$root/glslang-LICENSE.txt")
+            @($env:DXC_NOTICES_URL, $env:DXC_NOTICES_SHA256, "$root/DXC-NOTICES.txt")
           )
           foreach ($item in $items) {
             Invoke-WebRequest -Uri $item[0] -OutFile $item[2]
@@ -79,7 +75,6 @@ jobs:
             if ($actual -ne $item[1]) { throw "工具许可证 SHA-256 不匹配：$($item[2])" }
           }
           "DXC_LICENSE_FILES=$root/DXC-LICENSE.txt;$root/DXC-NOTICES.txt" >> $env:GITHUB_ENV
-          "GLSLANG_LICENSE_FILES=$root/glslang-LICENSE.txt" >> $env:GITHUB_ENV
       - name: 恢复锁定 Tint 产物
         id: tint-cache
         uses: actions/cache/restore@v5
@@ -165,27 +160,24 @@ jobs:
           $stage = "$PWD/stage/$name"
           cmake -DSTAGE="$stage" -DGENERATOR="$PWD/cmake/generate_shader_toolchain_manifest.cmake" `
             -DDXC="$env:VULKAN_SDK_ROOT/Bin/dxc.exe" `
-            -DGLSLANG="$env:VULKAN_SDK_ROOT/Bin/glslangValidator.exe" `
             -DTINT="$env:TINT_EXECUTABLE" -DDXC_VERSION="$env:DXC_VERSION" `
-            -DGLSLANG_VERSION="$env:GLSLANG_VERSION" -DDAWN_VERSION="$env:DAWN_VERSION" `
+            -DDAWN_VERSION="$env:DAWN_VERSION" `
             -DTINT_REVISION="$env:TINT_REVISION" `
             -DDXC_LICENSE_FILES="$env:DXC_LICENSE_FILES" `
-            -DGLSLANG_LICENSE_FILES="$env:GLSLANG_LICENSE_FILES" `
             -DDAWN_LICENSE_FILES="$env:TINT_LICENSE" `
             -DRUNTIME_FILES="$env:VULKAN_SDK_ROOT/Bin/dxcompiler.dll" `
             -P cmake/package_shader_toolchain.cmake
           cmake -DSTAGE="$stage" -DMANIFEST="$stage/shader-toolchain.json" `
             -P cmake/verify_shader_toolchain_manifest.cmake
           & "$stage/bin/dxc.exe" --version
-          & "$stage/bin/glslangValidator.exe" --version
           & "$stage/bin/tint.exe" --version
           $validation = "$env:RUNNER_TEMP/shader-tools-validation"
           cmake -S . -B $validation -G Ninja -DCMAKE_BUILD_TYPE=Release `
             -DGRANIT_BUILD_EXAMPLES=OFF -DGRANIT_BUILD_TESTING=ON -DGRANIT_BUILD_TOOLS=ON `
             -DGRANIT_SHADER_TOOLCHAIN_ROOT="$stage" -DGRANIT_SHADER_TOOLCHAIN_POLICY=locked `
             -DGRANIT_TINT_REVISION="$env:TINT_REVISION"
-          cmake --build $validation --target granit_shader_hlsl_api_test granit_shader_glsl_api_test
-          ctest --test-dir $validation -R "granit.shader_tools.(hlsl|glsl)_api" --output-on-failure
+          cmake --build $validation --target granit_shader_hlsl_api_test
+          ctest --test-dir $validation -R "granit.shader_tools.hlsl_api" --output-on-failure
           Compress-Archive -Path $stage -DestinationPath "$name.zip"
           $hash = (Get-FileHash "$name.zip" -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash  $name.zip" | Set-Content -Encoding ascii "$name.zip.sha256"
@@ -204,8 +196,6 @@ jobs:
     timeout-minutes: 120
     env:
       DXC_VERSION: 4973-8f559587
-      GLSLANG_VERSION: 15.4.0
-      GLSLANG_LICENSE_URL: https://raw.githubusercontent.com/KhronosGroup/glslang/15.4.0/LICENSE.txt
     steps:
       - uses: actions/checkout@v5
       - name: 安装构建依赖
@@ -231,13 +221,9 @@ jobs:
           mkdir -p "$root"
           curl --fail --location --retry 3 "$DXC_LICENSE_URL" --output "$root/DXC-LICENSE.txt"
           curl --fail --location --retry 3 "$DXC_NOTICES_URL" --output "$root/DXC-NOTICES.txt"
-          curl --fail --location --retry 3 "$GLSLANG_LICENSE_URL" \
-            --output "$root/glslang-LICENSE.txt"
           echo "$DXC_LICENSE_SHA256  $root/DXC-LICENSE.txt" | sha256sum --check
           echo "$DXC_NOTICES_SHA256  $root/DXC-NOTICES.txt" | sha256sum --check
-          echo "$GLSLANG_LICENSE_SHA256  $root/glslang-LICENSE.txt" | sha256sum --check
           echo "DXC_LICENSE_FILES=$root/DXC-LICENSE.txt;$root/DXC-NOTICES.txt" >> "$GITHUB_ENV"
-          echo "GLSLANG_LICENSE_FILES=$root/glslang-LICENSE.txt" >> "$GITHUB_ENV"
       - name: 恢复锁定 Tint 产物
         id: tint-cache
         uses: actions/cache/restore@v5
@@ -319,17 +305,14 @@ jobs:
           runtime="$VULKAN_SDK_ROOT/lib/libdxcompiler.so"
           cmake -DSTAGE="$stage" -DGENERATOR="$PWD/cmake/generate_shader_toolchain_manifest.cmake" \
             -DDXC="$VULKAN_SDK_ROOT/bin/dxc" \
-            -DGLSLANG="$VULKAN_SDK_ROOT/bin/glslangValidator" \
             -DTINT="$TINT_EXECUTABLE" -DDXC_VERSION="$DXC_VERSION" \
-            -DGLSLANG_VERSION="$GLSLANG_VERSION" -DDAWN_VERSION="$DAWN_VERSION" \
+            -DDAWN_VERSION="$DAWN_VERSION" \
             -DTINT_REVISION="$TINT_REVISION" -DDXC_LICENSE_FILES="$DXC_LICENSE_FILES" \
-            -DGLSLANG_LICENSE_FILES="$GLSLANG_LICENSE_FILES" \
             -DDAWN_LICENSE_FILES="$TINT_LICENSE" \
             -DRUNTIME_FILES="$runtime" -P cmake/package_shader_toolchain.cmake
           cmake -DSTAGE="$stage" -DMANIFEST="$stage/shader-toolchain.json" \
             -P cmake/verify_shader_toolchain_manifest.cmake
           LD_LIBRARY_PATH="$stage/lib" "$stage/bin/dxc" --version
-          "$stage/bin/glslangValidator" --version
           # 当前锁定的 Tint 没有版本参数，以能力帮助文本和源码修订共同确认身份。
           tint_help="$("$stage/bin/tint" --help 2>&1 || true)"
           [[ "$tint_help" == *"--input-format"* && "$tint_help" == *"spirv"* ]]
@@ -344,8 +327,8 @@ jobs:
             -DGRANIT_SHADER_TOOLCHAIN_POLICY=locked \
             -DGRANIT_TINT_REVISION="$TINT_REVISION"
           cmake --build "$validation" --target \
-            granit_shader_hlsl_api_test granit_shader_glsl_api_test
-          ctest --test-dir "$validation" -R 'granit.shader_tools.(hlsl|glsl)_api' \
+            granit_shader_hlsl_api_test
+          ctest --test-dir "$validation" -R 'granit.shader_tools.hlsl_api' \
             --output-on-failure
           tar -C stage -czf "$name.tar.gz" "$name"
           sha256sum "$name.tar.gz" > "$name.tar.gz.sha256"

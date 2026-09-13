@@ -33,6 +33,8 @@ struct canvas_draw_list_state {
       static_cast<void>(binding.reset());
     if (material != GRANIT_NULL_HANDLE)
       static_cast<void>(granit_material_destroy(renderer, material));
+    if (shader_library != GRANIT_NULL_HANDLE)
+      static_cast<void>(granit_shader_library_destroy(renderer, shader_library));
   }
 
   std::mutex mutex;
@@ -42,6 +44,7 @@ struct canvas_draw_list_state {
   std::vector<granit::pipeline::detail::pbr_draw_bindings> bindings;
   granit::pipeline::detail::canvas_material_group_cache material_groups;
   granit_material material = GRANIT_NULL_HANDLE;
+  granit_shader_library shader_library = GRANIT_NULL_HANDLE;
   bool clip_y_up = false;
 };
 
@@ -120,17 +123,27 @@ granit_result ensure_material(canvas_draw_list_state& state) {
                                        GRANIT_MATERIAL_PARAMETER_SAMPLER, 0, nullptr, 0,
                                        items.front().state.sampler}};
   const auto archive = granit::pipeline::detail::canvas_material_package();
+  if (state.shader_library == GRANIT_NULL_HANDLE) {
+    const auto library = granit::pipeline::detail::canvas_shader_library();
+    granit_shader_library_desc library_desc = GRANIT_SHADER_LIBRARY_DESC_INIT;
+    library_desc.archive_data = library.data();
+    library_desc.archive_size = library.size();
+    const auto result =
+        granit_shader_library_create(state.renderer, &library_desc, &state.shader_library);
+    if (result != GRANIT_SUCCESS)
+      return result;
+  }
   granit_material_desc desc = GRANIT_MATERIAL_DESC_INIT;
   desc.archive_data = archive.data();
   desc.archive_size = archive.size();
   desc.initial_updates = updates.data();
   desc.initial_update_count = static_cast<uint32_t>(updates.size());
-  desc.shader_resolver = granit::pipeline::detail::resolve_canvas_shader;
+  desc.shader_library = state.shader_library;
   return granit_material_create(state.renderer, &desc, &state.material);
 }
 
 granit::material::pbr_matrix4 pixel_projection(uint32_t width, uint32_t height, bool clip_y_up) {
-  // Canvas 使用左上原点；WebGPU 的 NDC Y 轴与 Vulkan 正高度视口相反。
+  // Canvas 使用左上原点；此处只处理 Canvas 像素投影，不改变材质或 View 的坐标契约。
   const auto y_sign = clip_y_up ? -1.0F : 1.0F;
   return {2.0F / static_cast<float>(width),
           0,
@@ -331,12 +344,12 @@ extern "C" granit_result granit_canvas_draw_list_record(granit_renderer renderer
   auto result = ensure_material(*state);
   if (result == GRANIT_SUCCESS)
     result = state->geometry.upload(renderer, state->list, frame_slot);
-  const granit::material::pbr_frame_constants frame{
-      .view_projection = pixel_projection(desc->width, desc->height, state->clip_y_up),
-      .camera_position = {},
-      .direction_to_light = {},
-      .light_radiance = {},
-      .render_options = {}};
+  const granit::material::pbr_frame_constants frame{.view_projection = pixel_projection(
+                                                        desc->width, desc->height, state->clip_y_up),
+                                                    .camera_position = {},
+                                                    .direction_to_light = {},
+                                                    .light_radiance = {},
+                                                    .render_options = {}};
   const granit::material::pbr_object_constants object{
       .model = identity_matrix(), .normal_matrix = identity_matrix(), .object_id = {}};
   if (result == GRANIT_SUCCESS) {

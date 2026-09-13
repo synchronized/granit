@@ -13,9 +13,9 @@
 
 | 窗口后端 | 第三方库提供 | Granit Surface 描述 | 额外转换 |
 |---|---|---|---|
-| Win32 | `HINSTANCE`、`HWND` | `win32_surface_desc` | 无 |
-| X11 | `Display*`、X11 `Window` | `xcb_surface_desc` | 使用 Xlib-xcb 取得 XCB connection |
-| Wayland | `wl_display*`、`wl_surface*` | `wayland_surface_desc` | 无 |
+| Win32 | `HINSTANCE`、`HWND` | `surface_desc::win32` | 无 |
+| X11 | `Display*`、X11 `Window` | `surface_desc::xcb` | 使用 Xlib-xcb 取得 XCB connection |
+| Wayland | `wl_display*`、`wl_surface*` | `surface_desc::wayland` | 无 |
 
 这些代码是平台直连示意，不属于稳定的第三方 Integration API。可选组件的当前接口见
 [SDL3 与 ImGui Integration](../reference/third-party-integrations.md)，后续阶段见
@@ -54,7 +54,8 @@ auto result = renderer.initialize({
 });
 granit::surface surface;
 if (result.ok())
-  result = surface.initialize_win32(renderer.native_handle(), {instance, hwnd});
+  result = surface.initialize(
+      renderer.native_handle(), granit::surface_desc::win32(instance, hwnd));
 ```
 
 ### Wayland
@@ -73,7 +74,8 @@ auto result = renderer.initialize({
 });
 granit::surface surface;
 if (result.ok())
-  result = surface.initialize_wayland(renderer.native_handle(), {display, wl_surface});
+  result = surface.initialize(
+      renderer.native_handle(), granit::surface_desc::wayland(display, wl_surface));
 ```
 
 SDL3 的 Wayland `xdg_*` 对象可能在隐藏和再次显示窗口时重建。窗口重新显示后必须重新查询属性，
@@ -101,9 +103,9 @@ auto result = renderer.initialize({
 });
 granit::surface surface;
 if (result.ok()) {
-  result = surface.initialize_xcb(
+  result = surface.initialize(
       renderer.native_handle(),
-      {connection, static_cast<std::uint32_t>(x11_window)});
+      granit::surface_desc::xcb(connection, static_cast<std::uint32_t>(x11_window)));
 }
 ```
 
@@ -124,7 +126,7 @@ if (result.ok()) {
 
 HWND hwnd = glfwGetWin32Window(window);
 HINSTANCE instance = reinterpret_cast<HINSTANCE>(GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
-surface.initialize_win32(renderer.native_handle(), {instance, hwnd});
+surface.initialize(renderer.native_handle(), granit::surface_desc::win32(instance, hwnd));
 ```
 
 Renderer 创建时声明 `granit::surface_type::win32`。
@@ -137,7 +139,8 @@ Renderer 创建时声明 `granit::surface_type::win32`。
 
 wl_display* display = glfwGetWaylandDisplay();
 wl_surface* wl_surface = glfwGetWaylandWindow(window);
-surface.initialize_wayland(renderer.native_handle(), {display, wl_surface});
+surface.initialize(
+    renderer.native_handle(), granit::surface_desc::wayland(display, wl_surface));
 ```
 
 Renderer 创建时声明 `granit::surface_type::wayland`。
@@ -152,9 +155,9 @@ Renderer 创建时声明 `granit::surface_type::wayland`。
 Display* display = glfwGetX11Display();
 const Window x11_window = glfwGetX11Window(window);
 xcb_connection_t* connection = XGetXCBConnection(display);
-surface.initialize_xcb(
+surface.initialize(
     renderer.native_handle(),
-    {connection, static_cast<std::uint32_t>(x11_window)});
+    granit::surface_desc::xcb(connection, static_cast<std::uint32_t>(x11_window)));
 ```
 
 Renderer 创建时声明 `granit::surface_type::xcb`，应用同时链接 GLFW 和 X11-xcb。

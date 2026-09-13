@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/tools/shader_tools.hpp>
+#include <granit/tools/shader_compiler.hpp>
+#include <granit/tools/shader_reflection.hpp>
 
 #include <cstring>
 #include <string_view>
@@ -9,6 +10,16 @@
 int main(int argc, char** argv) {
   if (argc != 4 && argc != 5)
     return 1;
+  granit::shader_tools::compiler compiler;
+  if (compiler.initialize({}).failed() || !compiler)
+    return 15;
+  auto moved_compiler = std::move(compiler);
+  if (!moved_compiler || compiler)
+    return 16;
+  compiler.reset();
+  const auto [compile_status, compilation] = compiler.compile({});
+  if (compile_status != granit::result::invalid_handle || compilation)
+    return 17;
   granit_shader_tools_inspect_desc desc{};
   constexpr auto expected_size =
       static_cast<uint32_t>(sizeof(granit_shader_tools_expected_binding));
@@ -24,16 +35,16 @@ int main(int argc, char** argv) {
   if (status.failed() || !result)
     return 2;
   const auto info = result.info();
-  if (info.status.failed() || info.stage != GRANIT_SHADER_TOOLS_STAGE_FRAGMENT ||
+  if (info.status.failed() || info.stage != granit::shader_stage::fragment ||
       info.entry_point.empty() || info.output.find("schema,1") == std::string_view::npos)
     return 3;
   if (result.binding_count() != 3)
     return 4;
   const auto [binding_status, binding] = result.binding(0);
   if (binding_status.failed() || binding.group != 0 || binding.binding != 0 ||
-      binding.type != GRANIT_SHADER_TOOLS_BINDING_UNIFORM_BUFFER ||
-      binding.access != GRANIT_SHADER_TOOLS_ACCESS_READ || binding.minimum_binding_size != 16 ||
-      binding.name.empty())
+      binding.type != granit::shader_tools::binding_type::uniform_buffer ||
+      binding.access != granit::shader_tools::binding_access::read ||
+      binding.minimum_binding_size != 16 || binding.name.empty())
     return 5;
   if (result.fragment_output_count() != 1)
     return 6;
@@ -41,8 +52,8 @@ int main(int argc, char** argv) {
     return 14;
   const auto [output_status, output] = result.fragment_output(0);
   if (output_status.failed() || output.location != 0 ||
-      output.scalar_type != GRANIT_SHADER_TOOLS_SCALAR_FLOAT || output.bit_width != 32 ||
-      output.vector_size != 4)
+      output.scalar_type != granit::shader_tools::scalar_type::floating_point ||
+      output.bit_width != 32 || output.vector_size != 4)
     return 7;
   auto moved = std::move(result);
   if (!moved || result)
@@ -73,8 +84,8 @@ int main(int argc, char** argv) {
       return 12;
     const auto [constant_status, constant] = override_result.override_at(0);
     if (constant_status.failed() || constant.id != 7 ||
-        constant.scalar_type != GRANIT_SHADER_TOOLS_SCALAR_FLOAT || constant.bit_width != 32 ||
-        constant.default_value_size != 4)
+        constant.scalar_type != granit::shader_tools::scalar_type::floating_point ||
+        constant.bit_width != 32 || constant.default_value_size != 4)
       return 13;
   }
   return 0;

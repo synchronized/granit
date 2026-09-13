@@ -147,7 +147,7 @@ D-03-graphics-pipeline.md
 - [S-19：Model Viewer 渲染线程](S-19-model-viewer-render-thread.md)——已完成；桌面使用有界渲染
   线程和异步上传，浏览器保持同步执行。
 - [S-20：Shader Asset 后端变体](S-20-shader-asset-variants.md)——已完成；后端 sidecar、能力选择和
-  WGSL/HLSL/GLSL portable 前端已形成闭环。
+  WGSL/HLSL portable 前端已形成闭环。
 - [S-21：可复现 Shader Toolchain 包](S-21-shader-toolchain-package.md)——已完成；发布带版本、许可
   和 SHA-256 清单的离线编译工具包，并让官方 CI 使用严格锁定策略。
 - [S-22：0.7.0 SDK 稳定化与上游集成](S-22-0.7.0-sdk-stabilization.md)——S-22A component 契约
@@ -181,6 +181,17 @@ D-03-graphics-pipeline.md
   已落地确定性纹理 Manifest、设备驱动的变体选择和逐 mip Upload Batch 契约。
 - [S-36：0.20.0 示例框架与跨平台 Model Viewer 稳定化](S-36-0.20.0-example-framework-and-model-viewer.md)——
   已完成；交互、帧延迟、示例分层、目录迁移、双后端视觉与发布验收均已闭合。
+- [S-37：0.21.0 Shader Library 与后端无关材质](S-37-0.21.0-shader-library-and-material-boundary.md)——
+  已完成；主体实现以及 Windows、Linux、Vulkan、Emscripten、浏览器 WebGPU、远端 SDK 和不可变
+  Release Candidate 验收均已通过。
+- [S-37H：WebGPU Provider 边界收敛](S-37H-webgpu-provider-boundary-collapse.md)——已完成；已删除
+  浏览器静态后端遗留的 Provider ABI、函数表、dispatch、domain adapter 和冗余 owner，并按领域
+  拆分后端私有设备实现，通过远端 Linux 与发布验收。
+- [S-37K：Shader 工具接口与组织收敛](S-37K-shader-tooling-api-structure.md)——已完成；已完成共享
+  类型、统一 Compiler、Compilation/Reflection、私有 Shader Object、Library Builder、CLI、CMake
+  适配与本地发布验收。
+- [S-37L：HLSL-first Shader 作者入口](S-37L-hlsl-first-shader-authoring.md)——已完成；L1 至 L6 已
+  完成作者入口、内建资产、旧接口和发布边界收敛，并通过完整跨平台与候选包验收。
 
 ## 状态
 

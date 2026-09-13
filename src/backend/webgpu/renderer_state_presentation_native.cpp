@@ -1,0 +1,229 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Granit contributors
+
+#include "backend/webgpu/renderer_state.h"
+
+#include <new>
+#include <utility>
+
+namespace granit::detail {
+namespace {
+
+webgpu_swapchain_desc to_webgpu_swapchain_desc(const backend_swapchain_desc& desc) {
+  return {sizeof(webgpu_swapchain_desc), desc.width, desc.height, desc.minimum_image_count,
+          desc.present_mode};
+}
+
+granit_texture_format to_texture_format(webgpu_texture_format format) {
+  switch (format) {
+  case GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA8_UNORM:
+    return GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+  case GRANIT_WEBGPU_TEXTURE_FORMAT_BGRA8_UNORM:
+    return GRANIT_TEXTURE_FORMAT_BGRA8_UNORM;
+  default:
+    return GRANIT_TEXTURE_FORMAT_UNDEFINED;
+  }
+}
+
+} // namespace
+
+namespace {
+
+class webgpu_surface_resource final : public backend_surface_resource {
+public:
+  explicit webgpu_surface_resource(std::shared_ptr<webgpu_renderer_state> renderer)
+      : renderer_(std::move(renderer)) {}
+
+  ~webgpu_surface_resource() override {
+    if (handle_ != 0) {
+      static_cast<void>(renderer_->native_device().destroy_surface(handle_));
+    }
+  }
+
+  std::shared_ptr<webgpu_renderer_state> renderer_;
+  webgpu_surface handle_{};
+};
+
+class webgpu_swapchain_resource final : public backend_swapchain_resource {
+public:
+  explicit webgpu_swapchain_resource(std::shared_ptr<webgpu_renderer_state> renderer)
+      : renderer_(std::move(renderer)) {}
+
+  ~webgpu_swapchain_resource() override {
+    if (handle_ != 0) {
+      static_cast<void>(renderer_->native_device().destroy_swapchain(handle_));
+    }
+  }
+
+  std::shared_ptr<webgpu_renderer_state> renderer_;
+  webgpu_swapchain handle_{};
+};
+
+/** 借用资源由 Swapchain 在 Present、Cancel 或重建时统一失效。 */
+class webgpu_borrowed_texture_resource final : public backend_texture_resource {
+public:
+  explicit webgpu_borrowed_texture_resource(webgpu_texture handle) : handle_(handle) {}
+
+  webgpu_texture handle_{};
+};
+
+class webgpu_borrowed_texture_view_resource final : public backend_texture_view_resource {
+public:
+  explicit webgpu_borrowed_texture_view_resource(webgpu_texture_view handle) : handle_(handle) {}
+
+  webgpu_texture_view handle_{};
+};
+
+webgpu_surface_resource* as_surface(backend_surface_resource& resource) {
+  return dynamic_cast<webgpu_surface_resource*>(&resource);
+}
+
+webgpu_swapchain_resource* as_swapchain(backend_swapchain_resource& resource) {
+  return dynamic_cast<webgpu_swapchain_resource*>(&resource);
+}
+
+} // namespace
+
+std::unique_ptr<backend_surface_resource> webgpu_renderer_state::presentation_allocate_surface() {
+  return std::make_unique<webgpu_surface_resource>(shared_from_this());
+}
+
+std::unique_ptr<backend_swapchain_resource>
+webgpu_renderer_state::presentation_allocate_swapchain() {
+  return std::make_unique<webgpu_swapchain_resource>(shared_from_this());
+}
+
+granit_result
+webgpu_renderer_state::presentation_create_surface(const granit_surface_desc& desc,
+                                                   backend_surface_resource& resource) noexcept {
+  auto* surface = as_surface(resource);
+  if (surface == nullptr || surface->handle_ != 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  return device_.create_surface(&desc, &surface->handle_);
+}
+
+granit_result webgpu_renderer_state::presentation_create_swapchain(
+    backend_surface_resource& surface_resource, const backend_swapchain_desc& desc,
+    backend_swapchain_resource& swapchain_resource) noexcept {
+  auto* surface = as_surface(surface_resource);
+  auto* swapchain = as_swapchain(swapchain_resource);
+  if (surface == nullptr || surface->handle_ == 0 || swapchain == nullptr ||
+      swapchain->handle_ != 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const auto native_desc = to_webgpu_swapchain_desc(desc);
+  return device_.create_swapchain(surface->handle_, &native_desc, &swapchain->handle_);
+}
+
+granit_result webgpu_renderer_state::presentation_recreate_swapchain(
+    backend_swapchain_resource& resource, const backend_swapchain_desc& desc) noexcept {
+  auto* swapchain = as_swapchain(resource);
+  if (swapchain == nullptr || swapchain->handle_ == 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  const auto native_desc = to_webgpu_swapchain_desc(desc);
+  return device_.recreate_swapchain(swapchain->handle_, &native_desc);
+}
+
+granit_result
+webgpu_renderer_state::presentation_get_swapchain_info(backend_swapchain_resource& resource,
+                                                       backend_swapchain_info& info) noexcept {
+  auto* swapchain = as_swapchain(resource);
+  if (swapchain == nullptr || swapchain->handle_ == 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  webgpu_swapchain_info native_info{};
+  native_info.struct_size = sizeof(native_info);
+  const auto result = device_.get_swapchain_info(swapchain->handle_, &native_info);
+  if (result != GRANIT_SUCCESS) {
+    return result;
+  }
+  const auto format = to_texture_format(native_info.format);
+  if (format == GRANIT_TEXTURE_FORMAT_UNDEFINED) {
+    return GRANIT_ERROR_UNSUPPORTED;
+  }
+  info = {native_info.width, native_info.height, native_info.image_count, native_info.present_mode,
+          format};
+  return GRANIT_SUCCESS;
+}
+
+granit_result webgpu_renderer_state::presentation_acquire_swapchain(
+    backend_swapchain_resource& resource, backend_acquired_swapchain_frame& frame) noexcept {
+  auto* swapchain = as_swapchain(resource);
+  if (swapchain == nullptr || swapchain->handle_ == 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  webgpu_acquired_frame native_frame{};
+  native_frame.struct_size = sizeof(native_frame);
+  const auto result = device_.acquire_swapchain(swapchain->handle_, &native_frame);
+  if (result != GRANIT_SUCCESS) {
+    return result;
+  }
+
+  backend_swapchain_info info{};
+  const auto info_result = presentation_get_swapchain_info(resource, info);
+  if (info_result != GRANIT_SUCCESS) {
+    std::uint32_t ignored{};
+    static_cast<void>(device_.cancel_swapchain(swapchain->handle_, &ignored));
+    return info_result;
+  }
+
+  granit_texture_desc texture_desc = GRANIT_TEXTURE_DESC_INIT;
+  texture_desc.format = info.format;
+  texture_desc.usage = GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT;
+  texture_desc.memory_location = GRANIT_MEMORY_LOCATION_DEVICE;
+  texture_desc.width = info.width;
+  texture_desc.height = info.height;
+
+  auto texture = std::unique_ptr<backend_texture_resource>(
+      new (std::nothrow) webgpu_borrowed_texture_resource(native_frame.texture));
+  auto view = std::unique_ptr<backend_texture_view_resource>(
+      new (std::nothrow) webgpu_borrowed_texture_view_resource(native_frame.view));
+  if (texture == nullptr || view == nullptr) {
+    std::uint32_t ignored{};
+    static_cast<void>(device_.cancel_swapchain(swapchain->handle_, &ignored));
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
+
+  frame = {};
+  frame.image_index = native_frame.image_index;
+  frame.needs_recreate = native_frame.needs_recreate != 0;
+  frame.dynamic_backbuffer.texture = std::move(texture);
+  frame.dynamic_backbuffer.view = std::move(view);
+  frame.dynamic_backbuffer.desc = texture_desc;
+  return GRANIT_SUCCESS;
+}
+
+granit_result
+webgpu_renderer_state::presentation_present_swapchain(backend_swapchain_resource& resource,
+                                                      bool& needs_recreate) noexcept {
+  auto* swapchain = as_swapchain(resource);
+  if (swapchain == nullptr || swapchain->handle_ == 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  std::uint32_t native_needs_recreate{};
+  const auto result = device_.present_swapchain(swapchain->handle_, &native_needs_recreate);
+  needs_recreate = native_needs_recreate != 0;
+  return result;
+}
+
+granit_result
+webgpu_renderer_state::presentation_cancel_swapchain(backend_swapchain_resource& resource,
+                                                     bool& needs_recreate) noexcept {
+  auto* swapchain = as_swapchain(resource);
+  if (swapchain == nullptr || swapchain->handle_ == 0) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  std::uint32_t native_needs_recreate{};
+  const auto result = device_.cancel_swapchain(swapchain->handle_, &native_needs_recreate);
+  needs_recreate = native_needs_recreate != 0;
+  return result;
+}
+
+webgpu_texture_view
+webgpu_renderer_state::presentation_native_view(backend_texture_view_resource& resource) noexcept {
+  const auto* view = dynamic_cast<webgpu_borrowed_texture_view_resource*>(&resource);
+  return view == nullptr ? 0 : view->handle_;
+}
+
+} // namespace granit::detail

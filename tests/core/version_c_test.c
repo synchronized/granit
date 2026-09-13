@@ -25,6 +25,8 @@ static void granit_test_result_messages(void) {
   TEST_ASSERT_NOT_NULL(granit_result_message(GRANIT_ERROR_INVALID_ARGUMENT));
   TEST_ASSERT_NOT_NULL(granit_result_message(GRANIT_ERROR_NOT_READY));
   TEST_ASSERT_EQUAL_STRING("operation cancelled", granit_result_message(GRANIT_ERROR_CANCELLED));
+  TEST_ASSERT_EQUAL_STRING("resource is still in use",
+                           granit_result_message(GRANIT_ERROR_RESOURCE_IN_USE));
 }
 
 static void granit_test_async_operation_invalid_arguments(void) {
@@ -40,12 +42,10 @@ static void granit_test_async_operation_invalid_arguments(void) {
   TEST_ASSERT_EQUAL_INT32(
       GRANIT_ERROR_INVALID_HANDLE,
       granit_async_operation_get_status(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE, &status));
-  TEST_ASSERT_EQUAL_INT32(
-      GRANIT_ERROR_INVALID_HANDLE,
-      granit_async_operation_request_cancel(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE));
-  TEST_ASSERT_EQUAL_INT32(
-      GRANIT_ERROR_INVALID_HANDLE,
-      granit_async_operation_destroy(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE));
+  TEST_ASSERT_EQUAL_INT32(GRANIT_ERROR_INVALID_HANDLE, granit_async_operation_request_cancel(
+                                                           GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE));
+  TEST_ASSERT_EQUAL_INT32(GRANIT_ERROR_INVALID_HANDLE,
+                          granit_async_operation_destroy(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE));
 }
 
 static void granit_test_renderer_rejects_invalid_arguments(void) {
@@ -66,23 +66,26 @@ static void granit_test_renderer_rejects_invalid_arguments(void) {
 
 static void granit_test_surface_rejects_invalid_arguments(void) {
   granit_surface surface = GRANIT_NULL_HANDLE;
-  granit_win32_surface_desc desc = GRANIT_WIN32_SURFACE_DESC_INIT;
+  granit_surface_desc desc = GRANIT_SURFACE_DESC_INIT;
+  desc.surface_type = GRANIT_SURFACE_TYPE_WIN32_BIT;
 
   TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_HANDLE,
-                        granit_surface_create_win32(GRANIT_NULL_HANDLE, &desc, &surface));
+                        granit_surface_create(GRANIT_NULL_HANDLE, &desc, &surface));
   TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_ARGUMENT,
-                        granit_surface_create_win32(UINT64_C(1), &desc, &surface));
+                        granit_surface_create(UINT64_C(1), &desc, &surface));
   TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_HANDLE,
                         granit_surface_destroy(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE));
   {
-    granit_xcb_surface_desc xcb = GRANIT_XCB_SURFACE_DESC_INIT;
+    granit_surface_desc xcb = GRANIT_SURFACE_DESC_INIT;
+    xcb.surface_type = GRANIT_SURFACE_TYPE_XCB_BIT;
     TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_ARGUMENT,
-                          granit_surface_create_xcb(UINT64_C(1), &xcb, &surface));
+                          granit_surface_create(UINT64_C(1), &xcb, &surface));
   }
   {
-    granit_wayland_surface_desc wayland = GRANIT_WAYLAND_SURFACE_DESC_INIT;
+    granit_surface_desc wayland = GRANIT_SURFACE_DESC_INIT;
+    wayland.surface_type = GRANIT_SURFACE_TYPE_WAYLAND_BIT;
     TEST_ASSERT_EQUAL_INT(GRANIT_ERROR_INVALID_ARGUMENT,
-                          granit_surface_create_wayland(UINT64_C(1), &wayland, &surface));
+                          granit_surface_create(UINT64_C(1), &wayland, &surface));
   }
 }
 

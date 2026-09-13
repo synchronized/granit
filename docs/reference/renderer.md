@@ -108,7 +108,7 @@ Renderer 返回 `GRANIT_ERROR_INVALID_HANDLE`。限制来自 Renderer 创建时�
 结尾零字符；名称、Vendor ID 或 Device ID 不可用时返回空值。这些元数据只用于诊断和性能记录，
 不应作为渲染行为分支条件。C++ 包装通过 `renderer::get_info(renderer_info&)` 完成缓冲区管理。
 
-Emscripten 使用静态 WebGPU Provider，`AUTO` 与 `WEBGPU` 都选择该后端；显式 Vulkan 返回
+Emscripten 使用静态编译的 WebGPU 后端，`AUTO` 与 `WEBGPU` 都选择该后端；显式 Vulkan 返回
 `GRANIT_ERROR_BACKEND_UNAVAILABLE`。Renderer 描述不接受后端动态库路径。
 
 ## 资源统计
@@ -153,7 +153,7 @@ if (result == GRANIT_SUCCESS && status.state == GRANIT_RENDERER_STATE_INITIALIZI
 立即为 `READY`；该模型同时为异步 WebGPU 初始化保留统一入口。
 
 需要创建窗口 Surface 时，通过 `surface_types` 提前声明窗口系统。当前公共入口支持 Win32、XCB、
-Wayland 和 Canvas；实际可用集合取决于所选后端、平台及 Provider 能力。具体创建方式见
+Wayland 和 Canvas；实际可用集合取决于所选后端与平台能力。具体创建方式见
 [surface.md](surface.md)。
 
 ## C++ API

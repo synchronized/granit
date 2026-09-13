@@ -287,8 +287,20 @@ archive_error export_material_archive_debug_json(std::span<const std::byte> byte
            << ",\n    \"file_size\": " << layout.header.file_size << ",\n    \"content_hash\": ";
     write_hash(stream, layout.header.content_hash);
     stream << "\n  },\n  \"requirements\": {\n    \"target_environment\": \"cross_backend\",\n"
-              "    \"binding_model\": \"bind_group\",\n    \"renderer_features\": []\n  },\n"
-              "  \"sections\": [";
+              "    \"binding_model\": \"bind_group\",\n    \"binding_groups\": [";
+    constexpr std::array groups{std::pair{package_binding_group_frame, "frame"},
+                                std::pair{package_binding_group_material, "material"},
+                                std::pair{package_binding_group_object, "object"},
+                                std::pair{package_binding_group_lighting, "lighting"}};
+    bool first_group = true;
+    for (const auto& [flag, name] : groups) {
+      if ((package.binding_groups() & flag) == 0)
+        continue;
+      stream << (first_group ? "" : ", ");
+      write_json_string(stream, name);
+      first_group = false;
+    }
+    stream << "],\n    \"renderer_features\": []\n  },\n  \"sections\": [";
     for (std::size_t index = 0; index < layout.sections.size(); ++index) {
       const auto& section = layout.sections[index];
       stream << (index == 0 ? "\n" : ",\n") << "    {\"type\": ";
