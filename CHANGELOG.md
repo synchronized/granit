@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+## 0.22.0 - 2026-09-14
+
 ### 新增
 
 - 新增可安装的 `AssetTools` component、`granit::asset_tools` 目标和统一 `granit_asset_tool`，覆盖

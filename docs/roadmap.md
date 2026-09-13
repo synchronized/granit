@@ -47,7 +47,7 @@
 | 二十七、0.19.0 纹理资产变体 | 已发布 | 纹理 Manifest、选择与逐 mip 上传已完成 |
 | 二十八、0.20.0 示例框架稳定化 | 已发布 | 示例分层、交互与双后端视觉验收已完成 |
 | 二十九、0.21.0 Shader Library 与后端无关材质 | 已完成 | S-37A～S-37L 与跨平台候选包验收均已完成 |
-| 三十、0.22.0 AssetTools SDK 与工具链交付 | 已完成 | S-38A～G 与跨平台候选包验收均已完成 |
+| 三十、0.22.0 AssetTools SDK 与工具链交付 | 已发布 | AssetTools SDK 与工具链已随 0.22.0 发布 |
 
 ## 一、工程与 ABI 基础
 
@@ -455,7 +455,7 @@
 
 ## 三十、0.22.0 AssetTools SDK 与工具链交付
 
-**状态：已完成；S-38A～S-38G 与跨平台候选包验收均已通过。**
+**状态：已发布；S-38A～S-38G 与跨平台候选包验收均已随 0.22.0 完成。**
 
 - **[S-38](plans/S-38-0.22.0-asset-tools-and-toolchain.md) / P1**：将 Shader、Material、Texture 与
   Environment 的离线构建能力收敛为一个 AssetTools SDK、component 和 CLI，同时保留各自独立的
