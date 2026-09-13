@@ -650,6 +650,116 @@ TEST_CASE("统一Render Pipeline拒绝跨Renderer与越界View") {
   REQUIRE(granit_render_pipeline_destroy(first.native_handle(), pipeline) == GRANIT_SUCCESS);
 }
 
+TEST_CASE("Render Pipeline在没有可见物体时仍清屏并执行覆盖层") {
+  granit::renderer renderer;
+  const auto initialized = renderer.initialize({.application_name = "granit-empty-pipeline"});
+  if (environment_unavailable(initialized))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(initialized == granit::result::success);
+
+  constexpr uint32_t size = 8;
+  granit::texture output_texture;
+  granit::texture_view output_view;
+  REQUIRE(output_texture.initialize(renderer.native_handle(),
+                                    {.format = granit::texture_format::rgba8_unorm,
+                                     .usage = granit::texture_usage::color_attachment |
+                                              granit::texture_usage::transfer_source,
+                                     .width = size,
+                                     .height = size}) == granit::result::success);
+  REQUIRE(output_view.initialize(renderer.native_handle(), output_texture.native_handle()) ==
+          granit::result::success);
+
+  granit_scene_view view{};
+  view.view = identity();
+  view.projection = identity();
+  view.view_projection = identity();
+  view.viewport_width = size;
+  view.viewport_height = size;
+  view.layer_mask = UINT64_C(2);
+  granit_scene_snapshot_desc scene_desc = GRANIT_SCENE_SNAPSHOT_DESC_INIT;
+  scene_desc.views = &view;
+  scene_desc.view_count = 1;
+  granit::scene_snapshot empty_scene;
+  REQUIRE(empty_scene.initialize(renderer.native_handle(), scene_desc) == granit::result::success);
+
+  granit_render_pipeline_render_desc render_desc = GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT;
+  render_desc.scene = empty_scene.native_handle();
+  render_desc.output = output_view.native_handle();
+  render_desc.output_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+  render_desc.width = size;
+  render_desc.height = size;
+  render_desc.clear_color = {0.25F, 0.5F, 1.0F, 1.0F};
+
+  granit_scene_renderable culled{};
+  culled.model = identity();
+  culled.normal_matrix = identity();
+  culled.bounds_radius = 0.25F;
+  culled.layer_mask = UINT64_C(1);
+  culled.payload = 99;
+  scene_desc.renderables = &culled;
+  scene_desc.renderable_count = 1;
+  granit::scene_snapshot culled_scene;
+  REQUIRE(culled_scene.initialize(renderer.native_handle(), scene_desc) == granit::result::success);
+  callback_state callback;
+  callback.renderer = renderer.native_handle();
+  granit_render_pipeline_desc callback_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
+  callback_desc.record = record;
+  callback_desc.user_data = &callback;
+  granit::render_pipeline callback_pipeline;
+  REQUIRE(callback_pipeline.initialize(renderer.native_handle(), callback_desc) ==
+          granit::result::success);
+  REQUIRE(callback_pipeline.render(render_desc) == granit::result::success);
+  CHECK(callback.stages ==
+        std::vector<granit_render_pipeline_stage>{GRANIT_RENDER_PIPELINE_STAGE_OPAQUE,
+                                                  GRANIT_RENDER_PIPELINE_STAGE_OVERLAY});
+  CHECK(callback.payloads.empty());
+
+  for (const auto sample_count : {GRANIT_SAMPLE_COUNT_1, GRANIT_SAMPLE_COUNT_4}) {
+    granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
+    pipeline_desc.sample_count = sample_count;
+    granit::render_pipeline pipeline;
+    REQUIRE(pipeline.initialize(renderer.native_handle(), pipeline_desc) ==
+            granit::result::success);
+    render_desc.scene = empty_scene.native_handle();
+    REQUIRE(pipeline.render(render_desc) == granit::result::success);
+    render_desc.scene = culled_scene.native_handle();
+    REQUIRE(pipeline.render(render_desc) == granit::result::success);
+  }
+
+  granit::buffer readback;
+  REQUIRE(readback.initialize(renderer.native_handle(),
+                              {.size = size * size * 4,
+                               .usage = granit::buffer_usage::transfer_destination,
+                               .location = granit::memory_location::readback}) ==
+          granit::result::success);
+  granit::command_recorder recorder;
+  REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(recorder.begin() == granit::result::success);
+  const granit_texture_write_region region{.mip_level = 0,
+                                           .base_array_layer = 0,
+                                           .array_layer_count = 1,
+                                           .aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT,
+                                           .x = 0,
+                                           .y = 0,
+                                           .z = 0,
+                                           .width = size,
+                                           .height = size,
+                                           .depth = 1};
+  REQUIRE(recorder.copy_texture_to_buffer(output_texture.native_handle(), readback.native_handle(),
+                                          {}, region) == granit::result::success);
+  REQUIRE(recorder.end() == granit::result::success);
+  REQUIRE(recorder.submit() == granit::result::success);
+  REQUIRE(recorder.reset() == granit::result::success);
+
+  void* mapped = nullptr;
+  REQUIRE(readback.map(0, size * size * 4, &mapped) == granit::result::success);
+  const auto* pixel = static_cast<const uint8_t*>(mapped);
+  CHECK(pixel[0] > 150);
+  CHECK(pixel[1] > pixel[0]);
+  CHECK(pixel[2] > pixel[1]);
+  REQUIRE(readback.unmap() == granit::result::success);
+}
+
 TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   granit::renderer renderer;
   const auto initialized = renderer.initialize({.application_name = "granit-pipeline-pixel-abi"});
