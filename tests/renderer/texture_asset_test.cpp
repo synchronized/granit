@@ -100,23 +100,6 @@ TEST_CASE("Texture Asset检查返回变体与子资源", "[texture_asset][inspec
   CHECK(cpp_info.subresources.size() == 1);
 }
 
-TEST_CASE("Texture Asset编码结果可确定性往返", "[texture_asset][encode]") {
-  const auto source = make_manifest();
-  granit::texture_asset_info info;
-  REQUIRE(granit::inspect_texture_asset(source, info) == granit::result::success);
-  std::vector<std::byte> first;
-  std::vector<std::byte> second;
-  REQUIRE(granit::encode_texture_asset(info, first) == granit::result::success);
-  REQUIRE(granit::encode_texture_asset(info, second) == granit::result::success);
-  CHECK(first == source);
-  CHECK(second == first);
-
-  granit_texture_asset_info native = GRANIT_TEXTURE_ASSET_INFO_INIT;
-  std::uint64_t required_size = 1;
-  CHECK(granit_texture_asset_encode(&native, nullptr, &required_size) ==
-        GRANIT_ERROR_INVALID_ARGUMENT);
-}
-
 TEST_CASE("Texture Asset检查拒绝损坏布局和未知版本", "[texture_asset][validation]") {
   auto manifest = make_manifest();
   granit_texture_asset_info info = GRANIT_TEXTURE_ASSET_INFO_INIT;

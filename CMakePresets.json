@@ -135,7 +135,7 @@
         "GRANIT_BUILD_MODEL_VIEWER_EXAMPLE": true,
         "GRANIT_BUILD_BENCHMARKS": false,
         "GRANIT_BUILD_TOOLS": false,
-        "GRANIT_BUILD_SHADER_TOOLS": false,
+        "GRANIT_BUILD_ASSET_TOOLS": false,
         "GRANIT_WARNINGS_AS_ERRORS": true
       }
     },

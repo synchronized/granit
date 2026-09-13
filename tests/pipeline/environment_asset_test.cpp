@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "assets/environment_asset.h"
 #include "core/sha256.h"
-#include "pipeline/environment_asset.h"
 
 #include <catch2/catch_all.hpp>
 #include <granit/pipeline/environment_map.hpp>
@@ -49,7 +49,7 @@ std::vector<std::byte> valid_package() {
 } // namespace
 
 TEST_CASE("GRENV v3 严格解析预处理环境布局和推荐光照", "[pipeline][environment]") {
-  using namespace granit::pipeline::detail;
+  using namespace granit::detail;
   auto bytes = valid_package();
   environment_package package;
   REQUIRE(parse_environment_package(bytes, package) == environment_package_error::none);
@@ -90,7 +90,7 @@ TEST_CASE("GRENV v3 严格解析预处理环境布局和推荐光照", "[pipelin
 }
 
 TEST_CASE("GRENV环境资源上传为Render Pipeline输入", "[example][model-viewer][environment][gpu]") {
-  using namespace granit::pipeline::detail;
+  using namespace granit::detail;
   granit::renderer renderer;
   const auto renderer_result = renderer.initialize({.application_name = "GRENV Test"});
   if (renderer_result.failed())

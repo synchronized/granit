@@ -12,7 +12,7 @@
 #include <string_view>
 #include <utility>
 
-namespace granit::shader_tools {
+namespace granit::asset_tools::shader {
 
 struct reflection_info {
   ::granit::result status = ::granit::result::invalid_handle;
@@ -23,23 +23,23 @@ struct reflection_info {
 };
 
 enum class binding_type : std::uint32_t {
-  uniform_buffer = GRANIT_SHADER_TOOLS_BINDING_UNIFORM_BUFFER,
-  storage_buffer = GRANIT_SHADER_TOOLS_BINDING_STORAGE_BUFFER,
-  sampled_texture = GRANIT_SHADER_TOOLS_BINDING_SAMPLED_TEXTURE,
-  storage_texture = GRANIT_SHADER_TOOLS_BINDING_STORAGE_TEXTURE,
-  sampler = GRANIT_SHADER_TOOLS_BINDING_SAMPLER,
+  uniform_buffer = GRANIT_ASSET_TOOLS_SHADER_BINDING_UNIFORM_BUFFER,
+  storage_buffer = GRANIT_ASSET_TOOLS_SHADER_BINDING_STORAGE_BUFFER,
+  sampled_texture = GRANIT_ASSET_TOOLS_SHADER_BINDING_SAMPLED_TEXTURE,
+  storage_texture = GRANIT_ASSET_TOOLS_SHADER_BINDING_STORAGE_TEXTURE,
+  sampler = GRANIT_ASSET_TOOLS_SHADER_BINDING_SAMPLER,
 };
 
 enum class binding_access : std::uint32_t {
-  read = GRANIT_SHADER_TOOLS_ACCESS_READ,
-  write = GRANIT_SHADER_TOOLS_ACCESS_WRITE,
-  read_write = GRANIT_SHADER_TOOLS_ACCESS_READ_WRITE,
+  read = GRANIT_ASSET_TOOLS_SHADER_ACCESS_READ,
+  write = GRANIT_ASSET_TOOLS_SHADER_ACCESS_WRITE,
+  read_write = GRANIT_ASSET_TOOLS_SHADER_ACCESS_READ_WRITE,
 };
 
 enum class scalar_type : std::uint32_t {
-  floating_point = GRANIT_SHADER_TOOLS_SCALAR_FLOAT,
-  signed_integer = GRANIT_SHADER_TOOLS_SCALAR_SINT,
-  unsigned_integer = GRANIT_SHADER_TOOLS_SCALAR_UINT,
+  floating_point = GRANIT_ASSET_TOOLS_SHADER_SCALAR_FLOAT,
+  signed_integer = GRANIT_ASSET_TOOLS_SHADER_SCALAR_SINT,
+  unsigned_integer = GRANIT_ASSET_TOOLS_SHADER_SCALAR_UINT,
 };
 
 struct binding_info {
@@ -79,7 +79,7 @@ struct override_info {
 class reflection {
 public:
   reflection() = default;
-  explicit reflection(granit_shader_tools_reflection handle) noexcept : handle_(handle) {}
+  explicit reflection(granit_asset_tools_shader_reflection handle) noexcept : handle_(handle) {}
   ~reflection() { reset(); }
   reflection(const reflection&) = delete;
   reflection& operator=(const reflection&) = delete;
@@ -94,9 +94,9 @@ public:
 
   [[nodiscard]] explicit operator bool() const noexcept { return handle_ != 0; }
   [[nodiscard]] reflection_info info() const noexcept {
-    granit_shader_tools_reflection_info value{};
+    granit_asset_tools_shader_reflection_info value{};
     value.struct_size = sizeof(value);
-    if (granit_shader_tools_reflection_get_info(handle_, &value) != GRANIT_SUCCESS)
+    if (granit_asset_tools_shader_reflection_get_info(handle_, &value) != GRANIT_SUCCESS)
       return {};
     return {::granit::from_native(value.status),
             {value.entry_point, static_cast<std::size_t>(value.entry_point_length)},
@@ -106,14 +106,14 @@ public:
   }
   [[nodiscard]] uint64_t binding_count() const noexcept {
     uint64_t count = 0;
-    return granit_shader_tools_reflection_get_binding_count(handle_, &count) == GRANIT_SUCCESS
+    return granit_asset_tools_shader_reflection_get_binding_count(handle_, &count) == GRANIT_SUCCESS
                ? count
                : 0;
   }
   [[nodiscard]] std::pair<::granit::result, binding_info> binding(uint64_t index) const noexcept {
-    granit_shader_tools_binding_info value{};
+    granit_asset_tools_shader_binding_info value{};
     value.struct_size = sizeof(value);
-    const auto status = granit_shader_tools_reflection_get_binding(handle_, index, &value);
+    const auto status = granit_asset_tools_shader_reflection_get_binding(handle_, index, &value);
     if (status != GRANIT_SUCCESS)
       return {::granit::from_native(status), {}};
     return {::granit::result::success,
@@ -127,43 +127,45 @@ public:
   }
   [[nodiscard]] uint64_t vertex_input_count() const noexcept {
     uint64_t count = 0;
-    return granit_shader_tools_reflection_get_vertex_input_count(handle_, &count) == GRANIT_SUCCESS
+    return granit_asset_tools_shader_reflection_get_vertex_input_count(handle_, &count) ==
+                   GRANIT_SUCCESS
                ? count
                : 0;
   }
   [[nodiscard]] uint64_t fragment_output_count() const noexcept {
     uint64_t count = 0;
-    return granit_shader_tools_reflection_get_fragment_output_count(handle_, &count) ==
+    return granit_asset_tools_shader_reflection_get_fragment_output_count(handle_, &count) ==
                    GRANIT_SUCCESS
                ? count
                : 0;
   }
   [[nodiscard]] std::pair<::granit::result, interface_variable_info>
   vertex_input(uint64_t index) const noexcept {
-    return interface_variable(index, granit_shader_tools_reflection_get_vertex_input);
+    return interface_variable(index, granit_asset_tools_shader_reflection_get_vertex_input);
   }
   [[nodiscard]] std::pair<::granit::result, interface_variable_info>
   fragment_output(uint64_t index) const noexcept {
-    return interface_variable(index, granit_shader_tools_reflection_get_fragment_output);
+    return interface_variable(index, granit_asset_tools_shader_reflection_get_fragment_output);
   }
   [[nodiscard]] workgroup_size compute_workgroup_size() const noexcept {
-    granit_shader_tools_workgroup_size value{};
+    granit_asset_tools_shader_workgroup_size value{};
     value.struct_size = sizeof(value);
-    if (granit_shader_tools_reflection_get_workgroup_size(handle_, &value) != GRANIT_SUCCESS)
+    if (granit_asset_tools_shader_reflection_get_workgroup_size(handle_, &value) != GRANIT_SUCCESS)
       return {};
     return {value.x, value.y, value.z};
   }
   [[nodiscard]] uint64_t override_count() const noexcept {
     uint64_t count = 0;
-    return granit_shader_tools_reflection_get_override_count(handle_, &count) == GRANIT_SUCCESS
+    return granit_asset_tools_shader_reflection_get_override_count(handle_, &count) ==
+                   GRANIT_SUCCESS
                ? count
                : 0;
   }
   [[nodiscard]] std::pair<::granit::result, override_info>
   override_at(uint64_t index) const noexcept {
-    granit_shader_tools_override_info value{};
+    granit_asset_tools_shader_override_info value{};
     value.struct_size = sizeof(value);
-    const auto status = granit_shader_tools_reflection_get_override(handle_, index, &value);
+    const auto status = granit_asset_tools_shader_reflection_get_override(handle_, index, &value);
     if (status != GRANIT_SUCCESS)
       return {::granit::from_native(status), {}};
     return {::granit::result::success,
@@ -177,24 +179,24 @@ public:
   [[nodiscard]] std::string_view reflection_json() const noexcept {
     const char* data = nullptr;
     uint64_t size = 0;
-    if (granit_shader_tools_reflection_get_json(handle_, &data, &size) != GRANIT_SUCCESS)
+    if (granit_asset_tools_shader_reflection_get_json(handle_, &data, &size) != GRANIT_SUCCESS)
       return {};
     return {data, static_cast<std::size_t>(size)};
   }
   void reset() noexcept {
     if (handle_ != 0) {
-      granit_shader_tools_reflection_destroy(handle_);
+      granit_asset_tools_shader_reflection_destroy(handle_);
       handle_ = 0;
     }
   }
 
 private:
-  using interface_getter = granit_result (*)(granit_shader_tools_reflection, uint64_t,
-                                             granit_shader_tools_interface_variable_info*);
+  using interface_getter = granit_result (*)(granit_asset_tools_shader_reflection, uint64_t,
+                                             granit_asset_tools_shader_interface_variable_info*);
 
   [[nodiscard]] std::pair<::granit::result, interface_variable_info>
   interface_variable(uint64_t index, interface_getter getter) const noexcept {
-    granit_shader_tools_interface_variable_info value{};
+    granit_asset_tools_shader_interface_variable_info value{};
     value.struct_size = sizeof(value);
     const auto status = getter(handle_, index, &value);
     if (status != GRANIT_SUCCESS)
@@ -208,16 +210,16 @@ private:
              {value.name, static_cast<std::size_t>(value.name_length)}}};
   }
 
-  granit_shader_tools_reflection handle_ = 0;
+  granit_asset_tools_shader_reflection handle_ = 0;
 };
 
 inline std::pair<::granit::result, reflection>
-inspect_spirv(const granit_shader_tools_inspect_desc& desc) noexcept {
-  granit_shader_tools_reflection handle = 0;
-  const auto status = granit_shader_tools_inspect_spirv(&desc, &handle);
+inspect_spirv(const granit_asset_tools_shader_inspect_desc& desc) noexcept {
+  granit_asset_tools_shader_reflection handle = 0;
+  const auto status = granit_asset_tools_shader_inspect_spirv(&desc, &handle);
   return {::granit::from_native(status), reflection{handle}};
 }
 
-} // namespace granit::shader_tools
+} // namespace granit::asset_tools::shader
 
 #endif

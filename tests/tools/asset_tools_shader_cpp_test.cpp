@@ -10,20 +10,20 @@
 int main(int argc, char** argv) {
   if (argc != 4 && argc != 5)
     return 1;
-  granit::shader_tools::compiler compiler;
-  if (compiler.initialize({}).failed() || !compiler)
+  granit::asset_tools::shader::compiler compiler;
+  if (compiler.initialize({}) != granit::result::invalid_argument || compiler)
     return 15;
   auto moved_compiler = std::move(compiler);
-  if (!moved_compiler || compiler)
+  if (moved_compiler || compiler)
     return 16;
   compiler.reset();
   const auto [compile_status, compilation] = compiler.compile({});
   if (compile_status != granit::result::invalid_handle || compilation)
     return 17;
-  granit_shader_tools_inspect_desc desc{};
+  granit_asset_tools_shader_inspect_desc desc{};
   constexpr auto expected_size =
-      static_cast<uint32_t>(sizeof(granit_shader_tools_expected_binding));
-  granit_shader_tools_expected_binding expected[]{
+      static_cast<uint32_t>(sizeof(granit_asset_tools_shader_expected_binding));
+  granit_asset_tools_shader_expected_binding expected[]{
       {expected_size, 0, 0}, {expected_size, 0, 1}, {expected_size, 0, 2}};
   desc.struct_size = sizeof(desc);
   desc.input_path = argv[1];
@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
   desc.validate_binding_set = 1;
   desc.expected_bindings = expected;
   desc.expected_binding_count = sizeof(expected) / sizeof(expected[0]);
-  auto [status, result] = granit::shader_tools::inspect_spirv(desc);
+  auto [status, result] = granit::asset_tools::shader::inspect_spirv(desc);
   if (status.failed() || !result)
     return 2;
   const auto info = result.info();
@@ -42,8 +42,8 @@ int main(int argc, char** argv) {
     return 4;
   const auto [binding_status, binding] = result.binding(0);
   if (binding_status.failed() || binding.group != 0 || binding.binding != 0 ||
-      binding.type != granit::shader_tools::binding_type::uniform_buffer ||
-      binding.access != granit::shader_tools::binding_access::read ||
+      binding.type != granit::asset_tools::shader::binding_type::uniform_buffer ||
+      binding.access != granit::asset_tools::shader::binding_access::read ||
       binding.minimum_binding_size != 16 || binding.name.empty())
     return 5;
   if (result.fragment_output_count() != 1)
@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
     return 14;
   const auto [output_status, output] = result.fragment_output(0);
   if (output_status.failed() || output.location != 0 ||
-      output.scalar_type != granit::shader_tools::scalar_type::floating_point ||
+      output.scalar_type != granit::asset_tools::shader::scalar_type::floating_point ||
       output.bit_width != 32 || output.vector_size != 4)
     return 7;
   auto moved = std::move(result);
@@ -62,7 +62,7 @@ int main(int argc, char** argv) {
   desc.input_path = argv[2];
   desc.input_path_length = std::strlen(argv[2]);
   desc.validate_binding_set = 0;
-  auto [vertex_status, vertex_result] = granit::shader_tools::inspect_spirv(desc);
+  auto [vertex_status, vertex_result] = granit::asset_tools::shader::inspect_spirv(desc);
   if (vertex_status.failed() || vertex_result.vertex_input_count() == 0)
     return 9;
   const auto [input_status, input] = vertex_result.vertex_input(0);
@@ -72,19 +72,19 @@ int main(int argc, char** argv) {
 
   desc.input_path = argv[3];
   desc.input_path_length = std::strlen(argv[3]);
-  auto [compute_status, compute_result] = granit::shader_tools::inspect_spirv(desc);
+  auto [compute_status, compute_result] = granit::asset_tools::shader::inspect_spirv(desc);
   const auto workgroup = compute_result.compute_workgroup_size();
   if (compute_status.failed() || workgroup.x == 0 || workgroup.y == 0 || workgroup.z == 0)
     return 11;
   if (argc == 5) {
     desc.input_path = argv[4];
     desc.input_path_length = std::strlen(argv[4]);
-    auto [override_status, override_result] = granit::shader_tools::inspect_spirv(desc);
+    auto [override_status, override_result] = granit::asset_tools::shader::inspect_spirv(desc);
     if (override_status.failed() || override_result.override_count() != 1)
       return 12;
     const auto [constant_status, constant] = override_result.override_at(0);
     if (constant_status.failed() || constant.id != 7 ||
-        constant.scalar_type != granit::shader_tools::scalar_type::floating_point ||
+        constant.scalar_type != granit::asset_tools::shader::scalar_type::floating_point ||
         constant.bit_width != 32 || constant.default_value_size != 4)
       return 13;
   }

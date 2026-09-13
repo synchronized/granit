@@ -47,6 +47,7 @@
 | 二十七、0.19.0 纹理资产变体 | 已发布 | 纹理 Manifest、选择与逐 mip 上传已完成 |
 | 二十八、0.20.0 示例框架稳定化 | 已发布 | 示例分层、交互与双后端视觉验收已完成 |
 | 二十九、0.21.0 Shader Library 与后端无关材质 | 已完成 | S-37A～S-37L 与跨平台候选包验收均已完成 |
+| 三十、0.22.0 AssetTools SDK 与工具链交付 | 已完成 | S-38A～G 与跨平台候选包验收均已完成 |
 
 ## 一、工程与 ABI 基础
 
@@ -450,6 +451,21 @@
 - **[S-37L](plans/S-37L-hlsl-first-shader-authoring.md) / P1**：已将作者输入收敛为 HLSL 与 Library
   源清单，完成内建资产迁移、旧入口删除和跨平台发布门禁。
 - 文件 I/O、网络、资产数据库、运行时源码编译、Android、新后端、Bindless 和材质节点图不属于
+  本版本。
+
+## 三十、0.22.0 AssetTools SDK 与工具链交付
+
+**状态：已完成；S-38A～S-38G 与跨平台候选包验收均已通过。**
+
+- **[S-38](plans/S-38-0.22.0-asset-tools-and-toolchain.md) / P1**：将 Shader、Material、Texture 与
+  Environment 的离线构建能力收敛为一个 AssetTools SDK、component 和 CLI，同时保留各自独立的
+  运行时资产格式。
+- Shader Compiler 的 DXC/Tint 独立路径收敛为一个 Toolchain 根目录，并为安装 Consumer 提供
+  `off`、`system`、`auto` 与 `download` 获取模式；其他资产领域不依赖 Shader Toolchain。
+- Toolchain 继续通过不可变的独立 Release 交付，普通 Granit SDK 只记录锁定身份；下载必须经过
+  归档 SHA-256、包内清单和真实编译能力验证。
+- 已构建 `.grshlib` 的 Runtime 消费路径保持无工具链依赖；默认配置不访问网络。
+- 图片解码、纹理压缩、HDR 卷积、macOS、ARM64、运行时资产编译和把工具链嵌入每个 SDK 包不属于
   本版本。
 
 ## 近期执行顺序

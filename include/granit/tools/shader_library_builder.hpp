@@ -10,12 +10,11 @@
 #include <string_view>
 #include <utility>
 
-namespace granit::shader_tools {
+namespace granit::asset_tools::shader {
 
 struct source_library_desc {
   std::string_view manifest_path;
-  std::string_view dxc_path;
-  std::string_view tint_path;
+  std::string_view toolchain_root;
   std::string_view cache_path;
   std::string_view output_path;
   std::string_view index_path;
@@ -23,15 +22,13 @@ struct source_library_desc {
 
 inline std::pair<::granit::result, bool>
 build_library_from_manifest(const source_library_desc& desc) noexcept {
-  const granit_shader_tools_source_library_desc native{
-      .struct_size = sizeof(granit_shader_tools_source_library_desc),
+  const granit_asset_tools_shader_source_library_desc native{
+      .struct_size = sizeof(granit_asset_tools_shader_source_library_desc),
       .reserved = 0,
       .manifest_path = desc.manifest_path.data(),
       .manifest_path_length = desc.manifest_path.size(),
-      .dxc_path = desc.dxc_path.data(),
-      .dxc_path_length = desc.dxc_path.size(),
-      .tint_path = desc.tint_path.data(),
-      .tint_path_length = desc.tint_path.size(),
+      .toolchain_root = desc.toolchain_root.data(),
+      .toolchain_root_length = desc.toolchain_root.size(),
       .cache_path = desc.cache_path.data(),
       .cache_path_length = desc.cache_path.size(),
       .output_path = desc.output_path.data(),
@@ -40,10 +37,10 @@ build_library_from_manifest(const source_library_desc& desc) noexcept {
       .index_path_length = desc.index_path.size(),
   };
   uint32_t cache_hit = 0;
-  const auto status = granit_shader_tools_build_library_from_manifest(&native, &cache_hit);
+  const auto status = granit_asset_tools_shader_build_library_from_manifest(&native, &cache_hit);
   return {::granit::from_native(status), cache_hit != 0};
 }
 
-} // namespace granit::shader_tools
+} // namespace granit::asset_tools::shader
 
 #endif

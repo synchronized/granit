@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "asset_file_io.h"
 #include "shader_cli/arguments.h"
 #include "shader_cli/commands.h"
-#include <granit/tools/shader_tools.hpp>
+#include <granit/tools/asset_tools.hpp>
 
 #include "shader_library/source_manifest.h"
 
@@ -14,28 +15,11 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <iterator>
 #include <sstream>
 #include <vector>
 
 namespace granit::shader_cli {
 namespace {
-std::vector<std::byte> read_bytes(const std::filesystem::path& path) {
-  std::ifstream stream{path, std::ios::binary};
-  const std::vector<char> bytes{std::istreambuf_iterator<char>{stream}, {}};
-  std::vector<std::byte> output(bytes.size());
-  if (!bytes.empty())
-    std::memcpy(output.data(), bytes.data(), bytes.size());
-  return output;
-}
-
-std::string read_text(const std::filesystem::path& path) {
-  const auto bytes = read_bytes(path);
-  if (bytes.empty())
-    return {};
-  return {reinterpret_cast<const char*>(bytes.data()), bytes.size()};
-}
-
 bool valid_identifier(std::string_view name) {
   return !name.empty() &&
          ((name.front() >= 'a' && name.front() <= 'z') ||
@@ -62,7 +46,7 @@ bool write_if_changed(const std::filesystem::path& destination, std::string_view
       return false;
   }
   if (std::filesystem::exists(destination, error) && !error) {
-    const auto current = read_bytes(destination);
+    const auto current = granit::asset_tools::cli::read_file(destination);
     if (current.size() == content.size() &&
         std::memcmp(current.data(), content.data(), content.size()) == 0)
       return true;
@@ -76,24 +60,22 @@ bool write_if_changed(const std::filesystem::path& destination, std::string_view
 
 int build_shader_library(int argc, char** argv) {
   const auto manifest = option_value(argc, argv, "--manifest");
-  const auto dxc = option_value(argc, argv, "--dxc");
-  const auto tint = option_value(argc, argv, "--tint");
+  const auto toolchain = option_value(argc, argv, "--toolchain");
   const auto cache = option_value(argc, argv, "--cache");
   const auto output = option_value(argc, argv, "--output");
   const auto index = option_value(argc, argv, "--index");
-  if (!manifest || !dxc || !tint || !cache || !output || !index) {
-    std::cerr << "build-library 需要 --manifest、--dxc、--tint、--cache、--output 和 --index\n";
+  if (!manifest || !toolchain || !cache || !output || !index) {
+    std::cerr << "build-library 需要 --manifest、--toolchain、--cache、--output 和 --index\n";
     return 2;
   }
-  const granit::shader_tools::source_library_desc desc{
+  const granit::asset_tools::shader::source_library_desc desc{
       .manifest_path = *manifest,
-      .dxc_path = *dxc,
-      .tint_path = *tint,
+      .toolchain_root = *toolchain,
       .cache_path = *cache,
       .output_path = *output,
       .index_path = *index,
   };
-  const auto [status, cache_hit] = granit::shader_tools::build_library_from_manifest(desc);
+  const auto [status, cache_hit] = granit::asset_tools::shader::build_library_from_manifest(desc);
   if (status.failed()) {
     std::cerr << "无法从源清单构建 Shader Library：" << *manifest << '\n';
     return 1;
@@ -112,7 +94,8 @@ int emit_shader_index_ids(int argc, char** argv) {
     return 2;
   }
   granit::tools::shader_library_index index;
-  if (granit::tools::parse_shader_library_index_json(read_text(*index_path), index) !=
+  if (granit::tools::parse_shader_library_index_json(
+          granit::asset_tools::cli::read_text_file(*index_path), index) !=
       granit::tools::shader_library_source_error::none) {
     std::cerr << "无法读取 Shader Library 索引：" << *index_path << '\n';
     return 1;
@@ -121,7 +104,7 @@ int emit_shader_index_ids(int argc, char** argv) {
   std::ostringstream content;
   content << "// SPDX-License-Identifier: MIT\n"
              "// Copyright (c) 2026 Granit contributors\n\n"
-             "// 由 granit_shader_tool index-ids 生成。\n\n"
+             "// 由 granit_asset_tool shader index-ids 生成。\n\n"
           << std::hex << std::setfill('0');
   std::string previous_name;
   for (const auto& spec : shader_specs) {

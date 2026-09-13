@@ -99,7 +99,7 @@ cmake \
 
 仓库的 `Shader Toolchain Packages` 手动 Actions 工作流固定 Vulkan SDK 下载地址、归档 SHA-256、
 Dawn 修订和全部工具版本。Windows 与 Linux 分别构建 Tint、组装精简目录、执行包内清单校验，
-再以 `locked` 策略运行 HLSL 双后端 ShaderTools 测试，最后上传带独立 SHA-256 文件的临时
+再以 `locked` 策略运行 HLSL 双后端 AssetTools 测试，最后上传带独立 SHA-256 文件的临时
 Artifact。当前锁定产物已作为独立预发行版本发布；后续工具升级仍须先完成两平台远端验证和
 许可证复核，再发布新标签，不能覆盖已有归档。
 
@@ -116,14 +116,19 @@ Windows x64 与 Linux x64 可以显式运行下载脚本。脚本选择当前宿
 cmake -DDESTINATION=<缓存目录> -P cmake/download_shader_toolchain.cmake
 ```
 
-随后使用脚本输出的目录配置 ShaderTools，并同时声明锁定的 Tint 修订：
+也可以让可安装的 CMake 模块按模式完成查找或下载：
 
 ```sh
 cmake -S . -B build \
-  -DGRANIT_SHADER_TOOLCHAIN_ROOT=<缓存目录>/<脚本输出的工具链目录> \
-  -DGRANIT_SHADER_TOOLCHAIN_POLICY=locked \
-  -DGRANIT_TINT_REVISION=0bc38adde72b79013536f8ce354b639ae19ae195
+  -DGRANIT_SHADER_TOOLCHAIN_MODE=download \
+  -DGRANIT_SHADER_TOOLCHAIN_CACHE_DIR=<缓存目录> \
+  -DGRANIT_SHADER_TOOLCHAIN_POLICY=locked
 ```
+
+`system`（默认）不访问网络，`off` 完全禁用 Shader 工具链，`auto` 仅在本机工具不完整时下载，
+`download` 固定使用锁定发布包。显式 `GRANIT_SHADER_TOOLCHAIN_ROOT` 始终优先。安装 Consumer 在
+请求 `AssetTools` component 后可 `include("${granit_SHADER_TOOLCHAIN_MODULE}")` 并调用
+`granit_find_shader_toolchain()`。
 
 工具链发布页为
 [Shader Toolchain v20260720.160313](https://github.com/synchronized/granit/releases/tag/shader-toolchain-v20260720.160313-0bc38adde72b)。

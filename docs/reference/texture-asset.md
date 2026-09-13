@@ -8,8 +8,8 @@ Texture Asset Manifest 是 Granit 用于检查和选择 GPU 纹理变体的后�
 
 ## 公共操作
 
-- `granit_texture_asset_encode` 将调用方提供的元数据确定性编码为 v1 Manifest。接口采用两次调用
-  模式，先查询所需字节数，再写入调用方缓冲区；相同输入产生完全相同的字节序列。
+- AssetTools 的 `granit_asset_tools_texture_build` 从已编码格式变体与布局生成确定性 v1 Manifest、
+  合并负载、内容 ID 和负载摘要；离线构建不属于 Renderer ABI。
 - `granit_texture_asset_inspect` 严格校验 Manifest。首次将两个输出数组保持为空可查询数量，随后由
   调用方提供足够容量取得变体和子资源摘要。
 - `granit_renderer_select_texture_asset_variant` 按 Manifest 顺序返回首个同时满足声明用途、当前设备
@@ -76,5 +76,5 @@ Texture Asset Manifest 是 Granit 用于检查和选择 GPU 纹理变体的后�
 ## 所有权与线程安全
 
 检查和选择调用不保留输入内存，可并发处理不同输出对象。逐 mip 入队遵循 Upload Batch 的线程
-安全规则；同一个 Batch 和 Texture 的写入仍由调用方排序。文件读取、网络、缓存、离线转码和
-离线转码不属于 Granit 运行时 API；资产工具可以使用公共编码接口生成 Manifest。
+安全规则；同一个 Batch 和 Texture 的写入仍由调用方排序。文件读取、网络、缓存和离线转码不属于
+Granit 运行时 API；Manifest 构建由可选的 AssetTools component 提供。

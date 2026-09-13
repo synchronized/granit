@@ -117,12 +117,12 @@ if(BUILD_SHARED_LIBS)
       GRANIT_ABI_RENDER_PIPELINE_LIBRARY_PATH="$<TARGET_FILE:granit_render_pipeline>"
       GRANIT_ABI_WINDOW_LIBRARY_PATH="$<TARGET_FILE:granit_window>"
       GRANIT_ABI_INPUT_LIBRARY_PATH="$<TARGET_FILE:granit_input>"
-      GRANIT_ABI_SHADER_TOOLS_LIBRARY_PATH="$<TARGET_FILE:granit_shader_tools>"
-      GRANIT_ABI_CORE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.21.0/core_symbols.txt"
+      GRANIT_ABI_ASSET_TOOLS_LIBRARY_PATH="$<TARGET_FILE:granit_asset_tools>"
+      GRANIT_ABI_CORE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.22.0/core_symbols.txt"
       GRANIT_ABI_RENDER_PIPELINE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.17.0/render_pipeline_symbols.txt"
       GRANIT_ABI_WINDOW_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.5.0/window_symbols.txt"
       GRANIT_ABI_INPUT_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/input_symbols.txt"
-      GRANIT_ABI_SHADER_TOOLS_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.21.0/shader_tools_symbols.txt"
+      GRANIT_ABI_ASSET_TOOLS_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.22.0/asset_tools_symbols.txt"
   )
   target_include_directories(
     granit_abi_exports_test
@@ -134,7 +134,7 @@ if(BUILD_SHARED_LIBS)
   )
   add_dependencies(
     granit_abi_exports_test granit granit_render_pipeline granit_window granit_input
-    granit_shader_tools
+    granit_asset_tools
   )
   granit_target_compile_warnings(granit_abi_exports_test)
   granit_target_output_directories(granit_abi_exports_test)
@@ -156,13 +156,13 @@ if(BUILD_SHARED_LIBS)
     function(granit_add_abi_export_snapshot_test component target snapshot)
       set(snapshot_version 0.1.0)
       if(component STREQUAL "core")
-        set(snapshot_version 0.21.0)
+        set(snapshot_version 0.22.0)
       endif()
       if(component STREQUAL "render_pipeline")
         set(snapshot_version 0.17.0)
       endif()
-      if(component STREQUAL "shader_tools")
-        set(snapshot_version 0.21.0)
+      if(component STREQUAL "asset_tools")
+        set(snapshot_version 0.22.0)
       endif()
       add_test(
         NAME "granit.abi.exports.${component}"
@@ -197,7 +197,7 @@ if(BUILD_SHARED_LIBS)
     )
     granit_add_abi_export_snapshot_test(input granit_input input_symbols.txt)
     granit_add_abi_export_snapshot_test(
-      shader_tools granit_shader_tools shader_tools_symbols.txt
+      asset_tools granit_asset_tools asset_tools_symbols.txt
     )
   endif()
 endif()
@@ -411,7 +411,7 @@ add_executable(
   pipeline/pbr_material_api_test.cpp
   pipeline/environment_map_api_test.cpp
   pipeline/environment_asset_test.cpp
-  "${PROJECT_SOURCE_DIR}/src/pipeline/environment_asset.cpp"
+  "${PROJECT_SOURCE_DIR}/src/assets/environment_asset.cpp"
   $<TARGET_OBJECTS:granit_internal_shader_format>
   pipeline/mesh_api_test.cpp
   pipeline/render_pipeline_api_test.cpp
@@ -432,11 +432,11 @@ set(granit_unlit_test_package "${CMAKE_CURRENT_BINARY_DIR}/assets/unlit.grmat")
 add_custom_command(
   OUTPUT "${granit_unlit_test_package}"
   COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/assets"
-  COMMAND granit_material_tool build "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit.grmat.json"
+  COMMAND granit_asset_tool material build "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit.grmat.json"
           --output "${granit_unlit_test_package}" --shader-index
           "${GRANIT_UNLIT_TEST_SHADER_INDEX}"
   DEPENDS
-    granit_material_tool
+    granit_asset_tool
     granit_test_shader_assets
     "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit.grmat.json"
     "${GRANIT_UNLIT_TEST_SHADER_INDEX}"
@@ -468,7 +468,7 @@ target_compile_definitions(
     GRANIT_UNLIT_SHADER_DIR="${GRANIT_UNLIT_TEST_SHADER_DIR}"
 )
 add_dependencies(
-  granit_pipeline_test granit_shader_tool_test_objects granit_test_shader_assets
+  granit_pipeline_test granit_shader_fixture_objects granit_test_shader_assets
 )
 granit_target_compile_warnings(granit_pipeline_test)
 granit_target_output_directories(granit_pipeline_test)
@@ -512,7 +512,7 @@ target_compile_definitions(
     GRANIT_PBR_MATERIAL_ASSET="${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat"
 )
 add_dependencies(
-  granit_material_test granit_shader_tool_test_objects granit_test_shader_assets
+  granit_material_test granit_shader_fixture_objects granit_test_shader_assets
 )
 granit_target_compile_warnings(granit_material_test)
 add_test(NAME granit.material COMMAND granit_material_test)
@@ -574,7 +574,7 @@ target_compile_definitions(
     GRANIT_TEST_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/assets"
     GRANIT_TEST_ARTIFACT_DIR="${CMAKE_BINARY_DIR}/test-artifacts"
 )
-add_dependencies(granit_renderer_test granit_shader_tool_test_objects)
+add_dependencies(granit_renderer_test granit_shader_fixture_objects)
 granit_target_compile_warnings(granit_renderer_test)
 add_test(NAME granit.renderer COMMAND granit_renderer_test)
 add_test(

@@ -32,8 +32,9 @@ function(granit_add_test_shader_object_from_hlsl)
   if(NOT ARG_NAME OR NOT ARG_SOURCE OR NOT ARG_ENTRY OR NOT ARG_STAGE OR NOT ARG_OUTPUT_DIR)
     message(FATAL_ERROR "granit_add_test_shader_object_from_hlsl 缺少必要参数")
   endif()
-  if(NOT GRANIT_DXC_EXECUTABLE OR NOT GRANIT_TINT_EXECUTABLE)
-    message(FATAL_ERROR "从 HLSL 生成跨后端资产需要 DXC 和 Tint")
+  if(NOT GRANIT_SHADER_TOOLCHAIN_ROOT OR NOT GRANIT_DXC_EXECUTABLE OR
+     NOT GRANIT_TINT_EXECUTABLE)
+    message(FATAL_ERROR "从 HLSL 生成跨后端资产需要完整 Shader Toolchain 根目录")
   endif()
 
   set(define_arguments)
@@ -45,8 +46,8 @@ function(granit_add_test_shader_object_from_hlsl)
     OUTPUT "${object}" "${object}.spv" "${object}.wgsl"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${ARG_OUTPUT_DIR}"
     COMMAND
-      "$<TARGET_FILE:granit_shader_tool>" compile --dxc "${GRANIT_DXC_EXECUTABLE}"
-      --tint "${GRANIT_TINT_EXECUTABLE}" --input "${ARG_SOURCE}" --entry "${ARG_ENTRY}"
+      "$<TARGET_FILE:granit_asset_tool>" shader compile --toolchain
+      "${GRANIT_SHADER_TOOLCHAIN_ROOT}" --input "${ARG_SOURCE}" --entry "${ARG_ENTRY}"
       --stage "${ARG_STAGE}" --spirv-output "${object}.spv" --wgsl-output "${object}.wgsl"
       ${define_arguments}
     COMMAND
@@ -54,7 +55,7 @@ function(granit_add_test_shader_object_from_hlsl)
       --wgsl "${object}.wgsl" --entry "${ARG_ENTRY}" --stage "${ARG_STAGE}"
       --output "${object}" --source "${ARG_SOURCE}" --dxc "${GRANIT_DXC_EXECUTABLE}"
       --tint "${GRANIT_TINT_EXECUTABLE}" ${define_arguments}
-    DEPENDS granit_shader_tool granit_shader_fixture_tool "${ARG_SOURCE}"
+    DEPENDS granit_asset_tool granit_shader_fixture_tool "${ARG_SOURCE}"
     COMMENT "从 HLSL 生成 Shader Object ${ARG_NAME}.grshaderobj"
     VERBATIM
   )
@@ -66,7 +67,7 @@ function(granit_add_test_shader_object)
   set(one_value_args NAME SOURCE SPIRV WGSL ENTRY HLSL_ENTRY STAGE OUTPUT_DIR OUTPUT_VAR)
   set(multi_value_args DEFINES)
   cmake_parse_arguments(ARG "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
-  if(GRANIT_DXC_EXECUTABLE AND GRANIT_TINT_EXECUTABLE)
+  if(GRANIT_SHADER_TOOLCHAIN_ROOT AND GRANIT_DXC_EXECUTABLE AND GRANIT_TINT_EXECUTABLE)
     set(hlsl_entry "${ARG_ENTRY}")
     if(ARG_HLSL_ENTRY)
       set(hlsl_entry "${ARG_HLSL_ENTRY}")
@@ -103,8 +104,9 @@ function(granit_add_hlsl_shader_library)
      NOT ARG_TARGET)
     message(FATAL_ERROR "granit_add_hlsl_shader_library 缺少必要参数")
   endif()
-  if(NOT GRANIT_DXC_EXECUTABLE OR NOT GRANIT_TINT_EXECUTABLE)
-    message(FATAL_ERROR "从 HLSL 源清单构建 Shader Library 需要 DXC 和 Tint")
+  if(NOT GRANIT_SHADER_TOOLCHAIN_ROOT OR NOT GRANIT_DXC_EXECUTABLE OR
+     NOT GRANIT_TINT_EXECUTABLE)
+    message(FATAL_ERROR "从 HLSL 源清单构建 Shader Library 需要完整 Shader Toolchain 根目录")
   endif()
 
   get_filename_component(output_directory "${ARG_OUTPUT}" DIRECTORY)
@@ -113,10 +115,10 @@ function(granit_add_hlsl_shader_library)
       COMMAND "${CMAKE_COMMAND}" -E make_directory "${ARG_CACHE_DIR}" "${output_directory}"
               "${index_directory}"
       COMMAND
-        "$<TARGET_FILE:granit_shader_tool>" build-library --manifest "${ARG_MANIFEST}"
-        --dxc "${GRANIT_DXC_EXECUTABLE}" --tint "${GRANIT_TINT_EXECUTABLE}"
+        "$<TARGET_FILE:granit_asset_tool>" shader build-library --manifest "${ARG_MANIFEST}"
+        --toolchain "${GRANIT_SHADER_TOOLCHAIN_ROOT}"
         --cache "${ARG_CACHE_DIR}" --output "${ARG_OUTPUT}" --index "${ARG_INDEX}")
-  set(dependencies granit_shader_tool "${ARG_MANIFEST}" ${ARG_SOURCES})
+  set(dependencies granit_asset_tool "${ARG_MANIFEST}" ${ARG_SOURCES})
   if(ARG_REFERENCE)
     list(APPEND commands COMMAND "${CMAKE_COMMAND}" -E compare_files "${ARG_OUTPUT}"
                                  "${ARG_REFERENCE}")

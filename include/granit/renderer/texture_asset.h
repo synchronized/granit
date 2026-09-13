@@ -125,13 +125,6 @@ GRANIT_API granit_result granit_texture_asset_inspect(const void* manifest_data,
                                                       uint64_t manifest_size,
                                                       granit_texture_asset_info* info);
 
-/**
- * 将调用方提供的元数据编码为确定性 v1 Manifest。manifest_data 为 NULL 时只返回所需容量；
- * manifest_size 输入容量并始终返回所需容量。
- */
-GRANIT_API granit_result granit_texture_asset_encode(const granit_texture_asset_info* info,
-                                                     void* manifest_data, uint64_t* manifest_size);
-
 /** 按 Manifest 顺序选择首个满足当前设备能力及调用方条件的变体。 */
 GRANIT_API granit_result granit_renderer_select_texture_asset_variant(
     granit_renderer renderer, const void* manifest_data, uint64_t manifest_size,

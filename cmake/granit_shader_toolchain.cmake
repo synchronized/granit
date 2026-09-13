@@ -2,14 +2,20 @@
 # Copyright (c) 2026 Granit contributors
 
 # Shader 前端工具只在资产构建阶段使用，不应成为 granit 核心目标的链接或安装依赖。
-set(GRANIT_SHADER_TOOLCHAIN_DAWN_VERSION "v20260720.160313")
-set(GRANIT_SHADER_TOOLCHAIN_TINT_REVISION "0bc38adde72b79013536f8ce354b639ae19ae195")
-if(WIN32)
-  set(GRANIT_SHADER_TOOLCHAIN_DXC_VERSION "1.8.0.4973")
-else()
-  # Vulkan SDK 1.4.321.1 在 Linux 与 Windows 中附带的 DXC 版本不同。
-  set(GRANIT_SHADER_TOOLCHAIN_DXC_VERSION "4973-8f559587")
-endif()
+include("${CMAKE_CURRENT_LIST_DIR}/GranitShaderToolchainLock.cmake")
+set(
+  GRANIT_SHADER_TOOLCHAIN_MODE
+  "system"
+  CACHE STRING
+  "Shader 工具链获取模式：off、system、auto 或 download"
+)
+set_property(CACHE GRANIT_SHADER_TOOLCHAIN_MODE PROPERTY STRINGS off system auto download)
+set(
+  GRANIT_SHADER_TOOLCHAIN_CACHE_DIR
+  "${CMAKE_BINARY_DIR}/toolchains"
+  CACHE PATH
+  "锁定 Shader 工具链下载缓存目录"
+)
 set(
   GRANIT_SHADER_TOOLCHAIN_POLICY
   "compatible"
@@ -32,10 +38,44 @@ set(GRANIT_DXC_EXECUTABLE "" CACHE FILEPATH "DXC 可执行文件")
 set(GRANIT_TINT_EXECUTABLE "" CACHE FILEPATH "Tint 可执行文件")
 
 function(granit_find_shader_toolchain)
+  if(NOT GRANIT_SHADER_TOOLCHAIN_MODE STREQUAL "off" AND
+     NOT GRANIT_SHADER_TOOLCHAIN_MODE STREQUAL "system" AND
+     NOT GRANIT_SHADER_TOOLCHAIN_MODE STREQUAL "auto" AND
+     NOT GRANIT_SHADER_TOOLCHAIN_MODE STREQUAL "download")
+    message(FATAL_ERROR "GRANIT_SHADER_TOOLCHAIN_MODE 必须是 off、system、auto 或 download")
+  endif()
+  if(GRANIT_SHADER_TOOLCHAIN_MODE STREQUAL "off")
+    set(GRANIT_DXC_EXECUTABLE "" CACHE FILEPATH "DXC 可执行文件" FORCE)
+    set(GRANIT_TINT_EXECUTABLE "" CACHE FILEPATH "Tint 可执行文件" FORCE)
+    set(GRANIT_DXC_EXECUTABLE "" PARENT_SCOPE)
+    set(GRANIT_TINT_EXECUTABLE "" PARENT_SCOPE)
+    message(STATUS "Granit Shader Toolchain: 已禁用")
+    return()
+  endif()
   if(NOT GRANIT_SHADER_TOOLCHAIN_POLICY STREQUAL "compatible" AND
      NOT GRANIT_SHADER_TOOLCHAIN_POLICY STREQUAL "locked" AND
      NOT GRANIT_SHADER_TOOLCHAIN_POLICY STREQUAL "unchecked")
     message(FATAL_ERROR "GRANIT_SHADER_TOOLCHAIN_POLICY 必须是 compatible、locked 或 unchecked")
+  endif()
+  if(GRANIT_SHADER_TOOLCHAIN_MODE STREQUAL "download" AND NOT GRANIT_SHADER_TOOLCHAIN_ROOT)
+    set(result_file "${CMAKE_BINARY_DIR}/granit-shader-toolchain-root.txt")
+    execute_process(
+      COMMAND
+        "${CMAKE_COMMAND}" "-DDESTINATION=${GRANIT_SHADER_TOOLCHAIN_CACHE_DIR}"
+        "-DRESULT_FILE=${result_file}" -P
+        "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/download_shader_toolchain.cmake"
+      RESULT_VARIABLE download_result
+    )
+    if(NOT download_result EQUAL 0 OR NOT EXISTS "${result_file}")
+      message(FATAL_ERROR "无法获取锁定的 Granit Shader Toolchain")
+    endif()
+    file(READ "${result_file}" downloaded_root)
+    set(GRANIT_SHADER_TOOLCHAIN_ROOT "${downloaded_root}" CACHE PATH
+        "包含 bin/dxc 和 bin/tint 的 Granit Shader 工具链根目录" FORCE)
+    set(GRANIT_DXC_EXECUTABLE "" CACHE FILEPATH "DXC 可执行文件" FORCE)
+    set(GRANIT_TINT_EXECUTABLE "" CACHE FILEPATH "Tint 可执行文件" FORCE)
+    set(GRANIT_TINT_REVISION "${GRANIT_SHADER_TOOLCHAIN_TINT_REVISION}" CACHE STRING
+        "Tint/Dawn 的实际源码修订号" FORCE)
   endif()
   if(GRANIT_SHADER_TOOLCHAIN_ROOT)
     set(granit_shader_toolchain_bin "${GRANIT_SHADER_TOOLCHAIN_ROOT}/bin")
@@ -133,6 +173,16 @@ function(granit_find_shader_toolchain)
   endif()
   if(NOT granit_tint_usable)
     set(GRANIT_TINT_EXECUTABLE "" CACHE FILEPATH "Tint 可执行文件" FORCE)
+  endif()
+  if(GRANIT_SHADER_TOOLCHAIN_MODE STREQUAL "auto" AND
+     (NOT GRANIT_DXC_EXECUTABLE OR NOT GRANIT_TINT_EXECUTABLE) AND
+     NOT GRANIT_SHADER_TOOLCHAIN_ROOT)
+    set(GRANIT_SHADER_TOOLCHAIN_MODE "download")
+    granit_find_shader_toolchain()
+    set(GRANIT_SHADER_TOOLCHAIN_ROOT "${GRANIT_SHADER_TOOLCHAIN_ROOT}" PARENT_SCOPE)
+    set(GRANIT_DXC_EXECUTABLE "${GRANIT_DXC_EXECUTABLE}" PARENT_SCOPE)
+    set(GRANIT_TINT_EXECUTABLE "${GRANIT_TINT_EXECUTABLE}" PARENT_SCOPE)
+    return()
   endif()
   set(GRANIT_DXC_EXECUTABLE "${GRANIT_DXC_EXECUTABLE}" PARENT_SCOPE)
   set(GRANIT_TINT_EXECUTABLE "${GRANIT_TINT_EXECUTABLE}" PARENT_SCOPE)

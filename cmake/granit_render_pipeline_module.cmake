@@ -14,7 +14,7 @@ function(granit_add_render_pipeline_module)
   # 本机构建生成并校验快照；交叉构建与轻量 Consumer 直接使用已校验快照。
   set(granit_pipeline_generate_shader_libraries FALSE)
   if(NOT CMAKE_CROSSCOMPILING AND
-     (GRANIT_BUILD_TOOLS OR GRANIT_BUILD_SHADER_TOOLS OR GRANIT_BUILD_EXAMPLES OR
+     (GRANIT_BUILD_TOOLS OR GRANIT_BUILD_ASSET_TOOLS OR GRANIT_BUILD_EXAMPLES OR
       GRANIT_BUILD_BENCHMARKS OR (GRANIT_BUILD_TESTING AND BUILD_TESTING)) AND
      GRANIT_DXC_EXECUTABLE AND GRANIT_TINT_EXECUTABLE)
     set(granit_pipeline_generate_shader_libraries TRUE)
@@ -86,7 +86,7 @@ function(granit_add_render_pipeline_module)
   if(granit_pipeline_generate_shader_libraries)
     add_custom_command(
       OUTPUT "${granit_pipeline_builtin_shader_ids}"
-      COMMAND "$<TARGET_FILE:granit_shader_tool>" index-ids
+      COMMAND "$<TARGET_FILE:granit_asset_tool>" shader index-ids
               --index "${granit_pipeline_builtin_index}"
               --shader tone_mapping_vertex_id=tone_mapping.vertex
               --shader tone_mapping_fragment_id=tone_mapping.fragment
@@ -96,14 +96,14 @@ function(granit_add_render_pipeline_module)
       COMMAND "${CMAKE_COMMAND}" -E compare_files "${granit_pipeline_builtin_shader_ids}"
               "${PROJECT_SOURCE_DIR}/src/pipeline/assets/render_pipeline_shader_ids.inc"
       DEPENDS
-        granit_shader_tool
+        granit_asset_tool
         granit_pipeline_builtin_shader_library
         "${granit_pipeline_builtin_index}"
         "${PROJECT_SOURCE_DIR}/src/pipeline/assets/render_pipeline_shader_ids.inc"
       VERBATIM)
     add_custom_command(
       OUTPUT "${granit_pipeline_debug_shader_ids}"
-      COMMAND "$<TARGET_FILE:granit_shader_tool>" index-ids
+      COMMAND "$<TARGET_FILE:granit_asset_tool>" shader index-ids
               --index "${granit_pipeline_debug_index}"
               --shader debug_world_vertex_id=world.vertex
               --shader debug_world_fragment_id=world.fragment/linear
@@ -112,7 +112,7 @@ function(granit_add_render_pipeline_module)
       COMMAND "${CMAKE_COMMAND}" -E compare_files "${granit_pipeline_debug_shader_ids}"
               "${PROJECT_SOURCE_DIR}/src/pipeline/assets/debug_draw_shader_ids.inc"
       DEPENDS
-        granit_shader_tool
+        granit_asset_tool
         granit_pipeline_debug_shader_library
         "${granit_pipeline_debug_index}"
         "${PROJECT_SOURCE_DIR}/src/pipeline/assets/debug_draw_shader_ids.inc"
@@ -185,8 +185,8 @@ function(granit_add_render_pipeline_module)
       "${PROJECT_SOURCE_DIR}/src/pipeline/dynamic_uniform_arena.cpp"
       "${PROJECT_SOURCE_DIR}/src/pipeline/dynamic_uniform_arena.h"
       "${PROJECT_SOURCE_DIR}/src/pipeline/draw_binding_cache.h"
-      "${PROJECT_SOURCE_DIR}/src/pipeline/environment_asset.cpp"
-      "${PROJECT_SOURCE_DIR}/src/pipeline/environment_asset.h"
+      "${PROJECT_SOURCE_DIR}/src/assets/environment_asset.cpp"
+      "${PROJECT_SOURCE_DIR}/src/assets/environment_asset.h"
       "${PROJECT_SOURCE_DIR}/src/pipeline/environment_map_api.cpp"
       $<TARGET_OBJECTS:granit_internal_shader_format>
       "${PROJECT_SOURCE_DIR}/src/pipeline/material_api.cpp"

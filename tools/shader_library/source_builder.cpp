@@ -5,6 +5,7 @@
 #include <granit/tools/shader_library_builder.h>
 
 #include "../shader_object_storage.h"
+#include "../shader_toolchain_layout.h"
 #include "builder.h"
 #include "object_cache.h"
 #include "shader_format/shader_library.h"
@@ -107,8 +108,8 @@ granit_result source_error(granit::tools::shader_library_source_error error) {
   return GRANIT_ERROR_INTERNAL;
 }
 
-std::string tool_identity(std::string_view path) {
-  return granit::tools::file_sha256_hex(copy_path(path));
+std::string tool_identity(const std::filesystem::path& path) {
+  return granit::tools::file_sha256_hex(path);
 }
 
 std::string object_stem(std::string_view name) {
@@ -134,18 +135,18 @@ compile_options(const std::vector<granit::tools::shader_library_source_define>& 
 }
 
 struct compiler_owner {
-  granit_shader_tools_compiler value{};
+  granit_asset_tools_shader_compiler value{};
   ~compiler_owner() {
     if (value != 0)
-      static_cast<void>(granit_shader_tools_compiler_destroy(value));
+      static_cast<void>(granit_asset_tools_shader_compiler_destroy(value));
   }
 };
 
 struct compilation_owner {
-  granit_shader_tools_compilation value{};
+  granit_asset_tools_shader_compilation value{};
   ~compilation_owner() {
     if (value != 0)
-      static_cast<void>(granit_shader_tools_compilation_destroy(value));
+      static_cast<void>(granit_asset_tools_shader_compilation_destroy(value));
   }
 };
 
@@ -159,20 +160,18 @@ constexpr std::size_t maximum_expanded_shader_count = 4096;
 
 } // namespace
 
-extern "C" granit_result
-granit_shader_tools_build_library_from_manifest(const granit_shader_tools_source_library_desc* desc,
-                                                std::uint32_t* cache_hit) {
+extern "C" granit_result granit_asset_tools_shader_build_library_from_manifest(
+    const granit_asset_tools_shader_source_library_desc* desc, std::uint32_t* cache_hit) {
   if (cache_hit == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *cache_hit = 0;
   if (desc == nullptr || desc->struct_size < sizeof(*desc) || desc->reserved != 0 ||
       !valid_string(desc->manifest_path, desc->manifest_path_length) ||
-      !valid_string(desc->dxc_path, desc->dxc_path_length) ||
-      !valid_string(desc->tint_path, desc->tint_path_length) ||
+      !valid_string(desc->toolchain_root, desc->toolchain_root_length) ||
       !valid_string(desc->cache_path, desc->cache_path_length) ||
       !valid_string(desc->output_path, desc->output_path_length) ||
       !valid_string(desc->index_path, desc->index_path_length) || desc->manifest_path_length == 0 ||
-      desc->dxc_path_length == 0 || desc->tint_path_length == 0 || desc->cache_path_length == 0 ||
+      desc->toolchain_root_length == 0 || desc->cache_path_length == 0 ||
       desc->output_path_length == 0 || desc->index_path_length == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
 
@@ -190,25 +189,23 @@ granit_shader_tools_build_library_from_manifest(const granit_shader_tools_source
     if (filesystem_error)
       return GRANIT_ERROR_INITIALIZATION_FAILED;
 
-    const std::string_view dxc{desc->dxc_path, static_cast<std::size_t>(desc->dxc_path_length)};
-    const std::string_view tint{desc->tint_path, static_cast<std::size_t>(desc->tint_path_length)};
-    const auto dxc_identity = tool_identity(dxc);
-    const auto tint_identity = tool_identity(tint);
-    if (dxc_identity.empty() || tint_identity.empty())
+    const auto toolchain_root = copy_path(desc->toolchain_root, desc->toolchain_root_length);
+    const auto toolchain = granit::asset_tools::detail::resolve_shader_toolchain(toolchain_root);
+    if (!granit::asset_tools::detail::shader_toolchain_ready(toolchain))
       return GRANIT_ERROR_NOT_READY;
+    const auto dxc_identity = tool_identity(toolchain.dxc);
+    const auto tint_identity = tool_identity(toolchain.tint);
     const auto revisions = "dxc=" + dxc_identity + ";tint=" + tint_identity;
     constexpr std::string_view target_environment = "vulkan1.3+webgpu-portable";
 
     compiler_owner compiler;
-    const granit_shader_tools_compiler_desc compiler_desc{
-        .struct_size = sizeof(granit_shader_tools_compiler_desc),
+    const granit_asset_tools_shader_compiler_desc compiler_desc{
+        .struct_size = sizeof(granit_asset_tools_shader_compiler_desc),
         .reserved = 0,
-        .dxc_path = dxc.data(),
-        .dxc_path_length = dxc.size(),
-        .tint_path = tint.data(),
-        .tint_path_length = tint.size(),
+        .toolchain_root = desc->toolchain_root,
+        .toolchain_root_length = desc->toolchain_root_length,
     };
-    auto status = granit_shader_tools_compiler_create(&compiler_desc, &compiler.value);
+    auto status = granit_asset_tools_shader_compiler_create(&compiler_desc, &compiler.value);
     if (status != GRANIT_SUCCESS)
       return status;
 
@@ -267,14 +264,14 @@ granit_shader_tools_build_library_from_manifest(const granit_shader_tools_source
         return status;
 
       if (!object_hit) {
-        std::vector<granit_shader_tools_define> native_defines;
+        std::vector<granit_asset_tools_shader_define> native_defines;
         native_defines.reserve(definitions.size());
         for (const auto& define : definitions) {
-          native_defines.push_back({sizeof(granit_shader_tools_define), 0, define.name.data(),
+          native_defines.push_back({sizeof(granit_asset_tools_shader_define), 0, define.name.data(),
                                     define.name.size(), define.value.data(), define.value.size()});
         }
-        const granit_shader_tools_compile_desc compile{
-            .struct_size = sizeof(granit_shader_tools_compile_desc),
+        const granit_asset_tools_shader_compile_desc compile{
+            .struct_size = sizeof(granit_asset_tools_shader_compile_desc),
             .stage = static_cast<granit_shader_stage>(item.shader->stage),
             .target_backends = static_cast<granit_shader_backend_flags>(manifest.target_backends),
             .input_path = source_string.data(),
@@ -292,7 +289,8 @@ granit_shader_tools_build_library_from_manifest(const granit_shader_tools_source
             .expected_binding_count = 0,
         };
         compilation_owner compilation;
-        status = granit_shader_tools_compiler_compile(compiler.value, &compile, &compilation.value);
+        status = granit_asset_tools_shader_compiler_compile(compiler.value, &compile,
+                                                            &compilation.value);
         if (status != GRANIT_SUCCESS)
           return status;
         status = granit::tools::write_shader_object_cache(object_context, object_hit);

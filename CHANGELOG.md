@@ -10,6 +10,27 @@
 
 ### 新增
 
+- 新增可安装的 `AssetTools` component、`granit::asset_tools` 目标和统一 `granit_asset_tool`，覆盖
+  Shader、Material、Texture 与 Environment 的确定性构建、检查、诊断和调试导出。
+- Shader Toolchain 新增 `off`、`system`、`auto`、`download` 四种获取模式，以及可安装的 CMake
+  解析模块、锁定发布身份和带双层摘要校验的并发安全下载缓存。
+
+### 变更
+
+- ShaderTools API、目标与 CLI 迁入 AssetTools，Compiler 和 Library Builder 统一接收 Toolchain
+  根目录；Material、Texture 和 Environment 不依赖 DXC/Tint。
+- Texture 离线编码从 Core 迁入 AssetTools；GRENV 格式实现移入共享私有资产层，旧 Material 和
+  Model Viewer Environment 独立工具已删除。
+
+### 兼容性与迁移
+
+- 0.21 Consumer 必须重新编译并更新工具目标、符号和命令名。完整步骤见
+  [从 0.21 迁移到 0.22](docs/guides/migrate-0.21-to-0.22.md)。
+
+## 0.21.0 - 2026-09-13
+
+### 新增
+
 - 新增确定性的 `.grshlib` v1、公共 Shader Library C/C++ API，以及由 Renderer 按后端和能力选择、
   校验并缓存 Shader 载荷的路径。
 

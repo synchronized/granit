@@ -17,11 +17,10 @@
 #include <utility>
 #include <vector>
 
-namespace granit::shader_tools {
+namespace granit::asset_tools::shader {
 
 struct compiler_config {
-  std::string_view dxc_path;
-  std::string_view tint_path;
+  std::string_view toolchain_root;
 };
 
 struct shader_define {
@@ -38,7 +37,7 @@ struct compile_desc {
   std::string_view wgsl_output_path;
   std::span<const shader_define> defines;
   bool validate_binding_set{};
-  std::span<const granit_shader_tools_expected_binding> expected_bindings;
+  std::span<const granit_asset_tools_shader_expected_binding> expected_bindings;
 };
 
 struct compilation_info {
@@ -52,7 +51,7 @@ struct compilation_info {
 class compilation {
 public:
   compilation() = default;
-  explicit compilation(granit_shader_tools_compilation handle) noexcept : handle_(handle) {}
+  explicit compilation(granit_asset_tools_shader_compilation handle) noexcept : handle_(handle) {}
   ~compilation() { reset(); }
   compilation(const compilation&) = delete;
   compilation& operator=(const compilation&) = delete;
@@ -67,9 +66,9 @@ public:
 
   [[nodiscard]] explicit operator bool() const noexcept { return handle_ != 0; }
   [[nodiscard]] compilation_info info() const noexcept {
-    granit_shader_tools_compilation_info value{};
+    granit_asset_tools_shader_compilation_info value{};
     value.struct_size = sizeof(value);
-    if (granit_shader_tools_compilation_get_info(handle_, &value) != GRANIT_SUCCESS)
+    if (granit_asset_tools_shader_compilation_get_info(handle_, &value) != GRANIT_SUCCESS)
       return {};
     return {::granit::from_native(value.status),
             {value.entry_point, static_cast<std::size_t>(value.entry_point_length)},
@@ -77,35 +76,35 @@ public:
             {value.output, static_cast<std::size_t>(value.output_length)},
             {value.diagnostic, static_cast<std::size_t>(value.diagnostic_length)}};
   }
-  [[nodiscard]] std::pair<::granit::result, ::granit::shader_tools::reflection>
+  [[nodiscard]] std::pair<::granit::result, ::granit::asset_tools::shader::reflection>
   reflection() const noexcept {
-    granit_shader_tools_reflection handle = 0;
-    const auto status = granit_shader_tools_compilation_get_reflection(handle_, &handle);
-    return {::granit::from_native(status), ::granit::shader_tools::reflection{handle}};
+    granit_asset_tools_shader_reflection handle = 0;
+    const auto status = granit_asset_tools_shader_compilation_get_reflection(handle_, &handle);
+    return {::granit::from_native(status), ::granit::asset_tools::shader::reflection{handle}};
   }
   [[nodiscard]] std::span<const std::byte> spirv() const noexcept {
     const void* data = nullptr;
     uint64_t size = 0;
-    if (granit_shader_tools_compilation_get_spirv(handle_, &data, &size) != GRANIT_SUCCESS)
+    if (granit_asset_tools_shader_compilation_get_spirv(handle_, &data, &size) != GRANIT_SUCCESS)
       return {};
     return {static_cast<const std::byte*>(data), static_cast<std::size_t>(size)};
   }
   [[nodiscard]] std::string_view wgsl() const noexcept {
     const char* source = nullptr;
     uint64_t length = 0;
-    if (granit_shader_tools_compilation_get_wgsl(handle_, &source, &length) != GRANIT_SUCCESS)
+    if (granit_asset_tools_shader_compilation_get_wgsl(handle_, &source, &length) != GRANIT_SUCCESS)
       return {};
     return {source, static_cast<std::size_t>(length)};
   }
   void reset() noexcept {
     if (handle_ != 0) {
-      static_cast<void>(granit_shader_tools_compilation_destroy(handle_));
+      static_cast<void>(granit_asset_tools_shader_compilation_destroy(handle_));
       handle_ = 0;
     }
   }
 
 private:
-  granit_shader_tools_compilation handle_ = 0;
+  granit_asset_tools_shader_compilation handle_ = 0;
 };
 
 class compiler {
@@ -126,15 +125,13 @@ public:
   [[nodiscard]] ::granit::result initialize(const compiler_config& config) noexcept {
     if (handle_ != 0)
       return ::granit::result::invalid_argument;
-    const granit_shader_tools_compiler_desc native{
-        .struct_size = sizeof(granit_shader_tools_compiler_desc),
+    const granit_asset_tools_shader_compiler_desc native{
+        .struct_size = sizeof(granit_asset_tools_shader_compiler_desc),
         .reserved = 0,
-        .dxc_path = config.dxc_path.data(),
-        .dxc_path_length = config.dxc_path.size(),
-        .tint_path = config.tint_path.data(),
-        .tint_path_length = config.tint_path.size(),
+        .toolchain_root = config.toolchain_root.data(),
+        .toolchain_root_length = config.toolchain_root.size(),
     };
-    return ::granit::from_native(granit_shader_tools_compiler_create(&native, &handle_));
+    return ::granit::from_native(granit_asset_tools_shader_compiler_create(&native, &handle_));
   }
 
   [[nodiscard]] std::pair<::granit::result, compilation>
@@ -142,18 +139,18 @@ public:
     if (handle_ == 0)
       return {::granit::result::invalid_handle, compilation{}};
     try {
-      std::vector<granit_shader_tools_define> definitions;
+      std::vector<granit_asset_tools_shader_define> definitions;
       definitions.reserve(desc.defines.size());
       for (const auto& define : desc.defines) {
-        definitions.push_back({.struct_size = sizeof(granit_shader_tools_define),
+        definitions.push_back({.struct_size = sizeof(granit_asset_tools_shader_define),
                                .reserved = 0,
                                .name = define.name.data(),
                                .name_length = define.name.size(),
                                .value = define.value.data(),
                                .value_length = define.value.size()});
       }
-      const granit_shader_tools_compile_desc native{
-          .struct_size = sizeof(granit_shader_tools_compile_desc),
+      const granit_asset_tools_shader_compile_desc native{
+          .struct_size = sizeof(granit_asset_tools_shader_compile_desc),
           .stage = static_cast<granit_shader_stage>(desc.stage),
           .target_backends = static_cast<granit_shader_backend_flags>(desc.target_backends),
           .input_path = desc.input_path.data(),
@@ -170,9 +167,9 @@ public:
           .expected_bindings = desc.expected_bindings.data(),
           .expected_binding_count = desc.expected_bindings.size(),
       };
-      granit_shader_tools_compilation compilation_handle = 0;
+      granit_asset_tools_shader_compilation compilation_handle = 0;
       const auto status =
-          granit_shader_tools_compiler_compile(handle_, &native, &compilation_handle);
+          granit_asset_tools_shader_compiler_compile(handle_, &native, &compilation_handle);
       return {::granit::from_native(status), compilation{compilation_handle}};
     } catch (const std::bad_alloc&) {
       return {::granit::result::out_of_memory, compilation{}};
@@ -183,7 +180,7 @@ public:
 
   void reset() noexcept {
     if (handle_ != 0) {
-      static_cast<void>(granit_shader_tools_compiler_destroy(handle_));
+      static_cast<void>(granit_asset_tools_shader_compiler_destroy(handle_));
       handle_ = 0;
     }
   }
@@ -191,19 +188,19 @@ public:
   [[nodiscard]] explicit operator bool() const noexcept { return handle_ != 0; }
 
 private:
-  granit_shader_tools_compiler handle_{};
+  granit_asset_tools_shader_compiler handle_{};
 };
 
-inline std::pair<::granit::result, granit_shader_tools_target_capabilities>
+inline std::pair<::granit::result, granit_asset_tools_shader_target_capabilities>
 target_capabilities(shader_backend backend,
                     shader_profile profile = shader_profile::portable) noexcept {
-  granit_shader_tools_target_capabilities capabilities =
-      GRANIT_SHADER_TOOLS_TARGET_CAPABILITIES_INIT;
-  const auto status = granit_shader_tools_get_target_capabilities(
+  granit_asset_tools_shader_target_capabilities capabilities =
+      GRANIT_ASSET_TOOLS_SHADER_TARGET_CAPABILITIES_INIT;
+  const auto status = granit_asset_tools_shader_get_target_capabilities(
       static_cast<std::uint32_t>(backend), static_cast<std::uint32_t>(profile), &capabilities);
   return {::granit::from_native(status), capabilities};
 }
 
-} // namespace granit::shader_tools
+} // namespace granit::asset_tools::shader
 
 #endif

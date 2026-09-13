@@ -24,9 +24,16 @@ foreach(required_file IN LISTS required_files)
   endif()
 endforeach()
 
-if(EXISTS "${install_prefix}/lib/cmake/granit/granitShaderToolsTargets.cmake")
+if(EXISTS "${install_prefix}/lib/cmake/granit/granitAssetToolsTargets.cmake")
+  foreach(toolchain_module IN ITEMS GranitShaderToolchain.cmake GranitShaderToolchainLock.cmake
+                                   granit_shader_toolchain.cmake download_shader_toolchain.cmake
+                                   verify_shader_toolchain_manifest.cmake)
+    if(NOT EXISTS "${install_prefix}/lib/cmake/granit/${toolchain_module}")
+      message(FATAL_ERROR "AssetTools 安装结果缺少工具链模块：${toolchain_module}")
+    endif()
+  endforeach()
   foreach(
-    shader_tools_header
+    asset_tools_header
     IN ITEMS
       shader_compiler.h
       shader_compiler.hpp
@@ -34,12 +41,34 @@ if(EXISTS "${install_prefix}/lib/cmake/granit/granitShaderToolsTargets.cmake")
       shader_library_builder.hpp
       shader_reflection.h
       shader_reflection.hpp
-      shader_tools.h
-      shader_tools.hpp
-      shader_tools_export.h
+      asset_tools.h
+      asset_tools.hpp
+      asset_tools_export.h
+      environment_builder.h
+      environment_builder.hpp
+      material_builder.h
+      material_builder.hpp
+      texture_builder.h
+      texture_builder.hpp
   )
-    if(NOT EXISTS "${install_prefix}/include/granit/tools/${shader_tools_header}")
-      message(FATAL_ERROR "ShaderTools 安装结果缺少公共头：${shader_tools_header}")
+    if(NOT EXISTS "${install_prefix}/include/granit/tools/${asset_tools_header}")
+      message(FATAL_ERROR "AssetTools 安装结果缺少公共头：${asset_tools_header}")
+    endif()
+  endforeach()
+  foreach(
+    obsolete_asset_tools_file
+    IN ITEMS
+      include/granit/tools/shader_tools.h
+      include/granit/tools/shader_tools.hpp
+      include/granit/tools/shader_tools_export.h
+      lib/cmake/granit/granitShaderToolsTargets.cmake
+      bin/granit_shader_tool
+      bin/granit_shader_tool.exe
+      bin/granit_material_tool
+      bin/granit_material_tool.exe
+  )
+    if(EXISTS "${install_prefix}/${obsolete_asset_tools_file}")
+      message(FATAL_ERROR "AssetTools 安装结果仍包含旧文件：${obsolete_asset_tools_file}")
     endif()
   endforeach()
 endif()

@@ -49,30 +49,6 @@ int main() {
       granit::result::invalid_handle.message() != "invalid handle")
     return 12;
 
-  granit::texture_asset_info asset;
-  asset.content_id[0] = std::byte{1};
-  asset.dimension = GRANIT_TEXTURE_DIMENSION_2D;
-  asset.width = 4;
-  asset.height = 4;
-  asset.depth = 1;
-  asset.array_layers = 1;
-  asset.mip_levels = 1;
-  asset.variants.resize(1);
-  asset.variants[0].format = GRANIT_TEXTURE_FORMAT_RGBA8_SRGB;
-  asset.variants[0].usage = GRANIT_TEXTURE_USAGE_SAMPLED_BIT;
-  asset.variants[0].subresource_count = 1;
-  asset.variants[0].payload_size = 64;
-  asset.subresources.resize(1);
-  asset.subresources[0].data_size = 64;
-  asset.subresources[0].bytes_per_row = 16;
-  asset.subresources[0].rows_per_image = 4;
-  std::vector<std::byte> manifest;
-  granit::texture_asset_info inspected;
-  if (granit::encode_texture_asset(asset, manifest).failed() || manifest.size() != 192 ||
-      granit::inspect_texture_asset(manifest, inspected).failed() ||
-      inspected.variants.size() != 1 || inspected.subresources.size() != 1)
-    return 14;
-
   diagnostic_capture diagnostics;
   granit::renderer renderer;
   const auto renderer_result = renderer.initialize(

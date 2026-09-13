@@ -51,6 +51,7 @@
 16. [0.21.0 Shader Library 与后端无关材质计划](plans/S-37-0.21.0-shader-library-and-material-boundary.md)
 17. [WebGPU Provider 边界收敛计划](plans/S-37H-webgpu-provider-boundary-collapse.md)
 18. [HLSL-first Shader 作者入口计划](plans/S-37L-hlsl-first-shader-authoring.md)
+19. [0.22.0 AssetTools SDK 与工具链交付计划](plans/S-38-0.22.0-asset-tools-and-toolchain.md)
 
 ## 操作指南
 
@@ -74,6 +75,7 @@
 - [从 0.18 迁移到 0.19](guides/migrate-0.18-to-0.19.md)
 - [从 0.19 迁移到 0.20](guides/migrate-0.19-to-0.20.md)
 - [从 0.20 迁移到 0.21](guides/migrate-0.20-to-0.21.md)
+- [从 0.21 迁移到 0.22](guides/migrate-0.21-to-0.22.md)
 - [从 0.8 迁移到 0.9](guides/migrate-0.8-to-0.9.md)
 - [示例程序及运行方式](guides/examples.md)
 - [运行跨后端模型查看器](guides/model-viewer.md)
@@ -108,7 +110,7 @@
 
 ### 命令与 Pipeline
 
-- [ShaderTools SDK](reference/shader-tools.md)
+- [AssetTools SDK](reference/asset-tools.md)
 - [Shader 工具链包清单](reference/shader-toolchain-package.md)
 - [Command Recorder](reference/command-recorder.md)
 - [Frame Context](reference/frame-context.md)

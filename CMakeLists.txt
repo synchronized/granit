@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.23)
 
 project(
   granit
-  VERSION 0.21.0
+  VERSION 0.22.0
   DESCRIPTION "Vulkan-based C++20 rendering library"
   LANGUAGES C CXX
 )
@@ -17,7 +17,7 @@ option(GRANIT_BUILD_MODEL_VIEWER_EXAMPLE "构建跨后端模型查看器示例" 
 option(GRANIT_FETCH_EXAMPLE_GLTF_DEPENDENCIES "下载模型查看器锁定的 glTF 私有依赖" OFF)
 option(GRANIT_BUILD_BENCHMARKS "构建 Granit benchmark 程序" OFF)
 option(GRANIT_BUILD_TOOLS "构建 Granit 离线工具" OFF)
-option(GRANIT_BUILD_SHADER_TOOLS "构建并安装 ShaderTools SDK" OFF)
+option(GRANIT_BUILD_ASSET_TOOLS "构建并安装 AssetTools SDK" OFF)
 option(GRANIT_BUILD_INTEGRATION_SDL3 "构建 SDL3 可选集成组件" OFF)
 option(GRANIT_BUILD_INTEGRATION_IMGUI "构建 ImGui 可选集成组件" OFF)
 option(GRANIT_BUILD_EMSCRIPTEN_PLATFORM "构建 S-10D Emscripten 平台验证目标" OFF)
@@ -58,10 +58,10 @@ include(granit_shader_assets)
 add_subdirectory(src)
 
 if(NOT EMSCRIPTEN AND
-   (GRANIT_BUILD_TOOLS OR GRANIT_BUILD_SHADER_TOOLS OR GRANIT_BUILD_EXAMPLES OR
+   (GRANIT_BUILD_TOOLS OR GRANIT_BUILD_ASSET_TOOLS OR GRANIT_BUILD_EXAMPLES OR
     GRANIT_BUILD_BENCHMARKS OR (GRANIT_BUILD_TESTING AND BUILD_TESTING)))
   add_subdirectory(tools)
-  if(TARGET granit_shader_tool)
+  if(TARGET granit_asset_tool)
     granit_prepare_runtime_shader_libraries()
   endif()
   if((GRANIT_BUILD_TESTING AND BUILD_TESTING) OR GRANIT_BUILD_BENCHMARKS)

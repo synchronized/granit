@@ -83,12 +83,12 @@ add_custom_command(
   OUTPUT "${granit_render_pipeline_smoke_package}"
   COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/assets"
   COMMAND
-    granit_material_tool build
+    granit_asset_tool material build
     "${granit_smoke_asset_dir}/render_pipeline_untextured.grmat.json"
     --output "${granit_render_pipeline_smoke_package}" --shader-index
     "${GRANIT_PBR_TEST_SHADER_INDEX}"
   DEPENDS
-    granit_material_tool
+    granit_asset_tool
     granit_test_shader_assets
     "${granit_smoke_asset_dir}/render_pipeline_untextured.grmat.json"
     "${GRANIT_PBR_TEST_SHADER_INDEX}"
@@ -106,7 +106,7 @@ target_include_directories(
   granit_render_pipeline_offscreen_smoke PRIVATE "${PROJECT_SOURCE_DIR}/tests"
                                                    "${PROJECT_SOURCE_DIR}/src"
 )
-add_dependencies(granit_render_pipeline_offscreen_smoke granit_material_tool)
+add_dependencies(granit_render_pipeline_offscreen_smoke granit_asset_tool)
 target_sources(
   granit_render_pipeline_offscreen_smoke
   PRIVATE "${granit_render_pipeline_smoke_package}"
@@ -155,7 +155,7 @@ if(WIN32)
     granit_render_pipeline_window_smoke PRIVATE "${PROJECT_SOURCE_DIR}/tests"
                                                 "${PROJECT_SOURCE_DIR}/src"
   )
-  add_dependencies(granit_render_pipeline_window_smoke granit_material_tool)
+  add_dependencies(granit_render_pipeline_window_smoke granit_asset_tool)
   target_sources(
     granit_render_pipeline_window_smoke
     PRIVATE "${granit_render_pipeline_smoke_package}"
