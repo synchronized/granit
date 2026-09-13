@@ -471,7 +471,7 @@
 
 ## 三十一、0.23.0 空帧与覆盖层可靠性
 
-**状态：待开始；S-39A～S-39E 已确认。**
+**状态：实现中；S-39A～S-39C 与 S-39D 桌面路径已完成。**
 
 - **[S-39](plans/S-39-0.23.0-empty-frame-and-overlay-reliability.md) / P1**：让有效 View 在零可见
   Renderable 时仍完成清屏、Tone Mapping、Debug Draw、Canvas、Overlay 和 Frame 提交。
@@ -479,11 +479,13 @@
   API，不改变 C ABI。
 - 以离屏像素、桌面 Swapchain、浏览器 WebGPU 和 Gneiss 工程选择界面完成真实 Consumer 验收。
 - 透明 PBR、通用 Render Graph 重构、Android、Bindless 和稳定 ABI 决策不属于本版本。
+- **[S-40](plans/S-40-0.23.0-shader-toolchain-configuration-reliability.md) / P1**：修复 0.22.0
+  遗留工具路径导致的配置失败，并让锁定 Toolchain 与仓库 Shader/Material 快照逐字节一致。
 
 ## 近期执行顺序
 
-1. 先实施 S-39A～S-39C，固定空可见集合与 clear-only 输出契约。
-2. 再实施 S-39D～S-39E，完成覆盖层、交换链、WebGPU、Gneiss 和发布验收。
+1. 完成 S-40 配置模式、锁定快照和干净缓存构建验收。
+2. 继续 S-39D～S-39E，完成浏览器 WebGPU、Gneiss 和发布验收。
 3. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
 4. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
 5. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。

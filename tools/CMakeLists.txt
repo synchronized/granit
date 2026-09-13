@@ -644,8 +644,6 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   )
 endif()
 
-include(granit_shader_toolchain)
-granit_find_shader_toolchain()
 if(GRANIT_DXC_EXECUTABLE AND NOT GRANIT_SHADER_TOOLCHAIN_POLICY STREQUAL "unchecked")
   set(GRANIT_DXC_PROBE_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/dxc_spirv_probe.spv")
   execute_process(
@@ -763,7 +761,8 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     NAME granit.shader_toolchain.modes
     COMMAND
       "${CMAKE_COMMAND}"
-      "-DMODULE=${PROJECT_SOURCE_DIR}/cmake/GranitShaderToolchain.cmake" -P
+      "-DMODULE=${PROJECT_SOURCE_DIR}/cmake/GranitShaderToolchain.cmake"
+      "-DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/shader-toolchain-mode-test" -P
       "${PROJECT_SOURCE_DIR}/cmake/check_shader_toolchain_modes.cmake"
   )
 

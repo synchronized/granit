@@ -149,7 +149,7 @@ endfunction()
 function(granit_prepare_runtime_shader_libraries)
   set(output_root "${CMAKE_BINARY_DIR}/generated/runtime-libraries")
   set(object_root "${CMAKE_BINARY_DIR}/generated/runtime-shader-objects")
-  if(GRANIT_DXC_EXECUTABLE AND GRANIT_TINT_EXECUTABLE)
+  if(GRANIT_SHADER_TOOLCHAIN_ROOT AND GRANIT_DXC_EXECUTABLE AND GRANIT_TINT_EXECUTABLE)
     granit_add_hlsl_shader_library(
       ALL
       NAME pbr_standard
@@ -351,7 +351,7 @@ function(granit_prepare_test_shader_assets)
   list(APPEND outputs ${output})
 
   add_custom_target(granit_test_shader_assets DEPENDS ${outputs})
-  if(GRANIT_DXC_EXECUTABLE AND GRANIT_TINT_EXECUTABLE)
+  if(GRANIT_SHADER_TOOLCHAIN_ROOT AND GRANIT_DXC_EXECUTABLE AND GRANIT_TINT_EXECUTABLE)
     set(test_library_root "${CMAKE_BINARY_DIR}/generated/test-libraries")
     set(test_cache_root "${CMAKE_BINARY_DIR}/generated/test-library-objects")
     set(pbr_manifest "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_runtime.grshlib.json")

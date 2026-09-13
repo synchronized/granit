@@ -90,7 +90,7 @@ TEST_CASE("公共 PBR 材质模板具有稳定 Schema 和内容身份") {
   granit::material::material_archive_layout layout;
   REQUIRE(granit::material::parse_material_archive_layout(bytes, layout) ==
           granit::material::archive_error::none);
-  CHECK(GRANIT_PBR_MATERIAL_TEMPLATE_VERSION == 3);
+  CHECK(GRANIT_PBR_MATERIAL_TEMPLATE_VERSION == 4);
 
   constexpr std::string_view hex = GRANIT_PBR_MATERIAL_CONTENT_HASH_HEX;
   REQUIRE(hex.size() == layout.header.content_hash.size() * 2);

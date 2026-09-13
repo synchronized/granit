@@ -10,9 +10,9 @@
 #include <granit/renderer/pipeline.h>
 
 typedef uint32_t granit_pbr_texture_flags;
-#define GRANIT_PBR_MATERIAL_TEMPLATE_VERSION UINT32_C(3)
+#define GRANIT_PBR_MATERIAL_TEMPLATE_VERSION UINT32_C(4)
 #define GRANIT_PBR_MATERIAL_CONTENT_HASH_HEX                                                       \
-  "12156fefaa291f2a7fddda62caa0dae29656294b4e5d9d3f76a44bb8d3a7d8f2"
+  "d30305713f07b6e9068b9e1f2fa700304d858ee7b2e738870790da3dfa15dee9"
 #define GRANIT_PBR_TEXTURE_BASE_COLOR (UINT32_C(1) << 0)
 #define GRANIT_PBR_TEXTURE_METALLIC_ROUGHNESS (UINT32_C(1) << 1)
 #define GRANIT_PBR_TEXTURE_NORMAL (UINT32_C(1) << 2)

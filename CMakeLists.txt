@@ -36,6 +36,13 @@ include(granit_integration_dependencies)
 include(granit_platform)
 include(CTest)
 
+if(NOT EMSCRIPTEN AND
+   (GRANIT_BUILD_TOOLS OR GRANIT_BUILD_ASSET_TOOLS OR GRANIT_BUILD_EXAMPLES OR
+    GRANIT_BUILD_BENCHMARKS OR (GRANIT_BUILD_TESTING AND BUILD_TESTING)))
+  include(granit_shader_toolchain)
+  granit_find_shader_toolchain()
+endif()
+
 set(
   GRANIT_INSTALL_CMAKEDIR
   "${CMAKE_INSTALL_LIBDIR}/cmake/granit"
