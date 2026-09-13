@@ -37,6 +37,8 @@ if(EXISTS "${install_prefix}/lib/cmake/granit/granitAssetToolsTargets.cmake")
       asset_tools.h
       asset_tools.hpp
       asset_tools_export.h
+      material_builder.h
+      material_builder.hpp
   )
     if(NOT EXISTS "${install_prefix}/include/granit/tools/${asset_tools_header}")
       message(FATAL_ERROR "AssetTools 安装结果缺少公共头：${asset_tools_header}")
@@ -51,6 +53,8 @@ if(EXISTS "${install_prefix}/lib/cmake/granit/granitAssetToolsTargets.cmake")
       lib/cmake/granit/granitShaderToolsTargets.cmake
       bin/granit_shader_tool
       bin/granit_shader_tool.exe
+      bin/granit_material_tool
+      bin/granit_material_tool.exe
   )
     if(EXISTS "${install_prefix}/${obsolete_asset_tools_file}")
       message(FATAL_ERROR "AssetTools 安装结果仍包含旧文件：${obsolete_asset_tools_file}")

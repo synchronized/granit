@@ -432,11 +432,11 @@ set(granit_unlit_test_package "${CMAKE_CURRENT_BINARY_DIR}/assets/unlit.grmat")
 add_custom_command(
   OUTPUT "${granit_unlit_test_package}"
   COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/assets"
-  COMMAND granit_material_tool build "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit.grmat.json"
+  COMMAND granit_asset_tool material build "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit.grmat.json"
           --output "${granit_unlit_test_package}" --shader-index
           "${GRANIT_UNLIT_TEST_SHADER_INDEX}"
   DEPENDS
-    granit_material_tool
+    granit_asset_tool
     granit_test_shader_assets
     "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit.grmat.json"
     "${GRANIT_UNLIT_TEST_SHADER_INDEX}"

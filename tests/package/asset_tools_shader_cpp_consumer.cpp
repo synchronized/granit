@@ -4,8 +4,9 @@
 #include <granit/tools/asset_tools.hpp>
 
 int main() {
-  const auto [result, capabilities] = granit::asset_tools::shader::target_capabilities(
+  const auto [status, capabilities] = granit::asset_tools::shader::target_capabilities(
       granit::shader_backend::vulkan, granit::shader_profile::portable);
   static_cast<void>(capabilities);
-  return result == granit::result::success ? 0 : 1;
+  granit::asset_tools::material::result material;
+  return status == granit::result::success && !material ? 0 : 1;
 }

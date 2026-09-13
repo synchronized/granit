@@ -32,7 +32,7 @@ else()
   add_custom_command(
     OUTPUT "${granit_model_viewer_material_package}"
     COMMAND
-      granit_material_tool build
+      granit_asset_tool material build
       "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat.json"
       --output "${granit_model_viewer_material_package}" --shader-index
       "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grshidx.json"
@@ -41,7 +41,7 @@ else()
       "${granit_model_viewer_material_package}"
       "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat"
     DEPENDS
-      granit_material_tool
+      granit_asset_tool
       "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat.json"
       "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grshidx.json"
       "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat"

@@ -3,10 +3,10 @@
 
 # AssetTools SDK
 
-AssetTools 是供编辑器、资产构建器和命令行工具直接链接的可选组件。当前已接入的 Shader
-领域通过 Compiler 调用锁定版本的 DXC 与 Tint，将 HLSL 编译为离线 Shader 产物，并检查
-SPIR-V 的入口点、阶段和反射。Material、Texture 与 Environment Builder 将在后续阶段迁入；
-AssetTools 不进入核心渲染库的传递依赖。
+AssetTools 是供编辑器、资产构建器和命令行工具直接链接的可选组件。Shader 领域通过 Compiler
+调用锁定版本的 DXC 与 Tint，将 HLSL 编译为离线 Shader 产物，并检查 SPIR-V 的入口点、阶段和
+反射。Material 领域从源 JSON 与 Shader 逻辑索引构建和检查 `.grmat`。Texture 与 Environment
+Builder 将在后续阶段迁入；AssetTools 不进入核心渲染库的传递依赖。
 
 ## 构建与链接
 
@@ -116,6 +116,20 @@ Library Builder 自动将 DXC 与 Tint 二进制的 SHA-256 身份纳入缓存�
   查询与同一句柄的销毁并发执行。
 - 所有函数捕获内部异常，不允许异常穿过 C ABI。无效参数、无效句柄、内存不足和工具失败均以
   `granit_result` 返回。
+
+## Material Builder
+
+- C11 入口位于 `<granit/tools/material_builder.h>`，C++20 包装位于对应 `.hpp`，命名空间为
+  `granit::asset_tools::material`。
+- `granit_asset_tools_material_build` 接收 Material 源 JSON 和一个或多个内存中的
+  `.grshidx.json`，在 SDK 内将逻辑 Shader 名称解析为内容 ID，并生成确定性的 `.grmat` 与稳定
+  调试 JSON。最终资产不保存索引路径。
+- `granit_asset_tools_material_inspect` 从内存检查已有 `.grmat`，使用与 Runtime 相同的格式实现。
+  build 和 inspect 均返回移动独占的结果句柄；Archive、调试 JSON 和诊断视图在句柄销毁前有效。
+- 描述结构无效时不创建结果；输入内容或资产语义无效时返回 `invalid_argument`，并尽量返回包含
+  诊断的结果句柄。CLI 把诊断写入标准错误，并只在构建成功后原子替换输出文件。
+- CLI 使用 `granit_asset_tool material build` 和 `granit_asset_tool material inspect`。Material
+  领域不查找、加载或下载 Shader Toolchain。
 
 命令行可使用 `granit_asset_tool shader inspect --json shader.spv` 输出稳定排序的 JSON 调试视图。普通
 `inspect` 的 CSV 文本保持兼容，但程序不应解析该文本，应使用结构化 SDK 查询或反射 JSON 视图。

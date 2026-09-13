@@ -200,12 +200,12 @@ add_custom_command(
   OUTPUT "${granit_canvas_benchmark_package}"
   COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/assets"
   COMMAND
-    granit_material_tool build
+    granit_asset_tool material build
     "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit_canvas.grmat.json"
     --output "${granit_canvas_benchmark_package}" --shader-index
     "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/canvas.grshidx.json"
   DEPENDS
-    granit_material_tool
+    granit_asset_tool
     "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit_canvas.grmat.json"
     "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/canvas.grshidx.json"
   VERBATIM
@@ -288,12 +288,12 @@ add_custom_command(
   OUTPUT "${granit_render_pipeline_benchmark_package}"
   COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/assets"
   COMMAND
-    granit_material_tool build
+    granit_asset_tool material build
     "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/render_pipeline_workload.grmat.json"
     --output "${granit_render_pipeline_benchmark_package}" --shader-index
     "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/pbr.grshidx.json"
   DEPENDS
-    granit_material_tool
+    granit_asset_tool
     "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/render_pipeline_workload.grmat.json"
     "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/pbr.grshidx.json"
   VERBATIM
@@ -323,7 +323,7 @@ target_include_directories(
   granit_render_pipeline_benchmarks PRIVATE "${PROJECT_SOURCE_DIR}/src"
                                              "${PROJECT_SOURCE_DIR}/tests"
 )
-add_dependencies(granit_render_pipeline_benchmarks granit_material_tool granit_test_shader_assets)
+add_dependencies(granit_render_pipeline_benchmarks granit_asset_tool granit_test_shader_assets)
 target_sources(
   granit_render_pipeline_benchmarks
   PRIVATE "${granit_render_pipeline_benchmark_package}"

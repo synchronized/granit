@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "material_cli/commands.h"
 #include "shader_cli/commands.h"
 
 #include <iostream>
@@ -24,7 +25,9 @@ void print_usage() {
                "  granit_asset_tool shader compile --toolchain <root> "
                "--input <shader.hlsl> --entry <name> --stage <vertex|fragment|compute> "
                "--spirv-output <shader.spv> --wgsl-output <shader.wgsl> "
-               "[--define <name=value>]...\n";
+               "[--define <name=value>]...\n"
+               "  granit_asset_tool material build <source.grmat.json> ...\n"
+               "  granit_asset_tool material inspect <package.grmat> --json ...\n";
 }
 
 } // namespace
@@ -62,6 +65,8 @@ int run_shader_command(int argc, char** argv) {
 int main(int argc, char** argv) {
   if (argc >= 2 && std::string_view{argv[1]} == "shader")
     return run_shader_command(argc - 1, argv + 1);
+  if (argc >= 2 && std::string_view{argv[1]} == "material")
+    return run_material_command(argc - 1, argv + 1);
   print_usage();
   return 2;
 }

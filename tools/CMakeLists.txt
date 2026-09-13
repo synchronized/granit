@@ -51,9 +51,29 @@ granit_target_compile_warnings(granit_asset_tools_shader_core)
 set_target_properties(granit_asset_tools_shader_core PROPERTIES FOLDER "Tools")
 set_target_properties(granit_asset_tools_shader_core PROPERTIES POSITION_INDEPENDENT_CODE YES)
 
+add_library(
+  granit_asset_tools_material_core OBJECT
+  "${PROJECT_SOURCE_DIR}/src/material/material_archive.cpp"
+  "${PROJECT_SOURCE_DIR}/src/material/material_debug_json.cpp"
+  "${PROJECT_SOURCE_DIR}/src/material/material_metadata.cpp"
+  "${PROJECT_SOURCE_DIR}/src/material/material_package.cpp"
+  "${PROJECT_SOURCE_DIR}/src/material/material_package_archive.cpp"
+  "${PROJECT_SOURCE_DIR}/src/material/material_source_json.cpp"
+)
+target_compile_features(granit_asset_tools_material_core PUBLIC cxx_std_20)
+target_include_directories(
+  granit_asset_tools_material_core
+  PUBLIC "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
+)
+granit_target_compile_warnings(granit_asset_tools_material_core)
+set_target_properties(
+  granit_asset_tools_material_core PROPERTIES FOLDER "Tools" POSITION_INDEPENDENT_CODE YES
+)
+
 if(GRANIT_BUILD_ASSET_TOOLS OR GRANIT_BUILD_TOOLS OR (GRANIT_BUILD_TESTING AND BUILD_TESTING))
   add_library(
     granit_asset_tools
+    asset_tools_material_api.cpp
     asset_tools_shader_api.cpp
     shader_library/builder.cpp
     shader_library/builder.h
@@ -69,6 +89,8 @@ if(GRANIT_BUILD_ASSET_TOOLS OR GRANIT_BUILD_TOOLS OR (GRANIT_BUILD_TESTING AND B
       BASE_DIRS "${PROJECT_SOURCE_DIR}/include"
       FILES
         "${PROJECT_SOURCE_DIR}/include/granit/tools/asset_tools_export.h"
+        "${PROJECT_SOURCE_DIR}/include/granit/tools/material_builder.h"
+        "${PROJECT_SOURCE_DIR}/include/granit/tools/material_builder.hpp"
         "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_compiler.h"
         "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_compiler.hpp"
         "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_library_builder.h"
@@ -90,6 +112,7 @@ if(GRANIT_BUILD_ASSET_TOOLS OR GRANIT_BUILD_TOOLS OR (GRANIT_BUILD_TESTING AND B
       $<TARGET_OBJECTS:granit_shader_object_storage>
       $<TARGET_OBJECTS:granit_shader_library_source>
       $<TARGET_OBJECTS:granit_internal_shader_format>
+      $<TARGET_OBJECTS:granit_asset_tools_material_core>
       $<TARGET_OBJECTS:granit_asset_tools_shader_core>
       $<TARGET_OBJECTS:granit_spirv_reflect>
   )
@@ -128,7 +151,11 @@ endif()
 if(TARGET granit_asset_tools)
   add_executable(
     granit_asset_tool
+    asset_file_io.cpp
+    asset_file_io.h
     asset_cli/main.cpp
+    material_cli/commands.cpp
+    material_cli/commands.h
     shader_cli/arguments.cpp
     shader_cli/arguments.h
     shader_cli/commands.h
@@ -161,26 +188,6 @@ if(TARGET granit_asset_tools)
     RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT AssetTools
   )
 endif()
-
-add_executable(
-  granit_material_tool
-  material_tool_main.cpp
-  $<TARGET_OBJECTS:granit_shader_library_source>
-  "${PROJECT_SOURCE_DIR}/src/material/material_debug_json.cpp"
-  "${PROJECT_SOURCE_DIR}/src/material/material_source_json.cpp"
-)
-target_compile_features(granit_material_tool PRIVATE cxx_std_20)
-target_include_directories(
-  granit_material_tool PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/tools"
-)
-target_link_libraries(granit_material_tool PRIVATE granit::material)
-target_compile_options(
-  granit_material_tool
-  PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
-)
-granit_target_compile_warnings(granit_material_tool)
-granit_target_output_directories(granit_material_tool)
-set_target_properties(granit_material_tool PROPERTIES FOLDER "Tools")
 
 if((GRANIT_BUILD_TESTING AND BUILD_TESTING) OR GRANIT_BUILD_BENCHMARKS)
   add_executable(
@@ -219,6 +226,39 @@ if((GRANIT_BUILD_TESTING AND BUILD_TESTING) OR GRANIT_BUILD_BENCHMARKS)
 endif()
 
 if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+
+  add_executable(
+    granit_asset_tools_material_test
+    "${PROJECT_SOURCE_DIR}/tests/tools/asset_tools_material_test.cpp"
+  )
+  target_compile_features(granit_asset_tools_material_test PRIVATE cxx_std_20)
+  target_link_libraries(granit_asset_tools_material_test PRIVATE granit::asset_tools)
+  granit_target_compile_warnings(granit_asset_tools_material_test)
+  granit_target_output_directories(granit_asset_tools_material_test)
+  add_test(
+    NAME granit.asset_tools.material.api
+    COMMAND
+      granit_asset_tools_material_test
+      "${PROJECT_SOURCE_DIR}/tests/assets/material_package_fixture.grmat.json"
+      "${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.grshidx.json"
+  )
+
+  add_executable(
+    granit_asset_tools_material_c_test
+    "${PROJECT_SOURCE_DIR}/tests/tools/asset_tools_material_c_test.c"
+  )
+  target_compile_features(granit_asset_tools_material_c_test PRIVATE c_std_11)
+  target_link_libraries(granit_asset_tools_material_c_test PRIVATE granit::asset_tools)
+  set_target_properties(granit_asset_tools_material_c_test PROPERTIES LINKER_LANGUAGE CXX)
+  granit_target_compile_warnings(granit_asset_tools_material_c_test)
+  granit_target_output_directories(granit_asset_tools_material_c_test)
+  add_test(
+    NAME granit.asset_tools.material.c_api
+    COMMAND
+      granit_asset_tools_material_c_test
+      "${PROJECT_SOURCE_DIR}/tests/assets/material_package_fixture.grmat.json"
+      "${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.grshidx.json"
+  )
 
   set(granit_shader_fixture_object_dir "${CMAKE_CURRENT_BINARY_DIR}/test-objects")
   set(granit_shader_fixture_object_outputs)
@@ -495,20 +535,20 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   set(GRANIT_MATERIAL_PACKAGE_FIXTURE "${CMAKE_CURRENT_BINARY_DIR}/material_package_fixture.grmat")
   set(GRANIT_MATERIAL_DEBUG_FIXTURE "${GRANIT_MATERIAL_PACKAGE_FIXTURE}.debug.json")
   add_test(
-    NAME granit.material_tool.build
+    NAME granit.asset_tools.material.build
     COMMAND
-      granit_material_tool build
+      granit_asset_tool material build
       "${PROJECT_SOURCE_DIR}/tests/assets/material_package_fixture.grmat.json"
       --output "${GRANIT_MATERIAL_PACKAGE_FIXTURE}" --shader-index
       "${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.grshidx.json" --emit-debug-json
   )
-  set_tests_properties(granit.material_tool.build PROPERTIES FIXTURES_SETUP granit_material_package)
+  set_tests_properties(granit.asset_tools.material.build PROPERTIES FIXTURES_SETUP granit_material_package)
   add_test(
-    NAME granit.material_tool.inspect
-    COMMAND granit_material_tool inspect "${GRANIT_MATERIAL_PACKAGE_FIXTURE}" --json
+    NAME granit.asset_tools.material.inspect
+    COMMAND granit_asset_tool material inspect "${GRANIT_MATERIAL_PACKAGE_FIXTURE}" --json
   )
   set_tests_properties(
-    granit.material_tool.inspect
+    granit.asset_tools.material.inspect
     PROPERTIES
       FIXTURES_REQUIRED granit_material_package
       PASS_REGULAR_EXPRESSION "\"magic\": \"GRMAT\""
@@ -516,19 +556,19 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
 
   set(GRANIT_UNLIT_PACKAGE_FIXTURE "${CMAKE_CURRENT_BINARY_DIR}/unlit.grmat")
   add_test(
-    NAME granit.material_tool.unlit_build
+    NAME granit.asset_tools.material.unlit_build
     COMMAND
-      granit_material_tool build "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit.grmat.json"
+      granit_asset_tool material build "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit.grmat.json"
       --output "${GRANIT_UNLIT_PACKAGE_FIXTURE}" --shader-index
       "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit.grshidx.json"
   )
-  set_tests_properties(granit.material_tool.unlit_build PROPERTIES FIXTURES_SETUP granit_unlit)
+  set_tests_properties(granit.asset_tools.material.unlit_build PROPERTIES FIXTURES_SETUP granit_unlit)
   add_test(
-    NAME granit.material_tool.unlit_inspect
-    COMMAND granit_material_tool inspect "${GRANIT_UNLIT_PACKAGE_FIXTURE}" --json
+    NAME granit.asset_tools.material.unlit_inspect
+    COMMAND granit_asset_tool material inspect "${GRANIT_UNLIT_PACKAGE_FIXTURE}" --json
   )
   set_tests_properties(
-    granit.material_tool.unlit_inspect
+    granit.asset_tools.material.unlit_inspect
     PROPERTIES
       FIXTURES_REQUIRED granit_unlit
       PASS_REGULAR_EXPRESSION "\"constant_buffer_size\": 32"

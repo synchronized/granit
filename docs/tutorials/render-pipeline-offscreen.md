@@ -59,7 +59,7 @@ Mesh 复制顶点布局和绘制范围，但只借用 Vertex Buffer。因此 Ver
 
 ## 4. 创建 Material
 
-CMake 在构建 Smoke 时使用 `granit_material_tool`，把
+CMake 在构建 Smoke 时使用 `granit_asset_tool`，把
 `tests/fixtures/smoke/render_pipeline_untextured.grmat.json` 编译为材质归档。程序读取归档，并在创建
 Material 时把 `base_color` 初始化为红色系颜色。示例把构建生成的 Shader 载荷链接为 `.grshlib`；
 材质归档通过内容 ID 引用其中的 Shader，Material 只接收对应 Library 句柄，Renderer 选择 Vulkan

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "asset_file_io.h"
 #include "shader_cli/arguments.h"
 #include "shader_cli/commands.h"
 #include <granit/tools/asset_tools.hpp>
@@ -14,28 +15,11 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <iterator>
 #include <sstream>
 #include <vector>
 
 namespace granit::shader_cli {
 namespace {
-std::vector<std::byte> read_bytes(const std::filesystem::path& path) {
-  std::ifstream stream{path, std::ios::binary};
-  const std::vector<char> bytes{std::istreambuf_iterator<char>{stream}, {}};
-  std::vector<std::byte> output(bytes.size());
-  if (!bytes.empty())
-    std::memcpy(output.data(), bytes.data(), bytes.size());
-  return output;
-}
-
-std::string read_text(const std::filesystem::path& path) {
-  const auto bytes = read_bytes(path);
-  if (bytes.empty())
-    return {};
-  return {reinterpret_cast<const char*>(bytes.data()), bytes.size()};
-}
-
 bool valid_identifier(std::string_view name) {
   return !name.empty() &&
          ((name.front() >= 'a' && name.front() <= 'z') ||
@@ -62,7 +46,7 @@ bool write_if_changed(const std::filesystem::path& destination, std::string_view
       return false;
   }
   if (std::filesystem::exists(destination, error) && !error) {
-    const auto current = read_bytes(destination);
+    const auto current = granit::asset_tools::cli::read_file(destination);
     if (current.size() == content.size() &&
         std::memcmp(current.data(), content.data(), content.size()) == 0)
       return true;
@@ -110,7 +94,8 @@ int emit_shader_index_ids(int argc, char** argv) {
     return 2;
   }
   granit::tools::shader_library_index index;
-  if (granit::tools::parse_shader_library_index_json(read_text(*index_path), index) !=
+  if (granit::tools::parse_shader_library_index_json(
+          granit::asset_tools::cli::read_text_file(*index_path), index) !=
       granit::tools::shader_library_source_error::none) {
     std::cerr << "无法读取 Shader Library 索引：" << *index_path << '\n';
     return 1;
