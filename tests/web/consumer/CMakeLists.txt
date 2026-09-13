@@ -9,7 +9,7 @@ if(NOT EMSCRIPTEN)
 endif()
 
 include(CTest)
-find_package(granit 0.21 CONFIG REQUIRED COMPONENTS RenderPipeline OPTIONAL_COMPONENTS Window Input)
+find_package(granit 0.22 CONFIG REQUIRED COMPONENTS RenderPipeline OPTIONAL_COMPONENTS Window Input)
 if(granit_Window_FOUND OR granit_Input_FOUND)
   message(FATAL_ERROR "浏览器安装包不应包含未实现的原生 Window/Input 组件")
 endif()

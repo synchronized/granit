@@ -193,7 +193,7 @@ D-03-graphics-pipeline.md
 - [S-37L：HLSL-first Shader 作者入口](S-37L-hlsl-first-shader-authoring.md)——已完成；L1 至 L6 已
   完成作者入口、内建资产、旧接口和发布边界收敛，并通过完整跨平台与候选包验收。
 - [S-38：0.22.0 AssetTools SDK 与工具链交付](S-38-0.22.0-asset-tools-and-toolchain.md)——实现中；
-  Shader、Material 与 Texture 已迁移，下一步统一 Environment 离线接口与 CLI。
+  四个资产领域与工具链交付已完成，本地发布验收通过，等待远端 Linux 与发布工作流。
 
 ## 状态
 

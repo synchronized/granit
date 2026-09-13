@@ -19,6 +19,7 @@
 
 ## 稳定化与跨平台
 
+- [2026-09-13 S-38 本地发布验收](2026-09-13-s38-local-release-acceptance.md)
 - [2026-09-13 Granit 0.21.0 发布验收](2026-09-13-v0.21.0-release-acceptance.md)
 - [2026-09-13 S-37 远端发布验收](2026-09-13-s37-remote-release-acceptance.md)
 - [2026-09-13 S-37L 本地 Release 验收](2026-09-13-s37l-local-release-acceptance.md)
