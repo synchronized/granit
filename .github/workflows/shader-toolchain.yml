@@ -177,7 +177,7 @@ jobs:
             -DGRANIT_SHADER_TOOLCHAIN_ROOT="$stage" -DGRANIT_SHADER_TOOLCHAIN_POLICY=locked `
             -DGRANIT_TINT_REVISION="$env:TINT_REVISION"
           cmake --build $validation --target granit_shader_hlsl_api_test
-          ctest --test-dir $validation -R "granit.shader_tools.hlsl_api" --output-on-failure
+          ctest --test-dir $validation -R "granit.asset_tools.shader.hlsl_api" --output-on-failure
           Compress-Archive -Path $stage -DestinationPath "$name.zip"
           $hash = (Get-FileHash "$name.zip" -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash  $name.zip" | Set-Content -Encoding ascii "$name.zip.sha256"
@@ -328,7 +328,7 @@ jobs:
             -DGRANIT_TINT_REVISION="$TINT_REVISION"
           cmake --build "$validation" --target \
             granit_shader_hlsl_api_test
-          ctest --test-dir "$validation" -R 'granit.shader_tools.hlsl_api' \
+          ctest --test-dir "$validation" -R 'granit.asset_tools.shader.hlsl_api' \
             --output-on-failure
           tar -C stage -czf "$name.tar.gz" "$name"
           sha256sum "$name.tar.gz" > "$name.tar.gz.sha256"

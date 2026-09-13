@@ -53,7 +53,7 @@ jobs:
           cmake --build build/shader-toolchain-test --target \
             granit_shader_hlsl_api_test
           ctest --test-dir build/shader-toolchain-test \
-            -R 'granit\.shader_tools\.hlsl_api' --output-on-failure
+            -R 'granit\.asset_tools\.shader\.hlsl_api' --output-on-failure
 
   build-test-consumer:
     runs-on: ubuntu-24.04
