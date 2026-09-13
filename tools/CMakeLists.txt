@@ -73,9 +73,11 @@ set_target_properties(
 if(GRANIT_BUILD_ASSET_TOOLS OR GRANIT_BUILD_TOOLS OR (GRANIT_BUILD_TESTING AND BUILD_TESTING))
   add_library(
     granit_asset_tools
+    asset_tools_environment_api.cpp
     asset_tools_material_api.cpp
     asset_tools_shader_api.cpp
     asset_tools_texture_api.cpp
+    "${PROJECT_SOURCE_DIR}/src/assets/environment_asset.cpp"
     "${PROJECT_SOURCE_DIR}/src/assets/texture_asset.cpp"
     shader_library/builder.cpp
     shader_library/builder.h
@@ -91,6 +93,8 @@ if(GRANIT_BUILD_ASSET_TOOLS OR GRANIT_BUILD_TOOLS OR (GRANIT_BUILD_TESTING AND B
       BASE_DIRS "${PROJECT_SOURCE_DIR}/include"
       FILES
         "${PROJECT_SOURCE_DIR}/include/granit/tools/asset_tools_export.h"
+        "${PROJECT_SOURCE_DIR}/include/granit/tools/environment_builder.h"
+        "${PROJECT_SOURCE_DIR}/include/granit/tools/environment_builder.hpp"
         "${PROJECT_SOURCE_DIR}/include/granit/tools/material_builder.h"
         "${PROJECT_SOURCE_DIR}/include/granit/tools/material_builder.hpp"
         "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_compiler.h"
@@ -158,6 +162,8 @@ if(TARGET granit_asset_tools)
     asset_file_io.cpp
     asset_file_io.h
     asset_cli/main.cpp
+    environment_cli/commands.cpp
+    environment_cli/commands.h
     material_cli/commands.cpp
     material_cli/commands.h
     shader_cli/arguments.cpp
@@ -292,6 +298,35 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
       "${CMAKE_COMMAND}" "-DTOOL=$<TARGET_FILE:granit_asset_tool>"
       "-DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/texture-cli-test" -P
       "${PROJECT_SOURCE_DIR}/cmake/check_texture_asset_tool.cmake"
+  )
+
+  add_executable(
+    granit_asset_tools_environment_test
+    "${PROJECT_SOURCE_DIR}/tests/tools/asset_tools_environment_test.cpp"
+  )
+  target_compile_features(granit_asset_tools_environment_test PRIVATE cxx_std_20)
+  target_link_libraries(granit_asset_tools_environment_test PRIVATE granit::asset_tools)
+  granit_target_compile_warnings(granit_asset_tools_environment_test)
+  granit_target_output_directories(granit_asset_tools_environment_test)
+  add_test(NAME granit.asset_tools.environment.api COMMAND granit_asset_tools_environment_test)
+
+  add_executable(
+    granit_asset_tools_environment_c_test
+    "${PROJECT_SOURCE_DIR}/tests/tools/asset_tools_environment_c_test.c"
+  )
+  target_compile_features(granit_asset_tools_environment_c_test PRIVATE c_std_11)
+  target_link_libraries(granit_asset_tools_environment_c_test PRIVATE granit::asset_tools)
+  set_target_properties(granit_asset_tools_environment_c_test PROPERTIES LINKER_LANGUAGE CXX)
+  granit_target_compile_warnings(granit_asset_tools_environment_c_test)
+  granit_target_output_directories(granit_asset_tools_environment_c_test)
+  add_test(NAME granit.asset_tools.environment.c_api COMMAND granit_asset_tools_environment_c_test)
+  add_test(
+    NAME granit.asset_tools.environment.cli
+    COMMAND
+      "${CMAKE_COMMAND}" "-DTOOL=$<TARGET_FILE:granit_asset_tool>"
+      "-DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/environment-cli-test"
+      "-DFIXTURE=${PROJECT_SOURCE_DIR}/assets/environments/studio_small_03.grenv" -P
+      "${PROJECT_SOURCE_DIR}/cmake/check_environment_asset_tool.cmake"
   )
 
   set(granit_shader_fixture_object_dir "${CMAKE_CURRENT_BINARY_DIR}/test-objects")

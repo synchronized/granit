@@ -56,21 +56,29 @@ SHA-256。来源和固定校验值见
 <ibl-sampler> -inputPath studio_small_03_1k.hdr -outCubeMap specular.ktx2 `
   -outLUT brdf_lut.png -distribution GGX -sampleCount 1024 -cubeMapResolution 128 `
   -mipLevelCount 8 -targetFormat R16G16B16A16_SFLOAT
-build/windows-clang-debug/bin/granit_model_viewer_environment_tool.exe build `
-  --irradiance diffuse.ktx2 --prefiltered specular.ktx2 `
-  --brdf-lut brdf_lut.png --output StudioSmall03.grenv `
+<asset-pipeline> extract-rgba16f diffuse.ktx2 irradiance.rgba16f.bin
+<asset-pipeline> extract-rgba16f-mips specular.ktx2 prefiltered
+<asset-pipeline> convert-rgba16f brdf_lut.png brdf_lut.rgba16f.bin
+build/windows-clang-debug/bin/granit_asset_tool.exe environment build `
+  --irradiance irradiance.rgba16f.bin --irradiance-resolution 32 `
+  --prefiltered 128=prefiltered/128.bin --prefiltered 64=prefiltered/64.bin `
+  --prefiltered 32=prefiltered/32.bin --prefiltered 16=prefiltered/16.bin `
+  --prefiltered 8=prefiltered/8.bin --prefiltered 4=prefiltered/4.bin `
+  --prefiltered 2=prefiltered/2.bin --prefiltered 1=prefiltered/1.bin `
+  --brdf-lut brdf_lut.rgba16f.bin --brdf-width 256 --brdf-height 256 `
+  --output StudioSmall03.grenv `
   --intensity 0.12 --exposure -0.5
 ```
 
-打包工具只接受未压缩 RGBA16F 六面 KTX2；GGX 输入必须包含一直到 1×1 的完整 Mip 链。
-BRDF LUT PNG 会被确定性转换为 RGBA16F。`--intensity` 和 `--exposure` 写入该环境推荐的初始
-光照参数；查看器加载后采用这些值，用户仍可在 Lighting 面板继续调整。工具不属于安装 SDK，
-也不会成为应用运行时依赖。
+上游资产管线负责从 KTX2/PNG 提取紧密 RGBA16F 字节；Granit Environment Builder 只验证六面
+Cube 布局、完整 mip 链和 LUT 尺寸并确定性编码。`--intensity` 和 `--exposure` 写入该环境推荐的
+初始光照参数；查看器加载后采用这些值，用户仍可在 Lighting 面板继续调整。AssetTools 是可选
+安装组件，不会成为应用运行时依赖。
 仓库已提交同一参数生成的 `assets/environments/studio_small_03.grenv`；其大小、SHA-256、采样参数和
 glTF IBL Sampler 修订号记录在 manifest 中。
 
 查看器省略 `--environment` 时会创建一个低分辨率内置摄影棚环境，保证离线首次运行时金属与暗部
-仍然可读；传入 GRENV v2 则使用预处理的高质量环境及其推荐光照参数进行跨后端图像验收。
+仍然可读；传入 GRENV v3 则使用预处理的高质量环境及其推荐光照参数进行跨后端图像验收。
 查看器默认使用方向光作为主光，并以低强度环境光补充暗部和金属反射；两者均可在 Lighting 面板调整。
 
 桌面查看器会在后台读取和解析 glTF、解码纹理，并在主线程持续显示阶段进度和处理窗口事件。
@@ -98,7 +106,7 @@ build/model-viewer/bin/granit_model_viewer_example.exe `
 | 参数 | 作用 |
 | --- | --- |
 | `--asset <文件>` | 必填；指定 `.gltf` 或 `.glb` 主文件 |
-| `--environment <文件>` | 可选；指定 GRENV v2 环境包，省略时使用内置低分辨率环境 |
+| `--environment <文件>` | 可选；指定 GRENV v3 环境包，省略时使用内置低分辨率环境 |
 | `--backend=auto\|vulkan` | 选择桌面 Renderer 后端 |
 | `--validation` | 启用可用的后端验证层 |
 | `--smoke-test` | 渲染少量帧后自动退出 |

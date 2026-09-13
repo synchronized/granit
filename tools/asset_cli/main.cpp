@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "environment_cli/commands.h"
 #include "material_cli/commands.h"
 #include "shader_cli/commands.h"
 #include "texture_cli/commands.h"
@@ -30,7 +31,9 @@ void print_usage() {
                "  granit_asset_tool material build <source.grmat.json> ...\n"
                "  granit_asset_tool material inspect <package.grmat> --json ...\n"
                "  granit_asset_tool texture build ...\n"
-               "  granit_asset_tool texture inspect <manifest.grtex> --json ...\n";
+               "  granit_asset_tool texture inspect <manifest.grtex> --json ...\n"
+               "  granit_asset_tool environment build ...\n"
+               "  granit_asset_tool environment inspect <environment.grenv> --json ...\n";
 }
 
 } // namespace
@@ -72,6 +75,8 @@ int main(int argc, char** argv) {
     return run_material_command(argc - 1, argv + 1);
   if (argc >= 2 && std::string_view{argv[1]} == "texture")
     return run_texture_command(argc - 1, argv + 1);
+  if (argc >= 2 && std::string_view{argv[1]} == "environment")
+    return run_environment_command(argc - 1, argv + 1);
   print_usage();
   return 2;
 }

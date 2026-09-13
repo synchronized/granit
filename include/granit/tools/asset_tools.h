@@ -4,6 +4,7 @@
 #ifndef GRANIT_ASSET_TOOLS_H_
 #define GRANIT_ASSET_TOOLS_H_
 
+#include <granit/tools/environment_builder.h>
 #include <granit/tools/material_builder.h>
 #include <granit/tools/shader_compiler.h>
 #include <granit/tools/shader_library_builder.h>

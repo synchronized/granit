@@ -411,7 +411,7 @@ add_executable(
   pipeline/pbr_material_api_test.cpp
   pipeline/environment_map_api_test.cpp
   pipeline/environment_asset_test.cpp
-  "${PROJECT_SOURCE_DIR}/src/pipeline/environment_asset.cpp"
+  "${PROJECT_SOURCE_DIR}/src/assets/environment_asset.cpp"
   $<TARGET_OBJECTS:granit_internal_shader_format>
   pipeline/mesh_api_test.cpp
   pipeline/render_pipeline_api_test.cpp

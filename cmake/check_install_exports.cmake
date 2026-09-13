@@ -37,6 +37,8 @@ if(EXISTS "${install_prefix}/lib/cmake/granit/granitAssetToolsTargets.cmake")
       asset_tools.h
       asset_tools.hpp
       asset_tools_export.h
+      environment_builder.h
+      environment_builder.hpp
       material_builder.h
       material_builder.hpp
       texture_builder.h

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "pipeline/environment_asset.h"
+#include "assets/environment_asset.h"
 
 #include "core/sha256.h"
 
@@ -12,7 +12,7 @@
 #include <limits>
 #include <new>
 
-namespace granit::pipeline::detail {
+namespace granit::detail {
 namespace {
 
 constexpr std::array magic{'G', 'R', 'E', 'N', 'V', '0', '3', '\0'};
@@ -228,4 +228,4 @@ environment_package_error encode_environment_package(const environment_package& 
   }
 }
 
-} // namespace granit::pipeline::detail
+} // namespace granit::detail

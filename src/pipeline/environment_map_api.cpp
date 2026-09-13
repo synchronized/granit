@@ -3,7 +3,7 @@
 
 #include <granit/pipeline/environment_map.h>
 
-#include "pipeline/environment_asset.h"
+#include "assets/environment_asset.h"
 
 #include <granit/renderer/texture.hpp>
 
@@ -77,7 +77,7 @@ granit::result upload_cube_mip(granit::texture& texture, std::span<const std::by
 }
 
 granit_result initialize_state(environment_state& state,
-                               const granit::pipeline::detail::environment_package& package) {
+                               const granit::detail::environment_package& package) {
   auto result = state.irradiance_texture.initialize(
       state.renderer,
       {.dimension = granit::texture_dimension::cube,
@@ -174,13 +174,13 @@ granit_environment_map_create_from_asset(granit_renderer renderer,
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   try {
-    granit::pipeline::detail::environment_package package;
+    granit::detail::environment_package package;
     const auto bytes =
         std::span{static_cast<const std::byte*>(desc->data), static_cast<std::size_t>(desc->size)};
-    const auto parsed = granit::pipeline::detail::parse_environment_package(bytes, package);
-    if (parsed == granit::pipeline::detail::environment_package_error::unsupported_version)
+    const auto parsed = granit::detail::parse_environment_package(bytes, package);
+    if (parsed == granit::detail::environment_package_error::unsupported_version)
       return GRANIT_ERROR_UNSUPPORTED;
-    if (parsed != granit::pipeline::detail::environment_package_error::none)
+    if (parsed != granit::detail::environment_package_error::none)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     auto state = std::make_shared<environment_state>();
     state->renderer = renderer;
@@ -213,8 +213,8 @@ granit_environment_map_create_builtin(granit_renderer renderer,
         0x399a, 0x3971, 0x391f, 0x3c00, 0x2e66, 0x2e66, 0x2fae, 0x3c00,
         0x35ae, 0x3666, 0x3733, 0x3c00, 0x3400, 0x3266, 0x319a, 0x3c00};
     constexpr std::array<std::uint16_t, 4> brdf_lut{0x3800, 0x2e66, 0x0000, 0x3c00};
-    const granit::pipeline::detail::environment_mip mip{1, std::as_bytes(std::span{prefiltered})};
-    granit::pipeline::detail::environment_package package;
+    const granit::detail::environment_mip mip{1, std::as_bytes(std::span{prefiltered})};
+    granit::detail::environment_package package;
     package.irradiance_resolution = 1;
     package.irradiance_pixels = std::as_bytes(std::span{irradiance});
     package.prefiltered_mips = {mip};

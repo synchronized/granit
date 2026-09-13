@@ -6,8 +6,8 @@
 AssetTools 是供编辑器、资产构建器和命令行工具直接链接的可选组件。Shader 领域通过 Compiler
 调用锁定版本的 DXC 与 Tint，将 HLSL 编译为离线 Shader 产物，并检查 SPIR-V 的入口点、阶段和
 反射。Material 领域从源 JSON 与 Shader 逻辑索引构建和检查 `.grmat`。Texture 领域从已经编码的
-GPU 格式变体生成 Manifest 与合并负载。Environment Builder 将在后续阶段迁入；AssetTools 不进入
-核心渲染库的传递依赖。
+GPU 格式变体生成 Manifest 与合并负载。Environment 领域从预处理 RGBA16F 像素构建和检查
+`.grenv`。AssetTools 不进入核心渲染库的传递依赖。
 
 ## 构建与链接
 
@@ -145,6 +145,19 @@ Library Builder 自动将 DXC 与 Tint 二进制的 SHA-256 身份纳入缓存�
   都不创建 GPU 对象，也不依赖 Renderer 状态或 Shader Toolchain。
 - CLI 的 `texture build` 接受 `--variant <format=payload>`，当前要求每个文件按 layer、mip 顺序
   紧密保存完整链；`texture inspect` 输出 JSON。图片解码和 GPU 格式压缩仍由上游资产管线负责。
+
+## Environment Builder
+
+- C11 入口位于 `<granit/tools/environment_builder.h>`，C++20 包装位于对应 `.hpp`，命名空间为
+  `granit::asset_tools::environment`。
+- Builder 接收紧密排列的 RGBA16F Irradiance Cube、完整 Prefiltered Cube mip 链、BRDF LUT
+  以及推荐环境强度和曝光值，生成包含 SHA-256 负载摘要的确定性 GRENV v3 包。
+- 六个 Cube 面在每个输入中连续排列；Prefiltered mip 必须从给定的二次幂分辨率逐级缩小，且
+  每个 mip 的像素字节数必须与分辨率严格一致。Builder 不执行 HDR 卷积、图片解码或格式转换。
+- `granit_asset_tools_environment_inspect` 使用与 Runtime 相同的私有格式实现检查版本、布局、参数
+  和摘要，并输出稳定调试 JSON。Builder 与 Inspector 均不创建 GPU 对象或依赖 Shader Toolchain。
+- CLI 使用 `granit_asset_tool environment build` 和 `environment inspect`。旧的 Model Viewer 私有
+  打包工具已删除，输入容器解析与 RGBA16F 预处理由上游资产管线负责。
 
 命令行可使用 `granit_asset_tool shader inspect --json shader.spv` 输出稳定排序的 JSON 调试视图。普通
 `inspect` 的 CSV 文本保持兼容，但程序不应解析该文本，应使用结构化 SDK 查询或反射 JSON 视图。
