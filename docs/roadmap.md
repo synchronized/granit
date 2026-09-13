@@ -47,6 +47,7 @@
 | 二十七、0.19.0 纹理资产变体 | 已发布 | 纹理 Manifest、选择与逐 mip 上传已完成 |
 | 二十八、0.20.0 示例框架稳定化 | 已发布 | 示例分层、交互与双后端视觉验收已完成 |
 | 二十九、0.21.0 Shader Library 与后端无关材质 | 已完成 | S-37A～S-37L 与跨平台候选包验收均已完成 |
+| 三十、0.22.0 ShaderTools 工具链交付 | 待开始 | 统一根目录、可选自动获取与独立工具链发布 |
 
 ## 一、工程与 ABI 基础
 
@@ -452,12 +453,25 @@
 - 文件 I/O、网络、资产数据库、运行时源码编译、Android、新后端、Bindless 和材质节点图不属于
   本版本。
 
+## 三十、0.22.0 ShaderTools 工具链交付与自动获取
+
+**状态：待开始；设计已确认。**
+
+- **[S-38](plans/S-38-0.22.0-shader-toolchain-acquisition.md) / P1**：将 ShaderTools 的 DXC/Tint
+  独立路径收敛为一个 Toolchain 根目录，并为安装 Consumer 提供 `off`、`system`、`auto` 与
+  `download` 获取模式。
+- Toolchain 继续通过不可变的独立 Release 交付，普通 Granit SDK 只记录锁定身份；下载必须经过
+  归档 SHA-256、包内清单和真实编译能力验证。
+- 已构建 `.grshlib` 的 Runtime 消费路径保持无工具链依赖；默认配置不访问网络。
+- macOS、ARM64、运行时 Shader 编译、新作者语言和把工具链嵌入每个 SDK 包不属于本版本。
+
 ## 近期执行顺序
 
-1. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
-2. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
-3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-4. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+1. 启动 S-38A～S-38F，在同一 0.22.0 特性分支完成接口、获取、发布与验收闭环。
+2. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
+3. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
+4. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+5. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。

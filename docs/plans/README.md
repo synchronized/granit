@@ -192,6 +192,8 @@ D-03-graphics-pipeline.md
   适配与本地发布验收。
 - [S-37L：HLSL-first Shader 作者入口](S-37L-hlsl-first-shader-authoring.md)——已完成；L1 至 L6 已
   完成作者入口、内建资产、旧接口和发布边界收敛，并通过完整跨平台与候选包验收。
+- [S-38：0.22.0 ShaderTools 工具链交付与自动获取](S-38-0.22.0-shader-toolchain-acquisition.md)——
+  已确认，待实施；统一 Toolchain 根目录、可安装解析模块、显式下载模式与独立 Release 交付。
 
 ## 状态
 
