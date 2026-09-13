@@ -41,6 +41,8 @@ if("AssetTools" IN_LIST granit_FIND_COMPONENTS)
   find_dependency(Threads)
   if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/granitAssetToolsTargets.cmake")
     include("${CMAKE_CURRENT_LIST_DIR}/granitAssetToolsTargets.cmake")
+    set_and_check(granit_SHADER_TOOLCHAIN_MODULE
+                  "${CMAKE_CURRENT_LIST_DIR}/GranitShaderToolchain.cmake")
     set(granit_AssetTools_FOUND TRUE)
   else()
     set(granit_AssetTools_FOUND FALSE)

@@ -759,6 +759,13 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
       -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/shader-toolchain-license-test -P
       "${PROJECT_SOURCE_DIR}/cmake/check_collect_license_bundle.cmake"
   )
+  add_test(
+    NAME granit.shader_toolchain.modes
+    COMMAND
+      "${CMAKE_COMMAND}"
+      "-DMODULE=${PROJECT_SOURCE_DIR}/cmake/GranitShaderToolchain.cmake" -P
+      "${PROJECT_SOURCE_DIR}/cmake/check_shader_toolchain_modes.cmake"
+  )
 
   if(GRANIT_SHADER_TOOLCHAIN_ROOT AND GRANIT_DXC_EXECUTABLE AND GRANIT_TINT_EXECUTABLE)
     add_executable(

@@ -42,6 +42,17 @@ HLSL portable 路径需要资产构建机安装 DXC 与 Tint，但应用运行�
   `GRANIT_TINT_REVISION` 提供匹配的源码修订，否则配置失败。
 - `unchecked` 只用于适配新工具链，跳过版本和配置期编译能力约束；真实资产编译仍可能失败。
 
+`GRANIT_SHADER_TOOLCHAIN_MODE` 控制工具链来源：
+
+- `off` 禁用 HLSL 构建且不查找工具、不访问网络；Material、Texture 和 Environment 仍可使用；
+- `system` 是默认值，只搜索显式 `GRANIT_SHADER_TOOLCHAIN_ROOT`、Vulkan SDK 和 `PATH`；
+- `auto` 先执行 `system` 搜索，缺少完整 DXC/Tint 时下载锁定发布包；
+- `download` 忽略偶然发现的系统工具并使用锁定缓存包。显式 Root 在所有模式中优先。
+
+下载缓存由 `GRANIT_SHADER_TOOLCHAIN_CACHE_DIR` 指定，默认位于构建树。下载过程使用进程锁、临时
+归档、发布 SHA-256、包内逐文件清单校验和原子目录替换。安装 AssetTools 后可通过
+`granit_SHADER_TOOLCHAIN_MODULE` 引入同一 `GranitShaderToolchain.cmake` 模块。
+
 Library Builder 自动将 DXC 与 Tint 二进制的 SHA-256 身份纳入缓存键，因此路径相同但二进制升级
 后不会复用旧产物。工具身份属于缓存实现，不单独暴露公共查询接口。
 

@@ -116,14 +116,19 @@ Windows x64 与 Linux x64 可以显式运行下载脚本。脚本选择当前宿
 cmake -DDESTINATION=<缓存目录> -P cmake/download_shader_toolchain.cmake
 ```
 
-随后使用脚本输出的目录配置 AssetTools，并同时声明锁定的 Tint 修订：
+也可以让可安装的 CMake 模块按模式完成查找或下载：
 
 ```sh
 cmake -S . -B build \
-  -DGRANIT_SHADER_TOOLCHAIN_ROOT=<缓存目录>/<脚本输出的工具链目录> \
-  -DGRANIT_SHADER_TOOLCHAIN_POLICY=locked \
-  -DGRANIT_TINT_REVISION=0bc38adde72b79013536f8ce354b639ae19ae195
+  -DGRANIT_SHADER_TOOLCHAIN_MODE=download \
+  -DGRANIT_SHADER_TOOLCHAIN_CACHE_DIR=<缓存目录> \
+  -DGRANIT_SHADER_TOOLCHAIN_POLICY=locked
 ```
+
+`system`（默认）不访问网络，`off` 完全禁用 Shader 工具链，`auto` 仅在本机工具不完整时下载，
+`download` 固定使用锁定发布包。显式 `GRANIT_SHADER_TOOLCHAIN_ROOT` 始终优先。安装 Consumer 在
+请求 `AssetTools` component 后可 `include("${granit_SHADER_TOOLCHAIN_MODULE}")` 并调用
+`granit_find_shader_toolchain()`。
 
 工具链发布页为
 [Shader Toolchain v20260720.160313](https://github.com/synchronized/granit/releases/tag/shader-toolchain-v20260720.160313-0bc38adde72b)。

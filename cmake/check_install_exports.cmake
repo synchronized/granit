@@ -25,6 +25,13 @@ foreach(required_file IN LISTS required_files)
 endforeach()
 
 if(EXISTS "${install_prefix}/lib/cmake/granit/granitAssetToolsTargets.cmake")
+  foreach(toolchain_module IN ITEMS GranitShaderToolchain.cmake GranitShaderToolchainLock.cmake
+                                   granit_shader_toolchain.cmake download_shader_toolchain.cmake
+                                   verify_shader_toolchain_manifest.cmake)
+    if(NOT EXISTS "${install_prefix}/lib/cmake/granit/${toolchain_module}")
+      message(FATAL_ERROR "AssetTools 安装结果缺少工具链模块：${toolchain_module}")
+    endif()
+  endforeach()
   foreach(
     asset_tools_header
     IN ITEMS

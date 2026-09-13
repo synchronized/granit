@@ -18,6 +18,10 @@ cmake --build --preset windows-clang-debug --target granit_asset_tool
 官方可复现构建使用 `locked`，新版本试验可临时使用 `unchecked`。完整约束见
 [AssetTools SDK](../docs/reference/asset-tools.md)。
 
+`GRANIT_SHADER_TOOLCHAIN_MODE` 支持 `off`、`system`、`auto` 和 `download`。默认 `system` 只使用
+本机工具且不访问网络；`auto` 在本机工具不完整时获取锁定包；`download` 固定使用锁定缓存；
+`off` 下非 Shader 资产命令仍然可用。
+
 `granit_asset_tool` 当前提供 Shader、Material、Texture 与 Environment 领域入口：
 
 ```powershell
