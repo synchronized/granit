@@ -5,8 +5,9 @@
 
 AssetTools 是供编辑器、资产构建器和命令行工具直接链接的可选组件。Shader 领域通过 Compiler
 调用锁定版本的 DXC 与 Tint，将 HLSL 编译为离线 Shader 产物，并检查 SPIR-V 的入口点、阶段和
-反射。Material 领域从源 JSON 与 Shader 逻辑索引构建和检查 `.grmat`。Texture 与 Environment
-Builder 将在后续阶段迁入；AssetTools 不进入核心渲染库的传递依赖。
+反射。Material 领域从源 JSON 与 Shader 逻辑索引构建和检查 `.grmat`。Texture 领域从已经编码的
+GPU 格式变体生成 Manifest 与合并负载。Environment Builder 将在后续阶段迁入；AssetTools 不进入
+核心渲染库的传递依赖。
 
 ## 构建与链接
 
@@ -130,6 +131,20 @@ Library Builder 自动将 DXC 与 Tint 二进制的 SHA-256 身份纳入缓存�
   诊断的结果句柄。CLI 把诊断写入标准错误，并只在构建成功后原子替换输出文件。
 - CLI 使用 `granit_asset_tool material build` 和 `granit_asset_tool material inspect`。Material
   领域不查找、加载或下载 Shader Toolchain。
+
+## Texture Builder
+
+- C11 入口位于 `<granit/tools/texture_builder.h>`，C++20 包装位于对应 `.hpp`，命名空间为
+  `granit::asset_tools::texture`。
+- Builder 接收逻辑尺寸、按偏好排序的格式变体、显式子资源布局和每个变体的已编码负载。它按
+  变体顺序拼接负载，计算各负载 SHA-256，并根据尺寸、格式、用途、布局和摘要生成内容 ID；调用方
+  不再填写偏移、大小、摘要或内容 ID。
+- 内容 ID 使用固定的 `granit.texture.asset.v1` 域和小端规范化字段计算。相同输入得到相同
+  Manifest、合并负载与内容 ID；改变变体顺序、格式、用途、布局或负载都会改变身份。
+- `granit_asset_tools_texture_inspect` 检查 Manifest 并提供稳定调试 JSON。Builder 和 Inspector
+  都不创建 GPU 对象，也不依赖 Renderer 状态或 Shader Toolchain。
+- CLI 的 `texture build` 接受 `--variant <format=payload>`，当前要求每个文件按 layer、mip 顺序
+  紧密保存完整链；`texture inspect` 输出 JSON。图片解码和 GPU 格式压缩仍由上游资产管线负责。
 
 命令行可使用 `granit_asset_tool shader inspect --json shader.spv` 输出稳定排序的 JSON 调试视图。普通
 `inspect` 的 CSV 文本保持兼容，但程序不应解析该文本，应使用结构化 SDK 查询或反射 JSON 视图。

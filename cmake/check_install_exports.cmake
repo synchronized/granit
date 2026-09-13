@@ -39,6 +39,8 @@ if(EXISTS "${install_prefix}/lib/cmake/granit/granitAssetToolsTargets.cmake")
       asset_tools_export.h
       material_builder.h
       material_builder.hpp
+      texture_builder.h
+      texture_builder.hpp
   )
     if(NOT EXISTS "${install_prefix}/include/granit/tools/${asset_tools_header}")
       message(FATAL_ERROR "AssetTools 安装结果缺少公共头：${asset_tools_header}")

@@ -19,42 +19,6 @@ int main(void) {
       granit_version_patch() != GRANIT_VERSION_PATCH)
     return 2;
 
-  granit_texture_asset_variant_info variant = {0};
-  variant.format = GRANIT_TEXTURE_FORMAT_RGBA8_SRGB;
-  variant.usage = GRANIT_TEXTURE_USAGE_SAMPLED_BIT;
-  variant.subresource_count = 1;
-  variant.payload_size = 64;
-  granit_texture_asset_subresource_info subresource = {0};
-  subresource.data_size = 64;
-  subresource.bytes_per_row = 16;
-  subresource.rows_per_image = 4;
-  granit_texture_asset_info asset = GRANIT_TEXTURE_ASSET_INFO_INIT;
-  asset.schema_version = GRANIT_TEXTURE_ASSET_SCHEMA_VERSION;
-  asset.content_id[0] = 1;
-  asset.dimension = GRANIT_TEXTURE_DIMENSION_2D;
-  asset.width = 4;
-  asset.height = 4;
-  asset.depth = 1;
-  asset.array_layers = 1;
-  asset.mip_levels = 1;
-  asset.variant_count = 1;
-  asset.subresource_count = 1;
-  asset.variants = &variant;
-  asset.variant_capacity = 1;
-  asset.subresources = &subresource;
-  asset.subresource_capacity = 1;
-  uint64_t manifest_size = 0;
-  if (granit_texture_asset_encode(&asset, NULL, &manifest_size) != GRANIT_SUCCESS ||
-      manifest_size != UINT64_C(192))
-    return 14;
-  unsigned char manifest[192] = {0};
-  if (granit_texture_asset_encode(&asset, manifest, &manifest_size) != GRANIT_SUCCESS)
-    return 15;
-  granit_texture_asset_info inspected = GRANIT_TEXTURE_ASSET_INFO_INIT;
-  if (granit_texture_asset_inspect(manifest, manifest_size, &inspected) != GRANIT_SUCCESS ||
-      inspected.variant_count != 1 || inspected.subresource_count != 1)
-    return 16;
-
   granit_renderer renderer = GRANIT_NULL_HANDLE;
   granit_renderer_desc invalid_desc = GRANIT_RENDERER_DESC_INIT;
   invalid_desc.struct_size = 0;

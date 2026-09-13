@@ -8,5 +8,6 @@
 #include <granit/tools/shader_compiler.h>
 #include <granit/tools/shader_library_builder.h>
 #include <granit/tools/shader_reflection.h>
+#include <granit/tools/texture_builder.h>
 
 #endif

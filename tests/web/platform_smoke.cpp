@@ -41,38 +41,39 @@
 namespace {
 
 bool validate_texture_asset_contract() {
-  granit_texture_asset_variant_info variant{};
-  variant.format = GRANIT_TEXTURE_FORMAT_RGBA8_SRGB;
-  variant.usage = GRANIT_TEXTURE_USAGE_SAMPLED_BIT;
-  variant.subresource_count = 1;
-  variant.payload_size = 64;
-  granit_texture_asset_subresource_info subresource{};
-  subresource.data_size = 64;
-  subresource.bytes_per_row = 16;
-  subresource.rows_per_image = 4;
-  granit_texture_asset_info asset = GRANIT_TEXTURE_ASSET_INFO_INIT;
-  asset.schema_version = GRANIT_TEXTURE_ASSET_SCHEMA_VERSION;
-  asset.content_id[0] = 1;
-  asset.dimension = GRANIT_TEXTURE_DIMENSION_2D;
-  asset.width = 4;
-  asset.height = 4;
-  asset.depth = 1;
-  asset.array_layers = 1;
-  asset.mip_levels = 1;
-  asset.variant_count = 1;
-  asset.subresource_count = 1;
-  asset.variants = &variant;
-  asset.variant_capacity = 1;
-  asset.subresources = &subresource;
-  asset.subresource_capacity = 1;
-  std::uint64_t size = 0;
-  if (granit_texture_asset_encode(&asset, nullptr, &size) != GRANIT_SUCCESS || size != 192)
-    return false;
   std::array<std::byte, 192> manifest{};
-  if (granit_texture_asset_encode(&asset, manifest.data(), &size) != GRANIT_SUCCESS)
-    return false;
+  const auto write_u32 = [&manifest](std::size_t offset, std::uint32_t value) {
+    for (std::uint32_t index = 0; index < 4; ++index)
+      manifest[offset + index] = static_cast<std::byte>(value >> (index * 8U));
+  };
+  const auto write_u64 = [&manifest](std::size_t offset, std::uint64_t value) {
+    for (std::uint32_t index = 0; index < 8; ++index)
+      manifest[offset + index] = static_cast<std::byte>(value >> (index * 8U));
+  };
+  constexpr char magic[] = "GRNTEXA";
+  for (std::size_t index = 0; index < sizeof(magic) - 1; ++index)
+    manifest[index] = static_cast<std::byte>(magic[index]);
+  write_u32(8, 1);
+  write_u32(12, 80);
+  write_u32(16, 4);
+  write_u32(20, 4);
+  write_u32(24, 1);
+  write_u32(28, 1);
+  write_u32(32, 1);
+  write_u32(36, GRANIT_TEXTURE_DIMENSION_2D);
+  write_u32(40, 1);
+  write_u32(44, 1);
+  manifest[48] = std::byte{1};
+  write_u32(80, GRANIT_TEXTURE_FORMAT_RGBA8_SRGB);
+  write_u32(84, GRANIT_TEXTURE_USAGE_SAMPLED_BIT);
+  write_u32(92, 1);
+  write_u64(104, 64);
+  write_u64(168, 64);
+  write_u32(176, 16);
+  write_u32(180, 4);
   granit_texture_asset_info inspected = GRANIT_TEXTURE_ASSET_INFO_INIT;
-  return granit_texture_asset_inspect(manifest.data(), size, &inspected) == GRANIT_SUCCESS &&
+  return granit_texture_asset_inspect(manifest.data(), manifest.size(), &inspected) ==
+             GRANIT_SUCCESS &&
          inspected.variant_count == 1 && inspected.subresource_count == 1;
 }
 
