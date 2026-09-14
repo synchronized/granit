@@ -149,30 +149,30 @@ endfunction()
 function(granit_prepare_runtime_shader_libraries)
   set(output_root "${CMAKE_BINARY_DIR}/generated/runtime-libraries")
   set(object_root "${CMAKE_BINARY_DIR}/generated/runtime-shader-objects")
-  if(GRANIT_DXC_EXECUTABLE AND GRANIT_TINT_EXECUTABLE)
+  if(GRANIT_SHADER_TOOLCHAIN_ROOT AND GRANIT_DXC_EXECUTABLE AND GRANIT_TINT_EXECUTABLE)
     granit_add_hlsl_shader_library(
       ALL
       NAME pbr_standard
-      MANIFEST "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.grshlib.json"
+      MANIFEST "${granit_asset_sources_dir}/shaders/pbr/pbr_standard.grshlib.json"
       OUTPUT "${output_root}/pbr_standard.grshlib"
       INDEX "${output_root}/pbr_standard.grshidx.json"
       CACHE_DIR "${object_root}/pbr-standard"
-      REFERENCE "${PROJECT_SOURCE_DIR}/assets/libraries/pbr_standard.grshlib"
-      INDEX_REFERENCE "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grshidx.json"
+      REFERENCE "${granit_installed_asset_snapshot_dir}/libraries/pbr_standard.grshlib"
+      INDEX_REFERENCE "${granit_installed_asset_snapshot_dir}/materials/pbr_standard.grshidx.json"
       TARGET granit_pbr_shader_library
-      SOURCES "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_standard.hlsl"
+      SOURCES "${granit_asset_sources_dir}/shaders/pbr/pbr_standard.hlsl"
     )
     granit_add_hlsl_shader_library(
       ALL
       NAME canvas
-      MANIFEST "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/canvas.grshlib.json"
+      MANIFEST "${granit_asset_sources_dir}/shaders/unlit/canvas.grshlib.json"
       OUTPUT "${output_root}/unlit_canvas.grshlib"
       INDEX "${output_root}/canvas.grshidx.json"
       CACHE_DIR "${object_root}/unlit-canvas"
-      REFERENCE "${PROJECT_SOURCE_DIR}/src/pipeline/assets/unlit_canvas.grshlib"
-      INDEX_REFERENCE "${PROJECT_SOURCE_DIR}/src/pipeline/assets/unlit_canvas.grshidx.json"
+      REFERENCE "${granit_embedded_asset_snapshot_dir}/pipeline/unlit_canvas.grshlib"
+      INDEX_REFERENCE "${granit_embedded_asset_snapshot_dir}/pipeline/unlit_canvas.grshidx.json"
       TARGET granit_canvas_shader_library
-      SOURCES "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.hlsl"
+      SOURCES "${granit_asset_sources_dir}/shaders/unlit/unlit.hlsl"
     )
   endif()
 endfunction()
@@ -185,7 +185,7 @@ function(granit_prepare_test_shader_assets)
   set(unlit_output "${root}/unlit")
   set(outputs)
 
-  set(pbr_source "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_untextured.hlsl")
+  set(pbr_source "${granit_asset_sources_dir}/shaders/pbr/pbr_untextured.hlsl")
   set(pbr_vertex_names pbr_lights.vert pbr_shadow_ibl_lights.vert pbr_untextured.vert)
   foreach(name IN LISTS pbr_vertex_names)
     set(definitions)
@@ -229,7 +229,7 @@ function(granit_prepare_test_shader_assets)
     endif()
     granit_add_test_shader_object(
       NAME "${name}"
-      SOURCE "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.hlsl"
+      SOURCE "${granit_asset_sources_dir}/shaders/unlit/unlit.hlsl"
       SPIRV "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/unlit/${name}.spv"
       WGSL "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/unlit/${name}.wgsl"
       ENTRY "${entry}"
@@ -294,7 +294,7 @@ function(granit_prepare_test_shader_assets)
     endif()
     granit_add_test_shader_object(
       NAME "tone_mapping.${stage}"
-      SOURCE "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.hlsl"
+      SOURCE "${granit_asset_sources_dir}/shaders/pipeline/tone_mapping.hlsl"
       SPIRV "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/pipeline/tone_mapping.${stage}.spv"
       WGSL "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/pipeline/tone_mapping.wgsl"
       ENTRY "${entry}"
@@ -351,16 +351,16 @@ function(granit_prepare_test_shader_assets)
   list(APPEND outputs ${output})
 
   add_custom_target(granit_test_shader_assets DEPENDS ${outputs})
-  if(GRANIT_DXC_EXECUTABLE AND GRANIT_TINT_EXECUTABLE)
+  if(GRANIT_SHADER_TOOLCHAIN_ROOT AND GRANIT_DXC_EXECUTABLE AND GRANIT_TINT_EXECUTABLE)
     set(test_library_root "${CMAKE_BINARY_DIR}/generated/test-libraries")
     set(test_cache_root "${CMAKE_BINARY_DIR}/generated/test-library-objects")
-    set(pbr_manifest "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_runtime.grshlib.json")
-    set(pbr_test_manifest "${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_test.grshlib.json")
-    set(unlit_manifest "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.grshlib.json")
+    set(pbr_manifest "${granit_asset_sources_dir}/shaders/pbr/pbr_runtime.grshlib.json")
+    set(pbr_test_manifest "${granit_asset_sources_dir}/shaders/pbr/pbr_test.grshlib.json")
+    set(unlit_manifest "${granit_asset_sources_dir}/shaders/unlit/unlit.grshlib.json")
     set(smoke_manifest "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/smoke.grshlib.json")
     set(pbr_sources "${pbr_source}")
     set(pbr_test_sources "${pbr_source}")
-    set(unlit_sources "${PROJECT_SOURCE_DIR}/assets/shaders/unlit/unlit.hlsl")
+    set(unlit_sources "${granit_asset_sources_dir}/shaders/unlit/unlit.hlsl")
     set(
       smoke_sources
       "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/triangle.hlsl"

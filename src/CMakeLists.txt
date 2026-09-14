@@ -48,7 +48,7 @@ target_sources(
     core/lifecycle_validation.h
     core/resource_validation.h
     core/texture_format.h
-    assets/texture_asset.h
+    asset_formats/texture_asset.h
     core/retirement_queue.h
     core/device_status.h
     renderer/renderer_factory.h
@@ -68,7 +68,7 @@ target_sources(
     core/lifecycle_validation.cpp
     core/retirement_queue.cpp
     core/resource_validation.cpp
-    assets/texture_asset.cpp
+    asset_formats/texture_asset.cpp
     renderer/renderer_api.cpp
     renderer/async_operation_api.cpp
     renderer/pipeline_api.cpp
@@ -251,19 +251,19 @@ install(
   COMPONENT RenderPipeline
 )
 install(
-  FILES "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat"
+  FILES "${granit_installed_asset_snapshot_dir}/materials/pbr_standard.grmat"
   DESTINATION "${CMAKE_INSTALL_DATADIR}/granit/assets/materials"
   COMPONENT RenderPipeline
 )
 install(
-  FILES "${PROJECT_SOURCE_DIR}/assets/libraries/pbr_standard.grshlib"
+  FILES "${granit_installed_asset_snapshot_dir}/libraries/pbr_standard.grshlib"
   DESTINATION "${CMAKE_INSTALL_DATADIR}/granit/assets/libraries"
   COMPONENT RenderPipeline
 )
 install(
   FILES
-    "${PROJECT_SOURCE_DIR}/assets/environments/studio_small_03.grenv"
-    "${PROJECT_SOURCE_DIR}/assets/environments/studio_small_03.manifest.json"
+    "${granit_installed_asset_snapshot_dir}/environments/studio_small_03.grenv"
+    "${granit_installed_asset_snapshot_dir}/environments/studio_small_03.manifest.json"
   DESTINATION "${CMAKE_INSTALL_DATADIR}/granit/assets/environments"
   COMPONENT RenderPipeline
 )

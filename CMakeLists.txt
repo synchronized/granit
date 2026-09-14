@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.23)
 
 project(
   granit
-  VERSION 0.22.0
+  VERSION 0.23.0
   DESCRIPTION "Vulkan-based C++20 rendering library"
   LANGUAGES C CXX
 )
@@ -31,10 +31,18 @@ include(CMakePackageConfigHelpers)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(utility)
+include(granit_asset_paths)
 include(granit_integration_dependencies)
 
 include(granit_platform)
 include(CTest)
+
+if(NOT EMSCRIPTEN AND
+   (GRANIT_BUILD_TOOLS OR GRANIT_BUILD_ASSET_TOOLS OR GRANIT_BUILD_EXAMPLES OR
+    GRANIT_BUILD_BENCHMARKS OR (GRANIT_BUILD_TESTING AND BUILD_TESTING)))
+  include(granit_shader_toolchain)
+  granit_find_shader_toolchain()
+endif()
 
 set(
   GRANIT_INSTALL_CMAKEDIR

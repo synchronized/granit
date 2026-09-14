@@ -152,7 +152,7 @@ correlated GGX 可见性和单方向光直接光照。输入方向会归一化�
 
 ## H-03C 实现记录
 
-`assets/shaders/pbr/pbr_untextured.hlsl` 已按 H-03B 的公式实现 Schlick、GGX 和 Smith correlated
+`assets/sources/shaders/pbr/pbr_untextured.hlsl` 已按 H-03B 的公式实现 Schlick、GGX 和 Smith correlated
 GGX，并使用固定的线性 Base Color、Metallic、Perceptual Roughness 与正入射方向光。顶点阶段
 通过 `SV_VertexID` 生成三角形，首版不要求 Vertex Buffer；材质常量与纹理绑定留到 H-03D。
 

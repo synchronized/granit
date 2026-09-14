@@ -86,6 +86,37 @@ TEST_CASE("PBR Render Graph Pass 随 Graph 释放回调捕获") {
   CHECK(observer.expired());
 }
 
+TEST_CASE("PBR Render Graph Pass 接受空对象并执行回调") {
+  granit::render_graph::serial_graph graph;
+  const auto color = graph.import_texture_view(101, true, "Empty PBR Color");
+  bool called = false;
+  const auto pass = granit::material::add_pbr_graph_pass(
+      graph,
+      {.color = color,
+       .view = {.view_projection = identity},
+       .light = {},
+       .objects = {}},
+      [&](granit::render_graph::pass_context&, const granit::material::pbr_frame_constants&,
+          std::span<const granit::material::pbr_object_constants> objects) {
+        called = true;
+        CHECK(objects.empty());
+        return GRANIT_SUCCESS;
+      });
+  REQUIRE(pass != granit::render_graph::invalid_pass_id);
+
+  granit::renderer renderer;
+  const auto initialized =
+      renderer.initialize({.application_name = "granit-empty-pbr-graph-tests"});
+  if (environment_unavailable(initialized))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(initialized == granit::result::success);
+  const auto result = graph.execute(renderer.native_handle());
+  REQUIRE(result.succeeded());
+  CHECK(called);
+  REQUIRE(granit_command_recorder_destroy(renderer.native_handle(), result.recorder) ==
+          GRANIT_SUCCESS);
+}
+
 TEST_CASE("PBR Render Graph Pass 拒绝不完整描述") {
   granit::render_graph::serial_graph graph;
   CHECK(granit::material::add_pbr_graph_pass(graph, {}, {}) ==

@@ -7,17 +7,17 @@ set(granit_build_tree_asset_dir "${CMAKE_CURRENT_BINARY_DIR}/granit-assets")
 file(REMOVE_RECURSE "${granit_build_tree_asset_dir}")
 file(MAKE_DIRECTORY "${granit_build_tree_asset_dir}")
 file(
-  COPY "${PROJECT_SOURCE_DIR}/assets/libraries/pbr_standard.grshlib"
+  COPY "${granit_installed_asset_snapshot_dir}/libraries/pbr_standard.grshlib"
   DESTINATION "${granit_build_tree_asset_dir}/libraries"
 )
 file(
-  COPY "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat"
+  COPY "${granit_installed_asset_snapshot_dir}/materials/pbr_standard.grmat"
   DESTINATION "${granit_build_tree_asset_dir}/materials"
 )
 file(
   COPY
-    "${PROJECT_SOURCE_DIR}/assets/environments/studio_small_03.grenv"
-    "${PROJECT_SOURCE_DIR}/assets/environments/studio_small_03.manifest.json"
+    "${granit_installed_asset_snapshot_dir}/environments/studio_small_03.grenv"
+    "${granit_installed_asset_snapshot_dir}/environments/studio_small_03.manifest.json"
   DESTINATION "${granit_build_tree_asset_dir}/environments"
 )
 set(

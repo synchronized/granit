@@ -33,7 +33,9 @@ Scene Snapshot 是提交给参考 Render Pipeline 的只读场景快照。它包
 每个 View 独立保存 viewport 和 layer mask。Renderable 和光源也具有 layer mask，参考管线据此
 生成每个 View 的可见集合。`first_view` 和 `view_count` 由渲染调用选择 Snapshot 中的连续 View。
 
+Snapshot 必须包含至少一个 View，但 Renderable 和各类光源数组可以为空。某个 View 的可见集合为空
+也是合法状态；Render Pipeline 仍可用该 View 清屏、绘制覆盖层并提交输出。
+
 ## 线程安全
 
 Snapshot 创建后不可变，可被读取。不要让销毁与使用该 Snapshot 的渲染调用并发执行。
-

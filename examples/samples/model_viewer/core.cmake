@@ -14,11 +14,11 @@ add_custom_command(
   COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated"
   COMMAND
     "${CMAKE_COMMAND}"
-    "-DINPUT=${PROJECT_SOURCE_DIR}/assets/libraries/pbr_standard.grshlib"
+    "-DINPUT=${granit_installed_asset_snapshot_dir}/libraries/pbr_standard.grshlib"
     "-DOUTPUT=${granit_model_viewer_shader_library_include}"
     -P "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
   DEPENDS
-    "${PROJECT_SOURCE_DIR}/assets/libraries/pbr_standard.grshlib"
+    "${granit_installed_asset_snapshot_dir}/libraries/pbr_standard.grshlib"
     "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
   COMMENT "内嵌模型查看器 PBR Shader Library"
   VERBATIM
@@ -26,25 +26,25 @@ add_custom_command(
 if(CMAKE_CROSSCOMPILING)
   set(
     granit_model_viewer_material_package
-    "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat"
+    "${granit_installed_asset_snapshot_dir}/materials/pbr_standard.grmat"
   )
 else()
   add_custom_command(
     OUTPUT "${granit_model_viewer_material_package}"
     COMMAND
       granit_asset_tool material build
-      "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat.json"
+      "${granit_asset_sources_dir}/materials/pbr_standard.grmat.json"
       --output "${granit_model_viewer_material_package}" --shader-index
-      "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grshidx.json"
+      "${granit_installed_asset_snapshot_dir}/materials/pbr_standard.grshidx.json"
     COMMAND
       "${CMAKE_COMMAND}" -E compare_files
       "${granit_model_viewer_material_package}"
-      "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat"
+      "${granit_installed_asset_snapshot_dir}/materials/pbr_standard.grmat"
     DEPENDS
       granit_asset_tool
-      "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat.json"
-      "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grshidx.json"
-      "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat"
+      "${granit_asset_sources_dir}/materials/pbr_standard.grmat.json"
+      "${granit_installed_asset_snapshot_dir}/materials/pbr_standard.grshidx.json"
+      "${granit_installed_asset_snapshot_dir}/materials/pbr_standard.grmat"
     COMMENT "生成模型查看器 PBR 材质归档"
     VERBATIM
   )

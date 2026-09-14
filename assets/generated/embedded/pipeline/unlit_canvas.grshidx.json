@@ -1,0 +1,10 @@
+{
+  "format_version": 1,
+  "library": "canvas",
+  "content_digest": "4670c604eaba71819a0f2d91d5c8b72de12138589855b36feb778110b204134b",
+  "shaders": [
+    {"name": "canvas.fragment/textured_vertex_color", "content_id": "8841d4fe0f6d6a44fe977b26e395fc8bc72340efa39952762170da3e75d8af97", "stage": "fragment", "entry_point": "fragment_main"},
+    {"name": "canvas.fragment/textured_vertex_color_encode_srgb", "content_id": "88b38f1bd98742b93a986a75b0f3459757cec5c97ce9c5a677aee0e2654b1ba4", "stage": "fragment", "entry_point": "fragment_main"},
+    {"name": "canvas.vertex/textured_vertex_color", "content_id": "0f1ddeaed465c366a90a7608f4f54cab0a3dc87e65b97bff6b204ee98ca0e977", "stage": "vertex", "entry_point": "canvas_vertex_main"}
+  ]
+}

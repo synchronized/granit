@@ -38,6 +38,19 @@ record_opaque_draws(render_pipeline_state& state, granit_command_recorder record
   rendering.depth_stencil_attachment = &depth_attachment;
   rendering.area = {0, 0, width, height};
   auto result = GRANIT_SUCCESS;
+  if (draws.empty()) {
+    result = trim_draw_binding_cache(state.opaque_draw_bindings, 0);
+    if (result != GRANIT_SUCCESS)
+      return result;
+    color_attachment.resolve_view = resolve_color;
+    color_attachment.store_operation = resolve_color == GRANIT_NULL_HANDLE
+                                           ? GRANIT_ATTACHMENT_STORE_OPERATION_STORE
+                                           : GRANIT_ATTACHMENT_STORE_OPERATION_DISCARD;
+    result = granit_command_recorder_begin_rendering(state.renderer, recorder, &rendering);
+    if (result == GRANIT_SUCCESS)
+      result = granit_command_recorder_end_rendering(state.renderer, recorder);
+    return result;
+  }
   const granit_viewport viewport{0, 0, static_cast<float>(width), static_cast<float>(height), 0, 1};
   const granit_scissor scissor{0, 0, width, height};
   std::vector<granit::pipeline::detail::material_draw_state> arena_materials;

@@ -1,9 +1,0 @@
-{
-  "format_version": 1,
-  "library": "pbr_standard",
-  "content_digest": "29ce5a354170272b658288f2c43df447e5e51e879cc551d48ca720df974a4d35",
-  "shaders": [
-    {"name": "standard.fragment/textured", "content_id": "7d54a39ac41a9e6b19ffb59b89a79e6abd497f9b0e1c6b0ad0792d196a04a0c4", "stage": "fragment", "entry_point": "fragment_main"},
-    {"name": "standard.vertex", "content_id": "ae9cb2deb84e872e2412aae252327aaab0a958ef25572634fd661c4ab5cf31d0", "stage": "vertex", "entry_point": "vertex_main"}
-  ]
-}

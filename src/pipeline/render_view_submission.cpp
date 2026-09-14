@@ -26,8 +26,6 @@ granit_result build_render_view_submission(
   if (view_index >= snapshot.views().size())
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto& visible = snapshot.views()[view_index];
-  if (visible.renderables.indices().empty())
-    return GRANIT_ERROR_NOT_READY;
 
   try {
     render_view_submission result;

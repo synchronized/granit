@@ -24,8 +24,8 @@
 这些初期示例在 0.5.0 开发阶段转为 `tests/smoke` 内部验证程序，只包含 `granit/granit.hpp` 和
 必要的标准库或平台窗口头，不包含 Vulkan 头文件。对应着色器源码与预编译 SPIR-V 放在
 `tests/fixtures/smoke`；普通构建不依赖运行时 Shader 编译器。正式 Pipeline 内置
-Shader 和跨示例共享的 PBR 参考 Shader 分别归入 `src/pipeline/shaders` 与
-`assets/shaders/pbr`。
+Pipeline 内建 Shader 和跨示例共享的 PBR 参考 Shader 分别归入
+`assets/sources/shaders/pipeline` 与 `assets/sources/shaders/pbr`。
 
 ## 恢复边界
 

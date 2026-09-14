@@ -15,7 +15,10 @@
 #include <emscripten/emscripten.h>
 #include <emscripten/html5.h>
 
+#include <granit/pipeline/canvas_draw_list.hpp>
 #include <granit/pipeline/render_pipeline.h>
+#include <granit/pipeline/render_pipeline.hpp>
+#include <granit/pipeline/scene.hpp>
 #include <granit/renderer/buffer.hpp>
 #include <granit/renderer/command_recorder.hpp>
 #include <granit/renderer/pipeline.hpp>
@@ -108,6 +111,15 @@ bool validate_fixture_assets() {
          granit::test::renderer_fixture::vertices.size() == 4 * 7 &&
          granit::test::renderer_fixture::indices.size() == 6 &&
          granit::test::renderer_fixture::make_uniform_data().size() == 4 * 256;
+}
+
+granit_matrix4 identity_matrix() noexcept {
+  granit_matrix4 value{};
+  value.elements[0] = 1.0F;
+  value.elements[5] = 1.0F;
+  value.elements[10] = 1.0F;
+  value.elements[15] = 1.0F;
+  return value;
 }
 
 granit_result validate_public_timestamp(granit_renderer renderer,
@@ -574,7 +586,80 @@ granit_result validate_presentation(granit_renderer renderer, granit_swapchain s
       granit_frame_get_info(renderer, frame, &frame_info) != GRANIT_ERROR_INVALID_HANDLE) {
     return result == GRANIT_SUCCESS ? GRANIT_ERROR_INTERNAL : result;
   }
-  return GRANIT_SUCCESS;
+
+  granit::render_pipeline empty_pipeline;
+  const granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
+  auto wrapper_result = empty_pipeline.initialize(renderer, pipeline_desc);
+  granit_scene_view scene_view{};
+  scene_view.view = identity_matrix();
+  scene_view.projection = identity_matrix();
+  scene_view.view_projection = identity_matrix();
+  scene_view.viewport_width = static_cast<float>(info.width);
+  scene_view.viewport_height = static_cast<float>(info.height);
+  scene_view.layer_mask = UINT64_MAX;
+  granit_scene_snapshot_desc scene_desc = GRANIT_SCENE_SNAPSHOT_DESC_INIT;
+  scene_desc.views = &scene_view;
+  scene_desc.view_count = 1;
+  granit::scene_snapshot empty_scene;
+  if (wrapper_result.ok())
+    wrapper_result = empty_scene.initialize(renderer, scene_desc);
+
+  granit::texture canvas_texture;
+  granit::texture_view canvas_texture_view;
+  granit::sampler canvas_sampler;
+  if (wrapper_result.ok()) {
+    wrapper_result =
+        canvas_texture.initialize(renderer, {.format = granit::texture_format::rgba8_unorm,
+                                             .usage = granit::texture_usage::sampled |
+                                                      granit::texture_usage::transfer_destination});
+  }
+  if (wrapper_result.ok())
+    wrapper_result = canvas_texture_view.initialize(renderer, canvas_texture.native_handle());
+  constexpr std::array<std::uint8_t, 4> green_pixel{0, 255, 0, 255};
+  if (wrapper_result.ok())
+    wrapper_result = canvas_texture.write(std::as_bytes(std::span{green_pixel}), {}, {});
+  if (wrapper_result.ok())
+    wrapper_result = canvas_sampler.initialize(renderer);
+  granit_canvas_draw_list_desc canvas_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
+  granit::canvas_draw_list canvas;
+  if (wrapper_result.ok())
+    wrapper_result = canvas.initialize(renderer, canvas_desc);
+  granit_canvas_rect_desc rect = GRANIT_CANVAS_RECT_DESC_INIT;
+  rect.x = 8.0F;
+  rect.y = 8.0F;
+  rect.width = 48.0F;
+  rect.height = 48.0F;
+  rect.state.texture = canvas_texture_view.native_handle();
+  rect.state.sampler = canvas_sampler.native_handle();
+  if (wrapper_result.ok())
+    wrapper_result = canvas.append_rect(rect);
+  if (wrapper_result.failed())
+    return granit::to_native(wrapper_result);
+
+  result = granit_swapchain_acquire(renderer, swapchain, &frame, &image_index, &needs_recreate);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  result = granit_swapchain_get_backbuffer(renderer, swapchain, image_index, &texture, &view);
+  if (result == GRANIT_SUCCESS) {
+    granit_render_pipeline_render_desc render_desc = GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT;
+    render_desc.scene = empty_scene.native_handle();
+    render_desc.output = view;
+    render_desc.output_format = info.format;
+    render_desc.width = info.width;
+    render_desc.height = info.height;
+    render_desc.frame = frame;
+    render_desc.canvas = canvas.native_handle();
+    render_desc.clear_color = {0.05F, 0.1F, 0.2F, 1.0F};
+    result = granit::to_native(empty_pipeline.render(render_desc));
+  }
+  if (result != GRANIT_SUCCESS) {
+    static_cast<void>(granit_frame_cancel(renderer, swapchain, frame, &needs_recreate));
+    return result;
+  }
+  result = granit_swapchain_present(renderer, swapchain, frame, &needs_recreate);
+  if (result == GRANIT_SUCCESS)
+    std::printf("GRANIT_EMPTY_FRAME:ready\n");
+  return result;
 }
 
 granit_result validate_renderer(granit_renderer renderer, const granit_renderer_limits& limits) {

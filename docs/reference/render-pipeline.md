@@ -39,6 +39,10 @@ Tone Mapping。自定义录制回调仍使用单采样契约，避免回调在�
 每个可见 Renderable 的 `payload` 必须唯一映射到一个 Draw Binding。绑定中的 Mesh、Material、
 Scene Snapshot 和输出资源必须属于同一 Renderer，并在调用期间保持有效。
 
+有效 View 的可见 Renderable 可以为空，包括 Scene 没有 Renderable 或全部 Renderable 被视锥、
+layer mask 裁剪的情况。该帧仍会清除 HDR Color 与 Depth、执行 Tone Mapping、录制可选 Debug Draw、
+Canvas 和 Overlay，并完成离屏或 Swapchain Frame 提交。Draw Binding 只需覆盖实际可见的 Renderable。
+
 单 View 可以使用紧凑的 `output`、`output_format`、`width` 和 `height` 字段。多 View 必须提供
 与 `view_count` 等长的 `outputs` 数组。非零 Frame 表示录制并提交窗口帧，此时只允许一个 View；
 零 Frame 表示离屏执行。
@@ -57,6 +61,9 @@ Draw List，最后调用用户 Overlay 回调。UNORM 输出自动启用 Shader 
 - 递归调用同一个 Render Pipeline。
 
 回调返回的首个错误会终止当前渲染调用，未完成的 Recorder 不会被提交。
+
+没有可见 Renderable 时仍会调用一次 Opaque 回调；此时 `payload_count` 为零，三个对象数组为空，
+回调仍负责初始化 Opaque Color 与 Depth 输出。随后照常执行 Tone Mapping 和 Overlay 阶段。
 
 Overlay 阶段具有以下固定语义：
 

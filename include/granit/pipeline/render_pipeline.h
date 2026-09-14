@@ -241,6 +241,7 @@ granit_render_pipeline_create(granit_renderer renderer, const granit_render_pipe
  *
  * 每个可见 Renderable 的 payload 必须在 draw_bindings 中唯一对应一项。Mesh 和 Material
  * 必须属于当前 Renderer，且在调用期间不得更新或销毁。
+ * 有效 View 没有可见 Renderable 时仍会清屏、执行后处理与覆盖层并提交；此时无需 Draw Binding。
  * 单 View 可使用 output/format/width/height；多 View 必须提供与 view_count 等长的 outputs 数组。
  * frame 为零时执行普通离屏提交；frame 非零时使用 Swapchain 帧提交，并要求 view_count 为 1。
  * 世界 Debug Draw 在 Tone Mapping 后、Canvas 与 Overlay 回调前执行，并复用当前 View 的深度附件。

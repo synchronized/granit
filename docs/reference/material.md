@@ -30,7 +30,7 @@ Render Pipeline component，不取代核心 Renderer 的 Shader、Pipeline 或 B
 RenderPipeline 资产根目录下的 `materials/pbr_standard.grmat` 是对应的标准材质模板。其模板版本由
 `GRANIT_PBR_MATERIAL_TEMPLATE_VERSION` 标识，归档内容身份由
 `GRANIT_PBR_MATERIAL_CONTENT_HASH_HEX` 固定；Shader 引用与同一资产根目录中的标准 PBR Shader
-配套发布。项目内权威源是 `assets/materials/pbr_standard.grmat.json`，Model Viewer 也消费该模板。
+配套发布。项目内权威源是 `assets/sources/materials/pbr_standard.grmat.json`，Model Viewer 也消费该模板。
 
 ## 创建与更新
 

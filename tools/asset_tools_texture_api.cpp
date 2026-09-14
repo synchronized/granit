@@ -3,7 +3,7 @@
 
 #include <granit/tools/texture_builder.h>
 
-#include "assets/texture_asset.h"
+#include "asset_formats/texture_asset.h"
 #include "core/sha256.h"
 
 #include <algorithm>

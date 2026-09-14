@@ -411,7 +411,7 @@ add_executable(
   pipeline/pbr_material_api_test.cpp
   pipeline/environment_map_api_test.cpp
   pipeline/environment_asset_test.cpp
-  "${PROJECT_SOURCE_DIR}/src/assets/environment_asset.cpp"
+  "${PROJECT_SOURCE_DIR}/src/asset_formats/environment_asset.cpp"
   $<TARGET_OBJECTS:granit_internal_shader_format>
   pipeline/mesh_api_test.cpp
   pipeline/render_pipeline_api_test.cpp
@@ -462,7 +462,7 @@ target_compile_definitions(
   PRIVATE
     GRANIT_PIPELINE_ASSET_DIR="${GRANIT_PBR_TEST_SHADER_DIR}"
     GRANIT_SHADER_OBJECT_FIXTURE_DIR="${CMAKE_BINARY_DIR}/tools/test-objects"
-    GRANIT_TEST_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/assets"
+    GRANIT_TEST_ASSET_DIR="${granit_test_shader_fixture_dir}"
     GRANIT_PIPELINE_SHADER_DIR="${GRANIT_PIPELINE_TEST_SHADER_DIR}"
     GRANIT_UNLIT_TEST_PACKAGE="${granit_unlit_test_package}"
     GRANIT_UNLIT_SHADER_DIR="${GRANIT_UNLIT_TEST_SHADER_DIR}"
@@ -506,10 +506,10 @@ target_compile_definitions(
   granit_material_test
   PRIVATE
     GRANIT_SHADER_OBJECT_FIXTURE_DIR="${CMAKE_BINARY_DIR}/tools/test-objects"
-    GRANIT_TEST_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/assets"
+    GRANIT_TEST_ASSET_DIR="${granit_test_shader_fixture_dir}"
     GRANIT_SMOKE_SHADER_DIR="${GRANIT_SMOKE_TEST_SHADER_DIR}"
-    GRANIT_PBR_LIBRARY_ASSET="${PROJECT_SOURCE_DIR}/assets/libraries/pbr_standard.grshlib"
-    GRANIT_PBR_MATERIAL_ASSET="${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat"
+    GRANIT_PBR_LIBRARY_ASSET="${granit_installed_asset_snapshot_dir}/libraries/pbr_standard.grshlib"
+    GRANIT_PBR_MATERIAL_ASSET="${granit_installed_asset_snapshot_dir}/materials/pbr_standard.grmat"
 )
 add_dependencies(
   granit_material_test granit_shader_fixture_objects granit_test_shader_assets
@@ -571,7 +571,7 @@ target_compile_definitions(
   granit_renderer_test
   PRIVATE
     GRANIT_SHADER_OBJECT_FIXTURE_DIR="${CMAKE_BINARY_DIR}/tools/test-objects"
-    GRANIT_TEST_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/assets"
+    GRANIT_TEST_ASSET_DIR="${granit_test_shader_fixture_dir}"
     GRANIT_TEST_ARTIFACT_DIR="${CMAKE_BINARY_DIR}/test-artifacts"
 )
 add_dependencies(granit_renderer_test granit_shader_fixture_objects)

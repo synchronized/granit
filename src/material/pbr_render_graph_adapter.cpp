@@ -11,7 +11,7 @@ namespace granit::material {
 render_graph::pass_id add_pbr_graph_pass(render_graph::serial_graph& graph,
                                          pbr_graph_pass_desc desc,
                                          pbr_graph_record_callback callback, std::string name) {
-  if (desc.color == render_graph::invalid_resource_id || desc.objects.empty() || !callback)
+  if (desc.color == render_graph::invalid_resource_id || !callback)
     return render_graph::invalid_pass_id;
 
   pbr_frame_constants frame{};
