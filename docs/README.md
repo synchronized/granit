@@ -54,6 +54,7 @@
 19. [0.22.0 AssetTools SDK 与工具链交付计划](plans/S-38-0.22.0-asset-tools-and-toolchain.md)
 20. [0.23.0 空帧与覆盖层可靠性计划](plans/S-39-0.23.0-empty-frame-and-overlay-reliability.md)
 21. [0.23.0 Shader Toolchain 配置可靠性计划](plans/S-40-0.23.0-shader-toolchain-configuration-reliability.md)
+22. [0.23.0 资产目录收敛计划](plans/S-41-0.23.0-asset-layout-convergence.md)
 
 ## 操作指南
 

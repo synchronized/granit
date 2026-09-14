@@ -481,15 +481,18 @@
 - 透明 PBR、通用 Render Graph 重构、Android、Bindless 和稳定 ABI 决策不属于本版本。
 - **[S-40](plans/S-40-0.23.0-shader-toolchain-configuration-reliability.md) / P1**：修复 0.22.0
   遗留工具路径导致的配置失败，并让锁定 Toolchain 与仓库 Shader/Material 快照逐字节一致。
+- **[S-41](plans/S-41-0.23.0-asset-layout-convergence.md) / P1**：按生命周期分离作者输入、已提交
+  生成快照、内建资产、格式实现与测试 Fixture，保持安装布局和资产字节不变。
 
 ## 近期执行顺序
 
-1. 执行 S-39/S-40 的 Linux、远端安装 Consumer 与不可变 Release Candidate 验收。
-2. 验收通过后完成 0.23.0 发布记录。
-3. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
-4. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
-5. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-6. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+1. 完成 S-41 资产目录迁移和本地共享/静态/Emscripten 验收。
+2. 执行 S-39～S-41 的 Linux、远端安装 Consumer 与不可变 Release Candidate 验收。
+3. 验收通过后完成 0.23.0 发布记录。
+4. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
+5. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
+6. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+7. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。

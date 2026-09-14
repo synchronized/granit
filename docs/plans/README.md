@@ -198,6 +198,8 @@ D-03-graphics-pipeline.md
   桌面、浏览器、Windows 共享/静态安装包与 Consumer 已通过，远端发布矩阵待执行。
 - [S-40：0.23.0 Shader Toolchain 配置可靠性](S-40-0.23.0-shader-toolchain-configuration-reliability.md)——
   本地完成；旧缓存迁移、配置顺序、锁定快照和模式矩阵已通过，Linux 验收待执行。
+- [S-41：0.23.0 资产目录收敛](S-41-0.23.0-asset-layout-convergence.md)——已确认，开始实施；
+  分离作者输入、安装快照、内建快照、格式实现与测试 Fixture，安装布局保持不变。
 
 ## 状态
 
