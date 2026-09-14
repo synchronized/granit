@@ -251,8 +251,8 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     NAME granit.asset_tools.material.api
     COMMAND
       granit_asset_tools_material_test
-      "${PROJECT_SOURCE_DIR}/tests/assets/material_package_fixture.grmat.json"
-      "${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.grshidx.json"
+      "${granit_test_material_fixture_dir}/material_package_fixture.grmat.json"
+      "${granit_test_shader_fixture_dir}/material_fixture.grshidx.json"
   )
 
   add_executable(
@@ -268,8 +268,8 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     NAME granit.asset_tools.material.c_api
     COMMAND
       granit_asset_tools_material_c_test
-      "${PROJECT_SOURCE_DIR}/tests/assets/material_package_fixture.grmat.json"
-      "${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.grshidx.json"
+      "${granit_test_material_fixture_dir}/material_package_fixture.grmat.json"
+      "${granit_test_shader_fixture_dir}/material_fixture.grshidx.json"
   )
 
   add_executable(
@@ -339,8 +339,8 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     endif()
     granit_add_test_shader_object_from_payloads(
       NAME "minimal.${stage}"
-      SPIRV "${PROJECT_SOURCE_DIR}/tests/assets/minimal.${stage}.spv"
-      WGSL "${PROJECT_SOURCE_DIR}/tests/assets/minimal.${stage}.wgsl"
+      SPIRV "${granit_test_shader_fixture_dir}/minimal.${stage}.spv"
+      WGSL "${granit_test_shader_fixture_dir}/minimal.${stage}.wgsl"
       ENTRY main
       STAGE "${shader_stage}"
       OUTPUT_DIR "${granit_shader_fixture_object_dir}"
@@ -432,7 +432,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
       COMMAND granit_asset_tools_shader_cpp_test
               "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/pipeline/tone_mapping.frag.spv"
               "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/unlit/unlit.vert.spv"
-              "${PROJECT_SOURCE_DIR}/tests/assets/minimal.comp.spv"
+              "${granit_test_shader_fixture_dir}/minimal.comp.spv"
     )
 
   endif()
@@ -489,7 +489,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_test(
     NAME granit.shader_fixture_tool.object_ids_compare
     COMMAND "${CMAKE_COMMAND}" -E compare_files "${granit_shader_object_id_output}"
-            "${PROJECT_SOURCE_DIR}/tests/assets/minimal_shader_ids.inc"
+            "${granit_test_shader_fixture_dir}/minimal_shader_ids.inc"
   )
   set_tests_properties(granit.shader_fixture_tool.object_ids_compare
                        PROPERTIES DEPENDS granit.shader_fixture_tool.object_ids)
@@ -498,7 +498,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_test(
     NAME granit.asset_tools.shader.index_ids
     COMMAND granit_asset_tool shader index-ids
-            --index "${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.grshidx.json"
+            --index "${granit_test_shader_fixture_dir}/material_fixture.grshidx.json"
             --shader material_fragment_id=main.fragment
             --output "${granit_shader_index_id_output}"
   )
@@ -607,9 +607,9 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     NAME granit.asset_tools.material.build
     COMMAND
       granit_asset_tool material build
-      "${PROJECT_SOURCE_DIR}/tests/assets/material_package_fixture.grmat.json"
+      "${granit_test_material_fixture_dir}/material_package_fixture.grmat.json"
       --output "${GRANIT_MATERIAL_PACKAGE_FIXTURE}" --shader-index
-      "${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.grshidx.json" --emit-debug-json
+      "${granit_test_shader_fixture_dir}/material_fixture.grshidx.json" --emit-debug-json
   )
   set_tests_properties(granit.asset_tools.material.build PROPERTIES FIXTURES_SETUP granit_material_package)
   add_test(
@@ -650,7 +650,7 @@ if(GRANIT_DXC_EXECUTABLE AND NOT GRANIT_SHADER_TOOLCHAIN_POLICY STREQUAL "unchec
     COMMAND
       "${GRANIT_DXC_EXECUTABLE}" -spirv -fspv-target-env=vulkan1.3 -T ps_6_6
       -E fragment_main -Fo "${GRANIT_DXC_PROBE_OUTPUT}"
-      "${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.hlsl"
+      "${granit_test_shader_fixture_dir}/material_fixture.hlsl"
     RESULT_VARIABLE GRANIT_DXC_PROBE_RESULT
     OUTPUT_QUIET
     ERROR_QUIET
@@ -675,8 +675,8 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING AND GRANIT_DXC_EXECUTABLE)
     COMMAND
       "${GRANIT_DXC_EXECUTABLE}" -spirv -fspv-target-env=vulkan1.3 -T ps_6_6
       -E fragment_main -Fo "${GRANIT_MATERIAL_FIXTURE}"
-      "${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.hlsl"
-    DEPENDS "${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.hlsl"
+      "${granit_test_shader_fixture_dir}/material_fixture.hlsl"
+    DEPENDS "${granit_test_shader_fixture_dir}/material_fixture.hlsl"
     COMMENT "使用 DXC 编译材质 HLSL fixture"
     VERBATIM
   )
@@ -696,7 +696,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING AND GRANIT_DXC_EXECUTABLE)
       NAME granit.asset_tools.shader.hlsl_api
       COMMAND
         granit_shader_hlsl_api_test "${GRANIT_SHADER_TOOLCHAIN_ROOT}"
-        "${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.hlsl"
+        "${granit_test_shader_fixture_dir}/material_fixture.hlsl"
         "${CMAKE_CURRENT_BINARY_DIR}/shader-hlsl-api-test"
     )
   endif()
@@ -723,7 +723,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING AND GRANIT_DXC_EXECUTABLE)
       granit_asset_tools_shader_cpp_test
       "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/pipeline/tone_mapping.frag.spv"
       "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/unlit/unlit.vert.spv"
-      "${PROJECT_SOURCE_DIR}/tests/assets/minimal.comp.spv" "${GRANIT_MATERIAL_FIXTURE}"
+      "${granit_test_shader_fixture_dir}/minimal.comp.spv" "${GRANIT_MATERIAL_FIXTURE}"
   )
 elseif(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   message(WARNING "未找到 dxc，跳过 Granit Shader 工具端到端测试")
@@ -779,14 +779,14 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
       NAME granit.asset_tools.shader.source_library_builder_api
       COMMAND
         granit_shader_source_library_builder_api_test "${GRANIT_SHADER_TOOLCHAIN_ROOT}"
-        "${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.grshlib.json"
+        "${granit_test_shader_fixture_dir}/material_fixture.grshlib.json"
         "${CMAKE_CURRENT_BINARY_DIR}/source-library-builder-api"
     )
     add_test(
       NAME granit.asset_tools.shader.build_library
       COMMAND
         granit_asset_tool shader build-library --manifest
-        "${PROJECT_SOURCE_DIR}/tests/assets/material_fixture.grshlib.json" --toolchain
+        "${granit_test_shader_fixture_dir}/material_fixture.grshlib.json" --toolchain
         "${GRANIT_SHADER_TOOLCHAIN_ROOT}" --cache
         "${CMAKE_CURRENT_BINARY_DIR}/source-library-cli/objects" --output
         "${CMAKE_CURRENT_BINARY_DIR}/source-library-cli/fixture.grshlib" --index

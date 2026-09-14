@@ -14,8 +14,8 @@ target_link_options(
   granit_web_platform_smoke
   PRIVATE
     "--preload-file=${CMAKE_CURRENT_SOURCE_DIR}/assets/s10d_startup.txt@/assets/s10d_startup.txt"
-    "--preload-file=${PROJECT_SOURCE_DIR}/tests/assets/dynamic_uniform.vert.wgsl@/assets/dynamic_uniform.vert.wgsl"
-    "--preload-file=${PROJECT_SOURCE_DIR}/tests/assets/dynamic_uniform.frag.wgsl@/assets/dynamic_uniform.frag.wgsl"
+    "--preload-file=${granit_test_shader_fixture_dir}/dynamic_uniform.vert.wgsl@/assets/dynamic_uniform.vert.wgsl"
+    "--preload-file=${granit_test_shader_fixture_dir}/dynamic_uniform.frag.wgsl@/assets/dynamic_uniform.frag.wgsl"
 )
 target_link_libraries(granit_web_platform_smoke PRIVATE granit_web_model_viewer_platform)
 set_target_properties(

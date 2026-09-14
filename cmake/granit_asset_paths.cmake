@@ -7,3 +7,8 @@ set(granit_installed_asset_snapshot_dir
     "${PROJECT_SOURCE_DIR}/assets/generated/installed")
 set(granit_embedded_asset_snapshot_dir
     "${PROJECT_SOURCE_DIR}/assets/generated/embedded")
+
+# 测试输入与生产资产分离，按所验证的资产类型组织。
+set(granit_test_fixture_dir "${PROJECT_SOURCE_DIR}/tests/fixtures")
+set(granit_test_shader_fixture_dir "${granit_test_fixture_dir}/shaders")
+set(granit_test_material_fixture_dir "${granit_test_fixture_dir}/materials")
