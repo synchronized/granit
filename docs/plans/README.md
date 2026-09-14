@@ -202,6 +202,8 @@ D-03-graphics-pipeline.md
   安装快照、内建快照、格式实现与测试 Fixture 已分离，并通过跨平台候选包验收。
 - [S-42：0.24.0 测试架构收敛](S-42-0.24.0-test-architecture-convergence.md)——本地实现完成；
   测试布局、两个核心 Smoke 和工作流职责选择已收敛，等待跨平台与发布候选远端验收。
+- [S-43：0.24.0 AssetTools 源码布局收敛](S-43-0.24.0-asset-tools-source-layout.md)——已确认；
+  统一公共路径、共享格式层、SDK、CLI 与测试工具的源码归属，不保留旧 include 路径。
 
 ## 状态
 
