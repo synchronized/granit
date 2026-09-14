@@ -91,7 +91,11 @@ TEST_CASE("PBR Render Graph Pass 接受空对象并执行回调") {
   const auto color = graph.import_texture_view(101, true, "Empty PBR Color");
   bool called = false;
   const auto pass = granit::material::add_pbr_graph_pass(
-      graph, {.color = color, .view = {.view_projection = identity}},
+      graph,
+      {.color = color,
+       .view = {.view_projection = identity},
+       .light = {},
+       .objects = {}},
       [&](granit::render_graph::pass_context&, const granit::material::pbr_frame_constants&,
           std::span<const granit::material::pbr_object_constants> objects) {
         called = true;
