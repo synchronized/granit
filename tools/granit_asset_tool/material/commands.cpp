@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "material_cli/commands.h"
+#include "granit_asset_tool/material/commands.h"
 
-#include "asset_file_io.h"
+#include "granit_asset_tool/file_io.h"
 
 #include <granit/asset_tools/material_builder.hpp>
 
@@ -13,6 +13,7 @@
 #include <string_view>
 #include <vector>
 
+namespace granit::asset_tools::cli {
 namespace {
 
 void print_usage() {
@@ -131,3 +132,5 @@ int run_material_command(int argc, char** argv) {
   print_usage();
   return 2;
 }
+
+} // namespace granit::asset_tools::cli

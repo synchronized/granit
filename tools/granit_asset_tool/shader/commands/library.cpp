@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "asset_file_io.h"
-#include "shader_cli/arguments.h"
-#include "shader_cli/commands.h"
+#include "granit_asset_tool/file_io.h"
+#include "granit_asset_tool/shader/arguments.h"
+#include "granit_asset_tool/shader/commands.h"
 #include <granit/asset_tools/asset_tools.hpp>
-
-#include "asset_tools/shader/library_source_manifest.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -18,7 +16,7 @@
 #include <sstream>
 #include <vector>
 
-namespace granit::shader_cli {
+namespace granit::asset_tools::cli {
 namespace {
 bool valid_identifier(std::string_view name) {
   return !name.empty() &&
@@ -93,10 +91,8 @@ int emit_shader_index_ids(int argc, char** argv) {
     std::cerr << "index-ids 需要 --index、一个或多个 --shader <name=logical-name> 和 --output\n";
     return 2;
   }
-  granit::asset_tools::detail::shader_library_index index;
-  if (granit::asset_tools::detail::parse_shader_library_index_json(
-          granit::asset_tools::cli::read_text_file(*index_path), index) !=
-      granit::asset_tools::detail::shader_library_source_error::none) {
+  const auto index_json = granit::asset_tools::cli::read_text_file(*index_path);
+  if (index_json.empty()) {
     std::cerr << "无法读取 Shader Library 索引：" << *index_path << '\n';
     return 1;
   }
@@ -117,13 +113,13 @@ int emit_shader_index_ids(int argc, char** argv) {
       std::cerr << "index-ids 的名称必须是唯一 C++ 标识符：" << spec << '\n';
       return 2;
     }
-    const auto found = std::ranges::find(index.shaders, logical_name,
-                                         &granit::asset_tools::detail::shader_library_index_entry::name);
-    if (found == index.shaders.end()) {
+    const auto [status, content_id] =
+        granit::asset_tools::shader::find_index_content_id(index_json, logical_name);
+    if (status.failed()) {
       std::cerr << "索引中不存在 Shader 逻辑名称：" << logical_name << '\n';
       return 1;
     }
-    append_content_id(content, name, found->content_id);
+    append_content_id(content, name, content_id);
     previous_name = name;
   }
   const auto generated = content.str();
@@ -134,4 +130,4 @@ int emit_shader_index_ids(int argc, char** argv) {
   return 0;
 }
 
-} // namespace granit::shader_cli
+} // namespace granit::asset_tools::cli

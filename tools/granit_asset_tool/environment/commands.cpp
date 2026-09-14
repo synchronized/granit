@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "environment_cli/commands.h"
+#include "granit_asset_tool/environment/commands.h"
 
-#include "asset_file_io.h"
+#include "granit_asset_tool/file_io.h"
 
 #include <granit/asset_tools/environment_builder.hpp>
 
@@ -17,6 +17,7 @@
 #include <utility>
 #include <vector>
 
+namespace granit::asset_tools::cli {
 namespace {
 
 struct mip_source {
@@ -167,3 +168,5 @@ int run_environment_command(int argc, char** argv) {
   print_usage();
   return 2;
 }
+
+} // namespace granit::asset_tools::cli

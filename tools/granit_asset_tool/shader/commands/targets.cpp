@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "shader_cli/commands.h"
+#include "granit_asset_tool/shader/commands.h"
 #include <granit/asset_tools/asset_tools.hpp>
 
 #include <iostream>
 
-namespace granit::shader_cli {
+namespace granit::asset_tools::cli {
 namespace {
 const char* object_backend_name(uint32_t backend) {
   return backend == GRANIT_SHADER_BACKEND_VULKAN_BIT ? "vulkan" : "webgpu";
@@ -27,4 +27,4 @@ int print_target_capabilities(granit::shader_backend backend) {
   return 0;
 }
 
-} // namespace granit::shader_cli
+} // namespace granit::asset_tools::cli

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "shader_cli/commands.h"
+#include "granit_asset_tool/shader/commands.h"
 #include <granit/asset_tools/asset_tools.hpp>
 
 #include <iostream>
@@ -9,7 +9,7 @@
 #include <string>
 #include <string_view>
 
-namespace granit::shader_cli {
+namespace granit::asset_tools::cli {
 namespace {
 std::string json_string(std::string_view value) {
   std::ostringstream output;
@@ -171,4 +171,4 @@ int inspect_shader(const char* path, bool verify, bool json) {
   return status.ok() ? 0 : 1;
 }
 
-} // namespace granit::shader_cli
+} // namespace granit::asset_tools::cli

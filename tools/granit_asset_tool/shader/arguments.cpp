@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "shader_cli/arguments.h"
+#include "granit_asset_tool/shader/arguments.h"
 
-namespace granit::shader_cli {
+namespace granit::asset_tools::cli {
 
 std::vector<std::string> option_values(int argc, char** argv, std::string_view name) {
   std::vector<std::string> values;
@@ -22,4 +22,4 @@ std::optional<std::string> option_value(int argc, char** argv, std::string_view 
   return std::nullopt;
 }
 
-} // namespace granit::shader_cli
+} // namespace granit::asset_tools::cli

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "asset_tools/shader/compiler_internal.h"
-#include "shader_cli/arguments.h"
-#include "shader_cli/fixture_commands.h"
 #include "asset_formats/shader/shader_cache_key.h"
 #include "asset_formats/shader/shader_object.h"
+#include "asset_tools/shader/compiler_internal.h"
 #include "asset_tools/shader/object_storage.h"
+#include "granit_asset_tool/shader/arguments.h"
+#include "shader_fixture_tool/commands.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -43,7 +43,7 @@ std::string read_text(const std::filesystem::path& path) {
 
 } // namespace
 
-namespace granit::shader_cli {
+namespace granit::asset_tools::cli {
 
 int build_shader_fixture_object(int argc, char** argv) {
   const auto spirv_path = option_value(argc, argv, "--spirv");
@@ -117,7 +117,8 @@ int build_shader_fixture_object(int argc, char** argv) {
     return 1;
   }
   bool cache_hit = false;
-  if (granit::asset_tools::detail::store_shader_object(*object_path, object, wgsl, spirv, cache_hit) !=
+  if (granit::asset_tools::detail::store_shader_object(*object_path, object, wgsl, spirv,
+                                                       cache_hit) !=
       granit::detail::shader_format::shader_object_error::success) {
     std::cerr << "无法写入测试 Shader Object\n";
     return 1;
@@ -127,4 +128,4 @@ int build_shader_fixture_object(int argc, char** argv) {
   return 0;
 }
 
-} // namespace granit::shader_cli
+} // namespace granit::asset_tools::cli

@@ -6,8 +6,9 @@
 
 #include <stdint.h>
 
-#include <granit/core/result.h>
 #include <granit/asset_tools/export.h>
+#include <granit/core/result.h>
+#include <granit/core/shader_types.h>
 
 /** HLSL-first Shader Library 源构建描述。所有路径只需在调用期间有效。 */
 typedef struct granit_asset_tools_shader_source_library_desc {
@@ -51,6 +52,15 @@ extern "C" {
  */
 GRANIT_ASSET_TOOLS_API granit_result granit_asset_tools_shader_build_library_from_manifest(
     const granit_asset_tools_shader_source_library_desc* desc, uint32_t* cache_hit);
+
+/**
+ * 从内存中的 `.grshidx.json` 查询逻辑 Shader 名称对应的内容 ID。
+ * 输入内存只需在调用期间有效；失败时 content_id 清零。JSON 无效或名称不存在返回
+ * INVALID_ARGUMENT。该函数线程安全。
+ */
+GRANIT_ASSET_TOOLS_API granit_result granit_asset_tools_shader_index_find_content_id(
+    const char* index_json, uint64_t index_json_length, const char* logical_name,
+    uint64_t logical_name_length, granit_shader_content_id content_id);
 
 #ifdef __cplusplus
 }

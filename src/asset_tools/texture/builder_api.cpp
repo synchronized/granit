@@ -5,6 +5,7 @@
 
 #include "asset_formats/texture/texture_asset.h"
 #include "core/sha256.h"
+#include "core/texture_format.h"
 
 #include <algorithm>
 #include <atomic>
@@ -151,6 +152,38 @@ granit_result decode_manifest(const void* data, uint64_t size,
                                                                  : GRANIT_ERROR_INVALID_ARGUMENT;
 }
 
+uint32_t mip_extent(uint32_t extent, uint32_t mip) {
+  return std::max(UINT32_C(1), extent >> std::min(mip, UINT32_C(31)));
+}
+
+bool append_tight_subresources(const granit_asset_tools_texture_build_desc& desc,
+                               const granit_asset_tools_texture_variant_desc& source,
+                               granit::detail::texture_asset_view& asset) {
+  uint64_t offset = 0;
+  for (uint32_t layer = 0; layer < desc.array_layers; ++layer) {
+    for (uint32_t mip = 0; mip < desc.mip_levels; ++mip) {
+      const auto depth =
+          desc.dimension == GRANIT_TEXTURE_DIMENSION_3D ? mip_extent(desc.depth, mip) : UINT32_C(1);
+      const granit_texture_data_layout layout{offset, 0, 0};
+      granit::detail::texture_transfer_footprint footprint{};
+      if (!granit::detail::calculate_texture_transfer_footprint(
+              source.format, mip_extent(desc.width, mip), mip_extent(desc.height, mip), depth,
+              layout, footprint) ||
+          offset > source.payload_size || footprint.required_size > source.payload_size - offset)
+        return false;
+      asset.subresources.push_back({mip,
+                                    layer,
+                                    offset,
+                                    footprint.required_size,
+                                    static_cast<uint32_t>(footprint.row_pitch),
+                                    static_cast<uint32_t>(footprint.image_rows),
+                                    {0, 0}});
+      offset += footprint.required_size;
+    }
+  }
+  return offset == source.payload_size;
+}
+
 } // namespace
 
 extern "C" {
@@ -178,18 +211,24 @@ granit_result granit_asset_tools_texture_build(const granit_asset_tools_texture_
       if (source.struct_size < sizeof(source) || source.reserved != 0 || source.reserved2 != 0 ||
           source.format == GRANIT_TEXTURE_FORMAT_UNDEFINED || source.usage == 0 ||
           !valid_bytes(source.payload, source.payload_size) || source.payload_size == 0 ||
-          source.payload_size > UINT64_MAX - payload_offset || source.subresources == nullptr ||
-          source.subresource_count == 0 ||
+          source.payload_size > UINT64_MAX - payload_offset ||
+          ((source.subresources == nullptr) != (source.subresource_count == 0)) ||
           source.subresource_count > UINT32_MAX - asset.subresources.size())
         return GRANIT_ERROR_INVALID_ARGUMENT;
       const auto first_subresource = static_cast<uint32_t>(asset.subresources.size());
-      asset.subresources.insert(asset.subresources.end(), source.subresources,
-                                source.subresources + source.subresource_count);
+      if (source.subresource_count == 0) {
+        if (!append_tight_subresources(*desc, source, asset))
+          return GRANIT_ERROR_INVALID_ARGUMENT;
+      } else {
+        asset.subresources.insert(asset.subresources.end(), source.subresources,
+                                  source.subresources + source.subresource_count);
+      }
       granit_texture_asset_variant_info variant{};
       variant.format = source.format;
       variant.usage = source.usage;
       variant.first_subresource = first_subresource;
-      variant.subresource_count = source.subresource_count;
+      variant.subresource_count =
+          static_cast<uint32_t>(asset.subresources.size()) - first_subresource;
       variant.payload_offset = payload_offset;
       variant.payload_size = source.payload_size;
       const auto bytes = std::span{static_cast<const std::byte*>(source.payload),

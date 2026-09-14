@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "shader_cli/arguments.h"
-#include "shader_cli/commands.h"
+#include "granit_asset_tool/shader/arguments.h"
+#include "granit_asset_tool/shader/commands.h"
 #include <granit/asset_tools/asset_tools.hpp>
 
 #include <algorithm>
@@ -12,7 +12,7 @@
 #include <utility>
 #include <vector>
 
-namespace granit::shader_cli {
+namespace granit::asset_tools::cli {
 namespace {
 bool parse_defines(const std::vector<std::string>& arguments,
                    std::vector<std::pair<std::string, std::string>>& output) {
@@ -76,4 +76,4 @@ int compile_shader(int argc, char** argv) {
   return status.ok() ? 0 : 1;
 }
 
-} // namespace granit::shader_cli
+} // namespace granit::asset_tools::cli

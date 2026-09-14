@@ -4,13 +4,13 @@
 #include <granit/asset_tools/shader_compiler.h>
 #include <granit/asset_tools/shader_library_builder.h>
 
-#include "asset_tools/common/toolchain_layout.h"
-#include "asset_tools/shader/library_builder.h"
-#include "asset_tools/shader/object_cache.h"
-#include "asset_tools/shader/object_storage.h"
 #include "asset_formats/shader/shader_library.h"
 #include "asset_formats/shader/shader_object.h"
+#include "asset_tools/common/toolchain_layout.h"
+#include "asset_tools/shader/library_builder.h"
 #include "asset_tools/shader/library_source_manifest.h"
+#include "asset_tools/shader/object_cache.h"
+#include "asset_tools/shader/object_storage.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -124,8 +124,8 @@ std::string object_stem(std::string_view name) {
   return result;
 }
 
-std::string
-compile_options(const std::vector<granit::asset_tools::detail::shader_library_source_define>& definitions) {
+std::string compile_options(
+    const std::vector<granit::asset_tools::detail::shader_library_source_define>& definitions) {
   std::string result = "source=hlsl;spirv=vulkan1.3;bridge=spirv1.3";
   for (const auto& define : definitions) {
     result += ";define=" + std::to_string(define.name.size()) + ":" + define.name + ":" +
@@ -178,8 +178,8 @@ extern "C" granit_result granit_asset_tools_shader_build_library_from_manifest(
   try {
     const auto manifest_path = copy_path(desc->manifest_path, desc->manifest_path_length);
     granit::asset_tools::detail::shader_library_source_manifest manifest;
-    const auto parse_result =
-        granit::asset_tools::detail::parse_shader_library_source_manifest(read_text(manifest_path), manifest);
+    const auto parse_result = granit::asset_tools::detail::parse_shader_library_source_manifest(
+        read_text(manifest_path), manifest);
     if (parse_result != granit::asset_tools::detail::shader_library_source_error::none)
       return source_error(parse_result);
 
@@ -323,7 +323,8 @@ extern "C" granit_result granit_asset_tools_shader_build_library_from_manifest(
       return GRANIT_ERROR_INTERNAL;
     index.library_digest = library.content_digest;
     std::string index_json;
-    const auto encode_result = granit::asset_tools::detail::encode_shader_library_index_json(index, index_json);
+    const auto encode_result =
+        granit::asset_tools::detail::encode_shader_library_index_json(index, index_json);
     if (encode_result != granit::asset_tools::detail::shader_library_source_error::none)
       return source_error(encode_result);
     bool index_hit = false;
@@ -331,6 +332,36 @@ extern "C" granit_result granit_asset_tools_shader_build_library_from_manifest(
                                index_hit))
       return GRANIT_ERROR_INITIALIZATION_FAILED;
     *cache_hit = all_objects_hit && library_hit && index_hit ? 1U : 0U;
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+extern "C" granit_result granit_asset_tools_shader_index_find_content_id(
+    const char* index_json, std::uint64_t index_json_length, const char* logical_name,
+    std::uint64_t logical_name_length, granit_shader_content_id content_id) {
+  if (content_id == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  std::memset(content_id, 0, sizeof(granit_shader_content_id));
+  if (!valid_string(index_json, index_json_length) || index_json_length == 0 ||
+      !valid_string(logical_name, logical_name_length) || logical_name_length == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+
+  try {
+    granit::asset_tools::detail::shader_library_index index;
+    const std::string_view json{index_json, static_cast<std::size_t>(index_json_length)};
+    if (granit::asset_tools::detail::parse_shader_library_index_json(json, index) !=
+        granit::asset_tools::detail::shader_library_source_error::none)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    const std::string_view name{logical_name, static_cast<std::size_t>(logical_name_length)};
+    const auto found = std::ranges::find(
+        index.shaders, name, &granit::asset_tools::detail::shader_library_index_entry::name);
+    if (found == index.shaders.end())
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    std::memcpy(content_id, found->content_id.data(), found->content_id.size());
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;

@@ -6,14 +6,17 @@
 
 #include <stdint.h>
 
+#include <granit/asset_tools/export.h>
 #include <granit/core/result.h>
 #include <granit/renderer/texture_asset.h>
-#include <granit/asset_tools/export.h>
 
 /** Texture Asset 构建或检查结果句柄。零值无效。 */
 typedef uint64_t granit_asset_tools_texture_result;
 
-/** 一个 GPU 格式变体及其完整子资源布局。所有输入只需在构建调用期间有效。 */
+/**
+ * 一个 GPU 格式变体及其子资源布局。subresources 和 subresource_count 同时为零时，Builder
+ * 根据构建描述生成紧密排列的完整 mip/层布局。所有输入只需在构建调用期间有效。
+ */
 typedef struct granit_asset_tools_texture_variant_desc {
   uint32_t struct_size;
   granit_texture_format format;

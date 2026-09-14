@@ -9,11 +9,11 @@
 #include <string_view>
 #include <vector>
 
-namespace granit::shader_cli {
+namespace granit::asset_tools::cli {
 
 std::optional<std::string> option_value(int argc, char** argv, std::string_view name);
 std::vector<std::string> option_values(int argc, char** argv, std::string_view name);
 
-} // namespace granit::shader_cli
+} // namespace granit::asset_tools::cli
 
 #endif

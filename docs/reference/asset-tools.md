@@ -104,6 +104,8 @@ Library Builder 自动将 DXC 与 Tint 二进制的 SHA-256 身份纳入缓存�
   CLI 的 `targets` 列出目标，`capabilities --target <name>` 查询对应能力。当前提供
   `vulkan-portable` 和 `webgpu-portable`，二者均不声明额外可选特性。
 - Library Builder 将目标后端和必需特性纳入缓存键与变体记录。
+- `granit_asset_tools_shader_index_find_content_id` 从内存中的 `.grshidx.json` 查询逻辑 Shader 名称，
+  供 CLI 和上游资产管线生成稳定内容 ID 引用，无需访问 SDK 私有 JSON 类型。
 - `granit_asset_tools_shader_reflection_get_binding_count` 和 `granit_asset_tools_shader_reflection_get_binding` 按
   Group、Binding 数字顺序返回结构化绑定。记录包含资源类型、访问模式、数组数量和 Buffer
   最小绑定尺寸。
@@ -147,9 +149,10 @@ Library Builder 自动将 DXC 与 Tint 二进制的 SHA-256 身份纳入缓存�
 
 - C11 入口位于 `<granit/asset_tools/texture_builder.h>`，C++20 包装位于对应 `.hpp`，命名空间为
   `granit::asset_tools::texture`。
-- Builder 接收逻辑尺寸、按偏好排序的格式变体、显式子资源布局和每个变体的已编码负载。它按
+- Builder 接收逻辑尺寸、按偏好排序的格式变体和每个变体的已编码负载。调用方可以提供显式
+  子资源布局；同时省略子资源指针和数量时，Builder 根据尺寸、层数和 mip 数生成紧密布局。它按
   变体顺序拼接负载，计算各负载 SHA-256，并根据尺寸、格式、用途、布局和摘要生成内容 ID；调用方
-  不再填写偏移、大小、摘要或内容 ID。
+  不再填写负载偏移、摘要或内容 ID。
 - 内容 ID 使用固定的 `granit.texture.asset.v1` 域和小端规范化字段计算。相同输入得到相同
   Manifest、合并负载与内容 ID；改变变体顺序、格式、用途、布局或负载都会改变身份。
 - `granit_asset_tools_texture_inspect` 检查 Manifest 并提供稳定调试 JSON。Builder 和 Inspector

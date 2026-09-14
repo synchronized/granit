@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "environment_cli/commands.h"
-#include "material_cli/commands.h"
-#include "shader_cli/commands.h"
-#include "texture_cli/commands.h"
+#include "granit_asset_tool/environment/commands.h"
+#include "granit_asset_tool/material/commands.h"
+#include "granit_asset_tool/shader/commands.h"
+#include "granit_asset_tool/texture/commands.h"
 
 #include <iostream>
 #include <string_view>
@@ -39,7 +39,7 @@ void print_usage() {
 } // namespace
 
 int run_shader_command(int argc, char** argv) {
-  using namespace granit::shader_cli;
+  using namespace granit::asset_tools::cli;
   if (argc == 2 && std::string_view{argv[1]} == "targets") {
     std::cout << "vulkan-portable\nwebgpu-portable\n";
     return 0;
@@ -69,6 +69,7 @@ int run_shader_command(int argc, char** argv) {
 }
 
 int main(int argc, char** argv) {
+  using namespace granit::asset_tools::cli;
   if (argc >= 2 && std::string_view{argv[1]} == "shader")
     return run_shader_command(argc - 1, argv + 1);
   if (argc >= 2 && std::string_view{argv[1]} == "material")

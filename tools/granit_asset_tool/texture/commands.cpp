@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "texture_cli/commands.h"
+#include "granit_asset_tool/texture/commands.h"
 
-#include "asset_file_io.h"
-#include "core/texture_format.h"
+#include "granit_asset_tool/file_io.h"
 
 #include <granit/asset_tools/texture_builder.hpp>
 
@@ -19,13 +18,13 @@
 #include <utility>
 #include <vector>
 
+namespace granit::asset_tools::cli {
 namespace {
 
 struct variant_source {
   granit_texture_format format{};
   std::filesystem::path path;
   std::vector<std::byte> payload;
-  std::vector<granit_texture_asset_subresource_info> subresources;
 };
 
 struct texture_shape {
@@ -138,39 +137,6 @@ std::optional<granit_texture_usage> parse_usage(std::string_view value) {
   return usage == 0 ? std::nullopt : std::optional<granit_texture_usage>{usage};
 }
 
-uint32_t mip_extent(uint32_t extent, uint32_t mip) {
-  return std::max(UINT32_C(1), extent >> std::min(mip, UINT32_C(31)));
-}
-
-bool append_subresources(std::vector<granit_texture_asset_subresource_info>& subresources,
-                         const texture_shape& shape, granit_texture_format format,
-                         std::size_t payload_size) {
-  uint64_t offset = 0;
-  for (uint32_t layer = 0; layer < shape.array_layers; ++layer) {
-    for (uint32_t mip = 0; mip < shape.mip_levels; ++mip) {
-      const auto depth = shape.dimension == GRANIT_TEXTURE_DIMENSION_3D
-                             ? mip_extent(shape.depth, mip)
-                             : UINT32_C(1);
-      granit_texture_data_layout layout{offset, 0, 0};
-      granit::detail::texture_transfer_footprint footprint{};
-      if (!granit::detail::calculate_texture_transfer_footprint(
-              format, mip_extent(shape.width, mip), mip_extent(shape.height, mip), depth, layout,
-              footprint) ||
-          offset > payload_size || footprint.required_size > payload_size - offset)
-        return false;
-      subresources.push_back({mip,
-                              layer,
-                              offset,
-                              footprint.required_size,
-                              static_cast<uint32_t>(footprint.row_pitch),
-                              static_cast<uint32_t>(footprint.image_rows),
-                              {0, 0}});
-      offset += footprint.required_size;
-    }
-  }
-  return offset == payload_size;
-}
-
 int inspect_texture(int argc, char** argv) {
   if ((argc != 4 && argc != 6) || std::string_view{argv[3]} != "--json" ||
       (argc == 6 && std::string_view{argv[4]} != "--output")) {
@@ -228,14 +194,10 @@ int build_texture(int argc, char** argv) {
       std::cerr << "无效 Texture 变体：" << spec << '\n';
       return 2;
     }
-    variant_source source{*format, std::string{spec.substr(separator + 1)}, {}, {}};
+    variant_source source{*format, std::string{spec.substr(separator + 1)}, {}};
     source.payload = granit::asset_tools::cli::read_file(source.path);
     if (source.payload.empty()) {
       std::cerr << "无法读取 Texture 变体负载：" << source.path << '\n';
-      return 1;
-    }
-    if (!append_subresources(source.subresources, shape, source.format, source.payload.size())) {
-      std::cerr << "Texture 变体负载大小与完整 mip/层布局不一致：" << source.path << '\n';
       return 1;
     }
     sources.push_back(std::move(source));
@@ -243,7 +205,7 @@ int build_texture(int argc, char** argv) {
   std::vector<granit::asset_tools::texture::variant_desc> variant_descs;
   variant_descs.reserve(sources.size());
   for (const auto& source : sources)
-    variant_descs.push_back({source.format, *usage, source.payload, source.subresources});
+    variant_descs.push_back({source.format, *usage, source.payload, {}});
   auto [status, result] =
       granit::asset_tools::texture::build({shape.dimension, shape.width, shape.height, shape.depth,
                                            shape.array_layers, shape.mip_levels, variant_descs});
@@ -269,3 +231,5 @@ int run_texture_command(int argc, char** argv) {
   print_usage();
   return 2;
 }
+
+} // namespace granit::asset_tools::cli

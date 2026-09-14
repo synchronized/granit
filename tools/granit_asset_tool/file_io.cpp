@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "asset_file_io.h"
+#include "granit_asset_tool/file_io.h"
 
 #include <fstream>
 #include <limits>

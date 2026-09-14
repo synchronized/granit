@@ -2,14 +2,22 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <granit/asset_tools/shader_compiler.hpp>
+#include <granit/asset_tools/shader_library_builder.hpp>
 #include <granit/asset_tools/shader_reflection.hpp>
 
+#include <cstddef>
 #include <cstring>
 #include <string_view>
 
 int main(int argc, char** argv) {
   if (argc != 4 && argc != 5)
     return 1;
+  constexpr std::string_view index_json =
+      R"({"format_version":1,"library":"fixture","content_digest":"0000000000000000000000000000000000000000000000000000000000000000","shaders":[{"name":"main.fragment","content_id":"8f7cfc8e65d45e5e67410d4de4bf6b20420d60506e8d04418fae81a77757b483","stage":"fragment","entry_point":"main"}]})";
+  const auto [index_status, content_id] =
+      granit::asset_tools::shader::find_index_content_id(index_json, "main.fragment");
+  if (index_status.failed() || std::to_integer<unsigned int>(content_id.front()) != 0x8f)
+    return 18;
   granit::asset_tools::shader::compiler compiler;
   if (compiler.initialize({}) != granit::result::invalid_argument || compiler)
     return 15;

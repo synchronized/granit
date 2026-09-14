@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "shader_cli/fixture_commands.h"
+#include "shader_fixture_tool/commands.h"
 
 #include <iostream>
 #include <string_view>
@@ -13,7 +13,7 @@ void print_usage() { std::cerr << "该工具只供 Granit 仓库测试生成 Sha
 } // namespace
 
 int main(int argc, char** argv) {
-  using namespace granit::shader_cli;
+  using namespace granit::asset_tools::cli;
   if (argc >= 2 && std::string_view{argv[1]} == "object")
     return build_shader_fixture_object(argc, argv);
   if (argc >= 2 && std::string_view{argv[1]} == "library")

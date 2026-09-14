@@ -3,6 +3,10 @@
 
 # Granit 离线工具
 
+正式命令行程序的源码位于 `tools/granit_asset_tool`，只通过安装级 AssetTools 公共接口访问资产
+能力。SDK 实现位于 `src/asset_tools`；测试资产生成程序位于
+`tests/support/shader_fixture_tool`，不属于发布工具。
+
 使用 `GRANIT_BUILD_TOOLS=ON` 构建可选离线工具：
 
 ```powershell
@@ -52,7 +56,7 @@ granit_asset_tool environment inspect environment.grenv --json
 `inspect` 按稳定顺序输出入口和资源绑定元数据；`inspect --json` 额外输出描述符、阶段接口、
 Compute Workgroup 和 Override 常量的结构化调试视图；`verify` 执行低成本 SPIR-V 结构与反射检查；
 完整 SPIR-V 合法性由 DXC、Tint 的 `--validate` 和可选 `spirv-val` 共同负责。工具不进入 Granit
-核心动态库及安装导出。
+核心动态库；CLI 只安装可执行文件，不向使用者导出内部源码接口。
 所有调用都必须使用显式子命令；早期原型的单参数入口不再保留。
 `targets` 列出工具内置的目标契约，`capabilities` 查询目标档位允许的可选特性。结果描述发布目标，
 不读取构建机 GPU；当前两个 portable 目标都只包含基线能力，因此可选特性为 `none`。

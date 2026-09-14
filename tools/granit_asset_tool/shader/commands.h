@@ -6,7 +6,7 @@
 
 #include <granit/core/shader_types.hpp>
 
-namespace granit::shader_cli {
+namespace granit::asset_tools::cli {
 
 int build_shader_library(int argc, char** argv);
 int emit_shader_index_ids(int argc, char** argv);
@@ -14,6 +14,6 @@ int compile_shader(int argc, char** argv);
 int inspect_shader(const char* path, bool verify, bool json = false);
 int print_target_capabilities(shader_backend backend);
 
-} // namespace granit::shader_cli
+} // namespace granit::asset_tools::cli
 
 #endif

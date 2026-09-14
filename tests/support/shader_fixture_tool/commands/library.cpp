@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "shader_cli/arguments.h"
-#include "shader_cli/fixture_commands.h"
 #include "asset_formats/shader/shader_object.h"
 #include "asset_tools/shader/library_builder.h"
+#include "granit_asset_tool/shader/arguments.h"
+#include "shader_fixture_tool/commands.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -17,7 +17,7 @@
 #include <sstream>
 #include <vector>
 
-namespace granit::shader_cli {
+namespace granit::asset_tools::cli {
 namespace {
 std::vector<std::byte> read_bytes(const std::filesystem::path& path) {
   std::ifstream stream{path, std::ios::binary};
@@ -83,8 +83,8 @@ int link_shader_fixture_library(int argc, char** argv) {
   for (const auto& path : object_paths)
     objects.emplace_back(path);
   bool cache_hit = false;
-  if (granit::asset_tools::detail::link_shader_library(objects, backend_mask, *output_path, cache_hit) !=
-      GRANIT_SUCCESS) {
+  if (granit::asset_tools::detail::link_shader_library(objects, backend_mask, *output_path,
+                                                       cache_hit) != GRANIT_SUCCESS) {
     std::cerr << "无法链接 Shader Library\n";
     return 1;
   }
@@ -135,4 +135,4 @@ int emit_shader_fixture_object_ids(int argc, char** argv) {
   return 0;
 }
 
-} // namespace granit::shader_cli
+} // namespace granit::asset_tools::cli

@@ -8,34 +8,25 @@ find_package(Threads REQUIRED)
 if(TARGET granit_asset_tools)
   add_executable(
     granit_asset_tool
-    asset_file_io.cpp
-    asset_file_io.h
-    asset_cli/main.cpp
-    environment_cli/commands.cpp
-    environment_cli/commands.h
-    material_cli/commands.cpp
-    material_cli/commands.h
-    shader_cli/arguments.cpp
-    shader_cli/arguments.h
-    shader_cli/commands.h
-    shader_cli/commands/compile.cpp
-    shader_cli/commands/inspect.cpp
-    shader_cli/commands/library.cpp
-    shader_cli/commands/targets.cpp
-    texture_cli/commands.cpp
-    texture_cli/commands.h
-  )
-  target_sources(
-    granit_asset_tool
-    PRIVATE
-      $<TARGET_OBJECTS:granit_asset_tools_shader_library_source>
-      $<TARGET_OBJECTS:granit_asset_tools_shader_compiler>
-      $<TARGET_OBJECTS:granit_spirv_reflect>
+    granit_asset_tool/file_io.cpp
+    granit_asset_tool/file_io.h
+    granit_asset_tool/main.cpp
+    granit_asset_tool/environment/commands.cpp
+    granit_asset_tool/environment/commands.h
+    granit_asset_tool/material/commands.cpp
+    granit_asset_tool/material/commands.h
+    granit_asset_tool/shader/arguments.cpp
+    granit_asset_tool/shader/arguments.h
+    granit_asset_tool/shader/commands.h
+    granit_asset_tool/shader/commands/compile.cpp
+    granit_asset_tool/shader/commands/inspect.cpp
+    granit_asset_tool/shader/commands/library.cpp
+    granit_asset_tool/shader/commands/targets.cpp
+    granit_asset_tool/texture/commands.cpp
+    granit_asset_tool/texture/commands.h
   )
   target_compile_features(granit_asset_tool PRIVATE cxx_std_20)
-  target_include_directories(
-    granit_asset_tool PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/tools"
-  )
+  target_include_directories(granit_asset_tool PRIVATE "${PROJECT_SOURCE_DIR}/tools")
   target_link_libraries(granit_asset_tool PRIVATE granit::asset_tools)
   target_compile_options(
     granit_asset_tool
@@ -53,12 +44,12 @@ endif()
 if((GRANIT_BUILD_TESTING AND BUILD_TESTING) OR GRANIT_BUILD_BENCHMARKS)
   add_executable(
     granit_shader_fixture_tool
-    shader_cli/fixture_main.cpp
-    shader_cli/fixture_commands.h
-    shader_cli/arguments.cpp
-    shader_cli/arguments.h
-    shader_cli/commands/fixture_library.cpp
-    shader_cli/commands/fixture_object.cpp
+    "${PROJECT_SOURCE_DIR}/tests/support/shader_fixture_tool/main.cpp"
+    "${PROJECT_SOURCE_DIR}/tests/support/shader_fixture_tool/commands.h"
+    granit_asset_tool/shader/arguments.cpp
+    granit_asset_tool/shader/arguments.h
+    "${PROJECT_SOURCE_DIR}/tests/support/shader_fixture_tool/commands/library.cpp"
+    "${PROJECT_SOURCE_DIR}/tests/support/shader_fixture_tool/commands/object.cpp"
     "${PROJECT_SOURCE_DIR}/src/asset_tools/shader/library_builder.cpp"
   )
   target_sources(
@@ -73,7 +64,7 @@ if((GRANIT_BUILD_TESTING AND BUILD_TESTING) OR GRANIT_BUILD_BENCHMARKS)
   target_include_directories(
     granit_shader_fixture_tool
     PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
-            "${PROJECT_SOURCE_DIR}/tools"
+            "${PROJECT_SOURCE_DIR}/tests/support" "${PROJECT_SOURCE_DIR}/tools"
   )
   target_link_libraries(granit_shader_fixture_tool PRIVATE Threads::Threads)
   target_compile_options(
