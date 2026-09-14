@@ -19,6 +19,7 @@
 
 ## 稳定化与跨平台
 
+- [2026-09-14 Granit 0.23.0 发布验收](2026-09-14-v0.23.0-release-acceptance.md)
 - [2026-09-14 S-39～S-41 远端发布验收](2026-09-14-s39-s41-remote-release-acceptance.md)
 - [2026-09-14 S-41 资产目录收敛本地验收](2026-09-14-s41-asset-layout-acceptance.md)
 - [2026-09-14 S-39/S-40 本地发布验收](2026-09-14-s39-s40-local-release-acceptance.md)
