@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+set_property(DIRECTORY APPEND PROPERTY LABELS integration)
+
 if(EMSCRIPTEN)
   # 浏览器集成测试复用模型查看器运行层，关闭示例时也只创建其私有支撑库。
   if(GRANIT_BUILD_MODEL_VIEWER_EXAMPLE OR (GRANIT_BUILD_TESTING AND BUILD_TESTING))

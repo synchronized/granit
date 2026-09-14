@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+set_property(DIRECTORY APPEND PROPERTY LABELS smoke)
+
 set(granit_smoke_asset_dir "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke")
 
 function(granit_add_smoke_target target source)
@@ -121,6 +123,20 @@ granit_add_smoke_target(granit_immediate_ui_adapter_smoke immediate_ui_adapter.c
 target_link_libraries(granit_immediate_ui_adapter_smoke PRIVATE granit::render_pipeline)
 add_test(NAME granit.smoke.immediate_ui_adapter COMMAND granit_immediate_ui_adapter_smoke)
 
+set_property(
+  TEST
+    granit.smoke.renderer
+    granit.smoke.offscreen_clear
+    granit.smoke.texture_readback
+    granit.smoke.offscreen_triangle
+    granit.smoke.compute
+    granit.smoke.material_hot_reload
+    granit.smoke.pbr_offscreen
+    granit.smoke.render_pipeline_offscreen
+    granit.smoke.immediate_ui_adapter
+  APPEND PROPERTY LABELS gpu integration
+)
+
 if(GRANIT_BUILD_INTEGRATION_SDL3)
   granit_add_smoke_target(granit_sdl3_window_clear_smoke sdl3_window_clear.cpp)
   target_link_libraries(
@@ -139,7 +155,10 @@ if(GRANIT_BUILD_INTEGRATION_SDL3)
       NAME granit.smoke.sdl3_window_clear
       COMMAND granit_sdl3_window_clear_smoke --smoke-test
     )
-    set_tests_properties(granit.smoke.sdl3_window_clear PROPERTIES TIMEOUT 30)
+    set_tests_properties(
+      granit.smoke.sdl3_window_clear
+      PROPERTIES TIMEOUT 30 LABELS "smoke;gpu;integration;platform"
+    )
   endif()
 endif()
 
@@ -168,6 +187,7 @@ if(WIN32)
   set_tests_properties(
     granit.smoke.render_pipeline_window
     PROPERTIES TIMEOUT 30 FAIL_REGULAR_EXPRESSION "\\[granit\\]\\[vulkan\\]"
+               LABELS "smoke;gpu;integration;platform"
   )
 
   granit_add_smoke_target(granit_window_clear_smoke window_clear.cpp)
@@ -199,6 +219,14 @@ if(WIN32)
   )
   add_test(NAME granit.smoke.window_hdr COMMAND granit_window_hdr_smoke --smoke-test)
   set_tests_properties(granit.smoke.window_hdr PROPERTIES TIMEOUT 30)
+
+  set_property(
+    TEST
+      granit.smoke.window_clear
+      granit.smoke.window_triangle
+      granit.smoke.window_hdr
+    APPEND PROPERTY LABELS gpu integration platform
+  )
 endif()
 
 if(GRANIT_HAS_XCB)
@@ -210,7 +238,10 @@ if(GRANIT_HAS_XCB)
     granit_xcb_window_clear_smoke PRIVATE granit::granit "${GRANIT_XCB_LIBRARY}"
   )
   add_test(NAME granit.smoke.xcb_window_clear COMMAND granit_xcb_window_clear_smoke --smoke-test)
-  set_tests_properties(granit.smoke.xcb_window_clear PROPERTIES TIMEOUT 30)
+  set_tests_properties(
+    granit.smoke.xcb_window_clear
+    PROPERTIES TIMEOUT 30 LABELS "smoke;gpu;integration;platform"
+  )
 endif()
 
 if(GRANIT_HAS_WAYLAND_SHELL)
@@ -264,5 +295,8 @@ if(GRANIT_HAS_WAYLAND_SHELL)
     NAME granit.smoke.wayland_window_clear
     COMMAND granit_wayland_window_clear_smoke --smoke-test
   )
-  set_tests_properties(granit.smoke.wayland_window_clear PROPERTIES TIMEOUT 30)
+  set_tests_properties(
+    granit.smoke.wayland_window_clear
+    PROPERTIES TIMEOUT 30 LABELS "smoke;gpu;integration;platform"
+  )
 endif()

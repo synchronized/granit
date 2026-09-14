@@ -4,6 +4,8 @@
 cmake_minimum_required(VERSION 3.23)
 project(granit_consumer LANGUAGES C CXX)
 
+set_property(DIRECTORY APPEND PROPERTY LABELS package)
+
 include(CTest)
 
 find_package(granit 0.23 CONFIG REQUIRED COMPONENTS RenderPipeline Window Input)

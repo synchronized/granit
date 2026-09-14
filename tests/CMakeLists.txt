@@ -736,6 +736,61 @@ if(GRANIT_BUILD_INTEGRATION_IMGUI)
   add_test(NAME granit.integration.imgui COMMAND granit_integration_imgui_test)
 endif()
 
+set_property(
+  TEST
+    granit.backend.native_boundaries
+    granit.c_version
+    granit.handle_table
+    granit.sha256
+    granit.async_operation_state
+    granit.resource_validation
+    granit.backend_capabilities
+    granit.backend_resources
+    granit.lifecycle_validation
+    granit.retirement_queue
+    granit.device_status
+    granit.render_graph
+    granit.math
+    granit.pbr
+    granit.scene
+    granit.vulkan_backend
+    granit.window
+    granit.input
+  APPEND PROPERTY LABELS unit
+)
+set_property(TEST granit.documentation APPEND PROPERTY LABELS unit)
+set_property(
+  TEST granit.build_tree_consumers granit.release_version granit.release_version_mismatch
+  APPEND PROPERTY LABELS package release
+)
+set_property(
+  TEST granit.lighting granit.pipeline granit.material granit.renderer
+       granit.renderer.lifecycle_diagnostic
+  APPEND PROPERTY LABELS gpu integration
+)
+set_property(
+  TEST granit.window_renderer
+  APPEND PROPERTY LABELS gpu integration platform
+)
+if(GRANIT_BUILD_INTEGRATION_IMGUI)
+  set_property(TEST granit.integration.imgui APPEND PROPERTY LABELS integration)
+endif()
+
+if(BUILD_SHARED_LIBS)
+  set_property(TEST granit.abi.exports APPEND PROPERTY LABELS package release)
+  if(granit_abi_export_tool)
+    set_property(
+      TEST
+        granit.abi.exports.core
+        granit.abi.exports.render_pipeline
+        granit.abi.exports.window
+        granit.abi.exports.input
+        granit.abi.exports.asset_tools
+      APPEND PROPERTY LABELS package release
+    )
+  endif()
+endif()
+
 set(
   granit_test_executable_targets
   granit_c_version_test

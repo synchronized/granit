@@ -4,6 +4,8 @@
 cmake_minimum_required(VERSION 3.23)
 project(granit_web_consumer LANGUAGES C CXX)
 
+set_property(DIRECTORY APPEND PROPERTY LABELS browser package)
+
 if(NOT EMSCRIPTEN)
   message(FATAL_ERROR "浏览器消费端测试需要 Emscripten 工具链")
 endif()

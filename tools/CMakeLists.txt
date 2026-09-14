@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+set_property(DIRECTORY APPEND PROPERTY LABELS integration tooling)
+
 set(GRANIT_SPIRV_REFLECT_DIR "${PROJECT_SOURCE_DIR}/3rd/spirv-reflect-1.4.350.0")
 set(GRANIT_SPIRV_HEADERS_DIR "${PROJECT_SOURCE_DIR}/3rd/spirv-headers-1.4.350.0/include")
 
@@ -764,6 +766,14 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
       "-DMODULE=${PROJECT_SOURCE_DIR}/cmake/GranitShaderToolchain.cmake"
       "-DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/shader-toolchain-mode-test" -P
       "${PROJECT_SOURCE_DIR}/cmake/check_shader_toolchain_modes.cmake"
+  )
+  set_property(
+    TEST
+      granit.shader_toolchain.manifest
+      granit.shader_toolchain.package
+      granit.shader_toolchain.licenses
+      granit.shader_toolchain.modes
+    APPEND PROPERTY LABELS package release
   )
 
   if(GRANIT_SHADER_TOOLCHAIN_ROOT AND GRANIT_DXC_EXECUTABLE AND GRANIT_TINT_EXECUTABLE)
