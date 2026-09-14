@@ -8,6 +8,22 @@
 
 ## Unreleased
 
+## 0.23.0 - 2026-09-14
+
+### 变更
+
+- Render Pipeline 现在接受没有可见 Renderable 的有效 View，仍会清除场景目标、执行 Tone Mapping、
+  绘制 Canvas 与 Overlay，并提交调用方提供的 Frame。
+- 空 Opaque pass 会建立 clear-only Rendering，并在 1x/4x MSAA 下完成确定的 Color、Depth 和
+  Resolve 输出；自定义 Opaque 回调仍按阶段执行并接收空数组。
+
+### 修复
+
+- 修复旧 CMake 缓存分别保存 DXC 与 Tint 路径时，Render Pipeline 错误启用源码 Shader 生成并因
+  缺少统一 Toolchain 根目录而配置失败的问题。
+- 仓库 Shader Library、索引、内容 ID 与 Material 快照已使用锁定 Shader Toolchain 重新生成，
+  并将 PBR Material 模板版本更新为 4。
+
 ## 0.22.0 - 2026-09-14
 
 ### 新增
