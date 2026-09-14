@@ -49,6 +49,7 @@
 | 二十九、0.21.0 Shader Library 与后端无关材质 | 已完成 | S-37A～S-37L 与跨平台候选包验收均已完成 |
 | 三十、0.22.0 AssetTools SDK 与工具链交付 | 已发布 | AssetTools SDK 与工具链已随 0.22.0 发布 |
 | 三十一、0.23.0 空帧与覆盖层可靠性 | 已发布 | S-39～S-41 已随 0.23.0 发布 |
+| 三十二、0.24.0 测试架构收敛 | 待开始 | 两个核心 Smoke 与分层测试矩阵 |
 
 ## 一、工程与 ABI 基础
 
@@ -484,12 +485,25 @@
 - **[S-41](plans/S-41-0.23.0-asset-layout-convergence.md) / P1**：按生命周期分离作者输入、已提交
   生成快照、内建资产、格式实现与测试 Fixture，保持安装布局和资产字节不变。
 
+## 三十二、0.24.0 测试架构收敛
+
+**状态：待开始；设计已确认。**
+
+- **[S-42](plans/S-42-0.24.0-test-architecture-convergence.md) / P1**：将 Smoke 收敛为离屏 GPU
+  与窗口 Render Pipeline 两个端到端健康检查，其余测试按模块和环境归位。
+- Win32、XCB、Wayland 统一通过 Window component 验证；SDL3 保留外部窗口 adapter 边界，复用
+  测试私有 Swapchain 帧逻辑。
+- 以 CTest 标签建立日常、GPU、平台、浏览器、安装包与发布矩阵，不改变公共 API 或 ABI。
+
 ## 近期执行顺序
 
-1. 公共执行器与场景 API 继续等待第二个真实复用证据。
-2. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
-3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-6. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+1. 执行 S-42A 测试基线与 CTest 标签收敛。
+2. 完成两个核心 Smoke、Window/SDL3 帧循环复用和 GPU/模块测试归位。
+3. 通过 Windows、Linux、Emscripten 与 Release Candidate 完成 0.24.0 验收。
+4. 公共执行器与场景 API 继续等待第二个真实复用证据。
+5. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
+6. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+7. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。
