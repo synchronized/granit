@@ -4,8 +4,8 @@
 #ifndef GRANIT_MATERIAL_MATERIAL_PACKAGE_ARCHIVE_H
 #define GRANIT_MATERIAL_MATERIAL_PACKAGE_ARCHIVE_H
 
-#include "material/material_archive.h"
-#include "material/material_package.h"
+#include "asset_formats/material/material_archive.h"
+#include "asset_formats/material/material_package.h"
 
 #include <vector>
 

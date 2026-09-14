@@ -3,7 +3,7 @@
 
 #include "builder.h"
 
-#include "shader_format/shader_library.h"
+#include "asset_formats/shader/shader_library.h"
 
 #include <algorithm>
 #include <atomic>

@@ -4,7 +4,7 @@
 #ifndef GRANIT_TOOLS_SHADER_ASSET_STORAGE_H_
 #define GRANIT_TOOLS_SHADER_ASSET_STORAGE_H_
 
-#include "shader_format/shader_object.h"
+#include "asset_formats/shader/shader_object.h"
 
 #include <filesystem>
 #include <string>

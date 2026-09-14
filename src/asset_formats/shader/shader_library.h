@@ -4,7 +4,7 @@
 #ifndef GRANIT_SHADER_FORMAT_SHADER_LIBRARY_H_
 #define GRANIT_SHADER_FORMAT_SHADER_LIBRARY_H_
 
-#include "shader_format/shader_object.h"
+#include "asset_formats/shader/shader_object.h"
 
 #include <cstddef>
 #include <cstdint>

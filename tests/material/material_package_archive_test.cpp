@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "material/material_debug_json.h"
-#include "material/material_package_archive.h"
+#include "asset_formats/material/material_package_archive.h"
 
 #include <catch2/catch_all.hpp>
 

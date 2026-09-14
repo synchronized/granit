@@ -7,7 +7,7 @@
 #include "lighting/light_data.h"
 #include "lighting/shadow_ibl_resources.h"
 #include "lighting/tone_mapping_resources.h"
-#include "material/material_package.h"
+#include "asset_formats/material/material_package.h"
 #include "pipeline/default_ibl_resources.h"
 #include "pipeline/dynamic_uniform_arena.h"
 #include "pipeline/embedded_shaders.h"

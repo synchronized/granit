@@ -55,11 +55,7 @@ set_target_properties(granit_asset_tools_shader_core PROPERTIES POSITION_INDEPEN
 
 add_library(
   granit_asset_tools_material_core OBJECT
-  "${PROJECT_SOURCE_DIR}/src/material/material_archive.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_debug_json.cpp"
-  "${PROJECT_SOURCE_DIR}/src/material/material_metadata.cpp"
-  "${PROJECT_SOURCE_DIR}/src/material/material_package.cpp"
-  "${PROJECT_SOURCE_DIR}/src/material/material_package_archive.cpp"
   "${PROJECT_SOURCE_DIR}/src/material/material_source_json.cpp"
 )
 target_compile_features(granit_asset_tools_material_core PUBLIC cxx_std_20)
@@ -79,8 +75,6 @@ if(GRANIT_BUILD_ASSET_TOOLS OR GRANIT_BUILD_TOOLS OR (GRANIT_BUILD_TESTING AND B
     asset_tools_material_api.cpp
     asset_tools_shader_api.cpp
     asset_tools_texture_api.cpp
-    "${PROJECT_SOURCE_DIR}/src/asset_formats/environment_asset.cpp"
-    "${PROJECT_SOURCE_DIR}/src/asset_formats/texture_asset.cpp"
     shader_library/builder.cpp
     shader_library/builder.h
     shader_library/object_cache.cpp
@@ -121,7 +115,10 @@ if(GRANIT_BUILD_ASSET_TOOLS OR GRANIT_BUILD_TOOLS OR (GRANIT_BUILD_TESTING AND B
     PRIVATE
       $<TARGET_OBJECTS:granit_shader_object_storage>
       $<TARGET_OBJECTS:granit_shader_library_source>
-      $<TARGET_OBJECTS:granit_internal_shader_format>
+      $<TARGET_OBJECTS:granit_asset_format_shader>
+      $<TARGET_OBJECTS:granit_asset_format_material>
+      $<TARGET_OBJECTS:granit_asset_format_texture>
+      $<TARGET_OBJECTS:granit_asset_format_environment>
       $<TARGET_OBJECTS:granit_asset_tools_material_core>
       $<TARGET_OBJECTS:granit_asset_tools_shader_core>
       $<TARGET_OBJECTS:granit_spirv_reflect>
@@ -217,7 +214,7 @@ if((GRANIT_BUILD_TESTING AND BUILD_TESTING) OR GRANIT_BUILD_BENCHMARKS)
   target_sources(
     granit_shader_fixture_tool
     PRIVATE
-      $<TARGET_OBJECTS:granit_internal_shader_format>
+      $<TARGET_OBJECTS:granit_asset_format_shader>
       $<TARGET_OBJECTS:granit_shader_object_storage>
       $<TARGET_OBJECTS:granit_asset_tools_shader_core>
       $<TARGET_OBJECTS:granit_spirv_reflect>
@@ -358,7 +355,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     granit_shader_object_test
     "${PROJECT_SOURCE_DIR}/tests/tools/shader_object_test.cpp"
     $<TARGET_OBJECTS:granit_shader_object_storage>
-    $<TARGET_OBJECTS:granit_internal_shader_format>
+    $<TARGET_OBJECTS:granit_asset_format_shader>
     $<TARGET_OBJECTS:granit_asset_tools_shader_core>
     $<TARGET_OBJECTS:granit_spirv_reflect>
   )
@@ -379,7 +376,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_executable(
     granit_shader_library_test
     "${PROJECT_SOURCE_DIR}/tests/tools/shader_library_test.cpp"
-    $<TARGET_OBJECTS:granit_internal_shader_format>
+    $<TARGET_OBJECTS:granit_asset_format_shader>
   )
   target_compile_features(granit_shader_library_test PRIVATE cxx_std_20)
   target_include_directories(

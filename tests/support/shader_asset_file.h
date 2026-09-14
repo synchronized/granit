@@ -6,7 +6,7 @@
 
 #include <granit/renderer/shader.hpp>
 
-#include "shader_format/shader_object.h"
+#include "asset_formats/shader/shader_object.h"
 
 #include <cstring>
 #include <filesystem>

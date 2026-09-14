@@ -4,7 +4,7 @@
 #ifndef GRANIT_MATERIAL_MATERIAL_SOURCE_JSON_H
 #define GRANIT_MATERIAL_MATERIAL_SOURCE_JSON_H
 
-#include "material/material_package.h"
+#include "asset_formats/material/material_package.h"
 
 #include <cstddef>
 #include <span>

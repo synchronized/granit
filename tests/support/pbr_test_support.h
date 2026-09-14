@@ -6,7 +6,7 @@
 
 #include "lighting/shadow_ibl_resources.h"
 #include "material/material_gpu_instance.h"
-#include "material/material_package.h"
+#include "asset_formats/material/material_package.h"
 #include "material/material_template_gpu.h"
 #include "material/pbr_default_resources.h"
 

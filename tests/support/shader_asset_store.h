@@ -4,9 +4,9 @@
 #ifndef GRANIT_TESTS_SUPPORT_SHADER_ASSET_STORE_H_
 #define GRANIT_TESTS_SUPPORT_SHADER_ASSET_STORE_H_
 
-#include "material/material_package.h"
+#include "asset_formats/material/material_package.h"
 #include "shader_asset_file.h"
-#include "shader_format/shader_library.h"
+#include "asset_formats/shader/shader_library.h"
 
 #include <granit/renderer/shader_library.hpp>
 

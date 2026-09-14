@@ -4,7 +4,7 @@
 #ifndef GRANIT_MATERIAL_MATERIAL_TEMPLATE_GPU_H
 #define GRANIT_MATERIAL_MATERIAL_TEMPLATE_GPU_H
 
-#include "material/material_package.h"
+#include "asset_formats/material/material_package.h"
 
 #include <granit/core/result.h>
 #include <granit/pipeline/material.h>

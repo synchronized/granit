@@ -3,7 +3,7 @@
 
 #include "shader_cli/arguments.h"
 #include "shader_cli/fixture_commands.h"
-#include "shader_format/shader_object.h"
+#include "asset_formats/shader/shader_object.h"
 #include "shader_library/builder.h"
 
 #include <algorithm>

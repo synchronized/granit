@@ -5,7 +5,7 @@ add_library(granit)
 add_library(granit::granit ALIAS granit)
 granit_target_output_directories(granit)
 
-add_subdirectory(shader_format)
+add_subdirectory(asset_formats)
 
 set(GRANIT_GENERATED_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated/include")
 set(GRANIT_GENERATED_VERSION_HEADER
@@ -21,7 +21,8 @@ configure_file(
 target_sources(
   granit
   PRIVATE
-    $<TARGET_OBJECTS:granit_internal_shader_format>
+    $<TARGET_OBJECTS:granit_asset_format_shader>
+    $<TARGET_OBJECTS:granit_asset_format_texture>
     backend/contracts/access.h
     backend/contracts/binding.h
     backend/contracts/capabilities.h
@@ -48,7 +49,6 @@ target_sources(
     core/lifecycle_validation.h
     core/resource_validation.h
     core/texture_format.h
-    asset_formats/texture_asset.h
     core/retirement_queue.h
     core/device_status.h
     renderer/renderer_factory.h
@@ -68,7 +68,6 @@ target_sources(
     core/lifecycle_validation.cpp
     core/retirement_queue.cpp
     core/resource_validation.cpp
-    asset_formats/texture_asset.cpp
     renderer/renderer_api.cpp
     renderer/async_operation_api.cpp
     renderer/pipeline_api.cpp

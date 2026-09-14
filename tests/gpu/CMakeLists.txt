@@ -13,7 +13,7 @@ endfunction()
 granit_add_gpu_test_target(granit_gpu_compute_test compute_test.cpp)
 target_link_libraries(granit_gpu_compute_test PRIVATE granit::granit)
 target_include_directories(granit_gpu_compute_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
-target_sources(granit_gpu_compute_test PRIVATE $<TARGET_OBJECTS:granit_internal_shader_format>)
+target_sources(granit_gpu_compute_test PRIVATE $<TARGET_OBJECTS:granit_asset_format_shader>)
 target_compile_definitions(
   granit_gpu_compute_test PRIVATE GRANIT_SMOKE_ASSET_DIR="${GRANIT_SMOKE_TEST_SHADER_DIR}"
 )
@@ -55,7 +55,7 @@ add_dependencies(
 target_sources(
   granit_gpu_render_pipeline_test
   PRIVATE "${granit_render_pipeline_test_package}"
-          $<TARGET_OBJECTS:granit_internal_shader_format>
+          $<TARGET_OBJECTS:granit_asset_format_shader>
 )
 add_test(NAME granit.gpu.render_pipeline COMMAND granit_gpu_render_pipeline_test)
 

@@ -435,8 +435,8 @@ add_executable(
   pipeline/pbr_material_api_test.cpp
   pipeline/environment_map_api_test.cpp
   pipeline/environment_asset_test.cpp
-  "${PROJECT_SOURCE_DIR}/src/asset_formats/environment_asset.cpp"
-  $<TARGET_OBJECTS:granit_internal_shader_format>
+  $<TARGET_OBJECTS:granit_asset_format_environment>
+  $<TARGET_OBJECTS:granit_asset_format_shader>
   pipeline/mesh_api_test.cpp
   pipeline/render_pipeline_api_test.cpp
   pipeline/scene_api_test.cpp
@@ -521,7 +521,7 @@ target_include_directories(
   granit_material_test PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/tests"
 )
 target_link_libraries(granit_material_test PRIVATE granit::material Catch2::Catch2WithMain)
-target_sources(granit_material_test PRIVATE $<TARGET_OBJECTS:granit_internal_shader_format>)
+target_sources(granit_material_test PRIVATE $<TARGET_OBJECTS:granit_asset_format_shader>)
 target_compile_options(
   granit_material_test
   PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
@@ -581,7 +581,7 @@ target_link_libraries(
     granit::granit
     Catch2::Catch2WithMain
     $<TARGET_OBJECTS:granit_shader_object_storage>
-    $<TARGET_OBJECTS:granit_internal_shader_format>
+    $<TARGET_OBJECTS:granit_asset_format_shader>
     $<$<PLATFORM_ID:Windows>:user32>
 )
 target_include_directories(

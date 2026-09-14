@@ -4,7 +4,7 @@
 #ifndef GRANIT_MATERIAL_MATERIAL_MIGRATION_H
 #define GRANIT_MATERIAL_MATERIAL_MIGRATION_H
 
-#include "material/material_metadata.h"
+#include "asset_formats/material/material_metadata.h"
 
 #include <cstdint>
 #include <memory>

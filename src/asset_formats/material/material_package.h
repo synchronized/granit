@@ -4,7 +4,7 @@
 #ifndef GRANIT_MATERIAL_MATERIAL_PACKAGE_H
 #define GRANIT_MATERIAL_MATERIAL_PACKAGE_H
 
-#include "material/material_metadata.h"
+#include "asset_formats/material/material_metadata.h"
 
 #include <granit/core/shader_types.hpp>
 #include <granit/renderer/pipeline.h>

@@ -93,14 +93,11 @@ function(granit_add_material_module)
   target_sources(
     granit_material
     PRIVATE
-      $<TARGET_OBJECTS:granit_internal_shader_format>
-      "${PROJECT_SOURCE_DIR}/src/material/material_archive.cpp"
+      $<TARGET_OBJECTS:granit_asset_format_shader>
+      $<TARGET_OBJECTS:granit_asset_format_material>
       "${PROJECT_SOURCE_DIR}/src/material/material_gpu_instance.cpp"
       "${PROJECT_SOURCE_DIR}/src/material/material_hot_reload.cpp"
-      "${PROJECT_SOURCE_DIR}/src/material/material_metadata.cpp"
       "${PROJECT_SOURCE_DIR}/src/material/material_migration.cpp"
-      "${PROJECT_SOURCE_DIR}/src/material/material_package.cpp"
-      "${PROJECT_SOURCE_DIR}/src/material/material_package_archive.cpp"
       "${PROJECT_SOURCE_DIR}/src/material/pbr_default_resources.cpp"
       "${PROJECT_SOURCE_DIR}/src/material/pbr_draw_inputs.cpp"
       "${PROJECT_SOURCE_DIR}/src/material/pbr_material_schema.cpp"
@@ -109,13 +106,9 @@ function(granit_add_material_module)
       FILE_SET HEADERS
       BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
       FILES
-        "${PROJECT_SOURCE_DIR}/src/material/material_archive.h"
         "${PROJECT_SOURCE_DIR}/src/material/material_gpu_instance.h"
         "${PROJECT_SOURCE_DIR}/src/material/material_hot_reload.h"
-        "${PROJECT_SOURCE_DIR}/src/material/material_metadata.h"
         "${PROJECT_SOURCE_DIR}/src/material/material_migration.h"
-        "${PROJECT_SOURCE_DIR}/src/material/material_package.h"
-        "${PROJECT_SOURCE_DIR}/src/material/material_package_archive.h"
         "${PROJECT_SOURCE_DIR}/src/material/pbr_default_resources.h"
         "${PROJECT_SOURCE_DIR}/src/material/pbr_draw_inputs.h"
         "${PROJECT_SOURCE_DIR}/src/material/pbr_material_schema.h"

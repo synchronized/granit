@@ -14,7 +14,7 @@ granit_add_smoke_target(granit_gpu_offscreen_smoke gpu_offscreen.cpp)
 target_link_libraries(granit_gpu_offscreen_smoke PRIVATE granit::granit)
 target_include_directories(granit_gpu_offscreen_smoke PRIVATE "${PROJECT_SOURCE_DIR}/src")
 target_sources(
-  granit_gpu_offscreen_smoke PRIVATE $<TARGET_OBJECTS:granit_internal_shader_format>
+  granit_gpu_offscreen_smoke PRIVATE $<TARGET_OBJECTS:granit_asset_format_shader>
 )
 target_compile_definitions(
   granit_gpu_offscreen_smoke
@@ -42,7 +42,7 @@ if(WIN32)
   target_sources(
     granit_render_pipeline_window_smoke
     PRIVATE "${granit_render_pipeline_test_package}"
-            $<TARGET_OBJECTS:granit_internal_shader_format>
+            $<TARGET_OBJECTS:granit_asset_format_shader>
   )
   add_test(
     NAME granit.smoke.render_pipeline_window

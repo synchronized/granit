@@ -5,8 +5,8 @@
 
 #include "../asset_tools_shader_core.h"
 #include "../shader_object_storage.h"
-#include "shader_format/shader_cache_key.h"
-#include "shader_format/shader_object.h"
+#include "asset_formats/shader/shader_cache_key.h"
+#include "asset_formats/shader/shader_object.h"
 
 #include <fstream>
 #include <span>

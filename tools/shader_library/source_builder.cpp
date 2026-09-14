@@ -8,8 +8,8 @@
 #include "../shader_toolchain_layout.h"
 #include "builder.h"
 #include "object_cache.h"
-#include "shader_format/shader_library.h"
-#include "shader_format/shader_object.h"
+#include "asset_formats/shader/shader_library.h"
+#include "asset_formats/shader/shader_object.h"
 #include "source_manifest.h"
 
 #include <algorithm>

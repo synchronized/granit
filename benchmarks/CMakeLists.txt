@@ -61,7 +61,7 @@ target_compile_definitions(
 target_include_directories(granit_renderer_benchmarks PRIVATE "${PROJECT_SOURCE_DIR}/src")
 target_link_libraries(granit_renderer_benchmarks PRIVATE granit::granit)
 target_sources(
-  granit_renderer_benchmarks PRIVATE $<TARGET_OBJECTS:granit_internal_shader_format>
+  granit_renderer_benchmarks PRIVATE $<TARGET_OBJECTS:granit_asset_format_shader>
 )
 add_dependencies(granit_renderer_benchmarks granit_test_shader_assets)
 granit_target_compile_warnings(granit_renderer_benchmarks)
@@ -109,7 +109,7 @@ target_compile_definitions(
 target_include_directories(granit_material_benchmarks PRIVATE "${PROJECT_SOURCE_DIR}/src")
 target_link_libraries(granit_material_benchmarks PRIVATE granit::material)
 target_sources(
-  granit_material_benchmarks PRIVATE $<TARGET_OBJECTS:granit_internal_shader_format>
+  granit_material_benchmarks PRIVATE $<TARGET_OBJECTS:granit_asset_format_shader>
 )
 add_dependencies(granit_material_benchmarks granit_test_shader_assets)
 granit_target_compile_warnings(granit_material_benchmarks)
@@ -327,7 +327,7 @@ add_dependencies(granit_render_pipeline_benchmarks granit_asset_tool granit_test
 target_sources(
   granit_render_pipeline_benchmarks
   PRIVATE "${granit_render_pipeline_benchmark_package}"
-          $<TARGET_OBJECTS:granit_internal_shader_format>
+          $<TARGET_OBJECTS:granit_asset_format_shader>
 )
 granit_target_compile_warnings(granit_render_pipeline_benchmarks)
 granit_target_output_directories(granit_render_pipeline_benchmarks)

@@ -11,7 +11,7 @@
 #include <string_view>
 #include <vector>
 
-#include "shader_format/shader_cache_key.h"
+#include "asset_formats/shader/shader_cache_key.h"
 
 #include <granit/core/shader_types.hpp>
 

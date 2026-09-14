@@ -4,7 +4,7 @@
 #ifndef GRANIT_MATERIAL_MATERIAL_DEBUG_JSON_H
 #define GRANIT_MATERIAL_MATERIAL_DEBUG_JSON_H
 
-#include "material/material_archive.h"
+#include "asset_formats/material/material_archive.h"
 
 #include <span>
 #include <string>

@@ -4,7 +4,7 @@
 #ifndef GRANIT_MATERIAL_PBR_MATERIAL_SCHEMA_H
 #define GRANIT_MATERIAL_PBR_MATERIAL_SCHEMA_H
 
-#include "material/material_package.h"
+#include "asset_formats/material/material_package.h"
 
 #include <granit/pipeline/pbr_material.h>
 

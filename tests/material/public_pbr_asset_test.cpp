@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "material/material_archive.h"
-#include "shader_format/shader_library.h"
+#include "asset_formats/material/material_archive.h"
+#include "asset_formats/shader/shader_library.h"
 
 #include <granit/pipeline/pbr_material.h>
 

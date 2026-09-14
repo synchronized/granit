@@ -5,7 +5,7 @@
 #include "renderer/renderer_registry_records.h"
 
 #include "core/sha256.h"
-#include "shader_format/shader_library.h"
+#include "asset_formats/shader/shader_library.h"
 
 #include <algorithm>
 #include <cstring>

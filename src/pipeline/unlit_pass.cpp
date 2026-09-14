@@ -3,7 +3,7 @@
 
 #include "pipeline/unlit_pass.h"
 
-#include "material/material_package.h"
+#include "asset_formats/material/material_package.h"
 #include "pipeline/material_access.h"
 #include "pipeline/mesh_access.h"
 #include "pipeline/pbr_draw_bindings.h"
