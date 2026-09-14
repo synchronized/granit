@@ -118,6 +118,13 @@ int main(int argc, char** argv) {
                                      .vertex_shader = vertex.native_handle(),
                                      .fragment_shader = fragment.native_handle(),
                                      .color_formats = std::span{&format, 1},
+                                     .depth_stencil_format = granit::texture_format::undefined,
+                                     .samples = granit::sample_count::one,
+                                     .vertex_buffers = {},
+                                     .primitive = {},
+                                     .depth = std::nullopt,
+                                     .color_blends = {},
+                                     .depth_bias = std::nullopt,
                                  });
   }
 
