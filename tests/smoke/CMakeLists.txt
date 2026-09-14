@@ -118,31 +118,6 @@ set_property(
   APPEND PROPERTY LABELS gpu integration
 )
 
-if(GRANIT_BUILD_INTEGRATION_SDL3)
-  granit_add_smoke_target(granit_sdl3_window_clear_smoke sdl3_window_clear.cpp)
-  target_link_libraries(
-    granit_sdl3_window_clear_smoke PRIVATE granit::granit granit::integration_sdl3
-  )
-  if(WIN32)
-    add_custom_command(
-      TARGET granit_sdl3_window_clear_smoke
-      POST_BUILD
-      COMMAND
-        "${CMAKE_COMMAND}" -E copy_if_different "$<TARGET_FILE:${GRANIT_SDL3_TARGET}>"
-        "$<TARGET_FILE_DIR:granit_sdl3_window_clear_smoke>"
-      VERBATIM
-    )
-    add_test(
-      NAME granit.smoke.sdl3_window_clear
-      COMMAND granit_sdl3_window_clear_smoke --smoke-test
-    )
-    set_tests_properties(
-      granit.smoke.sdl3_window_clear
-      PROPERTIES TIMEOUT 30 LABELS "smoke;gpu;integration;platform"
-    )
-  endif()
-endif()
-
 if(WIN32)
   granit_add_smoke_target(granit_render_pipeline_window_smoke render_pipeline_window.cpp)
   target_link_libraries(granit_render_pipeline_window_smoke PRIVATE granit::render_pipeline user32)
@@ -171,11 +146,6 @@ if(WIN32)
                LABELS "smoke;gpu;integration;platform"
   )
 
-  granit_add_smoke_target(granit_window_clear_smoke window_clear.cpp)
-  target_link_libraries(granit_window_clear_smoke PRIVATE granit::granit granit::window)
-  add_test(NAME granit.smoke.window_clear COMMAND granit_window_clear_smoke --smoke-test)
-  set_tests_properties(granit.smoke.window_clear PROPERTIES TIMEOUT 30)
-
   granit_add_smoke_target(granit_window_triangle_smoke window_triangle.cpp)
   target_link_libraries(granit_window_triangle_smoke PRIVATE granit::granit user32)
   target_include_directories(granit_window_triangle_smoke PRIVATE "${PROJECT_SOURCE_DIR}/src")
@@ -203,81 +173,8 @@ if(WIN32)
 
   set_property(
     TEST
-      granit.smoke.window_clear
       granit.smoke.window_triangle
       granit.smoke.window_hdr
     APPEND PROPERTY LABELS gpu integration platform
-  )
-endif()
-
-if(GRANIT_HAS_XCB)
-  granit_add_smoke_target(granit_xcb_window_clear_smoke xcb_window_clear.cpp)
-  target_include_directories(
-    granit_xcb_window_clear_smoke SYSTEM PRIVATE "${GRANIT_XCB_INCLUDE_DIR}"
-  )
-  target_link_libraries(
-    granit_xcb_window_clear_smoke PRIVATE granit::granit "${GRANIT_XCB_LIBRARY}"
-  )
-  add_test(NAME granit.smoke.xcb_window_clear COMMAND granit_xcb_window_clear_smoke --smoke-test)
-  set_tests_properties(
-    granit.smoke.xcb_window_clear
-    PROPERTIES TIMEOUT 30 LABELS "smoke;gpu;integration;platform"
-  )
-endif()
-
-if(GRANIT_HAS_WAYLAND_SHELL)
-  set(granit_smoke_wayland_protocol_dir "${CMAKE_CURRENT_BINARY_DIR}/generated/wayland")
-  set(
-    granit_smoke_xdg_shell_header
-    "${granit_smoke_wayland_protocol_dir}/xdg-shell-client-protocol.h"
-  )
-  set(
-    granit_smoke_xdg_shell_source
-    "${granit_smoke_wayland_protocol_dir}/xdg-shell-protocol.c"
-  )
-  add_custom_command(
-    OUTPUT "${granit_smoke_xdg_shell_header}" "${granit_smoke_xdg_shell_source}"
-    COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_smoke_wayland_protocol_dir}"
-    COMMAND
-      "${GRANIT_WAYLAND_SCANNER}" client-header "${GRANIT_XDG_SHELL_PROTOCOL}"
-      "${granit_smoke_xdg_shell_header}"
-    COMMAND
-      "${GRANIT_WAYLAND_SCANNER}" private-code "${GRANIT_XDG_SHELL_PROTOCOL}"
-      "${granit_smoke_xdg_shell_source}"
-    DEPENDS "${GRANIT_XDG_SHELL_PROTOCOL}"
-    VERBATIM
-  )
-  add_library(
-    granit_smoke_xdg_shell_protocol OBJECT
-    "${granit_smoke_xdg_shell_header}"
-    "${granit_smoke_xdg_shell_source}"
-  )
-  set_target_properties(
-    granit_smoke_xdg_shell_protocol PROPERTIES C_STANDARD 11 C_STANDARD_REQUIRED YES
-  )
-  target_include_directories(
-    granit_smoke_xdg_shell_protocol
-    SYSTEM PRIVATE "${GRANIT_WAYLAND_INCLUDE_DIR}" "${granit_smoke_wayland_protocol_dir}"
-  )
-
-  granit_add_smoke_target(granit_wayland_window_clear_smoke wayland_window_clear.cpp)
-  target_sources(
-    granit_wayland_window_clear_smoke PRIVATE $<TARGET_OBJECTS:granit_smoke_xdg_shell_protocol>
-  )
-  add_dependencies(granit_wayland_window_clear_smoke granit_smoke_xdg_shell_protocol)
-  target_include_directories(
-    granit_wayland_window_clear_smoke
-    SYSTEM PRIVATE "${GRANIT_WAYLAND_INCLUDE_DIR}" "${granit_smoke_wayland_protocol_dir}"
-  )
-  target_link_libraries(
-    granit_wayland_window_clear_smoke PRIVATE granit::granit "${GRANIT_WAYLAND_LIBRARY}"
-  )
-  add_test(
-    NAME granit.smoke.wayland_window_clear
-    COMMAND granit_wayland_window_clear_smoke --smoke-test
-  )
-  set_tests_properties(
-    granit.smoke.wayland_window_clear
-    PROPERTIES TIMEOUT 30 LABELS "smoke;gpu;integration;platform"
   )
 endif()

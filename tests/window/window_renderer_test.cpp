@@ -8,6 +8,8 @@
 
 #include <catch2/catch_all.hpp>
 
+#include "../support/swapchain_frame.h"
+
 #if defined(_WIN32)
 namespace {
 
@@ -42,9 +44,10 @@ TEST_CASE("Window component 可以连接 Renderer Surface 和 Swapchain", "[wind
   granit::swapchain swapchain;
   REQUIRE(swapchain.initialize(renderer.native_handle(), surface.native_handle(),
                                {.width = 96, .height = 72}) == granit::result::success);
-  granit::acquired_frame frame;
-  REQUIRE(swapchain.acquire(frame) == granit::result::success);
-  REQUIRE(swapchain.cancel(frame) == granit::result::success);
+  granit::frame_context frame_context;
+  REQUIRE(frame_context.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(granit::tests::render_clear_frames(swapchain, frame_context, 96, 72, 3) ==
+          granit::result::success);
 }
 
 } // namespace
@@ -93,9 +96,10 @@ TEST_CASE("Wayland Window component 可以连接 Renderer Surface 和 Swapchain"
   if (wayland_environment_unavailable(swapchain_result))
     SKIP("当前环境不支持 Vulkan Wayland Swapchain");
   REQUIRE(swapchain_result == granit::result::success);
-  granit::acquired_frame frame;
-  REQUIRE(swapchain.acquire(frame) == granit::result::success);
-  REQUIRE(swapchain.cancel(frame) == granit::result::success);
+  granit::frame_context frame_context;
+  REQUIRE(frame_context.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(granit::tests::render_clear_frames(swapchain, frame_context, 96, 72, 3) ==
+          granit::result::success);
 }
 
 } // namespace
@@ -145,9 +149,10 @@ TEST_CASE("XCB Window component 可以连接 Renderer Surface 和 Swapchain",
   if (xcb_environment_unavailable(swapchain_result))
     SKIP("当前环境不支持 Vulkan XCB Swapchain");
   REQUIRE(swapchain_result == granit::result::success);
-  granit::acquired_frame frame;
-  REQUIRE(swapchain.acquire(frame) == granit::result::success);
-  REQUIRE(swapchain.cancel(frame) == granit::result::success);
+  granit::frame_context frame_context;
+  REQUIRE(frame_context.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(granit::tests::render_clear_frames(swapchain, frame_context, 96, 72, 3) ==
+          granit::result::success);
 }
 
 } // namespace

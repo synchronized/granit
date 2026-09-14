@@ -725,6 +725,30 @@ granit_target_compile_warnings(granit_window_renderer_test)
 granit_target_output_directories(granit_window_renderer_test)
 add_test(NAME granit.window_renderer COMMAND granit_window_renderer_test)
 
+if(GRANIT_BUILD_INTEGRATION_SDL3)
+  add_executable(granit_integration_sdl3_surface_test integrations/sdl3/surface_test.cpp)
+  target_link_libraries(
+    granit_integration_sdl3_surface_test PRIVATE granit::granit granit::integration_sdl3
+  )
+  granit_target_compile_warnings(granit_integration_sdl3_surface_test)
+  granit_target_output_directories(granit_integration_sdl3_surface_test)
+  if(WIN32)
+    add_custom_command(
+      TARGET granit_integration_sdl3_surface_test
+      POST_BUILD
+      COMMAND
+        "${CMAKE_COMMAND}" -E copy_if_different "$<TARGET_FILE:${GRANIT_SDL3_TARGET}>"
+        "$<TARGET_FILE_DIR:granit_integration_sdl3_surface_test>"
+      VERBATIM
+    )
+    add_test(
+      NAME granit.integration.sdl3.surface
+      COMMAND granit_integration_sdl3_surface_test --smoke-test
+    )
+    set_tests_properties(granit.integration.sdl3.surface PROPERTIES TIMEOUT 30)
+  endif()
+endif()
+
 if(GRANIT_BUILD_INTEGRATION_IMGUI)
   add_executable(granit_integration_imgui_test integrations/imgui/renderer_test.cpp)
   target_link_libraries(
@@ -774,6 +798,12 @@ set_property(
 )
 if(GRANIT_BUILD_INTEGRATION_IMGUI)
   set_property(TEST granit.integration.imgui APPEND PROPERTY LABELS integration)
+endif()
+if(GRANIT_BUILD_INTEGRATION_SDL3 AND WIN32)
+  set_property(
+    TEST granit.integration.sdl3.surface
+    APPEND PROPERTY LABELS gpu integration platform
+  )
 endif()
 
 if(BUILD_SHARED_LIBS)

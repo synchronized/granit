@@ -6,10 +6,11 @@
 #include <granit/granit.hpp>
 #include <granit/integrations/sdl3/surface.hpp>
 
+#include "../../support/swapchain_frame.h"
+
 #include <cstdint>
 #include <cstring>
 #include <memory>
-#include <span>
 
 namespace {
 
@@ -20,43 +21,6 @@ struct sdl_quit {
 struct window_deleter {
   void operator()(SDL_Window* window) const noexcept { SDL_DestroyWindow(window); }
 };
-
-granit::result render_frame(granit::swapchain& swapchain, granit::frame_context& context,
-                            std::uint32_t width, std::uint32_t height, bool& needs_recreate) {
-  granit::acquired_frame frame;
-  auto result = swapchain.acquire(frame);
-  if (result.failed())
-    return result;
-  needs_recreate = frame.needs_recreate;
-
-  granit_texture texture = GRANIT_NULL_HANDLE;
-  granit_texture_view view = GRANIT_NULL_HANDLE;
-  result = swapchain.backbuffer(frame.image_index, texture, view);
-  granit::frame_recording recording;
-  if (result.ok())
-    result = context.begin(frame, recording);
-  auto& recorder = recording.recorder();
-  const granit::color_attachment_desc color{
-      .view = view, .clear_value = {.red = 0.04F, .green = 0.12F, .blue = 0.22F, .alpha = 1.0F}};
-  const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
-                                         .area = {0, 0, width, height}};
-  if (result.ok())
-    result = recorder.begin_rendering(rendering);
-  if (result.ok())
-    result = recorder.end_rendering();
-  if (result.ok())
-    result = recording.submit();
-  if (result.ok())
-    result = swapchain.present(frame);
-  needs_recreate = needs_recreate || frame.needs_recreate;
-  if (result.failed()) {
-    if (recording.valid())
-      static_cast<void>(recording.abort());
-    if (frame.valid())
-      static_cast<void>(swapchain.cancel(frame));
-  }
-  return result;
-}
 
 } // namespace
 
@@ -86,8 +50,7 @@ int main(int argc, char** argv) {
 
   int pixel_width = 0;
   int pixel_height = 0;
-  if (result.ok() &&
-      !SDL_GetWindowSizeInPixels(window.get(), &pixel_width, &pixel_height)) {
+  if (result.ok() && !SDL_GetWindowSizeInPixels(window.get(), &pixel_width, &pixel_height)) {
     result = granit::result::backend_unavailable;
   }
   granit::swapchain swapchain;
@@ -128,8 +91,9 @@ int main(int argc, char** argv) {
       recreate = false;
     }
 
-    result = render_frame(swapchain, frame_context, static_cast<std::uint32_t>(pixel_width),
-                          static_cast<std::uint32_t>(pixel_height), recreate);
+    result = granit::tests::render_clear_frame(swapchain, frame_context,
+                                               static_cast<std::uint32_t>(pixel_width),
+                                               static_cast<std::uint32_t>(pixel_height), recreate);
     if (result == granit::result::out_of_date) {
       result = granit::result::success;
       recreate = true;

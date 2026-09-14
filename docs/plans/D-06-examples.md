@@ -16,8 +16,8 @@
 
 - `granit_gpu_offscreen_smoke`：创建 Renderer、离屏 Texture、Shader 和 Graphics Pipeline，清屏并
   绘制三色三角形，再回读并断言图形内外像素与行布局。
-- `granit_window_clear_smoke`：在 Win32 窗口中完成 Surface、Swapchain、acquire、清屏、提交、
-  present 和窗口尺寸变化后的重建。
+- `granit_window_renderer_test`：通过 Window component 在 Win32、XCB 与 Wayland 上完成 Surface、
+  Swapchain、连续三帧 acquire、清屏、提交和 present。
 
 这些初期示例在 0.5.0 开发阶段转为 `tests/smoke` 内部验证程序，只包含 `granit/granit.hpp`、测试
 私有 Shader Asset 加载辅助代码和必要的平台窗口头，不包含 Vulkan 头文件。HLSL 作者源码与已提交
@@ -35,5 +35,5 @@ Swapchain 图像。
 
 - Clang 共享库、Visual Studio 共享库和 Clang 静态库均能构建全部适用 Smoke。
 - 离屏 GPU Smoke 能在 Vulkan Validation Layer 下验证清屏、最小三角形与回读像素。
-- Win32 窗口示例能完成真实 acquire、清屏、submit 和 present。
+- Window component 测试能在适用平台完成真实 acquire、清屏、submit 和 present。
 - 示例源文件不出现 Vulkan 类型、函数或头文件。
