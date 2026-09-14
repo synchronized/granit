@@ -83,7 +83,7 @@ granit_require_document_text(
 )
 granit_require_document_text(
   "docs/tutorials/render-pipeline-offscreen.md"
-  "granit.smoke.render_pipeline_offscreen"
+  "granit.gpu.render_pipeline"
   "RenderPipeline 教程验证命令"
 )
 get_property(granit_command_errors GLOBAL PROPERTY GRANIT_DOCUMENTATION_COMMAND_ERRORS)

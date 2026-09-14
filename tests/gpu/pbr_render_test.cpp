@@ -10,11 +10,11 @@
 #include "material/material_template_gpu.h"
 #include "material/pbr_default_resources.h"
 #include "material/pbr_material_schema.h"
-#include "pbr_test_support.h"
 #include "reference/lighting/ibl_reference.h"
 #include "reference/lighting/lighting_reference.h"
 #include "reference/lighting/tone_mapping_reference.h"
 #include "reference/material/pbr_reference.h"
+#include "support/pbr_test_support.h"
 
 #include <granit/granit.hpp>
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "../support/shader_asset_file.h"
+#include "../support/shader_asset_store.h"
 
 #include <granit/granit.hpp>
 
@@ -88,14 +88,23 @@ int main(int argc, char** argv) {
 
   granit::shader vertex;
   granit::shader fragment;
-  result = granit::tests::load_shader_asset(
-      renderer.native_handle(), std::string{GRANIT_SMOKE_ASSET_DIR} + "/triangle.vert.grshaderobj",
-      vertex);
-  if (result.ok()) {
-    result = granit::tests::load_shader_asset(
-        renderer.native_handle(),
-        std::string{GRANIT_SMOKE_ASSET_DIR} + "/triangle.frag.grshaderobj", fragment);
+  const auto vertex_path = std::string{GRANIT_SMOKE_ASSET_DIR} + "/triangle.vert.grshaderobj";
+  const auto fragment_path = std::string{GRANIT_SMOKE_ASSET_DIR} + "/triangle.frag.grshaderobj";
+  granit::tests::shader_asset_store shader_assets;
+  if (!shader_assets.add(vertex_path) || !shader_assets.add(fragment_path))
+    result = granit::result::invalid_argument;
+  std::vector<std::byte> shader_library_bytes;
+  granit::shader_library shader_library;
+  if (result.ok() && !shader_assets.initialize_library(renderer.native_handle(),
+                                                       shader_library_bytes, shader_library)) {
+    result = granit::result::invalid_argument;
   }
+  const auto vertex_reference = shader_assets.reference(vertex_path);
+  const auto fragment_reference = shader_assets.reference(fragment_path);
+  if (result.ok())
+    result = shader_library.create_shader(vertex_reference.asset_id, vertex);
+  if (result.ok())
+    result = shader_library.create_shader(fragment_reference.asset_id, fragment);
 
   granit::pipeline_layout layout;
   if (result.ok())
@@ -103,13 +112,13 @@ int main(int argc, char** argv) {
   constexpr granit::texture_format format = granit::texture_format::rgba8_unorm;
   granit::graphics_pipeline pipeline;
   if (result.ok()) {
-    result =
-        pipeline.initialize(renderer.native_handle(), {
-            .layout = layout.native_handle(),
-            .vertex_shader = vertex.native_handle(),
-            .fragment_shader = fragment.native_handle(),
-            .color_formats = std::span{&format, 1},
-        });
+    result = pipeline.initialize(renderer.native_handle(),
+                                 {
+                                     .layout = layout.native_handle(),
+                                     .vertex_shader = vertex.native_handle(),
+                                     .fragment_shader = fragment.native_handle(),
+                                     .color_formats = std::span{&format, 1},
+                                 });
   }
 
   granit::texture texture;

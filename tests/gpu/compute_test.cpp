@@ -97,14 +97,22 @@ int main() {
   void* mapped = nullptr;
   if (result.ok())
     result = readback.map(0, buffer_size, &mapped);
+  bool values_match = true;
   if (result.ok()) {
     const auto* values = static_cast<const std::uint32_t*>(mapped);
-    for (std::uint32_t index = 0; index < value_count; ++index)
-      std::cout << values[index] << (index + 1 == value_count ? '\n' : ' ');
+    for (std::uint32_t index = 0; index < value_count; ++index) {
+      const auto expected = index * 3U + 7U;
+      if (values[index] != expected) {
+        std::cerr << "Compute 回读值不一致：索引 " << index << "，实际 " << values[index]
+                  << "，预期 " << expected << '\n';
+        values_match = false;
+      }
+    }
     result = readback.unmap();
   }
-  if (result.failed()) {
-    std::cerr << "Compute Smoke 失败：" << granit::result_message(result) << '\n';
+  if (result.failed() || !values_match) {
+    if (result.failed())
+      std::cerr << "Compute GPU 测试失败：" << granit::result_message(result) << '\n';
     return 1;
   }
   return 0;

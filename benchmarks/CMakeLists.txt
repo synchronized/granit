@@ -252,8 +252,8 @@ set_target_properties(granit_lighting_benchmarks PROPERTIES FOLDER "Benchmarks")
 
 add_executable(
   granit_lighting_gpu_benchmarks
-  "${PROJECT_SOURCE_DIR}/tests/smoke/pbr_offscreen.cpp"
-  "${PROJECT_SOURCE_DIR}/tests/smoke/pbr_test_support.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/gpu/pbr_render_test.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/support/pbr_test_support.cpp"
   "${PROJECT_SOURCE_DIR}/tests/reference/lighting/ibl_reference.cpp"
   "${PROJECT_SOURCE_DIR}/tests/reference/lighting/lighting_reference.cpp"
   "${PROJECT_SOURCE_DIR}/tests/reference/lighting/tone_mapping_reference.cpp"
@@ -300,7 +300,7 @@ add_custom_command(
 )
 add_executable(
   granit_render_pipeline_benchmarks
-  "${PROJECT_SOURCE_DIR}/tests/smoke/render_pipeline_offscreen.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/gpu/render_pipeline_test.cpp"
 )
 target_compile_features(granit_render_pipeline_benchmarks PRIVATE cxx_std_20)
 target_compile_options(

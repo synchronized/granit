@@ -5,7 +5,7 @@
 #include "../support/tone_mapping_shader_library.h"
 #include "lighting/tone_mapping_resources.h"
 #include "material/pbr_material_schema.h"
-#include "pbr_test_support.h"
+#include "support/pbr_test_support.h"
 
 #include <granit/granit.hpp>
 

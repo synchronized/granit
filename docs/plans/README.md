@@ -200,8 +200,8 @@ D-03-graphics-pipeline.md
   已完成；旧缓存迁移、配置顺序、锁定快照和跨平台模式矩阵已通过。
 - [S-41：0.23.0 资产目录收敛](S-41-0.23.0-asset-layout-convergence.md)——已完成；作者输入、
   安装快照、内建快照、格式实现与测试 Fixture 已分离，并通过跨平台候选包验收。
-- [S-42：0.24.0 测试架构收敛](S-42-0.24.0-test-architecture-convergence.md)——实现中；统一离屏
-  GPU Smoke 与 Window/SDL3 帧验证已落地，下一步迁移独立 GPU 集成测试。
+- [S-42：0.24.0 测试架构收敛](S-42-0.24.0-test-architecture-convergence.md)——实现中；Smoke、窗口
+  帧验证与独立 GPU 集成测试已归位，下一步合并模块场景并加强窗口 Smoke。
 
 ## 状态
 

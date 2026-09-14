@@ -8,7 +8,32 @@ if(EMSCRIPTEN)
   return()
 endif()
 
+set(granit_smoke_asset_dir "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke")
+set(
+  granit_render_pipeline_test_package
+  "${CMAKE_CURRENT_BINARY_DIR}/assets/render_pipeline_untextured.grmat"
+)
+add_custom_command(
+  OUTPUT "${granit_render_pipeline_test_package}"
+  COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/assets"
+  COMMAND
+    granit_asset_tool material build
+    "${granit_smoke_asset_dir}/render_pipeline_untextured.grmat.json"
+    --output "${granit_render_pipeline_test_package}" --shader-index
+    "${GRANIT_PBR_TEST_SHADER_INDEX}"
+  DEPENDS
+    granit_asset_tool
+    granit_test_shader_assets
+    "${granit_smoke_asset_dir}/render_pipeline_untextured.grmat.json"
+    "${GRANIT_PBR_TEST_SHADER_INDEX}"
+  VERBATIM
+)
+add_custom_target(
+  granit_render_pipeline_test_package DEPENDS "${granit_render_pipeline_test_package}"
+)
+
 add_subdirectory(smoke)
+add_subdirectory(gpu)
 
 add_test(
   NAME granit.backend.native_boundaries
@@ -383,14 +408,13 @@ add_executable(
   lighting/tone_mapping_reference_test.cpp
   lighting/tone_mapping_pass_test.cpp
   lighting/tone_mapping_resources_test.cpp
-  "${PROJECT_SOURCE_DIR}/tests/smoke/pbr_test_support.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/support/pbr_test_support.cpp"
 )
 target_include_directories(
   granit_lighting_test
   PRIVATE
     "${PROJECT_SOURCE_DIR}/src"
     "${PROJECT_SOURCE_DIR}/tests"
-    "${PROJECT_SOURCE_DIR}/tests/smoke"
 )
 target_link_libraries(granit_lighting_test PRIVATE granit::lighting Catch2::Catch2WithMain)
 target_compile_options(granit_lighting_test PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>)
