@@ -48,7 +48,7 @@
 | 二十八、0.20.0 示例框架稳定化 | 已发布 | 示例分层、交互与双后端视觉验收已完成 |
 | 二十九、0.21.0 Shader Library 与后端无关材质 | 已完成 | S-37A～S-37L 与跨平台候选包验收均已完成 |
 | 三十、0.22.0 AssetTools SDK 与工具链交付 | 已发布 | AssetTools SDK 与工具链已随 0.22.0 发布 |
-| 三十一、0.23.0 空帧与覆盖层可靠性 | 待开始 | 支持无可见物体时的清屏、UI 与 Frame 提交 |
+| 三十一、0.23.0 空帧与覆盖层可靠性 | 实现中 | 空帧路径已完成，安装包与发布矩阵待验收 |
 
 ## 一、工程与 ABI 基础
 
@@ -471,13 +471,13 @@
 
 ## 三十一、0.23.0 空帧与覆盖层可靠性
 
-**状态：实现中；S-39A～S-39D 已完成，Gneiss 与发布验收待完成。**
+**状态：实现中；S-39A～S-39D 已完成，安装包与发布矩阵待完成。**
 
 - **[S-39](plans/S-39-0.23.0-empty-frame-and-overlay-reliability.md) / P1**：让有效 View 在零可见
   Renderable 时仍完成清屏、Tone Mapping、Debug Draw、Canvas、Overlay 和 Frame 提交。
 - 统一空 Opaque submission 与 clear-only Rendering 的内部语义，不新增 UI-only 或清屏专用公共
   API，不改变 C ABI。
-- 以离屏像素、桌面 Swapchain、浏览器 WebGPU 和 Gneiss 工程选择界面完成真实 Consumer 验收。
+- 以离屏像素、桌面 Swapchain、浏览器 WebGPU 和安装后 RenderPipeline Consumer 完成验收。
 - 透明 PBR、通用 Render Graph 重构、Android、Bindless 和稳定 ABI 决策不属于本版本。
 - **[S-40](plans/S-40-0.23.0-shader-toolchain-configuration-reliability.md) / P1**：修复 0.22.0
   遗留工具路径导致的配置失败，并让锁定 Toolchain 与仓库 Shader/Material 快照逐字节一致。
@@ -485,7 +485,7 @@
 ## 近期执行顺序
 
 1. 完成 S-40 配置模式、锁定快照和干净缓存构建验收。
-2. 继续 S-39D～S-39E，完成浏览器 WebGPU、Gneiss 和发布验收。
+2. 完成 S-39E 的 Granit 安装 Consumer 与发布验收。
 3. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
 4. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
 5. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
