@@ -16,6 +16,8 @@
   绘制 Canvas 与 Overlay，并提交调用方提供的 Frame。
 - 空 Opaque pass 会建立 clear-only Rendering，并在 1x/4x MSAA 下完成确定的 Color、Depth 和
   Resolve 输出；自定义 Opaque 回调仍按阶段执行并接收空数组。
+- 仓库资产按作者输入、已提交生成快照和测试 Fixture 分目录保存；SDK 安装资产目录与内容
+  保持不变。
 
 ### 修复
 
