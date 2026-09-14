@@ -8,6 +8,8 @@ if(EMSCRIPTEN)
   return()
 endif()
 
+add_subdirectory(asset_tools)
+
 set(granit_smoke_asset_dir "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke")
 set(
   granit_render_pipeline_test_package
