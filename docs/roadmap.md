@@ -487,7 +487,7 @@
 
 ## 三十二、0.24.0 测试架构收敛
 
-**状态：进行中；S-42A～S-42E 测试布局与两个核心 Smoke 已完成。**
+**状态：本地实现完成；等待 S-42F 跨平台与发布候选远端验收。**
 
 - **[S-42](plans/S-42-0.24.0-test-architecture-convergence.md) / P1**：将 Smoke 收敛为离屏 GPU
   与窗口 Render Pipeline 两个端到端健康检查，其余测试按模块和环境归位。
@@ -497,9 +497,9 @@
 
 ## 近期执行顺序
 
-1. 执行 S-42F，按标签更新工作流并完成跨平台与发布候选验收。
-2. 整理 0.24.0 发布记录并完成正式发布。
-3. 通过 Windows、Linux、Emscripten 与 Release Candidate 完成 0.24.0 验收。
+1. 推送 S-42 分支，执行 Quick Check、Windows、Linux、Emscripten 与 Documentation 工作流。
+2. 完成 Release Candidate 验收，记录固定提交与四套 SDK 产物。
+3. 整理 0.24.0 发布记录并完成正式发布。
 4. 公共执行器与场景 API 继续等待第二个真实复用证据。
 5. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
 6. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。

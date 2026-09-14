@@ -74,13 +74,9 @@ jobs:
             -DCMAKE_C_COMPILER_LAUNCHER=sccache `
             -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
           cmake --build --preset '${{ steps.package.outputs.preset }}'
-          $exclude = @(
-            'granit\.renderer\.lifecycle_diagnostic'
-            'granit\.window_renderer'
-            'granit\.example\.'
-            'granit\.smoke\.'
-          ) -join '|'
-          ctest --preset '${{ steps.package.outputs.preset }}' -E $exclude
+          # 托管 Windows Runner 没有 Vulkan ICD；完整 GPU 门禁由 Linux 发布矩阵执行。
+          ctest --preset '${{ steps.package.outputs.preset }}' `
+            -LE '^(gpu|platform)$' -E '^granit\.example\.'
       - name: 安装并打包
         shell: pwsh
         run: |
