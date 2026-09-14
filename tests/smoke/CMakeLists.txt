@@ -12,33 +12,17 @@ function(granit_add_smoke_target target source)
   granit_target_output_directories(${target})
 endfunction()
 
-granit_add_smoke_target(granit_version_smoke version.cpp)
-target_link_libraries(granit_version_smoke PRIVATE granit::granit)
-add_test(NAME granit.smoke.version COMMAND granit_version_smoke)
-
-granit_add_smoke_target(granit_renderer_smoke renderer.cpp)
-target_link_libraries(granit_renderer_smoke PRIVATE granit::granit)
-add_test(NAME granit.smoke.renderer COMMAND granit_renderer_smoke)
-
-granit_add_smoke_target(granit_offscreen_clear_smoke offscreen_clear.cpp)
-target_link_libraries(granit_offscreen_clear_smoke PRIVATE granit::granit)
-add_test(NAME granit.smoke.offscreen_clear COMMAND granit_offscreen_clear_smoke)
-
-granit_add_smoke_target(granit_texture_readback_smoke texture_readback.cpp)
-target_link_libraries(granit_texture_readback_smoke PRIVATE granit::granit)
-add_test(NAME granit.smoke.texture_readback COMMAND granit_texture_readback_smoke)
-
-granit_add_smoke_target(granit_offscreen_triangle_smoke offscreen_triangle.cpp)
-target_link_libraries(granit_offscreen_triangle_smoke PRIVATE granit::granit)
-target_include_directories(granit_offscreen_triangle_smoke PRIVATE "${PROJECT_SOURCE_DIR}/src")
+granit_add_smoke_target(granit_gpu_offscreen_smoke gpu_offscreen.cpp)
+target_link_libraries(granit_gpu_offscreen_smoke PRIVATE granit::granit)
+target_include_directories(granit_gpu_offscreen_smoke PRIVATE "${PROJECT_SOURCE_DIR}/src")
 target_sources(
-  granit_offscreen_triangle_smoke PRIVATE $<TARGET_OBJECTS:granit_internal_shader_format>
+  granit_gpu_offscreen_smoke PRIVATE $<TARGET_OBJECTS:granit_internal_shader_format>
 )
 target_compile_definitions(
-  granit_offscreen_triangle_smoke
+  granit_gpu_offscreen_smoke
   PRIVATE GRANIT_SMOKE_ASSET_DIR="${GRANIT_SMOKE_TEST_SHADER_DIR}"
 )
-add_test(NAME granit.smoke.offscreen_triangle COMMAND granit_offscreen_triangle_smoke)
+add_test(NAME granit.smoke.gpu_offscreen COMMAND granit_gpu_offscreen_smoke)
 
 granit_add_smoke_target(granit_compute_smoke compute.cpp)
 target_link_libraries(granit_compute_smoke PRIVATE granit::granit)
@@ -125,10 +109,7 @@ add_test(NAME granit.smoke.immediate_ui_adapter COMMAND granit_immediate_ui_adap
 
 set_property(
   TEST
-    granit.smoke.renderer
-    granit.smoke.offscreen_clear
-    granit.smoke.texture_readback
-    granit.smoke.offscreen_triangle
+    granit.smoke.gpu_offscreen
     granit.smoke.compute
     granit.smoke.material_hot_reload
     granit.smoke.pbr_offscreen

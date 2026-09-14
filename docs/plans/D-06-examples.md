@@ -12,18 +12,16 @@
 - 前置依赖：D-02、D-03、D-04、D-05、F-06、F-07
 - 后续依赖：D-07
 
-## 已实现验证程序
+## 当前验证程序
 
-- `granit_offscreen_clear_smoke`：创建 Renderer、离屏 Texture 及默认 View，通过 Dynamic
-  Rendering 清除颜色附件并提交。
-- `granit_offscreen_triangle_smoke`：加载仓库预编译 SPIR-V，创建 Shader、Pipeline Layout
-  与 Graphics Pipeline，使用 `gl_VertexIndex` 绘制三色三角形。
+- `granit_gpu_offscreen_smoke`：创建 Renderer、离屏 Texture、Shader 和 Graphics Pipeline，清屏并
+  绘制三色三角形，再回读并断言图形内外像素与行布局。
 - `granit_window_clear_smoke`：在 Win32 窗口中完成 Surface、Swapchain、acquire、清屏、提交、
   present 和窗口尺寸变化后的重建。
 
-这些初期示例在 0.5.0 开发阶段转为 `tests/smoke` 内部验证程序，只包含 `granit/granit.hpp` 和
-必要的标准库或平台窗口头，不包含 Vulkan 头文件。对应着色器源码与预编译 SPIR-V 放在
-`tests/fixtures/smoke`；普通构建不依赖运行时 Shader 编译器。正式 Pipeline 内置
+这些初期示例在 0.5.0 开发阶段转为 `tests/smoke` 内部验证程序，只包含 `granit/granit.hpp`、测试
+私有 Shader Asset 加载辅助代码和必要的平台窗口头，不包含 Vulkan 头文件。HLSL 作者源码与已提交
+的 SPIR-V/WGSL 测试输入位于 `tests/fixtures/smoke`；普通构建不依赖运行时 Shader 编译器。正式
 Pipeline 内建 Shader 和跨示例共享的 PBR 参考 Shader 分别归入
 `assets/sources/shaders/pipeline` 与 `assets/sources/shaders/pbr`。
 
@@ -36,6 +34,6 @@ Swapchain 图像。
 ## 验收
 
 - Clang 共享库、Visual Studio 共享库和 Clang 静态库均能构建全部适用 Smoke。
-- 离屏清屏与最小三角形示例能在 Vulkan Validation Layer 下运行完成。
+- 离屏 GPU Smoke 能在 Vulkan Validation Layer 下验证清屏、最小三角形与回读像素。
 - Win32 窗口示例能完成真实 acquire、清屏、submit 和 present。
 - 示例源文件不出现 Vulkan 类型、函数或头文件。
