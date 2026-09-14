@@ -142,8 +142,12 @@ async function main() {
         `WebGPU 生命周期异常，state=${rendererState}, failure=${failureResult}, asset=${assetStatus}`,
       );
     }
-    if (!browserMessages.some((message) => message === "log: GRANIT_EMPTY_FRAME:ready"))
+    if (
+      entryName === "granit_web_platform_smoke.html" &&
+      !browserMessages.some((message) => message === "log: GRANIT_EMPTY_FRAME:ready")
+    ) {
       throw new Error("浏览器未完成零 Renderable、Canvas 和 Swapchain Frame 验收");
+    }
     for (const diagnostic of [
       "Emscripten WebGPU initialization started",
       "Emscripten WebGPU adapter and device are ready",
