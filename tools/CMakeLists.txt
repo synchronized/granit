@@ -325,7 +325,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     COMMAND
       "${CMAKE_COMMAND}" "-DTOOL=$<TARGET_FILE:granit_asset_tool>"
       "-DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/environment-cli-test"
-      "-DFIXTURE=${PROJECT_SOURCE_DIR}/assets/environments/studio_small_03.grenv" -P
+      "-DFIXTURE=${granit_installed_asset_snapshot_dir}/environments/studio_small_03.grenv" -P
       "${PROJECT_SOURCE_DIR}/cmake/check_environment_asset_tool.cmake"
   )
 
@@ -520,7 +520,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     COMMAND
       "${CMAKE_COMMAND}" "-DTOOL=$<TARGET_FILE:granit_asset_tool>"
       "-DASSET_TOOLS_LIBRARY=$<TARGET_FILE:granit_asset_tools>"
-      "-DINPUT=${PROJECT_SOURCE_DIR}/assets/shaders/pbr/pbr_untextured.hlsl"
+      "-DINPUT=${granit_asset_sources_dir}/shaders/pbr/pbr_untextured.hlsl"
       "-DOUTPUT=${CMAKE_CURRENT_BINARY_DIR}/must-not-exist.spv" -P
       "${PROJECT_SOURCE_DIR}/cmake/check_shader_tool_diagnostic.cmake"
   )

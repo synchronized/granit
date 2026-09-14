@@ -251,19 +251,19 @@ install(
   COMPONENT RenderPipeline
 )
 install(
-  FILES "${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat"
+  FILES "${granit_installed_asset_snapshot_dir}/materials/pbr_standard.grmat"
   DESTINATION "${CMAKE_INSTALL_DATADIR}/granit/assets/materials"
   COMPONENT RenderPipeline
 )
 install(
-  FILES "${PROJECT_SOURCE_DIR}/assets/libraries/pbr_standard.grshlib"
+  FILES "${granit_installed_asset_snapshot_dir}/libraries/pbr_standard.grshlib"
   DESTINATION "${CMAKE_INSTALL_DATADIR}/granit/assets/libraries"
   COMPONENT RenderPipeline
 )
 install(
   FILES
-    "${PROJECT_SOURCE_DIR}/assets/environments/studio_small_03.grenv"
-    "${PROJECT_SOURCE_DIR}/assets/environments/studio_small_03.manifest.json"
+    "${granit_installed_asset_snapshot_dir}/environments/studio_small_03.grenv"
+    "${granit_installed_asset_snapshot_dir}/environments/studio_small_03.manifest.json"
   DESTINATION "${CMAKE_INSTALL_DATADIR}/granit/assets/environments"
   COMPONENT RenderPipeline
 )

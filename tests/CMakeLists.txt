@@ -508,8 +508,8 @@ target_compile_definitions(
     GRANIT_SHADER_OBJECT_FIXTURE_DIR="${CMAKE_BINARY_DIR}/tools/test-objects"
     GRANIT_TEST_ASSET_DIR="${PROJECT_SOURCE_DIR}/tests/assets"
     GRANIT_SMOKE_SHADER_DIR="${GRANIT_SMOKE_TEST_SHADER_DIR}"
-    GRANIT_PBR_LIBRARY_ASSET="${PROJECT_SOURCE_DIR}/assets/libraries/pbr_standard.grshlib"
-    GRANIT_PBR_MATERIAL_ASSET="${PROJECT_SOURCE_DIR}/assets/materials/pbr_standard.grmat"
+    GRANIT_PBR_LIBRARY_ASSET="${granit_installed_asset_snapshot_dir}/libraries/pbr_standard.grshlib"
+    GRANIT_PBR_MATERIAL_ASSET="${granit_installed_asset_snapshot_dir}/materials/pbr_standard.grmat"
 )
 add_dependencies(
   granit_material_test granit_shader_fixture_objects granit_test_shader_assets

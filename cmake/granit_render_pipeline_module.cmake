@@ -42,14 +42,14 @@ function(granit_add_render_pipeline_module)
     set(granit_pipeline_debug_index "${granit_pipeline_generated_dir}/debug_draw.grshidx.json")
     granit_add_hlsl_shader_library(
       NAME debug_draw
-      MANIFEST "${PROJECT_SOURCE_DIR}/assets/shaders/debug/debug_draw.grshlib.json"
+      MANIFEST "${granit_asset_sources_dir}/shaders/debug/debug_draw.grshlib.json"
       OUTPUT "${granit_pipeline_debug_archive}"
       INDEX "${granit_pipeline_debug_index}"
       CACHE_DIR "${granit_pipeline_generated_dir}/cache/debug_draw"
       REFERENCE "${PROJECT_SOURCE_DIR}/src/pipeline/assets/debug_draw.grshlib"
       INDEX_REFERENCE "${PROJECT_SOURCE_DIR}/src/pipeline/assets/debug_draw.grshidx.json"
       TARGET granit_pipeline_debug_shader_library
-      SOURCES "${PROJECT_SOURCE_DIR}/assets/shaders/debug/world.hlsl")
+      SOURCES "${granit_asset_sources_dir}/shaders/debug/world.hlsl")
     set(granit_pipeline_builtin_library_dependencies granit_pipeline_builtin_shader_library
                                                      "${granit_pipeline_builtin_archive}")
     set(granit_pipeline_debug_library_dependencies granit_pipeline_debug_shader_library

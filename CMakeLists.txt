@@ -31,6 +31,7 @@ include(CMakePackageConfigHelpers)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(utility)
+include(granit_asset_paths)
 include(granit_integration_dependencies)
 
 include(granit_platform)

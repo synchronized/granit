@@ -94,7 +94,7 @@ ctest --preset windows-clang-debug -R "^granit\.smoke\."
 
 ```text
 src/pipeline/shaders/   正式 Pipeline 内置 Shader
-assets/shaders/pbr/     示例、测试和工具共享的 PBR 参考 Shader
+assets/sources/shaders/pbr/     示例、测试和工具共享的 PBR 参考 Shader
 examples/assets/        Model Viewer 的示例资产
 tests/fixtures/         测试与 Smoke 固定输入
 ```
