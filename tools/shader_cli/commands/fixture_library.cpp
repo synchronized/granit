@@ -4,7 +4,7 @@
 #include "shader_cli/arguments.h"
 #include "shader_cli/fixture_commands.h"
 #include "asset_formats/shader/shader_object.h"
-#include "shader_library/builder.h"
+#include "asset_tools/shader/library_builder.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -83,7 +83,7 @@ int link_shader_fixture_library(int argc, char** argv) {
   for (const auto& path : object_paths)
     objects.emplace_back(path);
   bool cache_hit = false;
-  if (granit::tools::link_shader_library(objects, backend_mask, *output_path, cache_hit) !=
+  if (granit::asset_tools::detail::link_shader_library(objects, backend_mask, *output_path, cache_hit) !=
       GRANIT_SUCCESS) {
     std::cerr << "无法链接 Shader Library\n";
     return 1;

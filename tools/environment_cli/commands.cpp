@@ -5,7 +5,7 @@
 
 #include "asset_file_io.h"
 
-#include <granit/tools/environment_builder.hpp>
+#include <granit/asset_tools/environment_builder.hpp>
 
 #include <charconv>
 #include <cmath>

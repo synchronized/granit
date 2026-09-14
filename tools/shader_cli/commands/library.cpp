@@ -4,9 +4,9 @@
 #include "asset_file_io.h"
 #include "shader_cli/arguments.h"
 #include "shader_cli/commands.h"
-#include <granit/tools/asset_tools.hpp>
+#include <granit/asset_tools/asset_tools.hpp>
 
-#include "shader_library/source_manifest.h"
+#include "asset_tools/shader/library_source_manifest.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -93,10 +93,10 @@ int emit_shader_index_ids(int argc, char** argv) {
     std::cerr << "index-ids 需要 --index、一个或多个 --shader <name=logical-name> 和 --output\n";
     return 2;
   }
-  granit::tools::shader_library_index index;
-  if (granit::tools::parse_shader_library_index_json(
+  granit::asset_tools::detail::shader_library_index index;
+  if (granit::asset_tools::detail::parse_shader_library_index_json(
           granit::asset_tools::cli::read_text_file(*index_path), index) !=
-      granit::tools::shader_library_source_error::none) {
+      granit::asset_tools::detail::shader_library_source_error::none) {
     std::cerr << "无法读取 Shader Library 索引：" << *index_path << '\n';
     return 1;
   }
@@ -118,7 +118,7 @@ int emit_shader_index_ids(int argc, char** argv) {
       return 2;
     }
     const auto found = std::ranges::find(index.shaders, logical_name,
-                                         &granit::tools::shader_library_index_entry::name);
+                                         &granit::asset_tools::detail::shader_library_index_entry::name);
     if (found == index.shaders.end()) {
       std::cerr << "索引中不存在 Shader 逻辑名称：" << logical_name << '\n';
       return 1;

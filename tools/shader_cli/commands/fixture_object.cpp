@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "asset_tools_shader_core.h"
+#include "asset_tools/shader/compiler_internal.h"
 #include "shader_cli/arguments.h"
 #include "shader_cli/fixture_commands.h"
 #include "asset_formats/shader/shader_cache_key.h"
 #include "asset_formats/shader/shader_object.h"
-#include "shader_object_storage.h"
+#include "asset_tools/shader/object_storage.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -66,11 +66,11 @@ int build_shader_fixture_object(int argc, char** argv) {
   constexpr std::string_view target = "portable";
   const auto spirv = read_bytes(*spirv_path);
   const auto wgsl = read_text(*wgsl_path);
-  granit::tools::shader_info info;
+  granit::asset_tools::detail::shader_info info;
   std::ostringstream output;
   std::ostringstream diagnostic;
   if (spirv.empty() || wgsl.empty() ||
-      !granit::tools::inspect_shader(*spirv_path, false, info, output, diagnostic) ||
+      !granit::asset_tools::detail::inspect_shader(*spirv_path, false, info, output, diagnostic) ||
       info.entry_point != *entry || info.stage != *stage) {
     std::cerr << diagnostic.str() << "无法验证测试 Shader 载荷\n";
     return 1;
@@ -81,8 +81,8 @@ int build_shader_fixture_object(int argc, char** argv) {
   std::string options = "validated-pair";
   if (source_path) {
     source = read_text(*source_path);
-    const auto dxc_identity = granit::tools::file_sha256_hex(*dxc_path);
-    const auto tint_identity = granit::tools::file_sha256_hex(*tint_path);
+    const auto dxc_identity = granit::asset_tools::detail::file_sha256_hex(*dxc_path);
+    const auto tint_identity = granit::asset_tools::detail::file_sha256_hex(*tint_path);
     if (source.empty() || dxc_identity.empty() || tint_identity.empty()) {
       std::cerr << "无法读取测试 HLSL 或工具身份\n";
       return 1;
@@ -110,14 +110,14 @@ int build_shader_fixture_object(int argc, char** argv) {
        0});
   std::vector<std::byte> object;
   if (granit::detail::shader_format::encode_shader_object(
-          {wgsl, spirv, granit::tools::serialize_shader_info_json(info), cache_key,
+          {wgsl, spirv, granit::asset_tools::detail::serialize_shader_info_json(info), cache_key,
            GRANIT_SHADER_BACKEND_ALL_BITS, 0, stage_value, *entry},
           object) != granit::detail::shader_format::shader_object_error::success) {
     std::cerr << "无法编码测试 Shader Object\n";
     return 1;
   }
   bool cache_hit = false;
-  if (granit::tools::store_shader_object(*object_path, object, wgsl, spirv, cache_hit) !=
+  if (granit::asset_tools::detail::store_shader_object(*object_path, object, wgsl, spirv, cache_hit) !=
       granit::detail::shader_format::shader_object_error::success) {
     std::cerr << "无法写入测试 Shader Object\n";
     return 1;

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/tools/environment_builder.hpp>
+#include <granit/asset_tools/environment_builder.hpp>
 
 #include <algorithm>
 #include <array>

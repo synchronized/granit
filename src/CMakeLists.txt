@@ -7,6 +7,12 @@ granit_target_output_directories(granit)
 
 add_subdirectory(asset_formats)
 
+if(NOT EMSCRIPTEN AND
+   (GRANIT_BUILD_TOOLS OR GRANIT_BUILD_ASSET_TOOLS OR GRANIT_BUILD_EXAMPLES OR
+    GRANIT_BUILD_BENCHMARKS OR (GRANIT_BUILD_TESTING AND BUILD_TESTING)))
+  add_subdirectory(asset_tools)
+endif()
+
 set(GRANIT_GENERATED_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated/include")
 set(GRANIT_GENERATED_VERSION_HEADER
     "${GRANIT_GENERATED_INCLUDE_DIR}/granit/core/version.h")

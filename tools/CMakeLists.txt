@@ -3,157 +3,7 @@
 
 set_property(DIRECTORY APPEND PROPERTY LABELS integration tooling)
 
-set(GRANIT_SPIRV_REFLECT_DIR "${PROJECT_SOURCE_DIR}/3rd/spirv-reflect-1.4.350.0")
-set(GRANIT_SPIRV_HEADERS_DIR "${PROJECT_SOURCE_DIR}/3rd/spirv-headers-1.4.350.0/include")
-
-add_library(granit_spirv_reflect OBJECT "${GRANIT_SPIRV_REFLECT_DIR}/spirv_reflect.c")
-target_compile_definitions(granit_spirv_reflect PUBLIC SPIRV_REFLECT_USE_SYSTEM_SPIRV_H)
-target_include_directories(
-  granit_spirv_reflect
-  BEFORE PUBLIC "${GRANIT_SPIRV_REFLECT_DIR}" "${GRANIT_SPIRV_HEADERS_DIR}"
-)
-set_target_properties(granit_spirv_reflect PROPERTIES FOLDER "ThirdParty/SPIRV-Reflect")
-
 find_package(Threads REQUIRED)
-
-add_library(
-  granit_shader_library_source OBJECT
-  shader_library/source_manifest.cpp
-  shader_library/source_manifest.h
-)
-target_compile_features(granit_shader_library_source PUBLIC cxx_std_20)
-target_include_directories(
-  granit_shader_library_source
-  PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}" "${PROJECT_SOURCE_DIR}/include"
-)
-granit_target_compile_warnings(granit_shader_library_source)
-set_target_properties(
-  granit_shader_library_source PROPERTIES FOLDER "Tools" POSITION_INDEPENDENT_CODE YES
-)
-
-add_library(
-  granit_asset_tools_shader_core OBJECT
-  asset_tools_shader_core.cpp
-  asset_tools_shader_core.h
-  child_process.h
-  process.cpp
-)
-target_compile_features(granit_asset_tools_shader_core PUBLIC cxx_std_20)
-target_link_libraries(granit_asset_tools_shader_core PRIVATE Threads::Threads)
-target_include_directories(
-  granit_asset_tools_shader_core
-  PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}"
-)
-target_include_directories(
-  granit_asset_tools_shader_core
-  SYSTEM PRIVATE "${GRANIT_SPIRV_REFLECT_DIR}" "${GRANIT_SPIRV_HEADERS_DIR}"
-)
-target_compile_definitions(granit_asset_tools_shader_core PRIVATE SPIRV_REFLECT_USE_SYSTEM_SPIRV_H)
-granit_target_compile_warnings(granit_asset_tools_shader_core)
-set_target_properties(granit_asset_tools_shader_core PROPERTIES FOLDER "Tools")
-set_target_properties(granit_asset_tools_shader_core PROPERTIES POSITION_INDEPENDENT_CODE YES)
-
-add_library(
-  granit_asset_tools_material_core OBJECT
-  "${PROJECT_SOURCE_DIR}/src/material/material_debug_json.cpp"
-  "${PROJECT_SOURCE_DIR}/src/material/material_source_json.cpp"
-)
-target_compile_features(granit_asset_tools_material_core PUBLIC cxx_std_20)
-target_include_directories(
-  granit_asset_tools_material_core
-  PUBLIC "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
-)
-granit_target_compile_warnings(granit_asset_tools_material_core)
-set_target_properties(
-  granit_asset_tools_material_core PROPERTIES FOLDER "Tools" POSITION_INDEPENDENT_CODE YES
-)
-
-if(GRANIT_BUILD_ASSET_TOOLS OR GRANIT_BUILD_TOOLS OR (GRANIT_BUILD_TESTING AND BUILD_TESTING))
-  add_library(
-    granit_asset_tools
-    asset_tools_environment_api.cpp
-    asset_tools_material_api.cpp
-    asset_tools_shader_api.cpp
-    asset_tools_texture_api.cpp
-    shader_library/builder.cpp
-    shader_library/builder.h
-    shader_library/object_cache.cpp
-    shader_library/object_cache.h
-    shader_library/source_builder.cpp
-  )
-  add_library(granit::asset_tools ALIAS granit_asset_tools)
-  target_sources(
-    granit_asset_tools
-    PUBLIC
-      FILE_SET HEADERS
-      BASE_DIRS "${PROJECT_SOURCE_DIR}/include"
-      FILES
-        "${PROJECT_SOURCE_DIR}/include/granit/tools/asset_tools_export.h"
-        "${PROJECT_SOURCE_DIR}/include/granit/tools/environment_builder.h"
-        "${PROJECT_SOURCE_DIR}/include/granit/tools/environment_builder.hpp"
-        "${PROJECT_SOURCE_DIR}/include/granit/tools/material_builder.h"
-        "${PROJECT_SOURCE_DIR}/include/granit/tools/material_builder.hpp"
-        "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_compiler.h"
-        "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_compiler.hpp"
-        "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_library_builder.h"
-        "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_library_builder.hpp"
-        "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_reflection.h"
-        "${PROJECT_SOURCE_DIR}/include/granit/tools/shader_reflection.hpp"
-        "${PROJECT_SOURCE_DIR}/include/granit/tools/texture_builder.h"
-        "${PROJECT_SOURCE_DIR}/include/granit/tools/texture_builder.hpp"
-        "${PROJECT_SOURCE_DIR}/include/granit/tools/asset_tools.h"
-        "${PROJECT_SOURCE_DIR}/include/granit/tools/asset_tools.hpp"
-  )
-  target_compile_features(granit_asset_tools PUBLIC cxx_std_20)
-  target_include_directories(
-    granit_asset_tools
-    PRIVATE "${PROJECT_SOURCE_DIR}/src"
-    PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
-  )
-  target_sources(
-    granit_asset_tools
-    PRIVATE
-      $<TARGET_OBJECTS:granit_shader_object_storage>
-      $<TARGET_OBJECTS:granit_shader_library_source>
-      $<TARGET_OBJECTS:granit_asset_format_shader>
-      $<TARGET_OBJECTS:granit_asset_format_material>
-      $<TARGET_OBJECTS:granit_asset_format_texture>
-      $<TARGET_OBJECTS:granit_asset_format_environment>
-      $<TARGET_OBJECTS:granit_asset_tools_material_core>
-      $<TARGET_OBJECTS:granit_asset_tools_shader_core>
-      $<TARGET_OBJECTS:granit_spirv_reflect>
-  )
-  target_link_libraries(granit_asset_tools PRIVATE Threads::Threads)
-  target_compile_definitions(
-    granit_asset_tools
-    PRIVATE GRANIT_ASSET_TOOLS_BUILDING_LIBRARY
-    PUBLIC $<$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>:GRANIT_ASSET_TOOLS_STATIC_DEFINE>
-  )
-  granit_target_compile_warnings(granit_asset_tools)
-  granit_target_output_directories(granit_asset_tools)
-  set_target_properties(
-    granit_asset_tools
-    PROPERTIES
-      EXPORT_NAME asset_tools
-      FOLDER "Tools"
-      CXX_VISIBILITY_PRESET hidden
-      VISIBILITY_INLINES_HIDDEN YES
-  )
-  install(
-    TARGETS granit_asset_tools
-    EXPORT granitAssetToolsTargets
-    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT AssetTools
-    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT AssetTools
-    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT AssetTools
-    FILE_SET HEADERS DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}" COMPONENT AssetTools
-  )
-  install(
-    EXPORT granitAssetToolsTargets
-    NAMESPACE granit::
-    DESTINATION "${GRANIT_INSTALL_CMAKEDIR}"
-    COMPONENT AssetTools
-  )
-endif()
 
 if(TARGET granit_asset_tools)
   add_executable(
@@ -178,8 +28,8 @@ if(TARGET granit_asset_tools)
   target_sources(
     granit_asset_tool
     PRIVATE
-      $<TARGET_OBJECTS:granit_shader_library_source>
-      $<TARGET_OBJECTS:granit_asset_tools_shader_core>
+      $<TARGET_OBJECTS:granit_asset_tools_shader_library_source>
+      $<TARGET_OBJECTS:granit_asset_tools_shader_compiler>
       $<TARGET_OBJECTS:granit_spirv_reflect>
   )
   target_compile_features(granit_asset_tool PRIVATE cxx_std_20)
@@ -209,14 +59,14 @@ if((GRANIT_BUILD_TESTING AND BUILD_TESTING) OR GRANIT_BUILD_BENCHMARKS)
     shader_cli/arguments.h
     shader_cli/commands/fixture_library.cpp
     shader_cli/commands/fixture_object.cpp
-    shader_library/builder.cpp
+    "${PROJECT_SOURCE_DIR}/src/asset_tools/shader/library_builder.cpp"
   )
   target_sources(
     granit_shader_fixture_tool
     PRIVATE
       $<TARGET_OBJECTS:granit_asset_format_shader>
-      $<TARGET_OBJECTS:granit_shader_object_storage>
-      $<TARGET_OBJECTS:granit_asset_tools_shader_core>
+      $<TARGET_OBJECTS:granit_asset_tools_shader_object_storage>
+      $<TARGET_OBJECTS:granit_asset_tools_shader_compiler>
       $<TARGET_OBJECTS:granit_spirv_reflect>
   )
   target_compile_features(granit_shader_fixture_tool PRIVATE cxx_std_20)
@@ -354,9 +204,9 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_executable(
     granit_shader_object_test
     "${PROJECT_SOURCE_DIR}/tests/tools/shader_object_test.cpp"
-    $<TARGET_OBJECTS:granit_shader_object_storage>
+    $<TARGET_OBJECTS:granit_asset_tools_shader_object_storage>
     $<TARGET_OBJECTS:granit_asset_format_shader>
-    $<TARGET_OBJECTS:granit_asset_tools_shader_core>
+    $<TARGET_OBJECTS:granit_asset_tools_shader_compiler>
     $<TARGET_OBJECTS:granit_spirv_reflect>
   )
   target_compile_features(granit_shader_object_test PRIVATE cxx_std_20)
@@ -387,21 +237,21 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_test(NAME granit.asset_tools.shader.library_codec COMMAND granit_shader_library_test)
 
   add_executable(
-    granit_shader_library_source_test
+    granit_asset_tools_shader_library_source_test
     "${PROJECT_SOURCE_DIR}/tests/tools/shader_library_source_manifest_test.cpp"
-    $<TARGET_OBJECTS:granit_shader_library_source>
+    $<TARGET_OBJECTS:granit_asset_tools_shader_library_source>
   )
-  target_compile_features(granit_shader_library_source_test PRIVATE cxx_std_20)
+  target_compile_features(granit_asset_tools_shader_library_source_test PRIVATE cxx_std_20)
   target_include_directories(
-    granit_shader_library_source_test
-    PRIVATE "${PROJECT_SOURCE_DIR}/tools" "${PROJECT_SOURCE_DIR}/include"
+    granit_asset_tools_shader_library_source_test
+    PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/include"
   )
-  target_link_libraries(granit_shader_library_source_test PRIVATE Catch2::Catch2WithMain)
-  granit_target_compile_warnings(granit_shader_library_source_test)
-  granit_target_output_directories(granit_shader_library_source_test)
+  target_link_libraries(granit_asset_tools_shader_library_source_test PRIVATE Catch2::Catch2WithMain)
+  granit_target_compile_warnings(granit_asset_tools_shader_library_source_test)
+  granit_target_output_directories(granit_asset_tools_shader_library_source_test)
   add_test(
     NAME granit.asset_tools.shader.library_source_manifest
-    COMMAND granit_shader_library_source_test
+    COMMAND granit_asset_tools_shader_library_source_test
   )
 
   if(TARGET granit_asset_tools)

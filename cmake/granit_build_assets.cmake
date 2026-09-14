@@ -27,18 +27,3 @@ set(
   "Granit 构建树 RenderPipeline 资产根目录"
   FORCE
 )
-
-add_library(
-  granit_shader_object_storage OBJECT
-  "${PROJECT_SOURCE_DIR}/tools/shader_object_storage.cpp"
-  "${PROJECT_SOURCE_DIR}/tools/shader_object_storage.h"
-)
-target_compile_features(granit_shader_object_storage PUBLIC cxx_std_20)
-target_include_directories(
-  granit_shader_object_storage
-  PUBLIC "${PROJECT_SOURCE_DIR}/tools" "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/include"
-)
-granit_target_compile_warnings(granit_shader_object_storage)
-set_target_properties(
-  granit_shader_object_storage PROPERTIES FOLDER "Tools" POSITION_INDEPENDENT_CODE YES
-)

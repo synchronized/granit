@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/tools/shader_compiler.hpp>
-#include <granit/tools/shader_reflection.hpp>
+#include <granit/asset_tools/shader_compiler.hpp>
+#include <granit/asset_tools/shader_reflection.hpp>
 
 #include <cstring>
 #include <string_view>

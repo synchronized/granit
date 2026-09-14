@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "shader_object_storage.h"
+#include "asset_tools/shader/object_storage.h"
 
 #include <algorithm>
 #include <array>
@@ -13,7 +13,7 @@ int main(int argc, char** argv) {
   if (argc != 2)
     return 10;
   using namespace granit::detail::shader_format;
-  using namespace granit::tools;
+  using namespace granit::asset_tools::detail;
   constexpr std::string_view wgsl = "@compute @workgroup_size(1) fn main() {}\n";
   constexpr std::array spirv{std::byte{3}, std::byte{2}, std::byte{35}, std::byte{7}};
   constexpr std::string_view reflection = "{\"schema\":1}\n";

@@ -6,7 +6,7 @@
 #include "asset_file_io.h"
 #include "core/texture_format.h"
 
-#include <granit/tools/texture_builder.hpp>
+#include <granit/asset_tools/texture_builder.hpp>
 
 #include <algorithm>
 #include <charconv>

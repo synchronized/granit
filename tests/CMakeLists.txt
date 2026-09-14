@@ -514,8 +514,8 @@ add_executable(
   material/public_pbr_asset_test.cpp
   material/material_source_json_test.cpp
   material/material_template_gpu_test.cpp
-  "${PROJECT_SOURCE_DIR}/src/material/material_debug_json.cpp"
-  "${PROJECT_SOURCE_DIR}/src/material/material_source_json.cpp"
+  "${PROJECT_SOURCE_DIR}/src/asset_tools/material/debug_json.cpp"
+  "${PROJECT_SOURCE_DIR}/src/asset_tools/material/source_json.cpp"
 )
 target_include_directories(
   granit_material_test PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/tests"
@@ -580,7 +580,7 @@ target_link_libraries(
   PRIVATE
     granit::granit
     Catch2::Catch2WithMain
-    $<TARGET_OBJECTS:granit_shader_object_storage>
+    $<TARGET_OBJECTS:granit_asset_tools_shader_object_storage>
     $<TARGET_OBJECTS:granit_asset_format_shader>
     $<$<PLATFORM_ID:Windows>:user32>
 )

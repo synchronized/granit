@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/tools/asset_tools.hpp>
+#include <granit/asset_tools/asset_tools.hpp>
 
 #include <cstdint>
 #include <filesystem>

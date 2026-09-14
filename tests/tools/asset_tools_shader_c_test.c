@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/tools/shader_compiler.h>
-#include <granit/tools/shader_library_builder.h>
-#include <granit/tools/shader_reflection.h>
+#include <granit/asset_tools/shader_compiler.h>
+#include <granit/asset_tools/shader_library_builder.h>
+#include <granit/asset_tools/shader_reflection.h>
 
 #include <stddef.h>
 #include <stdint.h>

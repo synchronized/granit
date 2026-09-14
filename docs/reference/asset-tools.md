@@ -59,7 +59,7 @@ Library Builder 自动将 DXC 与 Tint 二进制的 SHA-256 身份纳入缓存�
 ## 接口与生命周期
 
 - C11 的编译、反射和 Library Builder 入口分别位于对应的
-  `<granit/tools/shader_*.h>`；`.hpp` 提供 C++20 包装。`asset_tools.h/.hpp` 是 AssetTools 的聚合
+  `<granit/asset_tools/shader_*.h>`；`.hpp` 提供 C++20 包装。`asset_tools.h/.hpp` 是 AssetTools 的聚合
   入口，后续资产领域继续使用各自独立头文件。
 - `granit_asset_tools_shader_compiler_create` 创建可复用 Compiler，配置只包含 Toolchain 根目录；
   `granit_asset_tools_shader_compiler_compile` 固定接收 HLSL。C++ 包装对应移动独占的 `compiler` 和
@@ -131,7 +131,7 @@ Library Builder 自动将 DXC 与 Tint 二进制的 SHA-256 身份纳入缓存�
 
 ## Material Builder
 
-- C11 入口位于 `<granit/tools/material_builder.h>`，C++20 包装位于对应 `.hpp`，命名空间为
+- C11 入口位于 `<granit/asset_tools/material_builder.h>`，C++20 包装位于对应 `.hpp`，命名空间为
   `granit::asset_tools::material`。
 - `granit_asset_tools_material_build` 接收 Material 源 JSON 和一个或多个内存中的
   `.grshidx.json`，在 SDK 内将逻辑 Shader 名称解析为内容 ID，并生成确定性的 `.grmat` 与稳定
@@ -145,7 +145,7 @@ Library Builder 自动将 DXC 与 Tint 二进制的 SHA-256 身份纳入缓存�
 
 ## Texture Builder
 
-- C11 入口位于 `<granit/tools/texture_builder.h>`，C++20 包装位于对应 `.hpp`，命名空间为
+- C11 入口位于 `<granit/asset_tools/texture_builder.h>`，C++20 包装位于对应 `.hpp`，命名空间为
   `granit::asset_tools::texture`。
 - Builder 接收逻辑尺寸、按偏好排序的格式变体、显式子资源布局和每个变体的已编码负载。它按
   变体顺序拼接负载，计算各负载 SHA-256，并根据尺寸、格式、用途、布局和摘要生成内容 ID；调用方
@@ -159,7 +159,7 @@ Library Builder 自动将 DXC 与 Tint 二进制的 SHA-256 身份纳入缓存�
 
 ## Environment Builder
 
-- C11 入口位于 `<granit/tools/environment_builder.h>`，C++20 包装位于对应 `.hpp`，命名空间为
+- C11 入口位于 `<granit/asset_tools/environment_builder.h>`，C++20 包装位于对应 `.hpp`，命名空间为
   `granit::asset_tools::environment`。
 - Builder 接收紧密排列的 RGBA16F Irradiance Cube、完整 Prefiltered Cube mip 链、BRDF LUT
   以及推荐环境强度和曝光值，生成包含 SHA-256 负载摘要的确定性 GRENV v3 包。

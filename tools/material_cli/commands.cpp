@@ -5,7 +5,7 @@
 
 #include "asset_file_io.h"
 
-#include <granit/tools/material_builder.hpp>
+#include <granit/asset_tools/material_builder.hpp>
 
 #include <filesystem>
 #include <iostream>

@@ -17,7 +17,7 @@ find_package(granit 0.22 CONFIG REQUIRED COMPONENTS AssetTools)
 target_link_libraries(asset_builder PRIVATE granit::asset_tools)
 ```
 
-C API 使用 `<granit/tools/asset_tools.h>` 或对应领域头；C++ 使用 `asset_tools.hpp`。Shader 符号前缀
+C API 使用 `<granit/asset_tools/asset_tools.h>` 或对应领域头；C++ 使用 `asset_tools.hpp`。Shader 符号前缀
 改为 `granit_asset_tools_shader_*`，C++ 命名空间改为 `granit::asset_tools::shader`。命令行统一为
 `granit_asset_tool shader|material|texture|environment ...`。
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/tools/shader_library_builder.hpp>
+#include <granit/asset_tools/shader_library_builder.hpp>
 
 #include <filesystem>
 #include <fstream>
