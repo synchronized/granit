@@ -48,7 +48,7 @@ target_sources(
     core/lifecycle_validation.h
     core/resource_validation.h
     core/texture_format.h
-    assets/texture_asset.h
+    asset_formats/texture_asset.h
     core/retirement_queue.h
     core/device_status.h
     renderer/renderer_factory.h
@@ -68,7 +68,7 @@ target_sources(
     core/lifecycle_validation.cpp
     core/retirement_queue.cpp
     core/resource_validation.cpp
-    assets/texture_asset.cpp
+    asset_formats/texture_asset.cpp
     renderer/renderer_api.cpp
     renderer/async_operation_api.cpp
     renderer/pipeline_api.cpp

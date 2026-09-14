@@ -3,7 +3,7 @@
 
 #include <granit/pipeline/environment_map.h>
 
-#include "assets/environment_asset.h"
+#include "asset_formats/environment_asset.h"
 
 #include <granit/renderer/texture.hpp>
 

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_ASSETS_ENVIRONMENT_ASSET_H_
-#define GRANIT_ASSETS_ENVIRONMENT_ASSET_H_
+#ifndef GRANIT_ASSET_FORMATS_ENVIRONMENT_ASSET_H_
+#define GRANIT_ASSET_FORMATS_ENVIRONMENT_ASSET_H_
 
 #include <cstddef>
 #include <cstdint>

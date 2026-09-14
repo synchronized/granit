@@ -3,7 +3,7 @@
 
 #include <granit/tools/environment_builder.h>
 
-#include "assets/environment_asset.h"
+#include "asset_formats/environment_asset.h"
 
 #include <atomic>
 #include <iomanip>

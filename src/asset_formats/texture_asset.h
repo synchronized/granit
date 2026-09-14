@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_ASSETS_TEXTURE_ASSET_H_
-#define GRANIT_ASSETS_TEXTURE_ASSET_H_
+#ifndef GRANIT_ASSET_FORMATS_TEXTURE_ASSET_H_
+#define GRANIT_ASSET_FORMATS_TEXTURE_ASSET_H_
 
 #include <granit/core/content_id.hpp>
 #include <granit/renderer/texture_asset.h>

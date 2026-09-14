@@ -77,8 +77,8 @@ if(GRANIT_BUILD_ASSET_TOOLS OR GRANIT_BUILD_TOOLS OR (GRANIT_BUILD_TESTING AND B
     asset_tools_material_api.cpp
     asset_tools_shader_api.cpp
     asset_tools_texture_api.cpp
-    "${PROJECT_SOURCE_DIR}/src/assets/environment_asset.cpp"
-    "${PROJECT_SOURCE_DIR}/src/assets/texture_asset.cpp"
+    "${PROJECT_SOURCE_DIR}/src/asset_formats/environment_asset.cpp"
+    "${PROJECT_SOURCE_DIR}/src/asset_formats/texture_asset.cpp"
     shader_library/builder.cpp
     shader_library/builder.h
     shader_library/object_cache.cpp

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "assets/environment_asset.h"
+#include "asset_formats/environment_asset.h"
 
 #include "core/sha256.h"
 
