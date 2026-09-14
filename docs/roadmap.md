@@ -48,7 +48,7 @@
 | 二十八、0.20.0 示例框架稳定化 | 已发布 | 示例分层、交互与双后端视觉验收已完成 |
 | 二十九、0.21.0 Shader Library 与后端无关材质 | 已完成 | S-37A～S-37L 与跨平台候选包验收均已完成 |
 | 三十、0.22.0 AssetTools SDK 与工具链交付 | 已发布 | AssetTools SDK 与工具链已随 0.22.0 发布 |
-| 三十一、0.23.0 空帧与覆盖层可靠性 | 实现中 | 空帧路径已完成，安装包与发布矩阵待验收 |
+| 三十一、0.23.0 空帧与覆盖层可靠性 | 本地完成 | Windows 与浏览器已通过，远端矩阵待执行 |
 
 ## 一、工程与 ABI 基础
 
@@ -471,7 +471,7 @@
 
 ## 三十一、0.23.0 空帧与覆盖层可靠性
 
-**状态：实现中；S-39A～S-39D 已完成，安装包与发布矩阵待完成。**
+**状态：本地完成；S-39A～S-39E 已通过，Linux 与不可变 Release Candidate 待执行。**
 
 - **[S-39](plans/S-39-0.23.0-empty-frame-and-overlay-reliability.md) / P1**：让有效 View 在零可见
   Renderable 时仍完成清屏、Tone Mapping、Debug Draw、Canvas、Overlay 和 Frame 提交。
@@ -484,8 +484,8 @@
 
 ## 近期执行顺序
 
-1. 完成 S-40 配置模式、锁定快照和干净缓存构建验收。
-2. 完成 S-39E 的 Granit 安装 Consumer 与发布验收。
+1. 执行 S-39/S-40 的 Linux、远端安装 Consumer 与不可变 Release Candidate 验收。
+2. 验收通过后完成 0.23.0 发布记录。
 3. 公共执行器与场景 API 继续等待 Granit 与 Gneiss 的第二个真实复用证据。
 4. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
 5. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。

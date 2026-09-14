@@ -194,10 +194,10 @@ D-03-graphics-pipeline.md
   完成作者入口、内建资产、旧接口和发布边界收敛，并通过完整跨平台与候选包验收。
 - [S-38：0.22.0 AssetTools SDK 与工具链交付](S-38-0.22.0-asset-tools-and-toolchain.md)——已完成；
   四个资产领域、工具链交付及跨平台 Release Candidate 均已通过验收。
-- [S-39：0.23.0 空帧与覆盖层可靠性](S-39-0.23.0-empty-frame-and-overlay-reliability.md)——实现中；
-  桌面和浏览器空帧、清屏、覆盖层与 Swapchain 已完成，安装包与发布矩阵待完成。
+- [S-39：0.23.0 空帧与覆盖层可靠性](S-39-0.23.0-empty-frame-and-overlay-reliability.md)——本地完成；
+  桌面、浏览器、Windows 共享/静态安装包与 Consumer 已通过，远端发布矩阵待执行。
 - [S-40：0.23.0 Shader Toolchain 配置可靠性](S-40-0.23.0-shader-toolchain-configuration-reliability.md)——
-  实现中；修复旧缓存迁移、配置顺序和锁定工具链快照一致性。
+  本地完成；旧缓存迁移、配置顺序、锁定快照和模式矩阵已通过，Linux 验收待执行。
 
 ## 状态
 
