@@ -20,8 +20,8 @@ Text 输入，第三方库不成为 Renderer 的传递依赖。
 不要直接 `reinterpret_cast` 第三方顶点数组，也不要把指针强制转换成 Granit 句柄。Texture ID 的
 含义、注册和失效由适配器管理；被借用的 View 与 Sampler 至少存活到 Canvas 完成录制。
 
-仓库中的 `granit_immediate_ui_adapter_smoke` 使用一个仿立即式 UI Draw Data 结构验证上述转换，
-不要求安装 ImGui、Nuklear 或其他 UI 库。接入具体库时只需在应用层实现相同映射。
+Canvas 模块测试验证批量范围、纹理状态和裁剪规则；可选的 `granit.integration.imgui` 测试使用真实
+`ImDrawData` 验证逐字段转换和 Texture ID 解析。接入其他 UI 库时在应用层实现相同映射。
 
 不要为每条命令重新截取和编号顶点。顶点在整帧转换中只复制一次，Draw Command 只保存纹理、
 裁剪区和索引范围，避免细粒度 C ABI 调用与重复句柄校验。
@@ -34,8 +34,8 @@ Text 输入，第三方库不成为 Renderer 的传递依赖。
 - 位图通过 Text Atlas 上传；已定位字形批量追加到 Text Draw List，再一次转换到 Canvas。
 - 字体对象和第三方 Glyph Cache 仍由上层持有，Granit 只拥有自己的 Atlas 页面。
 
-首版不提供强制的 ImGui、HarfBuzz 或 FreeType 构建选项。具体 Adapter 可位于应用仓库或未来独立
-CMake component，不能进入核心 C ABI，也不能把第三方类型写入 Granit 公共头文件。
+ImGui 作为可选 CMake component 提供；HarfBuzz 和 FreeType 仍由应用选择。具体 Adapter 不能进入
+核心 C ABI，也不能把第三方类型写入 Granit 公共头文件。
 
 ## 线程与每帧顺序
 

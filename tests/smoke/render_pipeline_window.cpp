@@ -3,6 +3,7 @@
 
 #include "../support/shader_asset_store.h"
 #include <granit/granit.hpp>
+#include <granit/pipeline/canvas_draw_list.hpp>
 #include <granit/pipeline/render_pipeline.h>
 
 #include <windows.h>
@@ -128,6 +129,37 @@ int main(int argument_count, char** arguments) {
   granit::swapchain_info info;
   if (result.ok())
     result = swapchain.query_info(info);
+
+  granit::texture canvas_texture;
+  granit::texture_view canvas_view;
+  granit::sampler canvas_sampler;
+  granit::canvas_draw_list canvas;
+  if (result.ok()) {
+    result = canvas_texture.initialize(
+        renderer.native_handle(),
+        {.format = granit::texture_format::rgba8_unorm,
+         .usage = granit::texture_usage::sampled | granit::texture_usage::transfer_destination,
+         .width = 1,
+         .height = 1});
+  }
+  constexpr std::array<std::uint8_t, 4> canvas_pixel{32, 160, 255, 255};
+  if (result.ok())
+    result = canvas_texture.write(std::as_bytes(std::span{canvas_pixel}), {}, {});
+  if (result.ok())
+    result = canvas_view.initialize(renderer.native_handle(), canvas_texture.native_handle());
+  if (result.ok())
+    result = canvas_sampler.initialize(renderer.native_handle(), {});
+  if (result.ok())
+    result = canvas.initialize(renderer.native_handle(), GRANIT_CANVAS_DRAW_LIST_DESC_INIT);
+  granit_canvas_rect_desc canvas_rect = GRANIT_CANVAS_RECT_DESC_INIT;
+  canvas_rect.x = 12;
+  canvas_rect.y = 12;
+  canvas_rect.width = 96;
+  canvas_rect.height = 48;
+  canvas_rect.state.texture = canvas_view.native_handle();
+  canvas_rect.state.sampler = canvas_sampler.native_handle();
+  if (result.ok())
+    result = canvas.append_rect(canvas_rect);
 
   constexpr std::array<float, 9> positions{-0.65F, -0.65F, 0.5F,  0.65F, -0.65F,
                                            0.5F,   0.0F,   0.65F, 0.5F};
@@ -262,6 +294,7 @@ int main(int argument_count, char** arguments) {
       desc.draw_binding_count = empty_frame ? 0 : 1;
       desc.draw_bindings = empty_frame ? nullptr : &binding;
       desc.frame = frame.handle;
+      desc.canvas = canvas.native_handle();
       result = granit::from_native(
           granit_render_pipeline_render(renderer.native_handle(), pipeline, &desc));
     }
