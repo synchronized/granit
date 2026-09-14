@@ -497,7 +497,7 @@
 
 ## 三十三、0.24.0 AssetTools 源码布局收敛
 
-**状态：已确认，准备实施。**
+**状态：本地实现与验收已完成；等待 0.24.0 跨平台与发布候选远端验收。**
 
 - **[S-43](plans/S-43-0.24.0-asset-tools-source-layout.md) / P1**：将公共头、SDK 实现、共享格式、
   正式 CLI 和测试 Fixture 工具放入与其交付边界一致的目录。
@@ -507,14 +507,13 @@
 
 ## 近期执行顺序
 
-1. 完成 S-43 AssetTools 源码布局收敛及本地共享/静态验证。
-2. 推送 0.24.0 分支，执行 Quick Check、Windows、Linux、Emscripten 与 Documentation 工作流。
-3. 完成 Release Candidate 验收，记录固定提交与四套 SDK 产物。
-4. 整理 0.24.0 发布记录并完成正式发布。
-5. 公共执行器与场景 API 继续等待第二个真实复用证据。
-6. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
-7. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-8. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+1. 推送 0.24.0 分支，执行 Quick Check、Windows、Linux、Emscripten 与 Documentation 工作流。
+2. 完成 Release Candidate 验收，记录固定提交与四套 SDK 产物。
+3. 整理 0.24.0 发布记录并完成正式发布。
+4. 公共执行器与场景 API 继续等待第二个真实复用证据。
+5. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
+6. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+7. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。
