@@ -169,8 +169,8 @@ function(granit_prepare_runtime_shader_libraries)
       OUTPUT "${output_root}/unlit_canvas.grshlib"
       INDEX "${output_root}/canvas.grshidx.json"
       CACHE_DIR "${object_root}/unlit-canvas"
-      REFERENCE "${PROJECT_SOURCE_DIR}/src/pipeline/assets/unlit_canvas.grshlib"
-      INDEX_REFERENCE "${PROJECT_SOURCE_DIR}/src/pipeline/assets/unlit_canvas.grshidx.json"
+      REFERENCE "${granit_embedded_asset_snapshot_dir}/pipeline/unlit_canvas.grshlib"
+      INDEX_REFERENCE "${granit_embedded_asset_snapshot_dir}/pipeline/unlit_canvas.grshidx.json"
       TARGET granit_canvas_shader_library
       SOURCES "${granit_asset_sources_dir}/shaders/unlit/unlit.hlsl"
     )
@@ -294,7 +294,7 @@ function(granit_prepare_test_shader_assets)
     endif()
     granit_add_test_shader_object(
       NAME "tone_mapping.${stage}"
-      SOURCE "${PROJECT_SOURCE_DIR}/src/pipeline/shaders/tone_mapping.hlsl"
+      SOURCE "${granit_asset_sources_dir}/shaders/pipeline/tone_mapping.hlsl"
       SPIRV "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/pipeline/tone_mapping.${stage}.spv"
       WGSL "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/pipeline/tone_mapping.wgsl"
       ENTRY "${entry}"
