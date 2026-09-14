@@ -80,7 +80,12 @@ async function validateVisualScene(browser, address, ratio) {
   });
   try {
     await page.goto(`http://127.0.0.1:${address.port}/granit_imgui_web.html?validation=1`);
-    await page.waitForFunction(() => Module._granit_web_imgui_rendered_frames?.() >= 30);
+    await page.waitForFunction(
+      () =>
+        Module.runtimeReady === true &&
+        typeof Module._granit_web_imgui_rendered_frames === "function" &&
+        Module._granit_web_imgui_rendered_frames() >= 30,
+    );
     const canvas = page.locator("#canvas");
     const artifact = path.join(outputDirectory, "validation");
     fs.mkdirSync(artifact, { recursive: true });
