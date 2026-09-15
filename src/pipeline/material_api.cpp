@@ -3,9 +3,11 @@
 
 #include <granit/pipeline/material.h>
 
+#include "core/handle_encoding.h"
+
+#include "asset_formats/material/material_package_archive.h"
 #include "lighting/shadow_ibl_resources.h"
 #include "material/material_gpu_instance.h"
-#include "asset_formats/material/material_package_archive.h"
 #include "material/material_template_gpu.h"
 #include "pipeline/material_access.h"
 
@@ -24,7 +26,7 @@ namespace {
 
 constexpr uint64_t index_mask = UINT64_C(0xffffffff);
 constexpr uint64_t generation_mask = UINT64_C(0x00ffffff);
-constexpr uint64_t type_value = UINT64_C(0x41);
+constexpr uint64_t type_value = static_cast<uint64_t>(granit::detail::handle_type::material);
 
 struct material_state {
   std::mutex mutex;

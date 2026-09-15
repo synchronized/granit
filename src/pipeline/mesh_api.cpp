@@ -3,6 +3,8 @@
 
 #include <granit/pipeline/mesh.h>
 
+#include "core/handle_encoding.h"
+
 #include "pipeline/mesh_access.h"
 
 #include <algorithm>
@@ -15,7 +17,7 @@ namespace {
 
 constexpr uint64_t index_mask = UINT64_C(0xffffffff);
 constexpr uint64_t generation_mask = UINT64_C(0x00ffffff);
-constexpr uint64_t type_value = UINT64_C(0x43);
+constexpr uint64_t type_value = static_cast<uint64_t>(granit::detail::handle_type::mesh);
 
 struct mesh_vertex_buffer {
   granit_buffer buffer = GRANIT_NULL_HANDLE;

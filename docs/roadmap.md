@@ -504,6 +504,8 @@
 - 公共 include 路径统一为 `granit/asset_tools`，C++ 命名空间保持 `granit::asset_tools`；项目处于
   0.x 阶段，不保留旧 `granit/tools` 转发入口。
 - Runtime 与 AssetTools 按领域复用私有格式 Object Library，正式 CLI 只依赖公开 AssetTools SDK。
+- AssetTools 六类结果句柄已统一类型、槽位和 generation 校验；Environment Map 与 Debug Draw List
+  的内部类型标记不再冲突，跨类型使用会返回无效句柄错误。
 
 ## 近期执行顺序
 

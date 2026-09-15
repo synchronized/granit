@@ -10,6 +10,7 @@
 #include <granit/renderer/shader_library.h>
 #include <granit/renderer/texture.h>
 
+#include "core/handle_encoding.h"
 #include "pipeline/debug_draw_geometry.h"
 #include "pipeline/embedded_shaders.h"
 
@@ -26,7 +27,7 @@ namespace {
 
 constexpr uint64_t index_mask = UINT64_C(0xffffffff);
 constexpr uint64_t generation_mask = UINT64_C(0x00ffffff);
-constexpr uint64_t type_value = UINT64_C(0x45);
+constexpr uint64_t type_value = static_cast<uint64_t>(granit::detail::handle_type::debug_draw_list);
 
 struct list_state {
   ~list_state() {

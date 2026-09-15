@@ -8,6 +8,20 @@ find_package(Threads REQUIRED)
 if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
 
   add_executable(
+    granit_asset_tools_handle_safety_test
+    "${CMAKE_CURRENT_SOURCE_DIR}/handle_safety_test.c"
+  )
+  target_compile_features(granit_asset_tools_handle_safety_test PRIVATE c_std_11)
+  target_link_libraries(granit_asset_tools_handle_safety_test PRIVATE granit::asset_tools)
+  set_target_properties(granit_asset_tools_handle_safety_test PROPERTIES LINKER_LANGUAGE CXX)
+  granit_target_compile_warnings(granit_asset_tools_handle_safety_test)
+  granit_target_output_directories(granit_asset_tools_handle_safety_test)
+  add_test(
+    NAME granit.asset_tools.handle_safety
+    COMMAND granit_asset_tools_handle_safety_test
+  )
+
+  add_executable(
     granit_asset_tools_material_test
     "${CMAKE_CURRENT_SOURCE_DIR}/material/api_test.cpp"
   )

@@ -4,17 +4,15 @@
 #include <granit/asset_tools/environment_builder.h>
 
 #include "asset_formats/environment/environment_asset.h"
+#include "core/shared_handle_table.h"
 
-#include <atomic>
 #include <iomanip>
 #include <limits>
 #include <memory>
-#include <mutex>
 #include <new>
 #include <span>
 #include <sstream>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 namespace {
@@ -25,9 +23,9 @@ struct stored_environment_result {
   std::string diagnostic;
 };
 
-std::mutex environment_results_mutex;
-std::unordered_map<uint64_t, std::shared_ptr<const stored_environment_result>> environment_results;
-std::atomic<uint64_t> next_environment_result{1};
+granit::detail::shared_handle_table<stored_environment_result,
+                                    granit::detail::handle_type::asset_tools_environment_result>
+    environment_results;
 
 bool valid_bytes(const void* data, uint64_t size) {
   return (data != nullptr || size == 0) &&
@@ -36,19 +34,12 @@ bool valid_bytes(const void* data, uint64_t size) {
 
 granit_asset_tools_environment_result
 store_environment_result(std::shared_ptr<const stored_environment_result> value) {
-  auto handle = next_environment_result.fetch_add(1, std::memory_order_relaxed);
-  if (handle == 0)
-    handle = next_environment_result.fetch_add(1, std::memory_order_relaxed);
-  std::lock_guard lock{environment_results_mutex};
-  environment_results.emplace(handle, std::move(value));
-  return handle;
+  return environment_results.insert(std::move(value));
 }
 
 std::shared_ptr<const stored_environment_result>
 find_environment_result(granit_asset_tools_environment_result handle) {
-  std::lock_guard lock{environment_results_mutex};
-  const auto iterator = environment_results.find(handle);
-  return iterator == environment_results.end() ? nullptr : iterator->second;
+  return environment_results.find(handle);
 }
 
 granit_result fail_with_result(std::shared_ptr<stored_environment_result> value,
@@ -221,8 +212,7 @@ granit_asset_tools_environment_result_get_diagnostic(granit_asset_tools_environm
 
 granit_result
 granit_asset_tools_environment_result_destroy(granit_asset_tools_environment_result result) {
-  std::lock_guard lock{environment_results_mutex};
-  return environment_results.erase(result) == 1 ? GRANIT_SUCCESS : GRANIT_ERROR_INVALID_HANDLE;
+  return environment_results.erase(result);
 }
 
 } // extern "C"

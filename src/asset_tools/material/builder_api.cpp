@@ -3,21 +3,19 @@
 
 #include <granit/asset_tools/material_builder.h>
 
-#include "asset_tools/material/debug_json.h"
 #include "asset_formats/material/material_package_archive.h"
+#include "asset_tools/material/debug_json.h"
 #include "asset_tools/material/source_json.h"
 #include "asset_tools/shader/library_source_manifest.h"
+#include "core/shared_handle_table.h"
 
 #include <algorithm>
-#include <atomic>
 #include <limits>
 #include <memory>
-#include <mutex>
 #include <new>
 #include <span>
 #include <string>
 #include <string_view>
-#include <unordered_map>
 #include <vector>
 
 namespace {
@@ -28,9 +26,9 @@ struct stored_material_result {
   std::string diagnostic;
 };
 
-std::mutex material_results_mutex;
-std::unordered_map<uint64_t, std::shared_ptr<const stored_material_result>> material_results;
-std::atomic<uint64_t> next_material_result{1};
+granit::detail::shared_handle_table<stored_material_result,
+                                    granit::detail::handle_type::asset_tools_material_result>
+    material_results;
 
 bool valid_bytes(const void* data, uint64_t size) {
   return (data != nullptr || size == 0) &&
@@ -39,19 +37,12 @@ bool valid_bytes(const void* data, uint64_t size) {
 
 granit_asset_tools_material_result
 store_material_result(std::shared_ptr<const stored_material_result> value) {
-  auto handle = next_material_result.fetch_add(1, std::memory_order_relaxed);
-  if (handle == 0)
-    handle = next_material_result.fetch_add(1, std::memory_order_relaxed);
-  std::lock_guard lock{material_results_mutex};
-  material_results.emplace(handle, std::move(value));
-  return handle;
+  return material_results.insert(std::move(value));
 }
 
 std::shared_ptr<const stored_material_result>
 find_material_result(granit_asset_tools_material_result handle) {
-  std::lock_guard lock{material_results_mutex};
-  const auto iterator = material_results.find(handle);
-  return iterator == material_results.end() ? nullptr : iterator->second;
+  return material_results.find(handle);
 }
 
 granit_result fail_with_result(std::shared_ptr<stored_material_result> value,
@@ -198,8 +189,7 @@ granit_asset_tools_material_result_get_diagnostic(granit_asset_tools_material_re
 
 granit_result
 granit_asset_tools_material_result_destroy(granit_asset_tools_material_result result) {
-  std::lock_guard lock{material_results_mutex};
-  return material_results.erase(result) == 1 ? GRANIT_SUCCESS : GRANIT_ERROR_INVALID_HANDLE;
+  return material_results.erase(result);
 }
 
 } // extern "C"

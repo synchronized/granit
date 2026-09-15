@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include <granit/pipeline/debug_draw_list.hpp>
 #include <granit/pipeline/environment_map.hpp>
 #include <granit/renderer/renderer.hpp>
 
@@ -36,6 +37,16 @@ TEST_CASE("Environment Map 拥有并释放 IBL 纹理", "[pipeline][environment-
   CHECK(info.environment.prefiltered_environment != GRANIT_NULL_HANDLE);
   CHECK(info.environment.brdf_lut != GRANIT_NULL_HANDLE);
   CHECK(info.environment.intensity > 0.0F);
+
+  granit::debug_draw_list debug;
+  REQUIRE(debug.initialize(renderer.native_handle(), GRANIT_DEBUG_DRAW_LIST_DESC_INIT).ok());
+  CHECK(environment.native_handle() != debug.native_handle());
+  granit_debug_draw_list_stats debug_stats = GRANIT_DEBUG_DRAW_LIST_STATS_INIT;
+  CHECK(granit_environment_map_get_info(renderer.native_handle(), debug.native_handle(), &info) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(granit_debug_draw_list_get_stats(renderer.native_handle(), environment.native_handle(),
+                                         &debug_stats) == GRANIT_ERROR_INVALID_HANDLE);
+  REQUIRE(debug.destroy().ok());
 
   granit::renderer_resource_stats live;
   REQUIRE(renderer.get_resource_stats(live).ok());

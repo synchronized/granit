@@ -49,7 +49,9 @@ target_sources(
     backend/contracts/upload.h
     backend/contracts/callback_lifetime.h
     backend/contracts/lifecycle.h
+    core/handle_encoding.h
     core/handle_table.h
+    core/shared_handle_table.h
     core/async_operation_state.h
     core/diagnostic_sink.h
     core/lifecycle_validation.h

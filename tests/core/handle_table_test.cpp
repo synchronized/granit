@@ -2,8 +2,11 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "core/handle_table.h"
+#include "core/shared_handle_table.h"
 
 #include <catch2/catch_all.hpp>
+
+#include <memory>
 
 namespace {
 
@@ -52,14 +55,13 @@ TEST_CASE("资源销毁后旧句柄失效", "[handle_table]") {
   void* erased_resource = nullptr;
 
   const auto old_handle = table.insert(&first_resource, resource_type::buffer, first_domain);
-  REQUIRE(
-    table.erase(old_handle, resource_type::buffer, first_domain, &erased_resource) ==
-    GRANIT_SUCCESS);
+  REQUIRE(table.erase(old_handle, resource_type::buffer, first_domain, &erased_resource) ==
+          GRANIT_SUCCESS);
   CHECK(erased_resource == &first_resource);
   CHECK(table.empty());
   CHECK(table.find(old_handle, resource_type::buffer, first_domain) == nullptr);
-  CHECK(
-    table.erase(old_handle, resource_type::buffer, first_domain) == GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(table.erase(old_handle, resource_type::buffer, first_domain) ==
+        GRANIT_ERROR_INVALID_HANDLE);
 
   const auto new_handle = table.insert(&second_resource, resource_type::buffer, first_domain);
   CHECK(new_handle != old_handle);
@@ -79,6 +81,36 @@ TEST_CASE("不同资源类型不能因槽位复用而混淆", "[handle_table]") 
   CHECK(texture_handle != buffer_handle);
   CHECK(table.find(buffer_handle, resource_type::buffer, first_domain) == nullptr);
   CHECK(table.find(texture_handle, resource_type::texture, first_domain) == &texture);
+}
+
+TEST_CASE("共享句柄表拒绝跨类型与重复销毁", "[handle_table]") {
+  granit::detail::shared_handle_table<int, granit::detail::handle_type::asset_tools_material_result>
+      materials;
+  granit::detail::shared_handle_table<int, granit::detail::handle_type::asset_tools_texture_result>
+      textures;
+
+  const auto material = materials.insert(std::make_shared<const int>(7));
+  const auto texture = textures.insert(std::make_shared<const int>(11));
+  REQUIRE(material != GRANIT_NULL_HANDLE);
+  REQUIRE(texture != GRANIT_NULL_HANDLE);
+  CHECK(material != texture);
+  CHECK(materials.find(texture) == nullptr);
+  CHECK(textures.find(material) == nullptr);
+  CHECK(materials.erase(texture) == GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(textures.erase(material) == GRANIT_ERROR_INVALID_HANDLE);
+
+  const auto borrowed = materials.find(material);
+  REQUIRE(borrowed != nullptr);
+  CHECK(materials.erase(material) == GRANIT_SUCCESS);
+  CHECK(*borrowed == 7);
+  CHECK(materials.erase(material) == GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(materials.find(material) == nullptr);
+
+  const auto replacement = materials.insert(std::make_shared<const int>(13));
+  CHECK(replacement != material);
+  CHECK(materials.find(material) == nullptr);
+  REQUIRE(materials.find(replacement) != nullptr);
+  CHECK(*materials.find(replacement) == 13);
 }
 
 } // namespace

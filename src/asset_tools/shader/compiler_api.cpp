@@ -3,22 +3,20 @@
 
 #include <granit/asset_tools/asset_tools.h>
 
-#include "asset_tools/shader/compiler_internal.h"
 #include "asset_tools/common/toolchain_layout.h"
+#include "asset_tools/shader/compiler_internal.h"
+#include "core/shared_handle_table.h"
 
 #include <algorithm>
-#include <atomic>
 #include <cctype>
 #include <cstddef>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <memory>
-#include <mutex>
 #include <sstream>
 #include <string>
 #include <string_view>
-#include <unordered_map>
 #include <vector>
 
 namespace {
@@ -45,13 +43,15 @@ struct stored_shader_data {
   uint32_t workgroup_size_z = 0;
 };
 
-std::mutex shader_data_mutex;
-std::unordered_map<uint64_t, std::shared_ptr<const stored_shader_data>> compilations;
-std::unordered_map<uint64_t, std::shared_ptr<const stored_shader_data>> reflections;
-std::atomic<uint64_t> next_shader_data_handle{1};
-std::mutex compilers_mutex;
-std::unordered_map<uint64_t, std::shared_ptr<const stored_compiler>> compilers;
-std::atomic<uint64_t> next_compiler{1};
+granit::detail::shared_handle_table<stored_shader_data,
+                                    granit::detail::handle_type::asset_tools_shader_compilation>
+    compilations;
+granit::detail::shared_handle_table<stored_shader_data,
+                                    granit::detail::handle_type::asset_tools_shader_reflection>
+    reflections;
+granit::detail::shared_handle_table<stored_compiler,
+                                    granit::detail::handle_type::asset_tools_shader_compiler>
+    compilers;
 
 bool valid_string(const char* value, uint64_t length) { return value != nullptr || length == 0; }
 
@@ -116,7 +116,8 @@ template <typename Desc> bool valid_binding_expectations(const Desc& desc) {
 }
 
 template <typename Desc>
-bool validate_binding_expectations(const Desc& desc, const granit::asset_tools::detail::shader_info& info,
+bool validate_binding_expectations(const Desc& desc,
+                                   const granit::asset_tools::detail::shader_info& info,
                                    std::ostream& diagnostic) {
   if (desc.struct_size < offsetof(Desc, validate_binding_set) + sizeof(desc.validate_binding_set) ||
       desc.validate_binding_set == 0)
@@ -208,7 +209,8 @@ uint32_t scalar_type_value(granit::asset_tools::detail::shader_scalar_type type)
   return 0;
 }
 
-void store_reflection(stored_shader_data& target, granit::asset_tools::detail::shader_info& source) {
+void store_reflection(stored_shader_data& target,
+                      granit::asset_tools::detail::shader_info& source) {
   target.reflection_json = granit::asset_tools::detail::serialize_shader_info_json(source);
   target.bindings = std::move(source.bindings);
   target.vertex_inputs = std::move(source.vertex_inputs);
@@ -221,45 +223,26 @@ void store_reflection(stored_shader_data& target, granit::asset_tools::detail::s
 
 std::shared_ptr<const stored_shader_data>
 find_compilation(granit_asset_tools_shader_compilation compilation) {
-  std::lock_guard lock{shader_data_mutex};
-  const auto iterator = compilations.find(compilation);
-  return iterator == compilations.end() ? nullptr : iterator->second;
+  return compilations.find(compilation);
 }
 
 std::shared_ptr<const stored_shader_data>
 find_reflection(granit_asset_tools_shader_reflection reflection) {
-  std::lock_guard lock{shader_data_mutex};
-  const auto iterator = reflections.find(reflection);
-  return iterator == reflections.end() ? nullptr : iterator->second;
-}
-
-uint64_t allocate_shader_data_handle() {
-  auto handle = next_shader_data_handle.fetch_add(1, std::memory_order_relaxed);
-  if (handle == 0)
-    handle = next_shader_data_handle.fetch_add(1, std::memory_order_relaxed);
-  return handle;
+  return reflections.find(reflection);
 }
 
 granit_asset_tools_shader_compilation
 store_compilation(std::shared_ptr<const stored_shader_data> value) {
-  const auto handle = allocate_shader_data_handle();
-  std::lock_guard lock{shader_data_mutex};
-  compilations.emplace(handle, std::move(value));
-  return handle;
+  return compilations.insert(std::move(value));
 }
 
 granit_asset_tools_shader_reflection
 store_reflection_handle(std::shared_ptr<const stored_shader_data> value) {
-  const auto handle = allocate_shader_data_handle();
-  std::lock_guard lock{shader_data_mutex};
-  reflections.emplace(handle, std::move(value));
-  return handle;
+  return reflections.insert(std::move(value));
 }
 
 std::shared_ptr<const stored_compiler> find_compiler(granit_asset_tools_shader_compiler compiler) {
-  std::lock_guard lock{compilers_mutex};
-  const auto iterator = compilers.find(compiler);
-  return iterator == compilers.end() ? nullptr : iterator->second;
+  return compilers.find(compiler);
 }
 
 } // namespace
@@ -284,12 +267,9 @@ granit_asset_tools_shader_compiler_create(const granit_asset_tools_shader_compil
     auto value = std::make_shared<stored_compiler>();
     value->dxc = paths.dxc;
     value->tint = paths.tint;
-    auto handle = next_compiler.fetch_add(1, std::memory_order_relaxed);
-    if (handle == 0)
-      handle = next_compiler.fetch_add(1, std::memory_order_relaxed);
-    std::lock_guard lock{compilers_mutex};
-    compilers.emplace(handle, std::move(value));
-    *compiler = handle;
+    *compiler = compilers.insert(std::move(value));
+    if (*compiler == GRANIT_NULL_HANDLE)
+      return GRANIT_ERROR_OUT_OF_MEMORY;
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
@@ -356,7 +336,8 @@ granit_asset_tools_shader_compiler_compile(granit_asset_tools_shader_compiler co
     granit::asset_tools::detail::hlsl_compile_options options{
         compiler_value->dxc, compiler_value->tint,  input, entry_point, stage, spirv_output,
         wgsl_output,         std::move(definitions)};
-    auto exit_code = granit::asset_tools::detail::compile_hlsl_shader(options, info, output, diagnostic);
+    auto exit_code =
+        granit::asset_tools::detail::compile_hlsl_shader(options, info, output, diagnostic);
     if (exit_code == 0 && !validate_binding_expectations(*desc, info, diagnostic)) {
       std::error_code filesystem_error;
       std::filesystem::remove(spirv_output, filesystem_error);
@@ -390,8 +371,7 @@ granit_asset_tools_shader_compiler_compile(granit_asset_tools_shader_compiler co
 
 granit_result
 granit_asset_tools_shader_compiler_destroy(granit_asset_tools_shader_compiler compiler) {
-  std::lock_guard lock{compilers_mutex};
-  return compilers.erase(compiler) == 1 ? GRANIT_SUCCESS : GRANIT_ERROR_INVALID_HANDLE;
+  return compilers.erase(compiler);
 }
 
 granit_result
@@ -411,8 +391,9 @@ granit_asset_tools_shader_inspect_spirv(const granit_asset_tools_shader_inspect_
     std::ostringstream diagnostic;
     granit::asset_tools::detail::shader_info info;
     const auto path = copy_path(desc->input_path, desc->input_path_length);
-    const auto succeeded = granit::asset_tools::detail::inspect_shader(path, true, info, output, diagnostic) &&
-                           validate_binding_expectations(*desc, info, diagnostic);
+    const auto succeeded =
+        granit::asset_tools::detail::inspect_shader(path, true, info, output, diagnostic) &&
+        validate_binding_expectations(*desc, info, diagnostic);
     value->status = succeeded ? GRANIT_SUCCESS : GRANIT_ERROR_INVALID_ARGUMENT;
     value->entry_point = info.entry_point;
     value->stage = stage_value(info.stage);
@@ -552,7 +533,8 @@ granit_asset_tools_shader_reflection_get_binding(granit_asset_tools_shader_refle
 
 granit_result get_interface_variable_count(
     granit_asset_tools_shader_reflection reflection,
-    const std::vector<granit::asset_tools::detail::shader_interface_variable_info> stored_shader_data::* member,
+    const std::vector<granit::asset_tools::detail::shader_interface_variable_info>
+        stored_shader_data::* member,
     uint64_t* count) {
   if (count == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -565,7 +547,8 @@ granit_result get_interface_variable_count(
 
 granit_result get_interface_variable(
     granit_asset_tools_shader_reflection reflection, uint64_t index,
-    const std::vector<granit::asset_tools::detail::shader_interface_variable_info> stored_shader_data::* member,
+    const std::vector<granit::asset_tools::detail::shader_interface_variable_info>
+        stored_shader_data::* member,
     granit_asset_tools_shader_interface_variable_info* output) {
   if (output == nullptr || output->struct_size < sizeof(*output))
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -689,14 +672,12 @@ granit_result granit_asset_tools_shader_get_target_capabilities(
 
 granit_result
 granit_asset_tools_shader_compilation_destroy(granit_asset_tools_shader_compilation compilation) {
-  std::lock_guard lock{shader_data_mutex};
-  return compilations.erase(compilation) == 1 ? GRANIT_SUCCESS : GRANIT_ERROR_INVALID_HANDLE;
+  return compilations.erase(compilation);
 }
 
 granit_result
 granit_asset_tools_shader_reflection_destroy(granit_asset_tools_shader_reflection reflection) {
-  std::lock_guard lock{shader_data_mutex};
-  return reflections.erase(reflection) == 1 ? GRANIT_SUCCESS : GRANIT_ERROR_INVALID_HANDLE;
+  return reflections.erase(reflection);
 }
 
 } // extern "C"

@@ -3,6 +3,8 @@
 
 #include <granit/pipeline/text_atlas.h>
 
+#include "core/handle_encoding.h"
+
 #include "pipeline/text_atlas_access.h"
 
 #include <granit/renderer/sampler.h>
@@ -19,7 +21,7 @@ namespace {
 
 constexpr uint64_t index_mask = UINT64_C(0xffffffff);
 constexpr uint64_t generation_mask = UINT64_C(0x00ffffff);
-constexpr uint64_t type_value = UINT64_C(0x47);
+constexpr uint64_t type_value = static_cast<uint64_t>(granit::detail::handle_type::text_atlas);
 
 struct glyph_key {
   uint64_t font_key = 0;

@@ -5,20 +5,18 @@
 
 #include "asset_formats/texture/texture_asset.h"
 #include "core/sha256.h"
+#include "core/shared_handle_table.h"
 #include "core/texture_format.h"
 
 #include <algorithm>
-#include <atomic>
 #include <cstring>
 #include <iomanip>
 #include <limits>
 #include <memory>
-#include <mutex>
 #include <new>
 #include <span>
 #include <sstream>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 namespace {
@@ -30,9 +28,9 @@ struct stored_texture_result {
   std::string diagnostic;
 };
 
-std::mutex texture_results_mutex;
-std::unordered_map<uint64_t, std::shared_ptr<const stored_texture_result>> texture_results;
-std::atomic<uint64_t> next_texture_result{1};
+granit::detail::shared_handle_table<stored_texture_result,
+                                    granit::detail::handle_type::asset_tools_texture_result>
+    texture_results;
 
 bool valid_bytes(const void* data, uint64_t size) {
   return (data != nullptr || size == 0) &&
@@ -41,19 +39,12 @@ bool valid_bytes(const void* data, uint64_t size) {
 
 granit_asset_tools_texture_result
 store_texture_result(std::shared_ptr<const stored_texture_result> value) {
-  auto handle = next_texture_result.fetch_add(1, std::memory_order_relaxed);
-  if (handle == 0)
-    handle = next_texture_result.fetch_add(1, std::memory_order_relaxed);
-  std::lock_guard lock{texture_results_mutex};
-  texture_results.emplace(handle, std::move(value));
-  return handle;
+  return texture_results.insert(std::move(value));
 }
 
 std::shared_ptr<const stored_texture_result>
 find_texture_result(granit_asset_tools_texture_result handle) {
-  std::lock_guard lock{texture_results_mutex};
-  const auto iterator = texture_results.find(handle);
-  return iterator == texture_results.end() ? nullptr : iterator->second;
+  return texture_results.find(handle);
 }
 
 granit_result fail_with_result(std::shared_ptr<stored_texture_result> value, granit_result status,
@@ -340,8 +331,7 @@ granit_asset_tools_texture_result_get_diagnostic(granit_asset_tools_texture_resu
 }
 
 granit_result granit_asset_tools_texture_result_destroy(granit_asset_tools_texture_result result) {
-  std::lock_guard lock{texture_results_mutex};
-  return texture_results.erase(result) == 1 ? GRANIT_SUCCESS : GRANIT_ERROR_INVALID_HANDLE;
+  return texture_results.erase(result);
 }
 
 } // extern "C"

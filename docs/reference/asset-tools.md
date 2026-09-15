@@ -58,6 +58,12 @@ Library Builder 自动将 DXC 与 Tint 二进制的 SHA-256 身份纳入缓存�
 
 ## 接口与生命周期
 
+Compiler、Compilation、Reflection 及 Material、Texture、Environment 构建结果均使用独立的 64 位
+不透明句柄。零值无效；把一种句柄传给另一种结果 API、重复销毁或使用已销毁句柄，会返回
+`GRANIT_ERROR_INVALID_HANDLE`。句柄编码包含内部类型、槽位和 generation，数值不可作为资产内容
+ID，也不可保存到文件或跨进程使用。不同结果的查询仍可并行；销毁同一句柄前，调用者须完成使用
+该句柄的查询。
+
 - C11 的编译、反射和 Library Builder 入口分别位于对应的
   `<granit/asset_tools/shader_*.h>`；`.hpp` 提供 C++20 包装。`asset_tools.h/.hpp` 是 AssetTools 的聚合
   入口，后续资产领域继续使用各自独立头文件。

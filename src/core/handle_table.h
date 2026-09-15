@@ -12,35 +12,11 @@
 #include <granit/core/result.h>
 #include <granit/core/types.h>
 
+#include "core/handle_encoding.h"
+
 namespace granit::detail {
 
-/** 内部资源类型。数值会编码进句柄，但不属于公共 ABI。 */
-enum class resource_type : std::uint8_t {
-  unknown = 0,
-  renderer = 1,
-  buffer = 2,
-  texture = 3,
-  shader = 4,
-  pipeline = 5,
-  swapchain = 6,
-  fence = 7,
-  surface = 8,
-  texture_view = 9,
-  sampler = 10,
-  command_recorder = 11,
-  frame = 12,
-  pipeline_layout = 13,
-  bind_group_layout = 14,
-  bind_group = 15,
-  compute_pipeline = 16,
-  upload_batch = 17,
-  timestamp_query_pool = 18,
-  frame_context = 19,
-  async_operation = 20,
-  readback_batch = 21,
-  pipeline_warmup_batch = 22,
-  shader_library = 23,
-};
+using resource_type = handle_type;
 
 /**
  * 非拥有资源句柄表。
@@ -74,8 +50,6 @@ public:
 
 private:
   static constexpr std::uint32_t invalid_slot = std::numeric_limits<std::uint32_t>::max();
-  static constexpr std::uint32_t maximum_generation = UINT32_C(0x00ffffff);
-
   struct slot {
     void* resource{};
     std::uint32_t generation{1};
@@ -84,15 +58,6 @@ private:
     resource_type type{resource_type::unknown};
   };
 
-  struct decoded_handle {
-    std::uint32_t slot_index;
-    std::uint32_t generation;
-    resource_type type;
-  };
-
-  [[nodiscard]] static granit_handle encode(std::uint32_t slot_index, std::uint32_t generation,
-                                            resource_type type) noexcept;
-  [[nodiscard]] static bool decode(granit_handle handle, decoded_handle& decoded) noexcept;
   [[nodiscard]] const slot* validate(granit_handle handle, resource_type expected_type,
                                      std::uint32_t expected_domain,
                                      decoded_handle* decoded = nullptr) const noexcept;
