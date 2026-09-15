@@ -44,7 +44,8 @@ granit_target_compile_warnings(granit_sdl3_imgui_example)
 granit_target_output_directories(granit_sdl3_imgui_example)
 if(WIN32 AND GRANIT_BUILD_TESTING AND BUILD_TESTING)
   add_test(NAME granit.example.sdl3_imgui COMMAND granit_sdl3_imgui_example --smoke-test)
-  set_tests_properties(granit.example.sdl3_imgui PROPERTIES TIMEOUT 30)
+  set_tests_properties(granit.example.sdl3_imgui PROPERTIES TIMEOUT 30
+                       FAIL_REGULAR_EXPRESSION "销毁时仍有|ImGui Draw Data 转换失败")
 endif()
 
 if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
