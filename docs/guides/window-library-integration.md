@@ -8,6 +8,8 @@
 本指南说明如何将 SDL3 或 GLFW 创建的窗口直接连接到 Granit Surface。SDL3 使用者可以选择
 `granit::integration_sdl3` 自动查询原生值；本文保留平台直连方法，供 GLFW、定制集成和排错使用。
 第三方库继续拥有窗口、事件循环与输入；Granit 只借用创建 Surface 所需的原生值。
+直连代码需要显式包含 `<granit/renderer/native_surface.h>` 或
+`<granit/renderer/native_surface.hpp>`；这些来源描述不由普通聚合头携带。
 
 当前直接映射关系为：
 

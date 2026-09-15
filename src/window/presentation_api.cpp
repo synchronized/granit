@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/renderer/surface.h>
+#include <granit/renderer/native_surface.h>
 #include <granit/window/presentation.h>
 
 #include "window/window_backend_internal.h"

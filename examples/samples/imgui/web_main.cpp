@@ -14,6 +14,7 @@
 #include "samples/imgui/resources.h"
 
 #include <granit/granit.hpp>
+#include <granit/renderer/native_surface.hpp>
 #include <granit/integrations/imgui/renderer.hpp>
 #include <granit/pipeline/canvas_draw_list.hpp>
 

@@ -8,6 +8,7 @@
 #include "support/pbr_test_support.h"
 
 #include <granit/granit.hpp>
+#include <granit/renderer/native_surface.hpp>
 
 #include <windows.h>
 

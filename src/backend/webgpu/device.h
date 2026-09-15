@@ -8,7 +8,7 @@
 #include <span>
 
 #include <granit/core/result.h>
-#include <granit/renderer/surface.h>
+#include <granit/renderer/native_surface.h>
 
 #include "backend/webgpu/types.h"
 

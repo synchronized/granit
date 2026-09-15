@@ -101,7 +101,7 @@ typedef struct granit_window_event {
   ((uint32_t)(offsetof(granit_window_event, data) + sizeof(granit_window_event_data)))
 #define GRANIT_WINDOW_EVENT_INIT                                                                   \
   {                                                                                                \
-    (uint32_t)sizeof(granit_window_event), UINT32_C(0), GRANIT_NULL_HANDLE, UINT64_C(0), {{0, 0}}   \
+    (uint32_t)sizeof(granit_window_event), UINT32_C(0), GRANIT_NULL_HANDLE, UINT64_C(0), {{0, 0}}  \
   }
 
 /** 窗口最近已知的尺寸与内容缩放状态。 */
@@ -149,15 +149,6 @@ GRANIT_WINDOW_API granit_result granit_window_destroy(granit_window_system windo
 GRANIT_WINDOW_API granit_result granit_window_get_state(granit_window_system window_system,
                                                         granit_window window,
                                                         granit_window_state* state);
-GRANIT_WINDOW_API granit_result granit_window_get_win32(granit_window_system window_system,
-                                                        granit_window window, void** instance,
-                                                        void** native_window);
-GRANIT_WINDOW_API granit_result granit_window_get_xcb(granit_window_system window_system,
-                                                      granit_window window, void** connection,
-                                                      uint32_t* native_window);
-GRANIT_WINDOW_API granit_result granit_window_get_wayland(granit_window_system window_system,
-                                                          granit_window window, void** display,
-                                                          void** native_surface);
 
 #ifdef __cplusplus
 }

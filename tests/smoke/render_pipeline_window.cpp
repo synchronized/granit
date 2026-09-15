@@ -3,6 +3,7 @@
 
 #include "../support/shader_asset_store.h"
 #include <granit/granit.hpp>
+#include <granit/renderer/native_surface.hpp>
 #include <granit/pipeline/canvas_draw_list.hpp>
 #include <granit/pipeline/render_pipeline.h>
 

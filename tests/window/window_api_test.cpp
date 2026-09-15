@@ -3,6 +3,7 @@
 
 #include <granit/window.h>
 #include <granit/window.hpp>
+#include <granit/window/native.h>
 
 #include <catch2/catch_all.hpp>
 

@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <granit/integrations/sdl3/surface.hpp>
+#include <granit/renderer/native_surface.hpp>
 
 #include <SDL3/SDL_properties.h>
 #include <SDL3/SDL_video.h>

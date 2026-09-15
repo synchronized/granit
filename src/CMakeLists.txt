@@ -153,6 +153,8 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/shader_library.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/surface.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/surface.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/native_surface.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/native_surface.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/texture.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/texture.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/texture_asset.h"

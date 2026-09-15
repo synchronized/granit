@@ -52,6 +52,8 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/window/export.h"
       "${PROJECT_SOURCE_DIR}/include/granit/window/input.h"
       "${PROJECT_SOURCE_DIR}/include/granit/window/input.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/window/native.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/window/native.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/window/presentation.h"
       "${PROJECT_SOURCE_DIR}/include/granit/window/presentation.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/window/window.h"

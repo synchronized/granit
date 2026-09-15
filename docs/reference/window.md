@@ -96,8 +96,9 @@ Window System 的顺序销毁。函数校验 Window System、Window 归属和创
 内部读取，不需要普通调用方判断 Win32、XCB 或 Wayland。C++ 使用
 `granit::window::create_surface(renderer, surface)`，输出为 `granit::surface` RAII 对象。
 
-原生互操作仍可使用 `granit_window_get_win32`、`granit_window_get_xcb` 与
-`granit_window_get_wayland`，查询值仅在 Window 存活期间借用。
+原生互操作仍可显式包含 `<granit/window/native.h>` 或对应 C++ 头，并使用
+`granit_window_get_win32`、`granit_window_get_xcb` 与 `granit_window_get_wayland`；查询值仅在
+Window 存活期间借用。这些查询不进入普通 Window 聚合头。
 
 在 Win32 Window 上查询 XCB 或 Wayland 值返回 `GRANIT_ERROR_UNSUPPORTED`，输出参数清零。
 XCB Window 可通过 `granit_window_get_xcb` 借用 connection 和 `xcb_window_t` 数值。未设置或

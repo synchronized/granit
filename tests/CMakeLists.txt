@@ -117,6 +117,7 @@ add_library(
     headers/readback_batch_h.c
     headers/pipeline_warmup_h.c
     headers/window_h.c
+    headers/window_native_h.c
     headers/pipeline_material_h.c
     headers/pipeline_pbr_material_h.c
     headers/pipeline_mesh_h.c
@@ -693,6 +694,7 @@ add_library(
       headers/pipeline_text_draw_list_hpp.cpp
       headers/pipeline_text_atlas_hpp.cpp
     headers/window_hpp.cpp
+    headers/window_native_hpp.cpp
 )
 target_link_libraries(
   granit_cpp_header_test PRIVATE granit::granit granit::render_pipeline granit::window

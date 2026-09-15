@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include <granit/granit.h>
+#include <granit/renderer/native_surface.h>
 
 #include "snapshots/0.4.0/core_identity.h"
 

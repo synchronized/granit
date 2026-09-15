@@ -29,7 +29,7 @@
 #include <granit/renderer/sampler.h>
 #include <granit/renderer/shader.h>
 #include <granit/renderer/shader_library.h>
-#include <granit/renderer/surface.h>
+#include <granit/renderer/native_surface.h>
 #include <granit/renderer/swapchain.h>
 #include <granit/renderer/texture.h>
 #include <granit/renderer/timestamp_query.h>

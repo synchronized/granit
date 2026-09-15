@@ -23,7 +23,7 @@
 #include <granit/renderer/renderer.h>
 #include <granit/renderer/sampler.hpp>
 #include <granit/renderer/shader.hpp>
-#include <granit/renderer/surface.h>
+#include <granit/renderer/native_surface.h>
 #include <granit/renderer/swapchain.h>
 #include <granit/renderer/texture.hpp>
 #include <granit/renderer/texture_asset.h>

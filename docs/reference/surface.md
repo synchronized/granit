@@ -5,9 +5,11 @@
 
 ## 定位
 
-Surface 表示 Renderer 与原生窗口系统或浏览器 Canvas 之间的输出连接。所有平台都通过
-`granit_surface_desc` 和 `granit_surface_create` 创建，平台差异只存在于描述中的
-`surface_type` 和 `source`。公共接口不暴露 Vulkan 或 WebGPU 类型。
+Surface 表示 Renderer 与窗口系统或浏览器 Canvas 之间的输出连接。普通头
+`<granit/renderer/surface.h>` 提供句柄和销毁；Granit Window 用户直接调用
+`granit_window_create_surface`。外部窗口和 Canvas 使用显式高级头
+`<granit/renderer/native_surface.h>` 中的 `granit_surface_desc` 和 `granit_surface_create`，平台差异
+只存在于描述的 `surface_type` 与 `source`。公共接口不暴露 Vulkan 或 WebGPU 类型。
 
 Renderer 创建前必须在 `granit_renderer_desc::surface_types` 中声明可能使用的来源。未声明的来源
 返回 `GRANIT_ERROR_UNSUPPORTED`；当前 Vulkan 后端支持平台窗口，浏览器 WebGPU 后端支持 Canvas。
@@ -17,6 +19,8 @@ Renderer 创建前必须在 `granit_renderer_desc::surface_types` 中声明可�
 Win32 示例：
 
 ```c
+#include <granit/renderer/native_surface.h>
+
 granit_renderer_desc renderer_desc = GRANIT_RENDERER_DESC_INIT;
 renderer_desc.surface_types = GRANIT_SURFACE_TYPE_WIN32_BIT;
 
@@ -50,6 +54,8 @@ Canvas selector 是“指针 + UTF-8 字节长度”，不要求以空字符结�
 `granit::surface_desc` 提供按来源命名的工厂，`granit::surface` 只有一个初始化入口：
 
 ```cpp
+#include <granit/renderer/native_surface.hpp>
+
 granit::surface surface;
 auto result = surface.initialize(
     renderer.native_handle(),
@@ -59,6 +65,7 @@ auto result = surface.initialize(
 其他来源使用 `surface_desc::xcb(connection, window)`、
 `surface_desc::wayland(display, native_surface)` 或 `surface_desc::canvas("#viewport")`。
 `granit::surface` 是无异常、move-only 的 RAII 类型，内部保存所属 Renderer 句柄。
+Granit Window 的普通入口见[Window](window.md)。
 
 ## 生命周期与归属
 

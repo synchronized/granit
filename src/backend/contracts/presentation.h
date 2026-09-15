@@ -10,7 +10,7 @@
 #include <vector>
 
 #include <granit/renderer/resource_types.h>
-#include <granit/renderer/surface.h>
+#include <granit/renderer/native_surface.h>
 
 #include "backend/contracts/resources.h"
 

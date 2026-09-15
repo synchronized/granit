@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <granit/window/window.h>
+#include <granit/window/native.h>
 
 #include "window/window_backend_internal.h"
 
