@@ -205,6 +205,8 @@ D-03-graphics-pipeline.md
 - [S-43：0.24.0 AssetTools 源码布局收敛](S-43-0.24.0-asset-tools-source-layout.md)——已完成；
   公共路径、共享格式层、SDK、CLI 与测试归属已统一，并通过跨平台、共享、静态和安装 Consumer
   验收。
+- [S-44：0.25.0 Window、Input 与呈现边界收敛](S-44-0.25.0-window-input-presentation-convergence.md)
+  ——已规划；合并 Window/Input 生命周期，增加 Window Surface 便捷入口并隔离原生平台 API。
 
 ## 状态
 

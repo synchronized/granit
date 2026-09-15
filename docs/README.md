@@ -57,6 +57,7 @@
 22. [0.23.0 资产目录收敛计划](plans/S-41-0.23.0-asset-layout-convergence.md)
 23. [0.24.0 测试架构收敛计划](plans/S-42-0.24.0-test-architecture-convergence.md)
 24. [0.24.0 AssetTools 源码布局收敛计划](plans/S-43-0.24.0-asset-tools-source-layout.md)
+25. [0.25.0 Window、Input 与呈现边界收敛计划](plans/S-44-0.25.0-window-input-presentation-convergence.md)
 
 ## 操作指南
 

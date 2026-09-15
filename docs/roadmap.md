@@ -49,7 +49,9 @@
 | 二十九、0.21.0 Shader Library 与后端无关材质 | 已完成 | S-37A～S-37L 与跨平台候选包验收均已完成 |
 | 三十、0.22.0 AssetTools SDK 与工具链交付 | 已发布 | AssetTools SDK 与工具链已随 0.22.0 发布 |
 | 三十一、0.23.0 空帧与覆盖层可靠性 | 已发布 | S-39～S-41 已随 0.23.0 发布 |
-| 三十二、0.24.0 测试架构收敛 | 已发布 | S-42～S-43 已随 0.24.0 发布 |
+| 三十二、0.24.0 测试架构收敛 | 已发布 | S-42 已随 0.24.0 发布 |
+| 三十三、0.24.0 AssetTools 源码布局收敛 | 已发布 | S-43 已随 0.24.0 发布 |
+| 三十四、0.25.0 Window/Input/呈现收敛 | 待开始 | S-44 已规划，等待实施 |
 
 ## 一、工程与 ABI 基础
 
@@ -507,12 +509,26 @@
 - AssetTools 六类结果句柄已统一类型、槽位和 generation 校验；Environment Map 与 Debug Draw List
   的内部类型标记不再冲突，跨类型使用会返回无效句柄错误。
 
+## 三十四、0.25.0 Window、Input 与呈现边界收敛
+
+**状态：待开始；S-44 已完成规划。**
+
+- **[S-44](plans/S-44-0.25.0-window-input-presentation-convergence.md) / P1**：将只服务 Window 的
+  Input 运行时并入 Window System，保留独立事件和值类型，删除第二套句柄、动态库和私有桥接。
+- 为 Granit Window 增加直接创建 Renderer Surface 的便捷入口；外部窗口继续使用显式包含的原生
+  Surface 描述，Renderer 不依赖 Window。
+- 以平台无关的呈现模式取代 Renderer 创建描述中的平台 Surface 位，并把原生窗口接口移出普通
+  聚合头。
+- 将 Window/Input 产品源码收敛到 `src/window`，按通用运行时、Input 领域和具体平台组织。
+- 手柄、触摸、完整 IME、第三方输入转换、Android 和全局 Event Bus 不属于本版本。
+
 ## 近期执行顺序
 
-1. 公共执行器与场景 API 继续等待第二个真实复用证据。
-2. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
-3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-4. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
+1. 实施 S-44，先做源码等价归位，再合并 Input 生命周期，最后调整呈现与原生接入边界。
+2. 公共执行器与场景 API 继续等待第二个真实复用证据。
+3. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
+4. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+5. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 
 若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。
