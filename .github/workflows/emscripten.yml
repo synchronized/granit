@@ -107,7 +107,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: 下载浏览器示例产物
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: granit-web-examples
           path: build/emscripten-release/web

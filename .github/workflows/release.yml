@@ -182,7 +182,7 @@ jobs:
     needs: [windows-package, linux-package]
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v7
         with:
           path: dist
           merge-multiple: true
