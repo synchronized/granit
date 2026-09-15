@@ -4,9 +4,9 @@
 #ifndef GRANIT_PLATFORM_INPUT_ADAPTER_H_
 #define GRANIT_PLATFORM_INPUT_ADAPTER_H_
 
-#include <granit/input/input.h>
+#include <granit/window/input.h>
 
-#include "window/input_bridge.hpp"
+#include "window/input/native_event.h"
 
 #include <cstdint>
 #include <memory>

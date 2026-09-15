@@ -4,9 +4,11 @@
 #ifndef GRANIT_PLATFORM_WINDOW_BACKEND_INTERNAL_H_
 #define GRANIT_PLATFORM_WINDOW_BACKEND_INTERNAL_H_
 
+#include <granit/window/input.h>
 #include <granit/window/window.h>
 
-#include "window/input_bridge.hpp"
+#include "window/input/native_event.h"
+#include "window/input/platform_adapter.h"
 
 #if defined(GRANIT_WINDOW_HAS_XCB)
 #include <xcb/xcb.h>
@@ -63,10 +65,10 @@ struct window_system_record {
   std::uint32_t backend{};
   std::unordered_map<granit_window, std::shared_ptr<window_record>> windows;
   std::deque<granit_window_event> events;
-  void* input_user_data{};
-  granit_window_input_window_callback input_window_destroyed{};
-  granit_window_input_window_callback input_focus_lost{};
-  granit_window_input_native_event_callback input_native_event{};
+  std::deque<granit_input_event> input_events;
+  std::unordered_map<granit_window, granit_keyboard_state> keyboards;
+  std::unordered_map<granit_window, granit_pointer_state> pointers;
+  granit::input::detail::platform_input_adapter input_platform;
 #if defined(GRANIT_WINDOW_HAS_XCB)
   xcb_connection_t* connection{};
   xcb_screen_t* screen{};
@@ -97,15 +99,20 @@ extern std::atomic<std::uint64_t> next_handle;
 
 std::uint64_t allocate_handle() noexcept;
 std::uint64_t timestamp_ns() noexcept;
+std::shared_ptr<window_system_record> acquire_system(granit_window_system handle);
+bool on_owner_thread(const window_system_record& system) noexcept;
 void enqueue_event(const std::shared_ptr<window_system_record>& system, granit_window window,
                    std::uint32_t type);
+void handle_native_input(window_system_record& system, granit_window window,
+                         const granit_window_input_native_event& event);
+void clear_window_input(window_system_record& system, granit_window window);
+void clear_input_focus(window_system_record& system, granit_window window);
 
 #if defined(_WIN32)
 granit_result create_win32_system(granit_window_system* output);
 granit_result destroy_win32_system(granit_window_system handle,
                                    const std::shared_ptr<window_system_record>& system);
-granit_result poll_win32_event(const std::shared_ptr<window_system_record>& system,
-                               granit_window_event* event);
+granit_result process_win32_events(const std::shared_ptr<window_system_record>& system);
 granit_result create_win32_window(const std::shared_ptr<window_system_record>& system,
                                   const granit_window_desc* desc, granit_window* output);
 granit_result destroy_win32_window(const std::shared_ptr<window_system_record>& system,
@@ -118,8 +125,7 @@ granit_result get_win32_window(const std::shared_ptr<window_record>& window, voi
 granit_result create_xcb_system(granit_window_system* output);
 granit_result destroy_xcb_system(granit_window_system handle,
                                  const std::shared_ptr<window_system_record>& system);
-granit_result poll_xcb_event(const std::shared_ptr<window_system_record>& system,
-                             granit_window_event* event);
+granit_result process_xcb_events(const std::shared_ptr<window_system_record>& system);
 granit_result create_xcb_window(const std::shared_ptr<window_system_record>& system,
                                 const granit_window_desc* desc, granit_window* output);
 granit_result destroy_xcb_window(const std::shared_ptr<window_system_record>& system,
@@ -141,15 +147,12 @@ granit_result create_wayland_system(granit_window_system* output);
 granit_result
 destroy_registered_wayland_system(granit_window_system handle,
                                   const std::shared_ptr<window_system_record>& system);
-granit_result poll_wayland_event(const std::shared_ptr<window_system_record>& system,
-                                 granit_window_event* event);
+granit_result process_wayland_events(const std::shared_ptr<window_system_record>& system);
 granit_result create_wayland_window(const std::shared_ptr<window_system_record>& system,
                                     const granit_window_desc* desc, granit_window* output);
 granit_result destroy_registered_wayland_window(const std::shared_ptr<window_system_record>& system,
                                                 const std::shared_ptr<window_record>& window,
                                                 granit_window handle);
-granit_result attach_wayland_input(window_system_record& system);
-void detach_wayland_input(window_system_record& system);
 granit_result get_wayland_window(const std::shared_ptr<window_system_record>& system,
                                  const std::shared_ptr<window_record>& window, void** display,
                                  void** native_surface);

@@ -109,8 +109,6 @@ extern "C" granit_result granit_window_system_destroy(granit_window_system handl
     return GRANIT_ERROR_INVALID_HANDLE;
   if (!on_owner_thread(*system))
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (system->input_user_data != nullptr)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
 #if defined(_WIN32)
   return destroy_win32_system(handle, system);
 #elif defined(GRANIT_WINDOW_HAS_XCB) || defined(GRANIT_WINDOW_HAS_WAYLAND)
@@ -128,6 +126,29 @@ extern "C" granit_result granit_window_system_destroy(granit_window_system handl
 #endif
 }
 
+extern "C" granit_result granit_window_system_process_events(granit_window_system handle) {
+  auto system = acquire_system(handle);
+  if (!system)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (!on_owner_thread(*system))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+#if defined(_WIN32)
+  return process_win32_events(system);
+#elif defined(GRANIT_WINDOW_HAS_XCB) || defined(GRANIT_WINDOW_HAS_WAYLAND)
+#if defined(GRANIT_WINDOW_HAS_WAYLAND)
+  if (system->backend == GRANIT_WINDOW_BACKEND_WAYLAND)
+    return process_wayland_events(system);
+#endif
+#if defined(GRANIT_WINDOW_HAS_XCB)
+  if (system->backend == GRANIT_WINDOW_BACKEND_XCB)
+    return process_xcb_events(system);
+#endif
+  return GRANIT_ERROR_UNSUPPORTED;
+#else
+  return GRANIT_ERROR_UNSUPPORTED;
+#endif
+}
+
 extern "C" granit_result granit_window_poll_event(granit_window_system handle,
                                                   granit_window_event* event) {
   if (event == nullptr || event->struct_size < GRANIT_WINDOW_EVENT_VERSION_1_SIZE)
@@ -137,25 +158,11 @@ extern "C" granit_result granit_window_poll_event(granit_window_system handle,
     return GRANIT_ERROR_INVALID_HANDLE;
   if (!on_owner_thread(*system))
     return GRANIT_ERROR_INVALID_ARGUMENT;
-#if defined(_WIN32)
-  return poll_win32_event(system, event);
-#elif defined(GRANIT_WINDOW_HAS_XCB) || defined(GRANIT_WINDOW_HAS_WAYLAND)
-#if defined(GRANIT_WINDOW_HAS_WAYLAND)
-  if (system->backend == GRANIT_WINDOW_BACKEND_WAYLAND)
-    return poll_wayland_event(system, event);
-#endif
-#if defined(GRANIT_WINDOW_HAS_XCB)
-  if (system->backend == GRANIT_WINDOW_BACKEND_XCB)
-    return poll_xcb_event(system, event);
-#endif
   if (system->events.empty())
     return GRANIT_ERROR_NOT_READY;
   *event = system->events.front();
   system->events.pop_front();
   return GRANIT_SUCCESS;
-#else
-  return GRANIT_ERROR_UNSUPPORTED;
-#endif
 }
 
 extern "C" granit_result granit_window_create(granit_window_system system_handle,
@@ -201,8 +208,7 @@ extern "C" granit_result granit_window_destroy(granit_window_system system_handl
   const auto found = system->windows.find(window_handle);
   if (found == system->windows.end())
     return GRANIT_ERROR_INVALID_HANDLE;
-  if (system->input_window_destroyed != nullptr)
-    system->input_window_destroyed(system->input_user_data, window_handle);
+  clear_window_input(*system, window_handle);
 #if defined(_WIN32)
   return destroy_win32_window(system, window_handle);
 #elif defined(GRANIT_WINDOW_HAS_XCB) || defined(GRANIT_WINDOW_HAS_WAYLAND)
@@ -244,78 +250,6 @@ extern "C" granit_result granit_window_get_state(granit_window_system system_han
   state->content_scale_horizontal = window.content_scale_horizontal;
   state->content_scale_vertical = window.content_scale_vertical;
   return GRANIT_SUCCESS;
-}
-
-extern "C" granit_result
-granit_window_internal_attach_input(granit_window_system handle, void* user_data,
-                                    granit_window_input_window_callback window_destroyed,
-                                    granit_window_input_window_callback focus_lost,
-                                    granit_window_input_native_event_callback native_event) {
-  auto system = acquire_system(handle);
-  if (!system)
-    return GRANIT_ERROR_INVALID_HANDLE;
-  if (!on_owner_thread(*system) || user_data == nullptr || window_destroyed == nullptr ||
-      focus_lost == nullptr || native_event == nullptr)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (system->input_user_data != nullptr)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  system->input_user_data = user_data;
-  system->input_window_destroyed = window_destroyed;
-  system->input_focus_lost = focus_lost;
-  system->input_native_event = native_event;
-#if defined(GRANIT_WINDOW_HAS_WAYLAND)
-  if (system->backend == GRANIT_WINDOW_BACKEND_WAYLAND) {
-    const auto result = attach_wayland_input(*system);
-    if (result == GRANIT_SUCCESS)
-      return GRANIT_SUCCESS;
-    system->input_user_data = nullptr;
-    system->input_window_destroyed = nullptr;
-    system->input_focus_lost = nullptr;
-    system->input_native_event = nullptr;
-    return result;
-  }
-#endif
-  return GRANIT_SUCCESS;
-}
-
-extern "C" granit_result granit_window_internal_detach_input(granit_window_system handle,
-                                                             void* user_data) {
-  auto system = acquire_system(handle);
-  if (!system)
-    return GRANIT_ERROR_INVALID_HANDLE;
-  if (!on_owner_thread(*system) || system->input_user_data != user_data)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-#if defined(GRANIT_WINDOW_HAS_WAYLAND)
-  if (system->backend == GRANIT_WINDOW_BACKEND_WAYLAND)
-    detach_wayland_input(*system);
-#endif
-  system->input_user_data = nullptr;
-  system->input_window_destroyed = nullptr;
-  system->input_focus_lost = nullptr;
-  system->input_native_event = nullptr;
-  return GRANIT_SUCCESS;
-}
-
-extern "C" granit_result granit_window_internal_pump(granit_window_system handle) {
-  granit_window_event event = GRANIT_WINDOW_EVENT_INIT;
-  const auto result = granit_window_poll_event(handle, &event);
-  if (result == GRANIT_SUCCESS) {
-    auto system = acquire_system(handle);
-    if (system)
-      system->events.push_front(event);
-    return GRANIT_SUCCESS;
-  }
-  return result == GRANIT_ERROR_NOT_READY ? GRANIT_SUCCESS : result;
-}
-
-extern "C" granit_result granit_window_internal_contains(granit_window_system handle,
-                                                         granit_window window) {
-  auto system = acquire_system(handle);
-  if (!system)
-    return GRANIT_ERROR_INVALID_HANDLE;
-  if (!on_owner_thread(*system))
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  return system->windows.contains(window) ? GRANIT_SUCCESS : GRANIT_ERROR_INVALID_HANDLE;
 }
 
 extern "C" granit_result granit_window_get_win32(granit_window_system system_handle,

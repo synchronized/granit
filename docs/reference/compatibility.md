@@ -16,8 +16,8 @@ Texture 离线编码入口迁出后的导出集合，0.23.0 未改变该导出�
 AssetTools 0.22.0 使用独立快照记录四个资产领域；
 RenderPipeline 使用 0.17.0 完整符号快照，覆盖 Shader Asset 检查、标准 PBR Schema 与材质
 Pipeline 预热入口。
-Window 新增接口使用 0.5.0 增量符号快照，Input 继续使用 0.1.0 快照。历史
-快照保持不可变，新版本只在 ABI 发生变化时通过新目录记录增量或完整基线。
+Window 在 0.25.0 合并输入生命周期，并使用 0.25.0 完整符号快照。历史快照保持不可变，新版本
+只在 ABI 发生变化时通过新目录记录增量或完整基线。
 
 ## 接口等级
 
@@ -43,8 +43,7 @@ Window 新增接口使用 0.5.0 增量符号快照，Input 继续使用 0.1.0 �
 |---|---|---|---|---|
 | Core（默认） | `granit::granit` | 无可选 Granit component | 稳定候选 | 优先收敛 C ABI、资源与提交契约 |
 | `RenderPipeline` | `granit::render_pipeline` | Core | 稳定候选 | 收敛材质、场景提交和参考管线边界 |
-| `Window` | `granit::window` | Core | 稳定候选 | 验证平台后端与宿主循环契约 |
-| `Input` | `granit::input` | Core、Window | 稳定候选 | 验证事件、文本输入与线程契约 |
+| `Window` | `granit::window` | Core | 稳定候选 | 验证平台后端、输入与宿主循环契约 |
 | `AssetTools` | `granit::asset_tools` | Threads、可选离线工具链 | 实验性 | 统一离线资产构建、检查与 CLI |
 | `IntegrationSDL3` | `granit::integration_sdl3` | Core、SDL3 | 实验性 | 保持可选适配层，不进入 Core |
 | `IntegrationImGui` | `granit::integration_imgui` | Core、RenderPipeline、ImGui | 实验性 | 保持可选适配层，不承诺第三方 ABI |

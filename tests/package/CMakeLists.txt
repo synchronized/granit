@@ -57,7 +57,6 @@ if(NOT GRANIT_REQUEST_COMPONENT)
     IN ITEMS
       granit::render_pipeline
       granit::window
-      granit::input
       granit::asset_tools
       granit::integration_sdl3
       granit::integration_imgui
@@ -70,11 +69,6 @@ elseif(GRANIT_REQUEST_COMPONENT STREQUAL "RenderPipeline")
   set(expected_target granit::render_pipeline)
 elseif(GRANIT_REQUEST_COMPONENT STREQUAL "Window")
   set(expected_target granit::window)
-elseif(GRANIT_REQUEST_COMPONENT STREQUAL "Input")
-  set(expected_target granit::input)
-  if(NOT TARGET granit::window)
-    message(FATAL_ERROR "Input component 未导入其 Window 依赖")
-  endif()
 elseif(GRANIT_REQUEST_COMPONENT STREQUAL "AssetTools")
   set(expected_target granit::asset_tools)
   if(NOT EXISTS "${granit_SHADER_TOOLCHAIN_MODULE}")

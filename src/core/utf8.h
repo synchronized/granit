@@ -7,7 +7,7 @@
 #include <cstddef>
 #include <string_view>
 
-namespace granit::input::detail {
+namespace granit::detail {
 
 enum class utf8_chunk_result {
   success,
@@ -19,6 +19,6 @@ enum class utf8_chunk_result {
 [[nodiscard]] utf8_chunk_result next_utf8_chunk(std::string_view text, std::size_t capacity,
                                                 std::size_t& length) noexcept;
 
-} // namespace granit::input::detail
+} // namespace granit::detail
 
 #endif

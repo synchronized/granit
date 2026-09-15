@@ -47,8 +47,7 @@ Granit 采用“Bring Your Own Engine”边界，不接管使用者的 ECS、Sce
 |---|---|---|---|
 | [核心 Renderer](docs/reference/renderer.md) | `granit::granit` | 0.x，未冻结 | GPU 资源、命令、Pipeline、同步与提交 |
 | [参考渲染管线](docs/reference/render-pipeline.md) | `granit::render_pipeline` | 0.x，未冻结 | Forward PBR、Lighting、Canvas、Debug Draw 与 Text |
-| [Window](docs/reference/window.md) | `granit::window` | 0.x，未冻结 | Win32、XCB、Wayland 窗口、事件及 Surface 接入 |
-| [Input](docs/reference/input.md) | `granit::input` | 0.x，未冻结 | Win32、XCB 和 Wayland 输入状态与事件 |
+| [Window](docs/reference/window.md) | `granit::window` | 0.x，未冻结 | Win32、XCB、Wayland 窗口、输入事件与 Surface 接入 |
 | [第三方集成](docs/reference/third-party-integrations.md) | `granit::integration_sdl3`、`granit::integration_imgui` | 实验性 | SDL3 Surface 与 ImGui Draw Data 转换 |
 
 ## 使用发布包
@@ -140,16 +139,16 @@ find_package(granit CONFIG REQUIRED COMPONENTS RenderPipeline)
 target_link_libraries(your_target PRIVATE granit::render_pipeline)
 ```
 
-使用可选 Window 和 Input component：
+使用可选 Window component：
 
 ```cmake
-find_package(granit CONFIG REQUIRED COMPONENTS Window Input)
-target_link_libraries(your_target PRIVATE granit::granit granit::window granit::input)
+find_package(granit CONFIG REQUIRED COMPONENTS Window)
+target_link_libraries(your_target PRIVATE granit::granit granit::window)
 ```
 
-Window 和 Input 均不是核心 Renderer 的强制依赖。应用也可以自行接入 SDL3 或 GLFW，具体边界见
-[窗口库接入](docs/guides/window-library-integration.md)；Input 行为见
-[Input component](docs/reference/input.md)。
+Window 不是核心 Renderer 的强制依赖，并直接提供窗口及输入事件。应用也可以自行接入 SDL3 或
+GLFW，具体边界见[窗口库接入](docs/guides/window-library-integration.md)；输入行为见
+[Window 输入](docs/reference/input.md)。
 
 使用可选 SDL3 和 ImGui Integration：
 

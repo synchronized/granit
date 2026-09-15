@@ -9,6 +9,7 @@
 #include <utility>
 
 #include <granit/core/result.hpp>
+#include <granit/window/input.hpp>
 #include <granit/window/window.h>
 
 namespace granit {
@@ -61,6 +62,21 @@ public:
   [[nodiscard]] result poll(window_event& event) noexcept {
     event.struct_size = sizeof(window_event);
     return from_native(granit_window_poll_event(handle_, &event));
+  }
+  [[nodiscard]] result process_events() noexcept {
+    return from_native(granit_window_system_process_events(handle_));
+  }
+  [[nodiscard]] result poll(input_event& event) noexcept {
+    event.struct_size = sizeof(input_event);
+    return from_native(granit_window_poll_input_event(handle_, &event));
+  }
+  [[nodiscard]] result keyboard(granit_window window, keyboard_state& state) const noexcept {
+    state = GRANIT_KEYBOARD_STATE_INIT;
+    return from_native(granit_window_get_keyboard_state(handle_, window, &state));
+  }
+  [[nodiscard]] result pointer(granit_window window, pointer_state& state) const noexcept {
+    state = GRANIT_POINTER_STATE_INIT;
+    return from_native(granit_window_get_pointer_state(handle_, window, &state));
   }
   [[nodiscard]] result reset() noexcept {
     if (!valid())

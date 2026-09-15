@@ -1,30 +1,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_INPUT_INPUT_H_
-#define GRANIT_INPUT_INPUT_H_
+#ifndef GRANIT_WINDOW_INPUT_H_
+#define GRANIT_WINDOW_INPUT_H_
 
 #include <stddef.h>
 #include <stdint.h>
 
 #include <granit/core/result.h>
 #include <granit/core/types.h>
-#include <granit/input/export.h>
+#include <granit/window/export.h>
 #include <granit/window/window.h>
-
-typedef granit_handle granit_input_system;
-
-typedef struct granit_input_system_desc {
-  uint32_t struct_size;
-  granit_window_system window_system;
-  uint32_t flags;
-  uint32_t reserved;
-} granit_input_system_desc;
-
-#define GRANIT_INPUT_SYSTEM_DESC_VERSION_1_SIZE                                                    \
-  ((uint32_t)(offsetof(granit_input_system_desc, reserved) + sizeof(uint32_t)))
-#define GRANIT_INPUT_SYSTEM_DESC_INIT                                                              \
-  {(uint32_t)sizeof(granit_input_system_desc), GRANIT_NULL_HANDLE, UINT32_C(0), UINT32_C(0)}
 
 typedef enum granit_input_event_type {
   GRANIT_INPUT_EVENT_KEY = 1,
@@ -253,17 +239,17 @@ typedef struct granit_pointer_state {
 extern "C" {
 #endif
 
-GRANIT_INPUT_API granit_result granit_input_system_create(const granit_input_system_desc* desc,
-                                                          granit_input_system* input_system);
-GRANIT_INPUT_API granit_result granit_input_system_destroy(granit_input_system input_system);
-GRANIT_INPUT_API granit_result granit_input_poll_event(granit_input_system input_system,
-                                                       granit_input_event* event);
-GRANIT_INPUT_API granit_result granit_input_get_keyboard_state(granit_input_system input_system,
-                                                               granit_window window,
-                                                               granit_keyboard_state* state);
-GRANIT_INPUT_API granit_result granit_input_get_pointer_state(granit_input_system input_system,
-                                                              granit_window window,
-                                                              granit_pointer_state* state);
+/** 弹出一个已经由 Window System 处理的输入事件；队列为空时返回 NOT_READY。 */
+GRANIT_WINDOW_API granit_result granit_window_poll_input_event(granit_window_system window_system,
+                                                               granit_input_event* event);
+
+/** 查询指定 Window 的当前键盘状态。 */
+GRANIT_WINDOW_API granit_result granit_window_get_keyboard_state(
+    granit_window_system window_system, granit_window window, granit_keyboard_state* state);
+
+/** 查询指定 Window 的当前指针状态。 */
+GRANIT_WINDOW_API granit_result granit_window_get_pointer_state(
+    granit_window_system window_system, granit_window window, granit_pointer_state* state);
 
 #ifdef __cplusplus
 }

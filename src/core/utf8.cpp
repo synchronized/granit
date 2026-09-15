@@ -5,7 +5,7 @@
 
 #include <cstdint>
 
-namespace granit::input::detail {
+namespace granit::detail {
 namespace {
 
 bool continuation(std::uint8_t value) noexcept { return value >= 0x80 && value <= 0xbf; }
@@ -59,4 +59,4 @@ utf8_chunk_result next_utf8_chunk(std::string_view text, std::size_t capacity,
   return utf8_chunk_result::success;
 }
 
-} // namespace granit::input::detail
+} // namespace granit::detail

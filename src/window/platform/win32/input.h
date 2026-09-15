@@ -4,7 +4,7 @@
 #ifndef GRANIT_PLATFORM_WIN32_INPUT_ADAPTER_H_
 #define GRANIT_PLATFORM_WIN32_INPUT_ADAPTER_H_
 
-#include <granit/input/input.h>
+#include <granit/window/input.h>
 
 #include <cstdint>
 #include <string_view>

@@ -4,6 +4,7 @@
 #ifndef GRANIT_WINDOW_H_
 #define GRANIT_WINDOW_H_
 
+#include <granit/window/input.h>
 #include <granit/window/window.h>
 
 #endif

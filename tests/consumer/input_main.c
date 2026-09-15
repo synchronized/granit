@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/input.h>
+#include <granit/window.h>
 
 int main(void) {
   granit_window_system_desc window_desc = GRANIT_WINDOW_SYSTEM_DESC_INIT;
@@ -13,17 +13,12 @@ int main(void) {
   if (window_result != GRANIT_SUCCESS || windows == GRANIT_NULL_HANDLE)
     return 2;
 
-  granit_input_system_desc input_desc = GRANIT_INPUT_SYSTEM_DESC_INIT;
-  input_desc.window_system = windows;
-  granit_input_system input = GRANIT_NULL_HANDLE;
-  if (granit_input_system_create(&input_desc, &input) != GRANIT_SUCCESS ||
-      input == GRANIT_NULL_HANDLE)
+  if (granit_window_system_process_events(windows) != GRANIT_SUCCESS)
     return 3;
-  if (granit_input_system_destroy(input) != GRANIT_SUCCESS)
+  granit_input_event event = GRANIT_INPUT_EVENT_INIT;
+  if (granit_window_poll_input_event(windows, &event) != GRANIT_ERROR_NOT_READY)
     return 4;
-  if (granit_input_system_destroy(input) != GRANIT_ERROR_INVALID_HANDLE)
-    return 5;
   if (granit_window_system_destroy(windows) != GRANIT_SUCCESS)
-    return 6;
-  return granit_window_system_destroy(windows) == GRANIT_ERROR_INVALID_HANDLE ? 0 : 7;
+    return 5;
+  return granit_window_system_destroy(windows) == GRANIT_ERROR_INVALID_HANDLE ? 0 : 6;
 }

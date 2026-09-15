@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/input.hpp>
+#include <granit/window/input.hpp>
 
 #include <type_traits>
 
@@ -14,5 +14,3 @@ static_assert(static_cast<std::uint32_t>(granit::input_event_type::text) ==
               GRANIT_INPUT_EVENT_TEXT);
 static_assert(static_cast<std::uint32_t>(granit::key_action::repeated) ==
               GRANIT_KEY_ACTION_REPEATED);
-static_assert(std::is_move_constructible_v<granit::input_system>);
-static_assert(!std::is_copy_constructible_v<granit::input_system>);

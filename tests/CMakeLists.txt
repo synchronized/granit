@@ -130,7 +130,7 @@ add_library(
 )
 target_compile_features(granit_c_header_test PRIVATE c_std_11)
 target_link_libraries(
-  granit_c_header_test PRIVATE granit::granit granit::render_pipeline granit::window granit::input
+  granit_c_header_test PRIVATE granit::granit granit::render_pipeline granit::window
 )
 granit_target_compile_warnings(granit_c_header_test)
 
@@ -143,12 +143,10 @@ if(BUILD_SHARED_LIBS)
       GRANIT_ABI_CORE_LIBRARY_PATH="$<TARGET_FILE:granit>"
       GRANIT_ABI_RENDER_PIPELINE_LIBRARY_PATH="$<TARGET_FILE:granit_render_pipeline>"
       GRANIT_ABI_WINDOW_LIBRARY_PATH="$<TARGET_FILE:granit_window>"
-      GRANIT_ABI_INPUT_LIBRARY_PATH="$<TARGET_FILE:granit_input>"
       GRANIT_ABI_ASSET_TOOLS_LIBRARY_PATH="$<TARGET_FILE:granit_asset_tools>"
       GRANIT_ABI_CORE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.22.0/core_symbols.txt"
       GRANIT_ABI_RENDER_PIPELINE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.17.0/render_pipeline_symbols.txt"
-      GRANIT_ABI_WINDOW_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.5.0/window_symbols.txt"
-      GRANIT_ABI_INPUT_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/input_symbols.txt"
+      GRANIT_ABI_WINDOW_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.25.0/window_symbols.txt"
       GRANIT_ABI_ASSET_TOOLS_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.22.0/asset_tools_symbols.txt"
   )
   target_include_directories(
@@ -160,8 +158,7 @@ if(BUILD_SHARED_LIBS)
     PRIVATE Catch2::Catch2WithMain ${CMAKE_DL_LIBS}
   )
   add_dependencies(
-    granit_abi_exports_test granit granit_render_pipeline granit_window granit_input
-    granit_asset_tools
+    granit_abi_exports_test granit granit_render_pipeline granit_window granit_asset_tools
   )
   granit_target_compile_warnings(granit_abi_exports_test)
   granit_target_output_directories(granit_abi_exports_test)
@@ -216,13 +213,11 @@ if(BUILD_SHARED_LIBS)
         "${CMAKE_COMMAND}"
         "-DGRANIT_ABI_COMPONENT=window"
         "-DGRANIT_ABI_LIBRARY=$<TARGET_FILE:granit_window>"
-        "-DGRANIT_ABI_SNAPSHOT=${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.5.0/window_symbols.txt"
+        "-DGRANIT_ABI_SNAPSHOT=${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.25.0/window_symbols.txt"
         "-DGRANIT_ABI_EXPORT_TOOL=${granit_abi_export_tool}"
         "-DGRANIT_ABI_EXPORT_TOOL_KIND=${granit_abi_export_tool_kind}"
-        "-DGRANIT_ABI_PRIVATE_EXPORTS=${CMAKE_CURRENT_SOURCE_DIR}/abi/snapshots/0.1.0/window_private_symbols.txt"
         -P "${CMAKE_CURRENT_SOURCE_DIR}/abi/check_exported_symbols.cmake"
     )
-    granit_add_abi_export_snapshot_test(input granit_input input_symbols.txt)
     granit_add_abi_export_snapshot_test(
       asset_tools granit_asset_tools asset_tools_symbols.txt
     )
@@ -700,7 +695,7 @@ add_library(
     headers/window_hpp.cpp
 )
 target_link_libraries(
-  granit_cpp_header_test PRIVATE granit::granit granit::render_pipeline granit::window granit::input
+  granit_cpp_header_test PRIVATE granit::granit granit::render_pipeline granit::window
 )
 granit_target_compile_warnings(granit_cpp_header_test)
 
@@ -719,23 +714,23 @@ granit_target_output_directories(granit_window_test)
 add_test(NAME granit.window COMMAND granit_window_test)
 
 add_executable(
-  granit_input_test
+  granit_window_input_test
   input/input_api_test.cpp
   input/utf8_test.cpp
-  $<TARGET_OBJECTS:granit_input_internal>
+  $<TARGET_OBJECTS:granit_window_input_internal>
 )
 if(GRANIT_HAS_XCB)
-  target_sources(granit_input_test PRIVATE input/xcb_input_adapter_test.cpp)
+  target_sources(granit_window_input_test PRIVATE input/xcb_input_adapter_test.cpp)
 endif()
 if(GRANIT_HAS_WAYLAND_INPUT)
-  target_sources(granit_input_test PRIVATE input/wayland_input_adapter_test.cpp)
-  target_link_libraries(granit_input_test PRIVATE "${GRANIT_XKBCOMMON_LIBRARY}")
+  target_sources(granit_window_input_test PRIVATE input/wayland_input_adapter_test.cpp)
+  target_link_libraries(granit_window_input_test PRIVATE "${GRANIT_XKBCOMMON_LIBRARY}")
 endif()
-target_include_directories(granit_input_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
-target_link_libraries(granit_input_test PRIVATE granit::input Catch2::Catch2WithMain)
-granit_target_compile_warnings(granit_input_test)
-granit_target_output_directories(granit_input_test)
-add_test(NAME granit.input COMMAND granit_input_test)
+target_include_directories(granit_window_input_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_link_libraries(granit_window_input_test PRIVATE granit::window Catch2::Catch2WithMain)
+granit_target_compile_warnings(granit_window_input_test)
+granit_target_output_directories(granit_window_input_test)
+add_test(NAME granit.window_input COMMAND granit_window_input_test)
 
 add_executable(granit_window_renderer_test window/window_renderer_test.cpp)
 target_link_libraries(
@@ -805,7 +800,7 @@ set_property(
     granit.scene
     granit.vulkan_backend
     granit.window
-    granit.input
+    granit.window_input
   APPEND PROPERTY LABELS unit
 )
 set_property(TEST granit.documentation APPEND PROPERTY LABELS unit)
@@ -840,7 +835,6 @@ if(BUILD_SHARED_LIBS)
         granit.abi.exports.core
         granit.abi.exports.render_pipeline
         granit.abi.exports.window
-        granit.abi.exports.input
         granit.abi.exports.asset_tools
       APPEND PROPERTY LABELS package release
     )

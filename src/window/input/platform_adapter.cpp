@@ -3,13 +3,13 @@
 
 #include "window/input/platform_adapter.h"
 
-#if defined(GRANIT_INPUT_HAS_WAYLAND)
+#if defined(GRANIT_WINDOW_HAS_WAYLAND_INPUT)
 #include "window/platform/wayland/input.h"
 #endif
 #if defined(_WIN32)
 #include "window/platform/win32/input.h"
 #endif
-#if defined(GRANIT_INPUT_HAS_XCB)
+#if defined(GRANIT_WINDOW_HAS_XCB)
 #include "window/platform/xcb/input.h"
 #endif
 
@@ -21,7 +21,7 @@ struct platform_input_adapter::implementation {
 #if defined(_WIN32)
   win32_input_adapter win32;
 #endif
-#if defined(GRANIT_INPUT_HAS_WAYLAND)
+#if defined(GRANIT_WINDOW_HAS_WAYLAND_INPUT)
   wayland_input_adapter wayland;
 #endif
 };
@@ -42,7 +42,7 @@ void platform_input_adapter::handle(granit_window window,
     return;
   }
 #endif
-#if defined(GRANIT_INPUT_HAS_XCB)
+#if defined(GRANIT_WINDOW_HAS_XCB)
   if (event.backend == GRANIT_WINDOW_INPUT_BACKEND_XCB) {
     const xcb_input_sink native_sink{sink.user_data, sink.keyboard, sink.pointer, sink.event};
     handle_xcb_input(window, {event.type, event.x, event.y, event.state, event.detail},
@@ -50,7 +50,7 @@ void platform_input_adapter::handle(granit_window window,
     return;
   }
 #endif
-#if defined(GRANIT_INPUT_HAS_WAYLAND)
+#if defined(GRANIT_WINDOW_HAS_WAYLAND_INPUT)
   if (event.backend != GRANIT_WINDOW_INPUT_BACKEND_WAYLAND)
     return;
   const wayland_input_sink native_sink{sink.user_data, sink.keyboard, sink.pointer, sink.event,
@@ -99,10 +99,10 @@ void platform_input_adapter::clear_window(granit_window window) noexcept {
 #if defined(_WIN32)
   implementation_->win32.clear_window(window);
 #endif
-#if defined(GRANIT_INPUT_HAS_WAYLAND)
+#if defined(GRANIT_WINDOW_HAS_WAYLAND_INPUT)
   implementation_->wayland.clear_window(window);
 #endif
-#if !defined(_WIN32) && !defined(GRANIT_INPUT_HAS_WAYLAND)
+#if !defined(_WIN32) && !defined(GRANIT_WINDOW_HAS_WAYLAND_INPUT)
   static_cast<void>(window);
 #endif
 }

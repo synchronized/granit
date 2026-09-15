@@ -35,7 +35,7 @@ typedef struct granit_window_system_desc {
 #define GRANIT_WINDOW_SYSTEM_DESC_VERSION_1_SIZE                                                   \
   ((uint32_t)(offsetof(granit_window_system_desc, reserved) + sizeof(uint32_t)))
 #define GRANIT_WINDOW_SYSTEM_DESC_INIT                                                             \
-  {(uint32_t)sizeof(granit_window_system_desc), GRANIT_WINDOW_BACKEND_AUTO, UINT32_C(0),            \
+  {(uint32_t)sizeof(granit_window_system_desc), GRANIT_WINDOW_BACKEND_AUTO, UINT32_C(0),           \
    UINT32_C(0)}
 
 typedef struct granit_window_desc {
@@ -51,8 +51,13 @@ typedef struct granit_window_desc {
 #define GRANIT_WINDOW_DESC_VERSION_1_SIZE                                                          \
   ((uint32_t)(offsetof(granit_window_desc, reserved) + sizeof(uint32_t)))
 #define GRANIT_WINDOW_DESC_INIT                                                                    \
-  {(uint32_t)sizeof(granit_window_desc), 0, UINT32_C(0), UINT32_C(0), UINT32_C(0),                  \
-   GRANIT_WINDOW_VISIBLE_BIT | GRANIT_WINDOW_RESIZABLE_BIT, UINT32_C(0)}
+  {(uint32_t)sizeof(granit_window_desc),                                                           \
+   0,                                                                                              \
+   UINT32_C(0),                                                                                    \
+   UINT32_C(0),                                                                                    \
+   UINT32_C(0),                                                                                    \
+   GRANIT_WINDOW_VISIBLE_BIT | GRANIT_WINDOW_RESIZABLE_BIT,                                        \
+   UINT32_C(0)}
 
 typedef enum granit_window_event_type {
   GRANIT_WINDOW_EVENT_CLOSE_REQUESTED = 1,
@@ -95,7 +100,9 @@ typedef struct granit_window_event {
 #define GRANIT_WINDOW_EVENT_VERSION_1_SIZE                                                         \
   ((uint32_t)(offsetof(granit_window_event, data) + sizeof(granit_window_event_data)))
 #define GRANIT_WINDOW_EVENT_INIT                                                                   \
-  {(uint32_t)sizeof(granit_window_event), UINT32_C(0), GRANIT_NULL_HANDLE, UINT64_C(0), {{0, 0}}}
+  {                                                                                                \
+    (uint32_t)sizeof(granit_window_event), UINT32_C(0), GRANIT_NULL_HANDLE, UINT64_C(0), {{0, 0}}   \
+  }
 
 /** 窗口最近已知的尺寸与内容缩放状态。 */
 typedef struct granit_window_state {
@@ -111,16 +118,26 @@ typedef struct granit_window_state {
 
 #define GRANIT_WINDOW_STATE_VERSION_1_SIZE ((uint32_t)sizeof(granit_window_state))
 #define GRANIT_WINDOW_STATE_INIT                                                                   \
-  {(uint32_t)sizeof(granit_window_state), UINT32_C(0), UINT32_C(0), UINT32_C(0), UINT32_C(0),       \
-   UINT32_C(0), 1.0F, 1.0F}
+  {(uint32_t)sizeof(granit_window_state),                                                          \
+   UINT32_C(0),                                                                                    \
+   UINT32_C(0),                                                                                    \
+   UINT32_C(0),                                                                                    \
+   UINT32_C(0),                                                                                    \
+   UINT32_C(0),                                                                                    \
+   1.0F,                                                                                           \
+   1.0F}
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-GRANIT_WINDOW_API granit_result granit_window_system_create(
-    const granit_window_system_desc* desc, granit_window_system* window_system);
+GRANIT_WINDOW_API granit_result granit_window_system_create(const granit_window_system_desc* desc,
+                                                            granit_window_system* window_system);
 GRANIT_WINDOW_API granit_result granit_window_system_destroy(granit_window_system window_system);
+
+/** 非阻塞地处理当前线程上已经到达的平台窗口与输入事件。 */
+GRANIT_WINDOW_API granit_result
+granit_window_system_process_events(granit_window_system window_system);
 GRANIT_WINDOW_API granit_result granit_window_poll_event(granit_window_system window_system,
                                                          granit_window_event* event);
 GRANIT_WINDOW_API granit_result granit_window_create(granit_window_system window_system,

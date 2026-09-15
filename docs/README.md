@@ -138,9 +138,9 @@
 
 ### 窗口输出
 
-- [Window 与 Input component 契约](reference/window-input-contract.md)
+- [Window 与输入契约](reference/window-input-contract.md)
 - [Window component](reference/window.md)
-- [Input component](reference/input.md)
+- [Window 输入](reference/input.md)
 - [Surface](reference/surface.md)
 - [Swapchain](reference/swapchain.md)
 - [SDL3 与 GLFW 窗口接入](guides/window-library-integration.md)

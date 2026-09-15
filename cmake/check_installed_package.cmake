@@ -49,8 +49,6 @@ granit_check_package(render_pipeline TRUE -DGRANIT_REQUEST_VERSION=0.24
                      -DGRANIT_REQUEST_COMPONENT=RenderPipeline)
 granit_check_package(window TRUE -DGRANIT_REQUEST_VERSION=0.24
                      -DGRANIT_REQUEST_COMPONENT=Window)
-granit_check_package(input TRUE -DGRANIT_REQUEST_VERSION=0.24
-                     -DGRANIT_REQUEST_COMPONENT=Input)
 if(EXISTS "${GRANIT_INSTALL_PREFIX}/lib/cmake/granit/granitAssetToolsTargets.cmake")
   granit_check_package(asset_tools TRUE -DGRANIT_REQUEST_VERSION=0.24
                        -DGRANIT_REQUEST_COMPONENT=AssetTools)
@@ -82,6 +80,7 @@ granit_check_package(exact TRUE -DGRANIT_REQUEST_VERSION=0.24.0 -DGRANIT_REQUEST
 granit_check_package(newer_minor FALSE -DGRANIT_REQUEST_VERSION=0.25)
 granit_check_package(incompatible_major FALSE -DGRANIT_REQUEST_VERSION=1.0)
 granit_check_package(unknown_component FALSE -DGRANIT_REQUEST_COMPONENT=Unknown)
+granit_check_package(removed_input FALSE -DGRANIT_REQUEST_COMPONENT=Input)
 granit_check_package(removed_shader_tools FALSE -DGRANIT_REQUEST_COMPONENT=ShaderTools)
 
 message(STATUS

@@ -37,25 +37,23 @@ LRESULT CALLBACK window_proc(HWND hwnd, UINT message, WPARAM word, LPARAM value)
   } else if (message == WM_MOUSELEAVE) {
     record->pointer_tracking = false;
   }
-  if (system->input_native_event != nullptr) {
-    auto input_value = value;
-    if (message == WM_MOUSEWHEEL || message == WM_MOUSEHWHEEL) {
-      POINT point{GET_X_LPARAM(value), GET_Y_LPARAM(value)};
-      if (ScreenToClient(hwnd, &point) != FALSE)
-        input_value = MAKELPARAM(point.x, point.y);
-    }
-    const granit_window_input_native_event input_event{GRANIT_WINDOW_INPUT_BACKEND_WIN32,
-                                                       message,
-                                                       static_cast<std::uintptr_t>(word),
-                                                       static_cast<std::intptr_t>(input_value),
-                                                       0,
-                                                       0,
-                                                       0,
-                                                       0,
-                                                       0,
-                                                       0};
-    system->input_native_event(system->input_user_data, record->handle, &input_event);
+  auto input_value = value;
+  if (message == WM_MOUSEWHEEL || message == WM_MOUSEHWHEEL) {
+    POINT point{GET_X_LPARAM(value), GET_Y_LPARAM(value)};
+    if (ScreenToClient(hwnd, &point) != FALSE)
+      input_value = MAKELPARAM(point.x, point.y);
   }
+  const granit_window_input_native_event input_event{GRANIT_WINDOW_INPUT_BACKEND_WIN32,
+                                                     message,
+                                                     static_cast<std::uintptr_t>(word),
+                                                     static_cast<std::intptr_t>(input_value),
+                                                     0,
+                                                     0,
+                                                     0,
+                                                     0,
+                                                     0,
+                                                     0};
+  handle_native_input(*system, record->handle, input_event);
 
   switch (message) {
   case WM_CLOSE:
@@ -85,8 +83,8 @@ LRESULT CALLBACK window_proc(HWND hwnd, UINT message, WPARAM word, LPARAM value)
     event.timestamp_ns = timestamp_ns();
     event.data.focus.focused = message == WM_SETFOCUS ? UINT32_C(1) : UINT32_C(0);
     system->events.push_back(event);
-    if (message == WM_KILLFOCUS && system->input_focus_lost != nullptr)
-      system->input_focus_lost(system->input_user_data, record->handle);
+    if (message == WM_KILLFOCUS)
+      clear_input_focus(*system, record->handle);
     return 0;
   }
   case WM_DPICHANGED: {
@@ -189,17 +187,13 @@ granit_result destroy_win32_system(granit_window_system handle,
   return GRANIT_SUCCESS;
 }
 
-granit_result poll_win32_event(const std::shared_ptr<window_system_record>& system,
-                               granit_window_event* event) {
+granit_result process_win32_events(const std::shared_ptr<window_system_record>& system) {
   MSG message{};
   while (PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE) != 0) {
     TranslateMessage(&message);
     DispatchMessageW(&message);
   }
-  if (system->events.empty())
-    return GRANIT_ERROR_NOT_READY;
-  *event = system->events.front();
-  system->events.pop_front();
+  static_cast<void>(system);
   return GRANIT_SUCCESS;
 }
 

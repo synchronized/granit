@@ -4,7 +4,7 @@
 #ifndef GRANIT_PLATFORM_WAYLAND_INPUT_ADAPTER_H_
 #define GRANIT_PLATFORM_WAYLAND_INPUT_ADAPTER_H_
 
-#include <granit/input/input.h>
+#include <granit/window/input.h>
 
 #include <cstddef>
 #include <cstdint>

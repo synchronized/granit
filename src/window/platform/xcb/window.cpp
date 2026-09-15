@@ -68,18 +68,6 @@ granit_result destroy_xcb_system(granit_window_system handle,
   return GRANIT_SUCCESS;
 }
 
-granit_result poll_xcb_event(const std::shared_ptr<window_system_record>& system,
-                             granit_window_event* event) {
-  pump_xcb_events(system);
-  if (xcb_connection_has_error(system->connection) != 0)
-    return GRANIT_ERROR_BACKEND_UNAVAILABLE;
-  if (system->events.empty())
-    return GRANIT_ERROR_NOT_READY;
-  *event = system->events.front();
-  system->events.pop_front();
-  return GRANIT_SUCCESS;
-}
-
 granit_result create_xcb_window(const std::shared_ptr<window_system_record>& system,
                                 const granit_window_desc* desc, granit_window* output) {
   try {
@@ -166,11 +154,11 @@ void pump_xcb_events(const std::shared_ptr<window_system_record>& system) {
     const auto type = static_cast<std::uint8_t>(event->response_type & UINT8_C(0x7f));
     const auto dispatch_input = [&](granit_window window, std::int16_t x, std::int16_t y,
                                     std::uint16_t state, std::uint8_t detail) {
-      if (system->input_native_event == nullptr || window == GRANIT_NULL_HANDLE)
+      if (window == GRANIT_NULL_HANDLE)
         return;
       const granit_window_input_native_event input_event{
           GRANIT_WINDOW_INPUT_BACKEND_XCB, type, 0, 0, x, y, state, detail, 0, 0};
-      system->input_native_event(system->input_user_data, window, &input_event);
+      handle_native_input(*system, window, input_event);
     };
     if (type == XCB_KEY_PRESS || type == XCB_KEY_RELEASE) {
       const auto* key = reinterpret_cast<const xcb_key_press_event_t*>(event.get());
@@ -214,8 +202,8 @@ void pump_xcb_events(const std::shared_ptr<window_system_record>& system) {
       output.timestamp_ns = timestamp_ns();
       output.data.focus.focused = type == XCB_FOCUS_IN ? UINT32_C(1) : UINT32_C(0);
       system->events.push_back(output);
-      if (type == XCB_FOCUS_OUT && system->input_focus_lost != nullptr)
-        system->input_focus_lost(system->input_user_data, output.window);
+      if (type == XCB_FOCUS_OUT)
+        clear_input_focus(*system, output.window);
     } else if (type == XCB_CLIENT_MESSAGE) {
       const auto* message = reinterpret_cast<const xcb_client_message_event_t*>(event.get());
       if (message->type == system->wm_protocols &&
@@ -223,6 +211,12 @@ void pump_xcb_events(const std::shared_ptr<window_system_record>& system) {
         enqueue_event(system, public_handle(message->window), GRANIT_WINDOW_EVENT_CLOSE_REQUESTED);
     }
   }
+}
+
+granit_result process_xcb_events(const std::shared_ptr<window_system_record>& system) {
+  pump_xcb_events(system);
+  return xcb_connection_has_error(system->connection) == 0 ? GRANIT_SUCCESS
+                                                           : GRANIT_ERROR_BACKEND_UNAVAILABLE;
 }
 
 } // namespace granit::window::detail

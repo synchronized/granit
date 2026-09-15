@@ -15,6 +15,8 @@
 #endif
 
 TEST_CASE("Window创建把空Window System归类为无效句柄", "[window][contract]") {
+  CHECK(granit_window_system_process_events(UINT64_MAX) == GRANIT_ERROR_INVALID_HANDLE);
+
   granit_window_desc desc = GRANIT_WINDOW_DESC_INIT;
   desc.width = 1;
   desc.height = 1;
@@ -67,6 +69,7 @@ TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]")
   CHECK(granit_window_get_state(system, window, &state) == GRANIT_ERROR_INVALID_ARGUMENT);
 
   granit_window_event event = GRANIT_WINDOW_EVENT_INIT;
+  REQUIRE(granit_window_system_process_events(system) == GRANIT_SUCCESS);
   while (granit_window_poll_event(system, &event) == GRANIT_SUCCESS) {
     event = GRANIT_WINDOW_EVENT_INIT;
   }
@@ -74,6 +77,7 @@ TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]")
                        SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE) != FALSE);
   bool saw_resize = false;
   for (int attempt = 0; attempt < 8 && !saw_resize; ++attempt) {
+    REQUIRE(granit_window_system_process_events(system) == GRANIT_SUCCESS);
     event = GRANIT_WINDOW_EVENT_INIT;
     if (granit_window_poll_event(system, &event) == GRANIT_SUCCESS)
       saw_resize = event.type == GRANIT_WINDOW_EVENT_RESIZED;
@@ -115,7 +119,10 @@ TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]")
     CHECK(event.data.focus.focused == focused);
   }
 
-  SendMessageW(static_cast<HWND>(second), WM_CLOSE, 0, 0);
+  REQUIRE(PostMessageW(static_cast<HWND>(second), WM_CLOSE, 0, 0) != FALSE);
+  event = GRANIT_WINDOW_EVENT_INIT;
+  CHECK(granit_window_poll_event(system, &event) == GRANIT_ERROR_NOT_READY);
+  REQUIRE(granit_window_system_process_events(system) == GRANIT_SUCCESS);
   event = GRANIT_WINDOW_EVENT_INIT;
   REQUIRE(granit_window_poll_event(system, &event) == GRANIT_SUCCESS);
   CHECK(event.type == GRANIT_WINDOW_EVENT_CLOSE_REQUESTED);
@@ -164,6 +171,7 @@ TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]")
       xcb_get_input_focus(static_cast<xcb_connection_t*>(connection)), nullptr));
   bool saw_resize = false;
   for (int attempt = 0; attempt < 32 && !saw_resize; ++attempt) {
+    REQUIRE(granit_window_system_process_events(system) == GRANIT_SUCCESS);
     granit_window_event event = GRANIT_WINDOW_EVENT_INIT;
     if (granit_window_poll_event(system, &event) == GRANIT_SUCCESS)
       saw_resize = event.type == GRANIT_WINDOW_EVENT_RESIZED && event.window == window;

@@ -26,11 +26,9 @@ void dispatch_wayland_input(window_system_record& system, granit_window window, 
                             std::uintptr_t word = 0, std::intptr_t value = 0, std::int32_t x = 0,
                             std::int32_t y = 0, std::uint32_t state = 0, std::uint32_t detail = 0,
                             std::uint32_t data0 = 0, std::uint32_t data1 = 0) {
-  if (system.input_native_event == nullptr)
-    return;
   const granit_window_input_native_event event{
       GRANIT_WINDOW_INPUT_BACKEND_WAYLAND, type, word, value, x, y, state, detail, data0, data1};
-  system.input_native_event(system.input_user_data, window, &event);
+  handle_native_input(system, window, event);
 }
 
 void wayland_registry_global(void* data, wl_registry* registry, std::uint32_t name,
@@ -75,8 +73,8 @@ void wayland_keyboard_enter(void* data, wl_keyboard*, std::uint32_t, wl_surface*
 
 void wayland_keyboard_leave(void* data, wl_keyboard*, std::uint32_t, wl_surface*) {
   auto& system = *static_cast<window_system_record*>(data);
-  if (system.input_focus_lost != nullptr && system.keyboard_window != GRANIT_NULL_HANDLE)
-    system.input_focus_lost(system.input_user_data, system.keyboard_window);
+  if (system.keyboard_window != GRANIT_NULL_HANDLE)
+    clear_input_focus(system, system.keyboard_window);
   system.keyboard_window = GRANIT_NULL_HANDLE;
 }
 
@@ -335,6 +333,15 @@ granit_result create_wayland_system(granit_window_system* output) {
     const auto result = initialize_wayland_system(*system);
     if (result != GRANIT_SUCCESS)
       return result;
+#if defined(GRANIT_WINDOW_HAS_WAYLAND_INPUT)
+    if (system->seat_name != 0) {
+      const auto input_result = initialize_wayland_input(*system);
+      if (input_result != GRANIT_SUCCESS) {
+        destroy_wayland_system(*system);
+        return input_result;
+      }
+    }
+#endif
     system->owner_thread = std::this_thread::get_id();
     system->backend = GRANIT_WINDOW_BACKEND_WAYLAND;
     const auto handle = allocate_handle();
@@ -371,16 +378,8 @@ destroy_registered_wayland_system(granit_window_system handle,
   return GRANIT_SUCCESS;
 }
 
-granit_result poll_wayland_event(const std::shared_ptr<window_system_record>& system,
-                                 granit_window_event* event) {
-  const auto result = pump_wayland_events(*system);
-  if (result != GRANIT_SUCCESS)
-    return result;
-  if (system->events.empty())
-    return GRANIT_ERROR_NOT_READY;
-  *event = system->events.front();
-  system->events.pop_front();
-  return GRANIT_SUCCESS;
+granit_result process_wayland_events(const std::shared_ptr<window_system_record>& system) {
+  return pump_wayland_events(*system);
 }
 
 granit_result create_wayland_window(const std::shared_ptr<window_system_record>& system,
@@ -454,17 +453,6 @@ granit_result destroy_registered_wayland_window(const std::shared_ptr<window_sys
   destroy_wayland_window(*window);
   return wl_display_flush(system->display) >= 0 ? GRANIT_SUCCESS : GRANIT_ERROR_BACKEND_UNAVAILABLE;
 }
-
-granit_result attach_wayland_input(window_system_record& system) {
-#if defined(GRANIT_WINDOW_HAS_WAYLAND_INPUT)
-  return initialize_wayland_input(system);
-#else
-  static_cast<void>(system);
-  return GRANIT_ERROR_UNSUPPORTED;
-#endif
-}
-
-void detach_wayland_input(window_system_record& system) { destroy_wayland_input(system); }
 
 granit_result get_wayland_window(const std::shared_ptr<window_system_record>& system,
                                  const std::shared_ptr<window_record>& window, void** display,
