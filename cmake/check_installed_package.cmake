@@ -44,18 +44,18 @@ function(granit_check_package name expected_success)
   endif()
 endfunction()
 
-granit_check_package(core_only TRUE -DGRANIT_REQUEST_VERSION=0.23)
-granit_check_package(render_pipeline TRUE -DGRANIT_REQUEST_VERSION=0.23
+granit_check_package(core_only TRUE -DGRANIT_REQUEST_VERSION=0.24)
+granit_check_package(render_pipeline TRUE -DGRANIT_REQUEST_VERSION=0.24
                      -DGRANIT_REQUEST_COMPONENT=RenderPipeline)
-granit_check_package(window TRUE -DGRANIT_REQUEST_VERSION=0.23
+granit_check_package(window TRUE -DGRANIT_REQUEST_VERSION=0.24
                      -DGRANIT_REQUEST_COMPONENT=Window)
-granit_check_package(input TRUE -DGRANIT_REQUEST_VERSION=0.23
+granit_check_package(input TRUE -DGRANIT_REQUEST_VERSION=0.24
                      -DGRANIT_REQUEST_COMPONENT=Input)
 if(EXISTS "${GRANIT_INSTALL_PREFIX}/lib/cmake/granit/granitAssetToolsTargets.cmake")
-  granit_check_package(asset_tools TRUE -DGRANIT_REQUEST_VERSION=0.23
+  granit_check_package(asset_tools TRUE -DGRANIT_REQUEST_VERSION=0.24
                        -DGRANIT_REQUEST_COMPONENT=AssetTools)
 else()
-  granit_check_package(asset_tools_unavailable FALSE -DGRANIT_REQUEST_VERSION=0.23
+  granit_check_package(asset_tools_unavailable FALSE -DGRANIT_REQUEST_VERSION=0.24
                        -DGRANIT_REQUEST_COMPONENT=AssetTools)
 endif()
 granit_check_package(older_0_7 FALSE -DGRANIT_REQUEST_VERSION=0.7)
@@ -77,8 +77,9 @@ granit_check_package(older_0_19 FALSE -DGRANIT_REQUEST_VERSION=0.19)
 granit_check_package(older_0_20 FALSE -DGRANIT_REQUEST_VERSION=0.20)
 granit_check_package(older_0_21 FALSE -DGRANIT_REQUEST_VERSION=0.21)
 granit_check_package(older_0_22 FALSE -DGRANIT_REQUEST_VERSION=0.22)
-granit_check_package(exact TRUE -DGRANIT_REQUEST_VERSION=0.23.0 -DGRANIT_REQUEST_EXACT=ON)
-granit_check_package(newer_minor FALSE -DGRANIT_REQUEST_VERSION=0.24)
+granit_check_package(older_0_23 FALSE -DGRANIT_REQUEST_VERSION=0.23)
+granit_check_package(exact TRUE -DGRANIT_REQUEST_VERSION=0.24.0 -DGRANIT_REQUEST_EXACT=ON)
+granit_check_package(newer_minor FALSE -DGRANIT_REQUEST_VERSION=0.25)
 granit_check_package(incompatible_major FALSE -DGRANIT_REQUEST_VERSION=1.0)
 granit_check_package(unknown_component FALSE -DGRANIT_REQUEST_COMPONENT=Unknown)
 granit_check_package(removed_shader_tools FALSE -DGRANIT_REQUEST_COMPONENT=ShaderTools)
