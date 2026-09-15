@@ -487,7 +487,7 @@ target_compile_definitions(
   granit_pipeline_test
   PRIVATE
     GRANIT_PIPELINE_ASSET_DIR="${GRANIT_PBR_TEST_SHADER_DIR}"
-    GRANIT_SHADER_OBJECT_FIXTURE_DIR="${CMAKE_BINARY_DIR}/tools/test-objects"
+    GRANIT_SHADER_OBJECT_FIXTURE_DIR="${CMAKE_CURRENT_BINARY_DIR}/asset_tools/test-objects"
     GRANIT_TEST_ASSET_DIR="${granit_test_shader_fixture_dir}"
     GRANIT_PIPELINE_SHADER_DIR="${GRANIT_PIPELINE_TEST_SHADER_DIR}"
     GRANIT_UNLIT_TEST_PACKAGE="${granit_unlit_test_package}"
@@ -531,7 +531,7 @@ target_compile_options(
 target_compile_definitions(
   granit_material_test
   PRIVATE
-    GRANIT_SHADER_OBJECT_FIXTURE_DIR="${CMAKE_BINARY_DIR}/tools/test-objects"
+    GRANIT_SHADER_OBJECT_FIXTURE_DIR="${CMAKE_CURRENT_BINARY_DIR}/asset_tools/test-objects"
     GRANIT_TEST_ASSET_DIR="${granit_test_shader_fixture_dir}"
     GRANIT_SMOKE_SHADER_DIR="${GRANIT_SMOKE_TEST_SHADER_DIR}"
     GRANIT_PBR_LIBRARY_ASSET="${granit_installed_asset_snapshot_dir}/libraries/pbr_standard.grshlib"
@@ -596,7 +596,7 @@ target_include_directories(
 target_compile_definitions(
   granit_renderer_test
   PRIVATE
-    GRANIT_SHADER_OBJECT_FIXTURE_DIR="${CMAKE_BINARY_DIR}/tools/test-objects"
+    GRANIT_SHADER_OBJECT_FIXTURE_DIR="${CMAKE_CURRENT_BINARY_DIR}/asset_tools/test-objects"
     GRANIT_TEST_ASSET_DIR="${granit_test_shader_fixture_dir}"
     GRANIT_TEST_ARTIFACT_DIR="${CMAKE_BINARY_DIR}/test-artifacts"
 )
