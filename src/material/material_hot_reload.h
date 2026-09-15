@@ -4,7 +4,7 @@
 #ifndef GRANIT_MATERIAL_MATERIAL_HOT_RELOAD_H
 #define GRANIT_MATERIAL_MATERIAL_HOT_RELOAD_H
 
-#include "material/material_package.h"
+#include "asset_formats/material/material_package.h"
 #include "material/material_template_gpu.h"
 
 #include <cstdint>

@@ -459,7 +459,9 @@ int main(int argc, char** argv) {
     }
     const auto convert_begin = std::chrono::steady_clock::now();
     result = canvas.clear();
-    if (result.ok()) {
+    if (result.failed()) {
+      std::cerr << "ImGui Canvas 清空失败，Granit 结果码：" << static_cast<int>(result) << '\n';
+    } else {
       result = granit::integration::imgui::append_draw_data(
           ImGui::GetDrawData(), canvas, granit::example::resolve_imgui_sample_texture, &bindings);
       if (result.failed())

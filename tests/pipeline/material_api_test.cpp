@@ -7,7 +7,7 @@
 #include <granit/renderer/sampler.hpp>
 #include <granit/renderer/texture.hpp>
 
-#include "material/material_package_archive.h"
+#include "asset_formats/material/material_package_archive.h"
 
 #include <catch2/catch_all.hpp>
 

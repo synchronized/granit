@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 #include "pipeline/forward_draw_recorder.h"
-#include "material/material_package.h"
+#include "asset_formats/material/material_package.h"
 #include "pipeline/draw_binding_cache.h"
 #include "pipeline/material_access.h"
 #include "pipeline/mesh_access.h"

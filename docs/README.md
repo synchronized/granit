@@ -55,6 +55,8 @@
 20. [0.23.0 空帧与覆盖层可靠性计划](plans/S-39-0.23.0-empty-frame-and-overlay-reliability.md)
 21. [0.23.0 Shader Toolchain 配置可靠性计划](plans/S-40-0.23.0-shader-toolchain-configuration-reliability.md)
 22. [0.23.0 资产目录收敛计划](plans/S-41-0.23.0-asset-layout-convergence.md)
+23. [0.24.0 测试架构收敛计划](plans/S-42-0.24.0-test-architecture-convergence.md)
+24. [0.24.0 AssetTools 源码布局收敛计划](plans/S-43-0.24.0-asset-tools-source-layout.md)
 
 ## 操作指南
 

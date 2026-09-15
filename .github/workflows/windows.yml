@@ -37,7 +37,7 @@ jobs:
             -DGRANIT_SHADER_TOOLCHAIN_ROOT="$root" -DGRANIT_SHADER_TOOLCHAIN_POLICY=locked `
             -DGRANIT_TINT_REVISION=0bc38adde72b79013536f8ce354b639ae19ae195
           cmake --build build/shader-toolchain-test --target `
-            granit_shader_hlsl_api_test
+            granit_asset_tools_shader_hlsl_api_test
           ctest --test-dir build/shader-toolchain-test `
             -R 'granit\.asset_tools\.shader\.hlsl_api' --output-on-failure
 
@@ -67,14 +67,9 @@ jobs:
             -DCMAKE_C_COMPILER_LAUNCHER=sccache `
             -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
           cmake --build --preset '${{ steps.preset.outputs.name }}'
-          # 托管 Windows Runner 没有 Vulkan ICD；GPU 运行测试由 Linux Lavapipe 矩阵覆盖。
-          $exclude = @(
-            'granit\.renderer\.lifecycle_diagnostic'
-            'granit\.window_renderer'
-            'granit\.example\.'
-            'granit\.smoke\.'
-          ) -join '|'
-          ctest --preset '${{ steps.preset.outputs.name }}' -E $exclude
+          # 托管 Windows Runner 没有 Vulkan ICD；GPU 与平台运行测试由 Linux 矩阵覆盖。
+          ctest --preset '${{ steps.preset.outputs.name }}' `
+            -LE '^(gpu|platform)$' -E '^granit\.example\.'
       - name: 上传渲染 Fixture 失败诊断
         if: failure()
         uses: actions/upload-artifact@v6

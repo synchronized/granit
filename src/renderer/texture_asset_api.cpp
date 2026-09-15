@@ -3,7 +3,7 @@
 
 #include <granit/renderer/texture_asset.h>
 
-#include "asset_formats/texture_asset.h"
+#include "asset_formats/texture/texture_asset.h"
 
 #include <algorithm>
 #include <cstring>

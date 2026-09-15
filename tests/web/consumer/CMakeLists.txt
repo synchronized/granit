@@ -4,12 +4,14 @@
 cmake_minimum_required(VERSION 3.23)
 project(granit_web_consumer LANGUAGES C CXX)
 
+set_property(DIRECTORY APPEND PROPERTY LABELS browser package)
+
 if(NOT EMSCRIPTEN)
   message(FATAL_ERROR "浏览器消费端测试需要 Emscripten 工具链")
 endif()
 
 include(CTest)
-find_package(granit 0.23 CONFIG REQUIRED COMPONENTS RenderPipeline OPTIONAL_COMPONENTS Window Input)
+find_package(granit 0.24 CONFIG REQUIRED COMPONENTS RenderPipeline OPTIONAL_COMPONENTS Window Input)
 if(granit_Window_FOUND OR granit_Input_FOUND)
   message(FATAL_ERROR "浏览器安装包不应包含未实现的原生 Window/Input 组件")
 endif()

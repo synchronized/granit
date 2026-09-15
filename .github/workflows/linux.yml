@@ -51,7 +51,7 @@ jobs:
             -DGRANIT_SHADER_TOOLCHAIN_POLICY=locked \
             -DGRANIT_TINT_REVISION=0bc38adde72b79013536f8ce354b639ae19ae195
           cmake --build build/shader-toolchain-test --target \
-            granit_shader_hlsl_api_test
+            granit_asset_tools_shader_hlsl_api_test
           ctest --test-dir build/shader-toolchain-test \
             -R 'granit\.asset_tools\.shader\.hlsl_api' --output-on-failure
 
@@ -194,15 +194,15 @@ jobs:
         run: |
           ctest --test-dir "build/${{ steps.preset.outputs.name }}" \
             --output-on-failure -R '^granit\.(integration\.imgui|example\.imgui_visual)$'
-      - name: 运行 X11 SDL3 与 ImGui smoke test
+      - name: 运行 X11 SDL3 Surface 与 ImGui 集成测试
         shell: bash
         run: |
           xvfb-run -a env SDL_VIDEODRIVER=x11 \
-            "build/${{ steps.preset.outputs.name }}/bin/granit_sdl3_window_clear_smoke" \
+            "build/${{ steps.preset.outputs.name }}/bin/granit_integration_sdl3_surface_test" \
             --smoke-test
           xvfb-run -a env SDL_VIDEODRIVER=x11 \
             "build/${{ steps.preset.outputs.name }}/bin/granit_sdl3_imgui_example" --smoke-test
-      - name: 运行 Wayland SDL3 与 ImGui smoke test
+      - name: 运行 Wayland SDL3 Surface 与 ImGui 集成测试
         shell: bash
         run: |
           export XDG_RUNTIME_DIR="$RUNNER_TEMP/granit-integration-wayland"
@@ -221,7 +221,7 @@ jobs:
             exit 1
           }
           SDL_VIDEODRIVER=wayland \
-            "build/${{ steps.preset.outputs.name }}/bin/granit_sdl3_window_clear_smoke" \
+            "build/${{ steps.preset.outputs.name }}/bin/granit_integration_sdl3_surface_test" \
             --smoke-test
           SDL_VIDEODRIVER=wayland \
             "build/${{ steps.preset.outputs.name }}/bin/granit_sdl3_imgui_example" --smoke-test

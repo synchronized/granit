@@ -162,9 +162,9 @@ Granit 只为自己的目标设置输出目录，不修改父项目的全局 CMa
 - Visual Studio 等多配置生成器：使用 `bin/<配置>` 和 `lib/<配置>`。
 
 因此 Windows 共享库构建中的程序与 `granit.dll` 位于同一目录，无需修改 `PATH` 即可直接运行。
-例如可执行窗口清屏 Smoke：
+例如可执行离屏 GPU Smoke：
 
 ```powershell
-build/windows-clang-debug/bin/granit_window_clear_smoke.exe
-build/windows-vs2022-debug/bin/Debug/granit_window_clear_smoke.exe
+build/windows-clang-debug/bin/granit_gpu_offscreen_smoke.exe
+build/windows-vs2022-debug/bin/Debug/granit_gpu_offscreen_smoke.exe
 ```

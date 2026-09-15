@@ -1,0 +1,110 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Granit contributors
+
+#include <SDL3/SDL.h>
+
+#include <granit/granit.hpp>
+#include <granit/integrations/sdl3/surface.hpp>
+
+#include "../../support/swapchain_frame.h"
+
+#include <cstdint>
+#include <cstring>
+#include <memory>
+
+namespace {
+
+struct sdl_quit {
+  ~sdl_quit() { SDL_Quit(); }
+};
+
+struct window_deleter {
+  void operator()(SDL_Window* window) const noexcept { SDL_DestroyWindow(window); }
+};
+
+} // namespace
+
+int main(int argc, char** argv) {
+  const bool smoke_test = argc > 1 && std::strcmp(argv[1], "--smoke-test") == 0;
+  if (!SDL_Init(SDL_INIT_VIDEO))
+    return 1;
+  sdl_quit quit;
+  std::unique_ptr<SDL_Window, window_deleter> window(SDL_CreateWindow(
+      "Granit SDL3 窗口清屏", 800, 600, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY));
+  if (!window)
+    return 1;
+
+  granit::surface_type surface_type{};
+  auto result = granit::integration::sdl3::query_surface_type(window.get(), surface_type);
+  granit::renderer renderer;
+  if (result.ok()) {
+    result = renderer.initialize({.application_name = "Granit SDL3 Window Clear",
+                                  .enable_validation = true,
+                                  .surface_types = surface_type});
+  }
+  granit::surface surface;
+  if (result.ok()) {
+    result =
+        granit::integration::sdl3::create_surface(renderer.native_handle(), window.get(), surface);
+  }
+
+  int pixel_width = 0;
+  int pixel_height = 0;
+  if (result.ok() && !SDL_GetWindowSizeInPixels(window.get(), &pixel_width, &pixel_height)) {
+    result = granit::result::backend_unavailable;
+  }
+  granit::swapchain swapchain;
+  if (result.ok()) {
+    result = swapchain.initialize(renderer.native_handle(), surface.native_handle(),
+                                  {.width = static_cast<std::uint32_t>(pixel_width),
+                                   .height = static_cast<std::uint32_t>(pixel_height)});
+  }
+  granit::frame_context frame_context;
+  if (result.ok())
+    result = frame_context.initialize(renderer.native_handle());
+
+  bool running = result.ok();
+  bool recreate = false;
+  std::uint32_t rendered_frames = 0;
+  while (running) {
+    SDL_Event event{};
+    while (SDL_PollEvent(&event)) {
+      if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) {
+        running = false;
+      } else if (event.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
+        pixel_width = event.window.data1;
+        pixel_height = event.window.data2;
+        recreate = true;
+      }
+    }
+    if (!running)
+      break;
+    if (pixel_width <= 0 || pixel_height <= 0)
+      continue;
+    if (recreate) {
+      result = swapchain.recreate({.width = static_cast<std::uint32_t>(pixel_width),
+                                   .height = static_cast<std::uint32_t>(pixel_height)});
+      if (result == granit::result::not_ready)
+        continue;
+      if (result.failed())
+        break;
+      recreate = false;
+    }
+
+    result = granit::tests::render_clear_frame(swapchain, frame_context,
+                                               static_cast<std::uint32_t>(pixel_width),
+                                               static_cast<std::uint32_t>(pixel_height), recreate);
+    if (result == granit::result::out_of_date) {
+      result = granit::result::success;
+      recreate = true;
+      continue;
+    }
+    if (result.failed())
+      break;
+    ++rendered_frames;
+    if (smoke_test && rendered_frames >= 3)
+      break;
+  }
+
+  return result.failed() ? 1 : 0;
+}

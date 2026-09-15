@@ -8,7 +8,34 @@ if(EMSCRIPTEN)
   return()
 endif()
 
+add_subdirectory(asset_tools)
+
+set(granit_smoke_asset_dir "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke")
+set(
+  granit_render_pipeline_test_package
+  "${CMAKE_CURRENT_BINARY_DIR}/assets/render_pipeline_untextured.grmat"
+)
+add_custom_command(
+  OUTPUT "${granit_render_pipeline_test_package}"
+  COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/assets"
+  COMMAND
+    granit_asset_tool material build
+    "${granit_smoke_asset_dir}/render_pipeline_untextured.grmat.json"
+    --output "${granit_render_pipeline_test_package}" --shader-index
+    "${GRANIT_PBR_TEST_SHADER_INDEX}"
+  DEPENDS
+    granit_asset_tool
+    granit_test_shader_assets
+    "${granit_smoke_asset_dir}/render_pipeline_untextured.grmat.json"
+    "${GRANIT_PBR_TEST_SHADER_INDEX}"
+  VERBATIM
+)
+add_custom_target(
+  granit_render_pipeline_test_package DEPENDS "${granit_render_pipeline_test_package}"
+)
+
 add_subdirectory(smoke)
+add_subdirectory(gpu)
 
 add_test(
   NAME granit.backend.native_boundaries
@@ -383,14 +410,13 @@ add_executable(
   lighting/tone_mapping_reference_test.cpp
   lighting/tone_mapping_pass_test.cpp
   lighting/tone_mapping_resources_test.cpp
-  "${PROJECT_SOURCE_DIR}/tests/smoke/pbr_test_support.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/support/pbr_test_support.cpp"
 )
 target_include_directories(
   granit_lighting_test
   PRIVATE
     "${PROJECT_SOURCE_DIR}/src"
     "${PROJECT_SOURCE_DIR}/tests"
-    "${PROJECT_SOURCE_DIR}/tests/smoke"
 )
 target_link_libraries(granit_lighting_test PRIVATE granit::lighting Catch2::Catch2WithMain)
 target_compile_options(granit_lighting_test PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>)
@@ -411,8 +437,8 @@ add_executable(
   pipeline/pbr_material_api_test.cpp
   pipeline/environment_map_api_test.cpp
   pipeline/environment_asset_test.cpp
-  "${PROJECT_SOURCE_DIR}/src/asset_formats/environment_asset.cpp"
-  $<TARGET_OBJECTS:granit_internal_shader_format>
+  $<TARGET_OBJECTS:granit_asset_format_environment>
+  $<TARGET_OBJECTS:granit_asset_format_shader>
   pipeline/mesh_api_test.cpp
   pipeline/render_pipeline_api_test.cpp
   pipeline/scene_api_test.cpp
@@ -461,7 +487,7 @@ target_compile_definitions(
   granit_pipeline_test
   PRIVATE
     GRANIT_PIPELINE_ASSET_DIR="${GRANIT_PBR_TEST_SHADER_DIR}"
-    GRANIT_SHADER_OBJECT_FIXTURE_DIR="${CMAKE_BINARY_DIR}/tools/test-objects"
+    GRANIT_SHADER_OBJECT_FIXTURE_DIR="${CMAKE_CURRENT_BINARY_DIR}/asset_tools/test-objects"
     GRANIT_TEST_ASSET_DIR="${granit_test_shader_fixture_dir}"
     GRANIT_PIPELINE_SHADER_DIR="${GRANIT_PIPELINE_TEST_SHADER_DIR}"
     GRANIT_UNLIT_TEST_PACKAGE="${granit_unlit_test_package}"
@@ -490,14 +516,14 @@ add_executable(
   material/public_pbr_asset_test.cpp
   material/material_source_json_test.cpp
   material/material_template_gpu_test.cpp
-  "${PROJECT_SOURCE_DIR}/src/material/material_debug_json.cpp"
-  "${PROJECT_SOURCE_DIR}/src/material/material_source_json.cpp"
+  "${PROJECT_SOURCE_DIR}/src/asset_tools/material/debug_json.cpp"
+  "${PROJECT_SOURCE_DIR}/src/asset_tools/material/source_json.cpp"
 )
 target_include_directories(
   granit_material_test PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/tests"
 )
 target_link_libraries(granit_material_test PRIVATE granit::material Catch2::Catch2WithMain)
-target_sources(granit_material_test PRIVATE $<TARGET_OBJECTS:granit_internal_shader_format>)
+target_sources(granit_material_test PRIVATE $<TARGET_OBJECTS:granit_asset_format_shader>)
 target_compile_options(
   granit_material_test
   PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
@@ -505,7 +531,7 @@ target_compile_options(
 target_compile_definitions(
   granit_material_test
   PRIVATE
-    GRANIT_SHADER_OBJECT_FIXTURE_DIR="${CMAKE_BINARY_DIR}/tools/test-objects"
+    GRANIT_SHADER_OBJECT_FIXTURE_DIR="${CMAKE_CURRENT_BINARY_DIR}/asset_tools/test-objects"
     GRANIT_TEST_ASSET_DIR="${granit_test_shader_fixture_dir}"
     GRANIT_SMOKE_SHADER_DIR="${GRANIT_SMOKE_TEST_SHADER_DIR}"
     GRANIT_PBR_LIBRARY_ASSET="${granit_installed_asset_snapshot_dir}/libraries/pbr_standard.grshlib"
@@ -556,8 +582,8 @@ target_link_libraries(
   PRIVATE
     granit::granit
     Catch2::Catch2WithMain
-    $<TARGET_OBJECTS:granit_shader_object_storage>
-    $<TARGET_OBJECTS:granit_internal_shader_format>
+    $<TARGET_OBJECTS:granit_asset_tools_shader_object_storage>
+    $<TARGET_OBJECTS:granit_asset_format_shader>
     $<$<PLATFORM_ID:Windows>:user32>
 )
 target_include_directories(
@@ -570,7 +596,7 @@ target_include_directories(
 target_compile_definitions(
   granit_renderer_test
   PRIVATE
-    GRANIT_SHADER_OBJECT_FIXTURE_DIR="${CMAKE_BINARY_DIR}/tools/test-objects"
+    GRANIT_SHADER_OBJECT_FIXTURE_DIR="${CMAKE_CURRENT_BINARY_DIR}/asset_tools/test-objects"
     GRANIT_TEST_ASSET_DIR="${granit_test_shader_fixture_dir}"
     GRANIT_TEST_ARTIFACT_DIR="${CMAKE_BINARY_DIR}/test-artifacts"
 )
@@ -725,6 +751,30 @@ granit_target_compile_warnings(granit_window_renderer_test)
 granit_target_output_directories(granit_window_renderer_test)
 add_test(NAME granit.window_renderer COMMAND granit_window_renderer_test)
 
+if(GRANIT_BUILD_INTEGRATION_SDL3)
+  add_executable(granit_integration_sdl3_surface_test integrations/sdl3/surface_test.cpp)
+  target_link_libraries(
+    granit_integration_sdl3_surface_test PRIVATE granit::granit granit::integration_sdl3
+  )
+  granit_target_compile_warnings(granit_integration_sdl3_surface_test)
+  granit_target_output_directories(granit_integration_sdl3_surface_test)
+  if(WIN32)
+    add_custom_command(
+      TARGET granit_integration_sdl3_surface_test
+      POST_BUILD
+      COMMAND
+        "${CMAKE_COMMAND}" -E copy_if_different "$<TARGET_FILE:${GRANIT_SDL3_TARGET}>"
+        "$<TARGET_FILE_DIR:granit_integration_sdl3_surface_test>"
+      VERBATIM
+    )
+    add_test(
+      NAME granit.integration.sdl3.surface
+      COMMAND granit_integration_sdl3_surface_test --smoke-test
+    )
+    set_tests_properties(granit.integration.sdl3.surface PROPERTIES TIMEOUT 30)
+  endif()
+endif()
+
 if(GRANIT_BUILD_INTEGRATION_IMGUI)
   add_executable(granit_integration_imgui_test integrations/imgui/renderer_test.cpp)
   target_link_libraries(
@@ -734,6 +784,67 @@ if(GRANIT_BUILD_INTEGRATION_IMGUI)
   granit_target_compile_warnings(granit_integration_imgui_test)
   granit_target_output_directories(granit_integration_imgui_test)
   add_test(NAME granit.integration.imgui COMMAND granit_integration_imgui_test)
+endif()
+
+set_property(
+  TEST
+    granit.backend.native_boundaries
+    granit.c_version
+    granit.handle_table
+    granit.sha256
+    granit.async_operation_state
+    granit.resource_validation
+    granit.backend_capabilities
+    granit.backend_resources
+    granit.lifecycle_validation
+    granit.retirement_queue
+    granit.device_status
+    granit.render_graph
+    granit.math
+    granit.pbr
+    granit.scene
+    granit.vulkan_backend
+    granit.window
+    granit.input
+  APPEND PROPERTY LABELS unit
+)
+set_property(TEST granit.documentation APPEND PROPERTY LABELS unit)
+set_property(
+  TEST granit.build_tree_consumers granit.release_version granit.release_version_mismatch
+  APPEND PROPERTY LABELS package release
+)
+set_property(
+  TEST granit.lighting granit.pipeline granit.material granit.renderer
+       granit.renderer.lifecycle_diagnostic
+  APPEND PROPERTY LABELS gpu integration
+)
+set_property(
+  TEST granit.window_renderer
+  APPEND PROPERTY LABELS gpu integration platform
+)
+if(GRANIT_BUILD_INTEGRATION_IMGUI)
+  set_property(TEST granit.integration.imgui APPEND PROPERTY LABELS integration)
+endif()
+if(GRANIT_BUILD_INTEGRATION_SDL3 AND WIN32)
+  set_property(
+    TEST granit.integration.sdl3.surface
+    APPEND PROPERTY LABELS gpu integration platform
+  )
+endif()
+
+if(BUILD_SHARED_LIBS)
+  set_property(TEST granit.abi.exports APPEND PROPERTY LABELS package release)
+  if(granit_abi_export_tool)
+    set_property(
+      TEST
+        granit.abi.exports.core
+        granit.abi.exports.render_pipeline
+        granit.abi.exports.window
+        granit.abi.exports.input
+        granit.abi.exports.asset_tools
+      APPEND PROPERTY LABELS package release
+    )
+  endif()
 endif()
 
 set(

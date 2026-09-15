@@ -19,6 +19,10 @@
 
 ## 稳定化与跨平台
 
+- [2026-09-15 Granit 0.24.0 跨平台验收](2026-09-15-v0.24.0-cross-platform-acceptance.md)
+- [2026-09-15 0.24.0 句柄类型安全本地验收](2026-09-15-0.24-handle-type-safety.md)
+- [2026-09-14 S-42 测试架构本地验收](2026-09-14-s42-local-acceptance.md)
+- [2026-09-14 S-42 测试架构基线](2026-09-14-s42-test-baseline.md)
 - [2026-09-14 Granit 0.23.0 发布验收](2026-09-14-v0.23.0-release-acceptance.md)
 - [2026-09-14 S-39～S-41 远端发布验收](2026-09-14-s39-s41-remote-release-acceptance.md)
 - [2026-09-14 S-41 资产目录收敛本地验收](2026-09-14-s41-asset-layout-acceptance.md)

@@ -3,11 +3,13 @@
 
 #include <granit/pipeline/render_pipeline.h>
 
+#include "core/handle_encoding.h"
+
+#include "asset_formats/material/material_package.h"
 #include "lighting/forward_pipeline_graph.h"
 #include "lighting/light_data.h"
 #include "lighting/shadow_ibl_resources.h"
 #include "lighting/tone_mapping_resources.h"
-#include "material/material_package.h"
 #include "pipeline/default_ibl_resources.h"
 #include "pipeline/dynamic_uniform_arena.h"
 #include "pipeline/embedded_shaders.h"
@@ -43,7 +45,7 @@ namespace {
 
 constexpr uint64_t index_mask = UINT64_C(0xffffffff);
 constexpr uint64_t generation_mask = UINT64_C(0x00ffffff);
-constexpr uint64_t type_value = UINT64_C(0x42);
+constexpr uint64_t type_value = static_cast<uint64_t>(granit::detail::handle_type::render_pipeline);
 // 自动路径固定覆盖首轮多光源评估上限，打包和逐 Draw Buffer 必须使用相同容量。
 constexpr granit::lighting::light_limits automatic_light_limits{
     .directional = 4, .point = 128, .spot = 64};

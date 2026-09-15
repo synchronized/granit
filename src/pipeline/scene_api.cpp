@@ -3,6 +3,8 @@
 
 #include <granit/pipeline/scene.h>
 
+#include "core/handle_encoding.h"
+
 #include "pipeline/scene_access.h"
 #include "scene/multi_view_submission.h"
 
@@ -15,7 +17,7 @@ namespace {
 
 constexpr uint64_t index_mask = UINT64_C(0xffffffff);
 constexpr uint64_t generation_mask = UINT64_C(0x00ffffff);
-constexpr uint64_t type_value = UINT64_C(0x40);
+constexpr uint64_t type_value = static_cast<uint64_t>(granit::detail::handle_type::scene_snapshot);
 
 struct snapshot_state {
   granit_renderer renderer = GRANIT_NULL_HANDLE;

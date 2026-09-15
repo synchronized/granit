@@ -12,7 +12,7 @@
 #include <span>
 #include <vector>
 
-#include "material/material_metadata.h"
+#include "asset_formats/material/material_metadata.h"
 #include "material/material_migration.h"
 
 namespace granit::material {

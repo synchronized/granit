@@ -54,8 +54,9 @@ inline void apply_imgui_theme() {
   colors[ImGuiCol_Button] = {0.36F, 0.29F, 0.76F, 1};
   colors[ImGuiCol_ButtonHovered] = {0.46F, 0.38F, 0.92F, 1};
   colors[ImGuiCol_ButtonActive] = {0.55F, 0.47F, 1, 1};
-  colors[ImGuiCol_Header] = {0.27F, 0.23F, 0.52F, 0.72F};
-  colors[ImGuiCol_HeaderHovered] = {0.38F, 0.31F, 0.75F, 0.82F};
+  // 普通 TreeNode 悬停时会填满整行且没有圆角；用灰色弱化内层横条。
+  colors[ImGuiCol_Header] = {0.14F, 0.15F, 0.22F, 0.65F};
+  colors[ImGuiCol_HeaderHovered] = {0.23F, 0.23F, 0.33F, 0.35F};
   colors[ImGuiCol_HeaderActive] = {0.46F, 0.38F, 0.92F, 1};
   colors[ImGuiCol_Separator] = {0.18F, 0.21F, 0.30F, 1};
   colors[ImGuiCol_SeparatorHovered] = {0.43F, 0.36F, 0.86F, 1};

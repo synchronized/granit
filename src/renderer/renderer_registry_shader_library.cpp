@@ -5,7 +5,7 @@
 #include "renderer/renderer_registry_records.h"
 
 #include "core/sha256.h"
-#include "shader_format/shader_library.h"
+#include "asset_formats/shader/shader_library.h"
 
 #include <algorithm>
 #include <cstring>
@@ -221,8 +221,20 @@ granit_result renderer_registry::destroy_shader_library(granit_renderer renderer
   const auto found = shader_libraries_.find(library);
   if (found == shader_libraries_.end() || found->second != record)
     return GRANIT_ERROR_INVALID_HANDLE;
-  if (std::ranges::any_of(record->shaders,
-                          [](const auto& cached) { return cached.second.use_count() > 1; }))
+  // GPU 延迟回收会保留已销毁 Shader 的引用；只检查仍有效的 Shader 与 Pipeline 依赖。
+  if (std::ranges::any_of(record->shaders, [&](const auto& cached) {
+        const auto* shader = cached.second.get();
+        return std::ranges::any_of(shaders_, [&](const auto& live) {
+                 return live.second.get() == shader;
+               }) ||
+               std::ranges::any_of(graphics_pipelines_, [&](const auto& live) {
+                 return live.second->vertex_shader.get() == shader ||
+                        live.second->fragment_shader.get() == shader;
+               }) ||
+               std::ranges::any_of(compute_pipelines_, [&](const auto& live) {
+                 return live.second->compute_shader.get() == shader;
+               });
+      }))
     return GRANIT_ERROR_RESOURCE_IN_USE;
   const auto result =
       handles_.erase(library, resource_type::shader_library, record->owner->domain());

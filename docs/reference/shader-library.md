@@ -62,9 +62,9 @@ Core 会在使用前再次校验所选载荷摘要。Library 内按内容 ID 缓
 释放。找不到内容 ID 返回 `GRANIT_ERROR_NOT_READY`，没有兼容后端变体或能力不足返回
 `GRANIT_ERROR_UNSUPPORTED`。
 
-Shader 句柄及由它创建的 Pipeline 会保留缓存对象。任一引用尚未释放时，
+有效的 Shader 句柄及 Pipeline 会保留缓存对象。任一公开句柄尚未释放时，
 `granit_shader_library_destroy()` 返回 `GRANIT_ERROR_RESOURCE_IN_USE`，Library 句柄仍然有效，调用方
-可在释放依赖后重试销毁。
+可在释放依赖后重试销毁。已销毁资源的 GPU 延迟回收引用不阻止 Library 销毁。
 
 `granit_material_desc.shader_library` 把 Library 交给 Material。Material 会立即保留引用，即使尚未
 按需创建 Pipeline，也必须先销毁 Material 才能销毁 Library。Material 归档仍只保存稳定内容 ID，

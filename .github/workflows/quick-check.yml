@@ -103,18 +103,17 @@ jobs:
           key: quick-linux-ccache-v1-${{ github.sha }}
           restore-keys: |
             quick-linux-ccache-v1-
-      - name: 配置并构建快速目标
+      - name: 配置并构建快速测试
         shell: bash
         run: |
           cmake --preset linux-clang-release \
             -DGRANIT_BUILD_EXAMPLES=OFF \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-          cmake --build --preset linux-clang-release --target \
-            granit_c_header_test granit_cpp_header_test granit_renderer_test granit_pipeline_test
-      - name: 运行核心测试
+          cmake --build --preset linux-clang-release
+      - name: 运行单元与 Smoke 测试
         shell: bash
-        run: ctest --preset linux-clang-release -R 'granit\.(renderer|pipeline)$'
+        run: ctest --preset linux-clang-release -L '^(unit|smoke)$'
 
   webgpu-compile:
     if: needs.classify.outputs.suite == 'webgpu'

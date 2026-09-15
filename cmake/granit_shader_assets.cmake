@@ -305,8 +305,8 @@ function(granit_prepare_test_shader_assets)
     list(APPEND outputs ${output})
   endforeach()
 
-  set(smoke_vertex_names triangle.vert window_triangle.vert)
-  set(smoke_vertex_sources triangle.hlsl window_triangle.hlsl)
+  set(smoke_vertex_names triangle.vert)
+  set(smoke_vertex_sources triangle.hlsl)
   foreach(name source IN ZIP_LISTS smoke_vertex_names smoke_vertex_sources)
     granit_add_test_shader_object(
       NAME "${name}"
@@ -321,8 +321,8 @@ function(granit_prepare_test_shader_assets)
     )
     list(APPEND outputs ${output})
   endforeach()
-  set(smoke_fragment_names triangle.frag window_triangle.frag)
-  set(smoke_fragment_sources triangle.hlsl window_triangle.hlsl)
+  set(smoke_fragment_names triangle.frag)
+  set(smoke_fragment_sources triangle.hlsl)
   foreach(name source IN ZIP_LISTS smoke_fragment_names smoke_fragment_sources)
     granit_add_test_shader_object(
       NAME "${name}"
@@ -364,7 +364,6 @@ function(granit_prepare_test_shader_assets)
     set(
       smoke_sources
       "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/triangle.hlsl"
-      "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/window_triangle.hlsl"
       "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/compute.hlsl"
     )
     foreach(library IN ITEMS pbr pbr_test unlit smoke)

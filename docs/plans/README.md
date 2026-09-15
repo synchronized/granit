@@ -200,6 +200,11 @@ D-03-graphics-pipeline.md
   已完成；旧缓存迁移、配置顺序、锁定快照和跨平台模式矩阵已通过。
 - [S-41：0.23.0 资产目录收敛](S-41-0.23.0-asset-layout-convergence.md)——已完成；作者输入、
   安装快照、内建快照、格式实现与测试 Fixture 已分离，并通过跨平台候选包验收。
+- [S-42：0.24.0 测试架构收敛](S-42-0.24.0-test-architecture-convergence.md)——跨平台验收完成；
+  测试布局、两个核心 Smoke 和工作流职责选择已收敛，等待发布候选验收。
+- [S-43：0.24.0 AssetTools 源码布局收敛](S-43-0.24.0-asset-tools-source-layout.md)——已完成；
+  公共路径、共享格式层、SDK、CLI 与测试归属已统一，并通过跨平台、共享、静态和安装 Consumer
+  验收。
 
 ## 状态
 

@@ -8,6 +8,29 @@
 
 ## Unreleased
 
+## 0.24.0 - 2026-09-15
+
+### 变更
+
+- 开发测试将简单 Smoke 收敛为离屏 GPU 与窗口 Render Pipeline 两条端到端路径；Window
+  component 统一覆盖 Win32、XCB 与 Wayland 的 Surface、Swapchain 和帧生命周期。
+- AssetTools 公共头统一移至 `<granit/asset_tools/...>`，正式 CLI 与 SDK、私有格式实现和测试
+  Fixture 工具按交付边界分目录组织；AssetTools 六类结果句柄统一校验资源类型、generation 与槽位。
+
+### 修复
+
+- 修正 Web ImGui Canvas 材质常量缓冲区大小，避免 WGSL 绘制因缓冲区不足而显示黑屏；嵌套
+  ImGui 折叠项的悬停背景改为低对比度灰色。
+- 修正 Shader Library 在 GPU 延迟回收已销毁 Shader 时的资源占用误判，防止示例关闭时报告
+  级联释放。
+
+### 兼容性与迁移
+
+- 使用旧 `<granit/tools/...>` 公共头或 `granit::tools` 命名空间的源码需改用
+  `<granit/asset_tools/...>` 和 `granit::asset_tools` 后重新编译；C ABI 函数名和已发布资产格式不变。
+- 当前版本仍处于 0.x，不承诺 Core、RenderPipeline、Window、Input 与 AssetTools 的稳定 ABI；
+  SDL3 和 ImGui Integration 继续作为实验性 component 提供。
+
 ## 0.23.0 - 2026-09-14
 
 ### 变更

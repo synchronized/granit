@@ -16,7 +16,7 @@
 #include <granit/renderer/texture.hpp>
 
 #include "lighting/tone_mapping_resources.h"
-#include "material/material_package_archive.h"
+#include "asset_formats/material/material_package_archive.h"
 #include "support/shader_asset_store.h"
 #include "support/tone_mapping_shader_library.h"
 

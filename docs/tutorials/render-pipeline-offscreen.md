@@ -3,8 +3,8 @@
 
 # 使用 Render Pipeline 完成第一次离屏渲染
 
-本教程通过仓库自带 Smoke 程序渲染一个 64×64 的 PBR 三角形，并回读中心像素验证结果。完成后可以理解
-Renderer、Mesh、Material、Scene Snapshot 和 Render Pipeline 如何组成一次完整渲染。
+本教程通过仓库自带 GPU 集成测试渲染一个 64×64 的 PBR 三角形，并回读中心像素验证结果。完成后
+可以理解 Renderer、Mesh、Material、Scene Snapshot 和 Render Pipeline 如何组成一次完整渲染。
 
 ## 前置条件
 
@@ -14,14 +14,14 @@ Renderer、Mesh、Material、Scene Snapshot 和 Render Pipeline 如何组成一�
 
 构建环境和安装方式见[构建与安装](../guides/build.md)。
 
-## 1. 构建并运行 Smoke
+## 1. 构建并运行 GPU 集成测试
 
 Windows Clang + Ninja：
 
 ```powershell
 cmake --preset windows-clang-debug
 cmake --build --preset windows-clang-debug
-build/windows-clang-debug/bin/granit_render_pipeline_offscreen_smoke.exe
+build/windows-clang-debug/bin/granit_gpu_render_pipeline_test.exe
 ```
 
 成功时程序输出如下形式的消息，具体像素值可能因设备而异：
@@ -33,7 +33,7 @@ Render Pipeline 离屏渲染成功，中心像素：R, G, B
 也可以通过 CTest 单独运行：
 
 ```powershell
-ctest --preset windows-clang-debug -R "^granit.smoke.render_pipeline_offscreen$"
+ctest --preset windows-clang-debug -R "^granit.gpu.render_pipeline$"
 ```
 
 ## 2. 创建 Renderer 和输出目标
@@ -59,7 +59,7 @@ Mesh 复制顶点布局和绘制范围，但只借用 Vertex Buffer。因此 Ver
 
 ## 4. 创建 Material
 
-CMake 在构建 Smoke 时使用 `granit_asset_tool`，把
+CMake 在构建测试时使用 `granit_asset_tool`，把
 `tests/fixtures/smoke/render_pipeline_untextured.grmat.json` 编译为材质归档。程序读取归档，并在创建
 Material 时把 `base_color` 初始化为红色系颜色。示例把构建生成的 Shader 载荷链接为 `.grshlib`；
 材质归档通过内容 ID 引用其中的 Shader，Material 只接收对应 Library 句柄，Renderer 选择 Vulkan
@@ -110,8 +110,8 @@ Render Pipeline 已经完成离屏执行。示例另外创建 readback Buffer �
 Texture 复制到 Buffer，然后映射 CPU 内存并检查中心像素。任一 RGB 通道非零即说明三角形覆盖了
 中心位置。
 
-回读是 Smoke 的自动验证步骤，不是 Render Pipeline 的必需阶段。实际应用可以继续采样输出 Texture、
-传递给后处理，或改用 Swapchain Frame 进行窗口显示。
+回读是 GPU 集成测试的自动验证步骤，不是 Render Pipeline 的必需阶段。实际应用可以继续采样输出
+Texture、传递给后处理，或改用 Swapchain Frame 进行窗口显示。
 
 ## 8. 按所有权顺序销毁
 
@@ -137,4 +137,4 @@ Vertex Buffer 与 Renderer 由 C++ RAII 包装随后释放
 - 绕过参考管线，直接学习 [Command Recorder](../reference/command-recorder.md)。
 
 本教程对应的完整源码位于
-[`tests/smoke/render_pipeline_offscreen.cpp`](../../tests/smoke/render_pipeline_offscreen.cpp)。
+[`tests/gpu/render_pipeline_test.cpp`](../../tests/gpu/render_pipeline_test.cpp)。

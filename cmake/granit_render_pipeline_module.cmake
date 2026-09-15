@@ -185,10 +185,9 @@ function(granit_add_render_pipeline_module)
       "${PROJECT_SOURCE_DIR}/src/pipeline/dynamic_uniform_arena.cpp"
       "${PROJECT_SOURCE_DIR}/src/pipeline/dynamic_uniform_arena.h"
       "${PROJECT_SOURCE_DIR}/src/pipeline/draw_binding_cache.h"
-      "${PROJECT_SOURCE_DIR}/src/asset_formats/environment_asset.cpp"
-      "${PROJECT_SOURCE_DIR}/src/asset_formats/environment_asset.h"
+      $<TARGET_OBJECTS:granit_asset_format_environment>
       "${PROJECT_SOURCE_DIR}/src/pipeline/environment_map_api.cpp"
-      $<TARGET_OBJECTS:granit_internal_shader_format>
+      $<TARGET_OBJECTS:granit_asset_format_shader>
       "${PROJECT_SOURCE_DIR}/src/pipeline/material_api.cpp"
       "${PROJECT_SOURCE_DIR}/src/pipeline/material_access.h"
       "${PROJECT_SOURCE_DIR}/src/pipeline/lighting_submission.cpp"

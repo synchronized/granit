@@ -1,0 +1,100 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Granit contributors
+
+#include <granit/asset_tools/shader_compiler.hpp>
+#include <granit/asset_tools/shader_library_builder.hpp>
+#include <granit/asset_tools/shader_reflection.hpp>
+
+#include <cstddef>
+#include <cstring>
+#include <string_view>
+
+int main(int argc, char** argv) {
+  if (argc != 4 && argc != 5)
+    return 1;
+  constexpr std::string_view index_json =
+      R"({"format_version":1,"library":"fixture","content_digest":"0000000000000000000000000000000000000000000000000000000000000000","shaders":[{"name":"main.fragment","content_id":"8f7cfc8e65d45e5e67410d4de4bf6b20420d60506e8d04418fae81a77757b483","stage":"fragment","entry_point":"main"}]})";
+  const auto [index_status, content_id] =
+      granit::asset_tools::shader::find_index_content_id(index_json, "main.fragment");
+  if (index_status.failed() || std::to_integer<unsigned int>(content_id.front()) != 0x8f)
+    return 18;
+  granit::asset_tools::shader::compiler compiler;
+  if (compiler.initialize({}) != granit::result::invalid_argument || compiler)
+    return 15;
+  auto moved_compiler = std::move(compiler);
+  if (moved_compiler || compiler)
+    return 16;
+  compiler.reset();
+  const auto [compile_status, compilation] = compiler.compile({});
+  if (compile_status != granit::result::invalid_handle || compilation)
+    return 17;
+  granit_asset_tools_shader_inspect_desc desc{};
+  constexpr auto expected_size =
+      static_cast<uint32_t>(sizeof(granit_asset_tools_shader_expected_binding));
+  granit_asset_tools_shader_expected_binding expected[]{
+      {expected_size, 0, 0}, {expected_size, 0, 1}, {expected_size, 0, 2}};
+  desc.struct_size = sizeof(desc);
+  desc.input_path = argv[1];
+  desc.input_path_length = std::strlen(argv[1]);
+  desc.validate_binding_set = 1;
+  desc.expected_bindings = expected;
+  desc.expected_binding_count = sizeof(expected) / sizeof(expected[0]);
+  auto [status, result] = granit::asset_tools::shader::inspect_spirv(desc);
+  if (status.failed() || !result)
+    return 2;
+  const auto info = result.info();
+  if (info.status.failed() || info.stage != granit::shader_stage::fragment ||
+      info.entry_point.empty() || info.output.find("schema,1") == std::string_view::npos)
+    return 3;
+  if (result.binding_count() != 3)
+    return 4;
+  const auto [binding_status, binding] = result.binding(0);
+  if (binding_status.failed() || binding.group != 0 || binding.binding != 0 ||
+      binding.type != granit::asset_tools::shader::binding_type::uniform_buffer ||
+      binding.access != granit::asset_tools::shader::binding_access::read ||
+      binding.minimum_binding_size != 16 || binding.name.empty())
+    return 5;
+  if (result.fragment_output_count() != 1)
+    return 6;
+  if (result.reflection_json().find("\"entry_point\": \"fragment_main\"") == std::string_view::npos)
+    return 14;
+  const auto [output_status, output] = result.fragment_output(0);
+  if (output_status.failed() || output.location != 0 ||
+      output.scalar_type != granit::asset_tools::shader::scalar_type::floating_point ||
+      output.bit_width != 32 || output.vector_size != 4)
+    return 7;
+  auto moved = std::move(result);
+  if (!moved || result)
+    return 8;
+
+  desc.input_path = argv[2];
+  desc.input_path_length = std::strlen(argv[2]);
+  desc.validate_binding_set = 0;
+  auto [vertex_status, vertex_result] = granit::asset_tools::shader::inspect_spirv(desc);
+  if (vertex_status.failed() || vertex_result.vertex_input_count() == 0)
+    return 9;
+  const auto [input_status, input] = vertex_result.vertex_input(0);
+  if (input_status.failed() || input.location != 0 || input.component != 0 ||
+      input.bit_width != 32 || input.vector_size == 0)
+    return 10;
+
+  desc.input_path = argv[3];
+  desc.input_path_length = std::strlen(argv[3]);
+  auto [compute_status, compute_result] = granit::asset_tools::shader::inspect_spirv(desc);
+  const auto workgroup = compute_result.compute_workgroup_size();
+  if (compute_status.failed() || workgroup.x == 0 || workgroup.y == 0 || workgroup.z == 0)
+    return 11;
+  if (argc == 5) {
+    desc.input_path = argv[4];
+    desc.input_path_length = std::strlen(argv[4]);
+    auto [override_status, override_result] = granit::asset_tools::shader::inspect_spirv(desc);
+    if (override_status.failed() || override_result.override_count() != 1)
+      return 12;
+    const auto [constant_status, constant] = override_result.override_at(0);
+    if (constant_status.failed() || constant.id != 7 ||
+        constant.scalar_type != granit::asset_tools::shader::scalar_type::floating_point ||
+        constant.bit_width != 32 || constant.default_value_size != 4)
+      return 13;
+  }
+  return 0;
+}

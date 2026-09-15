@@ -3,7 +3,7 @@
 
 #include "../tests/support/shader_asset_store.h"
 #include "material/material_migration.h"
-#include "material/material_package.h"
+#include "asset_formats/material/material_package.h"
 #include "material/material_template_gpu.h"
 
 #include <granit/renderer/renderer.h>

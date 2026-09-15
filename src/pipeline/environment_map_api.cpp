@@ -3,7 +3,8 @@
 
 #include <granit/pipeline/environment_map.h>
 
-#include "asset_formats/environment_asset.h"
+#include "asset_formats/environment/environment_asset.h"
+#include "core/handle_encoding.h"
 
 #include <granit/renderer/texture.hpp>
 
@@ -19,7 +20,7 @@ namespace {
 
 constexpr uint64_t index_mask = UINT64_C(0xffffffff);
 constexpr uint64_t generation_mask = UINT64_C(0x00ffffff);
-constexpr uint64_t type_value = UINT64_C(0x45);
+constexpr uint64_t type_value = static_cast<uint64_t>(granit::detail::handle_type::environment_map);
 constexpr std::uint32_t rgba16_bytes_per_pixel = 8;
 
 struct environment_state {

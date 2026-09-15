@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+set_property(DIRECTORY APPEND PROPERTY LABELS browser integration)
+
 include(granit_web)
 
 add_executable(granit_web_platform_smoke platform_smoke.cpp)

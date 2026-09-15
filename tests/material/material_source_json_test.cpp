@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "material/material_source_json.h"
+#include "asset_tools/material/source_json.h"
 
 #include <catch2/catch_all.hpp>
 

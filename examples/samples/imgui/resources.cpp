@@ -6,6 +6,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <span>
 #include <vector>
 
@@ -19,8 +20,11 @@ result resolve_imgui_sample_texture(ImTextureID texture, granit_canvas_draw_stat
   const auto* binding = texture == imgui_font_texture_id      ? &bindings.font
                         : texture == imgui_checker_texture_id ? &bindings.checker
                                                               : nullptr;
-  if (binding == nullptr)
+  if (binding == nullptr) {
+    std::fprintf(stderr, "ImGui 绘制命令使用了未识别的纹理 ID：0x%llx\n",
+                 static_cast<unsigned long long>(texture));
     return result::invalid_argument;
+  }
   state.texture = binding->view;
   state.sampler = binding->sampler;
   return result::success;

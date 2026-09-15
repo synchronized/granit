@@ -21,19 +21,19 @@ Buffer 组合多个在途操作。
 
 ## 原始文件 Smoke
 
-不传参数时，内部 Smoke 只验证回读像素，不产生文件：
+不传参数时，内部 Smoke 绘制三角形并验证图形内外像素，不产生文件：
 
 ```powershell
-build/windows-clang-debug/bin/granit_texture_readback_smoke.exe
+build/windows-clang-debug/bin/granit_gpu_offscreen_smoke.exe
 ```
 
 传入路径后写出原始像素：
 
 ```powershell
-build/windows-clang-debug/bin/granit_texture_readback_smoke.exe clear.rgba
+build/windows-clang-debug/bin/granit_gpu_offscreen_smoke.exe frame.rgba
 ```
 
-输出文件是 16×16 的 `RGBA8_UNORM` 数据，每行跨度由程序输出。`.rgba` 没有尺寸、格式等元数据，
+输出文件是 64×64 的 `RGBA8_UNORM` 数据，每行跨度由程序输出。`.rgba` 没有尺寸、格式等元数据，
 不能直接当作 PNG 使用；图片编码和资源包由工具或上层资产模块负责，不属于 Renderer。
 
 ## C API 容量查询

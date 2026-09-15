@@ -4,7 +4,7 @@
 #include <granit/renderer/shader_library.h>
 
 #include "renderer/renderer_registry.h"
-#include "shader_format/shader_library.h"
+#include "asset_formats/shader/shader_library.h"
 
 #include <cstring>
 #include <limits>

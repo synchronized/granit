@@ -49,6 +49,7 @@
 | 二十九、0.21.0 Shader Library 与后端无关材质 | 已完成 | S-37A～S-37L 与跨平台候选包验收均已完成 |
 | 三十、0.22.0 AssetTools SDK 与工具链交付 | 已发布 | AssetTools SDK 与工具链已随 0.22.0 发布 |
 | 三十一、0.23.0 空帧与覆盖层可靠性 | 已发布 | S-39～S-41 已随 0.23.0 发布 |
+| 三十二、0.24.0 测试架构收敛 | 候选验收中 | 跨平台门禁已通过，等待 Release Candidate |
 
 ## 一、工程与 ABI 基础
 
@@ -484,11 +485,35 @@
 - **[S-41](plans/S-41-0.23.0-asset-layout-convergence.md) / P1**：按生命周期分离作者输入、已提交
   生成快照、内建资产、格式实现与测试 Fixture，保持安装布局和资产字节不变。
 
+## 三十二、0.24.0 测试架构收敛
+
+**状态：跨平台远端验收完成；等待 Release Candidate。**
+
+- **[S-42](plans/S-42-0.24.0-test-architecture-convergence.md) / P1**：将 Smoke 收敛为离屏 GPU
+  与窗口 Render Pipeline 两个端到端健康检查，其余测试按模块和环境归位。
+- Win32、XCB、Wayland 统一通过 Window component 验证；SDL3 保留外部窗口 adapter 边界，复用
+  测试私有 Swapchain 帧逻辑。
+- 以 CTest 标签建立日常、GPU、平台、浏览器、安装包与发布矩阵，不改变公共 API 或 ABI。
+
+## 三十三、0.24.0 AssetTools 源码布局收敛
+
+**状态：跨平台远端验收完成；等待 0.24.0 Release Candidate。**
+
+- **[S-43](plans/S-43-0.24.0-asset-tools-source-layout.md) / P1**：将公共头、SDK 实现、共享格式、
+  正式 CLI 和测试 Fixture 工具放入与其交付边界一致的目录。
+- 公共 include 路径统一为 `granit/asset_tools`，C++ 命名空间保持 `granit::asset_tools`；项目处于
+  0.x 阶段，不保留旧 `granit/tools` 转发入口。
+- Runtime 与 AssetTools 按领域复用私有格式 Object Library，正式 CLI 只依赖公开 AssetTools SDK。
+- AssetTools 六类结果句柄已统一类型、槽位和 generation 校验；Environment Map 与 Debug Draw List
+  的内部类型标记不再冲突，跨类型使用会返回无效句柄错误。
+
 ## 近期执行顺序
 
-1. 公共执行器与场景 API 继续等待第二个真实复用证据。
-2. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
-3. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
+1. 完成 0.24.0 Release Candidate 验收，记录固定提交与四套 SDK 产物。
+2. 整理 0.24.0 发布记录并完成正式发布。
+3. 公共执行器与场景 API 继续等待第二个真实复用证据。
+4. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
+5. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
 6. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
    不作为当前稳定化工作的前置项。
 

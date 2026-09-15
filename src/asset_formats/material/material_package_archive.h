@@ -1,0 +1,21 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Granit contributors
+
+#ifndef GRANIT_MATERIAL_MATERIAL_PACKAGE_ARCHIVE_H
+#define GRANIT_MATERIAL_MATERIAL_PACKAGE_ARCHIVE_H
+
+#include "asset_formats/material/material_archive.h"
+#include "asset_formats/material/material_package.h"
+
+#include <vector>
+
+namespace granit::material {
+
+[[nodiscard]] archive_error encode_material_package_archive(const material_package& package,
+                                                            std::vector<std::byte>& bytes) noexcept;
+[[nodiscard]] archive_error decode_material_package_archive(std::span<const std::byte> bytes,
+                                                            material_package& package) noexcept;
+
+} // namespace granit::material
+
+#endif

@@ -43,7 +43,7 @@ if(EXISTS "${install_prefix}/lib/cmake/granit/granitAssetToolsTargets.cmake")
       shader_reflection.hpp
       asset_tools.h
       asset_tools.hpp
-      asset_tools_export.h
+      export.h
       environment_builder.h
       environment_builder.hpp
       material_builder.h
@@ -51,10 +51,13 @@ if(EXISTS "${install_prefix}/lib/cmake/granit/granitAssetToolsTargets.cmake")
       texture_builder.h
       texture_builder.hpp
   )
-    if(NOT EXISTS "${install_prefix}/include/granit/tools/${asset_tools_header}")
+    if(NOT EXISTS "${install_prefix}/include/granit/asset_tools/${asset_tools_header}")
       message(FATAL_ERROR "AssetTools 安装结果缺少公共头：${asset_tools_header}")
     endif()
   endforeach()
+  if(EXISTS "${install_prefix}/include/granit/tools")
+    message(FATAL_ERROR "AssetTools 安装结果仍包含旧公共头目录：include/granit/tools")
+  endif()
   foreach(
     obsolete_asset_tools_file
     IN ITEMS

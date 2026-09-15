@@ -5,8 +5,8 @@
 #include <granit/renderer/shader.hpp>
 #include <granit/renderer/shader_library.hpp>
 
-#include "shader_format/shader_library.h"
-#include "shader_format/shader_object.h"
+#include "asset_formats/shader/shader_library.h"
+#include "asset_formats/shader/shader_object.h"
 
 #include <array>
 #include <filesystem>

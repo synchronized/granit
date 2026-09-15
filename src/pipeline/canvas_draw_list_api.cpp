@@ -3,6 +3,8 @@
 
 #include <granit/pipeline/canvas_draw_list.h>
 
+#include "core/handle_encoding.h"
+
 #include "pipeline/canvas_draw_list.h"
 #include "pipeline/canvas_geometry_upload.h"
 #include "pipeline/canvas_pass.h"
@@ -21,7 +23,8 @@ namespace {
 
 constexpr uint64_t index_mask = UINT64_C(0xffffffff);
 constexpr uint64_t generation_mask = UINT64_C(0x00ffffff);
-constexpr uint64_t type_value = UINT64_C(0x44);
+constexpr uint64_t type_value =
+    static_cast<uint64_t>(granit::detail::handle_type::canvas_draw_list);
 
 struct canvas_draw_list_state {
   explicit canvas_draw_list_state(uint32_t frame_slot_count)
@@ -344,12 +347,12 @@ extern "C" granit_result granit_canvas_draw_list_record(granit_renderer renderer
   auto result = ensure_material(*state);
   if (result == GRANIT_SUCCESS)
     result = state->geometry.upload(renderer, state->list, frame_slot);
-  const granit::material::pbr_frame_constants frame{.view_projection = pixel_projection(
-                                                        desc->width, desc->height, state->clip_y_up),
-                                                    .camera_position = {},
-                                                    .direction_to_light = {},
-                                                    .light_radiance = {},
-                                                    .render_options = {}};
+  const granit::material::pbr_frame_constants frame{
+      .view_projection = pixel_projection(desc->width, desc->height, state->clip_y_up),
+      .camera_position = {},
+      .direction_to_light = {},
+      .light_radiance = {},
+      .render_options = {}};
   const granit::material::pbr_object_constants object{
       .model = identity_matrix(), .normal_matrix = identity_matrix(), .object_id = {}};
   if (result == GRANIT_SUCCESS) {

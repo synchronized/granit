@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+set_property(DIRECTORY APPEND PROPERTY LABELS unit)
+
 add_executable(granit_core_api_c_test core_api_c_test.c)
 target_compile_features(granit_core_api_c_test PRIVATE c_std_11)
 target_link_libraries(granit_core_api_c_test PRIVATE granit::granit Unity::Unity)

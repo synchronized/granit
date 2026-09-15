@@ -3,6 +3,8 @@
 
 #include <granit/pipeline/text_draw_list.h>
 
+#include "core/handle_encoding.h"
+
 #include "pipeline/text_atlas_access.h"
 
 #include <algorithm>
@@ -16,7 +18,7 @@ namespace {
 
 constexpr uint64_t index_mask = UINT64_C(0xffffffff);
 constexpr uint64_t generation_mask = UINT64_C(0x00ffffff);
-constexpr uint64_t type_value = UINT64_C(0x46);
+constexpr uint64_t type_value = static_cast<uint64_t>(granit::detail::handle_type::text_draw_list);
 
 struct text_run {
   uint32_t first_glyph = 0;
