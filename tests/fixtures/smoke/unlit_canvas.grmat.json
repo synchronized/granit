@@ -4,7 +4,7 @@
   "binding_model": "bind_group",
   "binding_groups": ["frame", "material", "object"],
   "material": {
-    "constant_buffer_size": 32,
+    "constant_buffer_size": 48,
     "parameters": [
       {"name": "base_color", "type": "float4", "offset": 0},
       {"name": "alpha_cutoff", "type": "float32", "offset": 16},

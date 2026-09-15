@@ -430,7 +430,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     granit.asset_tools.material.unlit_inspect
     PROPERTIES
       FIXTURES_REQUIRED granit_unlit
-      PASS_REGULAR_EXPRESSION "\"constant_buffer_size\": 32"
+      PASS_REGULAR_EXPRESSION "\"constant_buffer_size\": 48"
   )
 endif()
 
