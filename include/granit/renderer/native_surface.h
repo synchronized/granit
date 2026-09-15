@@ -9,6 +9,11 @@
 
 #include <granit/renderer/surface.h>
 
+#define GRANIT_SURFACE_TYPE_WIN32_BIT (UINT32_C(1) << 0)
+#define GRANIT_SURFACE_TYPE_XCB_BIT (UINT32_C(1) << 1)
+#define GRANIT_SURFACE_TYPE_WAYLAND_BIT (UINT32_C(1) << 2)
+#define GRANIT_SURFACE_TYPE_CANVAS_BIT (UINT32_C(1) << 3)
+
 /** Win32 Surface 来源。instance 与 window 必须保持有效直到 Surface 销毁。 */
 typedef struct granit_win32_surface_source {
   void* instance;

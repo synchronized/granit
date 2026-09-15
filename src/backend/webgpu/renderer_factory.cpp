@@ -6,6 +6,8 @@
 
 #include "backend/webgpu/renderer_state.h"
 
+#include <granit/renderer/native_surface.h>
+
 #include <new>
 
 namespace granit::detail {
@@ -33,10 +35,9 @@ granit_result create_webgpu_renderer(std::uint32_t surface_types,
 } // namespace
 
 granit_result create_default_renderer(const granit_renderer_desc& desc, granit_renderer& renderer) {
-  const auto surface_types = desc.surface_types;
-  if ((surface_types & ~GRANIT_SURFACE_TYPE_CANVAS_BIT) != 0) {
-    return GRANIT_ERROR_UNSUPPORTED;
-  }
+  const auto surface_types = desc.presentation_mode == GRANIT_PRESENTATION_ENABLED
+                                 ? GRANIT_SURFACE_TYPE_CANVAS_BIT
+                                 : UINT32_C(0);
   const auto backend = desc.backend;
   if (backend == GRANIT_RENDERER_BACKEND_VULKAN)
     return GRANIT_ERROR_BACKEND_UNAVAILABLE;

@@ -11,6 +11,7 @@
 #include <optional>
 #include <vector>
 
+#include <granit/renderer/native_surface.h>
 #include <granit/renderer/renderer.h>
 
 namespace granit::detail {

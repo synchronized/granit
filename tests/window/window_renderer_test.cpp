@@ -29,8 +29,9 @@ TEST_CASE("Window component 可以连接 Renderer Surface 和 Swapchain", "[wind
           granit::result::success);
 
   granit::renderer renderer;
-  const auto renderer_result = renderer.initialize(
-      {.application_name = "granit-window-renderer", .surface_types = granit::surface_type::win32});
+  const auto renderer_result =
+      renderer.initialize({.application_name = "granit-window-renderer",
+                           .presentation = granit::presentation_mode::enabled});
   if (environment_unavailable(renderer_result))
     SKIP("当前环境不支持 Vulkan Win32 Swapchain");
   REQUIRE(renderer_result == granit::result::success);
@@ -74,7 +75,7 @@ TEST_CASE("Wayland Window component 可以连接 Renderer Surface 和 Swapchain"
   granit::renderer renderer;
   const auto renderer_result =
       renderer.initialize({.application_name = "granit-wayland-window-renderer",
-                           .surface_types = granit::surface_type::wayland});
+                           .presentation = granit::presentation_mode::enabled});
   if (wayland_environment_unavailable(renderer_result))
     SKIP("当前环境不支持 Vulkan Wayland Swapchain");
   REQUIRE(renderer_result == granit::result::success);
@@ -122,7 +123,7 @@ TEST_CASE("XCB Window component 可以连接 Renderer Surface 和 Swapchain",
   granit::renderer renderer;
   const auto renderer_result =
       renderer.initialize({.application_name = "granit-xcb-window-renderer",
-                           .surface_types = granit::surface_type::xcb});
+                           .presentation = granit::presentation_mode::enabled});
   if (xcb_environment_unavailable(renderer_result))
     SKIP("当前环境不支持 Vulkan XCB Swapchain");
   REQUIRE(renderer_result == granit::result::success);

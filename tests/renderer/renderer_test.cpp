@@ -322,8 +322,12 @@ TEST_CASE("Renderer 描述拒绝未知字段和非法字符串", "[renderer][val
   CHECK(granit_renderer_create(&desc, &renderer) == GRANIT_ERROR_INVALID_ARGUMENT);
 
   desc = GRANIT_RENDERER_DESC_INIT;
-  desc.surface_types = UINT32_C(0x80000000);
+  desc.presentation_mode = UINT32_C(0x80000000);
   CHECK(granit_renderer_create(&desc, &renderer) == GRANIT_ERROR_INVALID_ARGUMENT);
+
+  granit::renderer wrapper;
+  CHECK(wrapper.initialize({.presentation = static_cast<granit::presentation_mode>(2)}) ==
+        granit::result::invalid_argument);
 
   desc = GRANIT_RENDERER_DESC_INIT;
   desc.frames_in_flight = 0;

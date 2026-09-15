@@ -25,29 +25,14 @@ const char* video_driver() noexcept {
 
 } // namespace
 
-result query_surface_type(SDL_Window* window, surface_type& type) noexcept {
-  type = surface_type::none;
-  if (window == nullptr || SDL_GetWindowProperties(window) == 0)
+result create_surface(granit_renderer renderer, SDL_Window* window, surface& output) noexcept {
+  if (window == nullptr)
+    return result::invalid_argument;
+  const auto properties = SDL_GetWindowProperties(window);
+  if (properties == 0)
     return result::invalid_argument;
   const auto* driver = video_driver();
-  if (std::strcmp(driver, "windows") == 0)
-    type = surface_type::win32;
-  else if (std::strcmp(driver, "wayland") == 0)
-    type = surface_type::wayland;
-  else if (std::strcmp(driver, "x11") == 0)
-    type = surface_type::xcb;
-  else
-    return result::unsupported;
-  return result::success;
-}
-
-result create_surface(granit_renderer renderer, SDL_Window* window, surface& output) noexcept {
-  surface_type type{};
-  const auto query_result = query_surface_type(window, type);
-  if (query_result != result::success)
-    return query_result;
-  const auto properties = SDL_GetWindowProperties(window);
-  if (type == surface_type::win32) {
+  if (std::strcmp(driver, "windows") == 0) {
     auto* instance =
         SDL_GetPointerProperty(properties, SDL_PROP_WINDOW_WIN32_INSTANCE_POINTER, nullptr);
     auto* native_window =
@@ -56,7 +41,7 @@ result create_surface(granit_renderer renderer, SDL_Window* window, surface& out
       return result::backend_unavailable;
     return output.initialize(renderer, granit::surface_desc::win32(instance, native_window));
   }
-  if (type == surface_type::wayland) {
+  if (std::strcmp(driver, "wayland") == 0) {
     auto* display =
         SDL_GetPointerProperty(properties, SDL_PROP_WINDOW_WAYLAND_DISPLAY_POINTER, nullptr);
     auto* native_surface =
@@ -66,6 +51,8 @@ result create_surface(granit_renderer renderer, SDL_Window* window, surface& out
     return output.initialize(renderer, granit::surface_desc::wayland(display, native_surface));
   }
 #if defined(GRANIT_INTEGRATION_SDL3_HAS_X11)
+  if (std::strcmp(driver, "x11") != 0)
+    return result::unsupported;
   auto* display = static_cast<Display*>(
       SDL_GetPointerProperty(properties, SDL_PROP_WINDOW_X11_DISPLAY_POINTER, nullptr));
   const auto native_window =

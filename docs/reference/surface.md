@@ -11,8 +11,9 @@ Surface 表示 Renderer 与窗口系统或浏览器 Canvas 之间的输出连接
 `<granit/renderer/native_surface.h>` 中的 `granit_surface_desc` 和 `granit_surface_create`，平台差异
 只存在于描述的 `surface_type` 与 `source`。公共接口不暴露 Vulkan 或 WebGPU 类型。
 
-Renderer 创建前必须在 `granit_renderer_desc::surface_types` 中声明可能使用的来源。未声明的来源
-返回 `GRANIT_ERROR_UNSUPPORTED`；当前 Vulkan 后端支持平台窗口，浏览器 WebGPU 后端支持 Canvas。
+Renderer 创建前设置 `granit_renderer_desc::presentation_mode = GRANIT_PRESENTATION_ENABLED`。
+默认 `DISABLED` 只用于离屏渲染；未启用呈现或当前后端不支持的来源返回
+`GRANIT_ERROR_UNSUPPORTED`。当前 Vulkan 后端支持平台窗口，浏览器 WebGPU 后端支持 Canvas。
 
 ## C API
 
@@ -22,7 +23,7 @@ Win32 示例：
 #include <granit/renderer/native_surface.h>
 
 granit_renderer_desc renderer_desc = GRANIT_RENDERER_DESC_INIT;
-renderer_desc.surface_types = GRANIT_SURFACE_TYPE_WIN32_BIT;
+renderer_desc.presentation_mode = GRANIT_PRESENTATION_ENABLED;
 
 granit_surface_desc desc = GRANIT_SURFACE_DESC_INIT;
 desc.surface_type = GRANIT_SURFACE_TYPE_WIN32_BIT;

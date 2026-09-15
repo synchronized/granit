@@ -34,14 +34,10 @@ int main(int argc, char** argv) {
   if (!window)
     return 1;
 
-  granit::surface_type surface_type{};
-  auto result = granit::integration::sdl3::query_surface_type(window.get(), surface_type);
   granit::renderer renderer;
-  if (result.ok()) {
-    result = renderer.initialize({.application_name = "Granit SDL3 Window Clear",
-                                  .enable_validation = true,
-                                  .surface_types = surface_type});
-  }
+  auto result = renderer.initialize({.application_name = "Granit SDL3 Window Clear",
+                                     .enable_validation = true,
+                                     .presentation = granit::presentation_mode::enabled});
   granit::surface surface;
   if (result.ok()) {
     result =

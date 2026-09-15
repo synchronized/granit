@@ -32,11 +32,8 @@ cmake -S . -B build/integrations \
 ```cpp
 #include <granit/integrations/sdl3/surface.hpp>
 
-granit::surface_type type{};
-auto result = granit::integration::sdl3::query_surface_type(window, type);
-
 granit::renderer renderer;
-renderer.initialize({.surface_types = type});
+auto result = renderer.initialize({.presentation = granit::presentation_mode::enabled});
 
 granit::surface surface;
 result = granit::integration::sdl3::create_surface(renderer.native_handle(), window, surface);
