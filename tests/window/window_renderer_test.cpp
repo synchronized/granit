@@ -27,9 +27,6 @@ TEST_CASE("Window component 可以连接 Renderer Surface 和 Swapchain", "[wind
               window_system.native_handle(),
               {.title = "Granit Window Renderer Test", .width = 96, .height = 72, .flags = 0}) ==
           granit::result::success);
-  void* instance = nullptr;
-  void* native_window = nullptr;
-  REQUIRE(window.native_win32(instance, native_window) == granit::result::success);
 
   granit::renderer renderer;
   const auto renderer_result = renderer.initialize(
@@ -38,9 +35,7 @@ TEST_CASE("Window component 可以连接 Renderer Surface 和 Swapchain", "[wind
     SKIP("当前环境不支持 Vulkan Win32 Swapchain");
   REQUIRE(renderer_result == granit::result::success);
   granit::surface surface;
-  REQUIRE(surface.initialize(renderer.native_handle(),
-                             granit::surface_desc::win32(instance, native_window)) ==
-          granit::result::success);
+  REQUIRE(window.create_surface(renderer.native_handle(), surface) == granit::result::success);
   granit::swapchain swapchain;
   REQUIRE(swapchain.initialize(renderer.native_handle(), surface.native_handle(),
                                {.width = 96, .height = 72}) == granit::result::success);
@@ -75,9 +70,6 @@ TEST_CASE("Wayland Window component 可以连接 Renderer Surface 和 Swapchain"
                              .width = 96,
                              .height = 72,
                              .flags = 0}) == granit::result::success);
-  void* display = nullptr;
-  void* native_surface = nullptr;
-  REQUIRE(window.native_wayland(display, native_surface) == granit::result::success);
 
   granit::renderer renderer;
   const auto renderer_result =
@@ -87,9 +79,7 @@ TEST_CASE("Wayland Window component 可以连接 Renderer Surface 和 Swapchain"
     SKIP("当前环境不支持 Vulkan Wayland Swapchain");
   REQUIRE(renderer_result == granit::result::success);
   granit::surface surface;
-  REQUIRE(surface.initialize(renderer.native_handle(),
-                             granit::surface_desc::wayland(display, native_surface)) ==
-          granit::result::success);
+  REQUIRE(window.create_surface(renderer.native_handle(), surface) == granit::result::success);
   granit::swapchain swapchain;
   const auto swapchain_result = swapchain.initialize(
       renderer.native_handle(), surface.native_handle(), {.width = 96, .height = 72});
@@ -128,9 +118,6 @@ TEST_CASE("XCB Window component 可以连接 Renderer Surface 和 Swapchain",
           window_system.native_handle(),
           {.title = "Granit XCB Window Renderer Test", .width = 96, .height = 72, .flags = 0}) ==
       granit::result::success);
-  void* connection = nullptr;
-  std::uint32_t native_window = 0;
-  REQUIRE(window.native_xcb(connection, native_window) == granit::result::success);
 
   granit::renderer renderer;
   const auto renderer_result =
@@ -140,9 +127,7 @@ TEST_CASE("XCB Window component 可以连接 Renderer Surface 和 Swapchain",
     SKIP("当前环境不支持 Vulkan XCB Swapchain");
   REQUIRE(renderer_result == granit::result::success);
   granit::surface surface;
-  REQUIRE(surface.initialize(renderer.native_handle(),
-                             granit::surface_desc::xcb(connection, native_window)) ==
-          granit::result::success);
+  REQUIRE(window.create_surface(renderer.native_handle(), surface) == granit::result::success);
   granit::swapchain swapchain;
   const auto swapchain_result = swapchain.initialize(
       renderer.native_handle(), surface.native_handle(), {.width = 96, .height = 72});

@@ -16,6 +16,12 @@
 
 TEST_CASE("Window创建把空Window System归类为无效句柄", "[window][contract]") {
   CHECK(granit_window_system_process_events(UINT64_MAX) == GRANIT_ERROR_INVALID_HANDLE);
+  granit_surface surface = UINT64_C(42);
+  CHECK(granit_window_create_surface(UINT64_MAX, UINT64_C(1), UINT64_C(1), &surface) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(surface == GRANIT_NULL_HANDLE);
+  CHECK(granit_window_create_surface(UINT64_MAX, UINT64_C(1), UINT64_C(1), nullptr) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
 
   granit_window_desc desc = GRANIT_WINDOW_DESC_INIT;
   desc.width = 1;

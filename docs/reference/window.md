@@ -8,8 +8,8 @@
 Window 是独立可选 component，CMake 使用者目标为 `granit::window`。当前已实现 Win32、XCB 与
 Wayland Window System、顶层窗口、显式事件处理、窗口与输入事件轮询、状态和原生值查询。
 
-Window 不依赖 Renderer 或 Vulkan。应用可以只使用 Window，也可以把查询到的原生值交给
-Renderer Surface。
+Window 公开依赖核心 Renderer，但不暴露 Vulkan。应用可以直接从 Granit Window 创建 Renderer
+Surface；外部窗口仍通过 Renderer 的原生 Surface 高级入口接入。
 
 ## 创建与销毁
 
@@ -87,22 +87,25 @@ configure 后才返回；后续 configure 转换为尺寸和焦点事件，tople
 ## Renderer 接入
 
 ```c
-void* instance = 0;
-void* hwnd = 0;
-granit_window_get_win32(system, window, &instance, &hwnd);
+granit_surface surface = GRANIT_NULL_HANDLE;
+granit_window_create_surface(system, window, renderer, &surface);
 ```
 
-查询只借出原生值，Window 仍拥有 HWND。应用使用这些值填入
-`granit_surface_desc::source.win32` 并调用 `granit_surface_create`，同时保证按 Swapchain、
-Surface、Window、Window System 的顺序销毁。
+Surface 由 Renderer 拥有。Window 不保存 Renderer 或 Surface；应用按 Swapchain、Surface、Window、
+Window System 的顺序销毁。函数校验 Window System、Window 归属和创建线程，平台来源在 Window
+内部读取，不需要普通调用方判断 Win32、XCB 或 Wayland。C++ 使用
+`granit::window::create_surface(renderer, surface)`，输出为 `granit::surface` RAII 对象。
+
+原生互操作仍可使用 `granit_window_get_win32`、`granit_window_get_xcb` 与
+`granit_window_get_wayland`，查询值仅在 Window 存活期间借用。
 
 在 Win32 Window 上查询 XCB 或 Wayland 值返回 `GRANIT_ERROR_UNSUPPORTED`，输出参数清零。
-XCB Window 可通过 `granit_window_get_xcb` 借用 connection 和 `xcb_window_t` 数值，并交给
-统一的 `granit_surface_create`。未设置或无法连接 `DISPLAY` 时，创建 Window System 返回
+XCB Window 可通过 `granit_window_get_xcb` 借用 connection 和 `xcb_window_t` 数值。未设置或
+无法连接 `DISPLAY` 时，创建 Window System 返回
 `GRANIT_ERROR_BACKEND_UNAVAILABLE`。
 
-Wayland Window 可通过 `granit_window_get_wayland` 借用 `wl_display*` 和 `wl_surface*`，并交给
-统一的 `granit_surface_create`。Window 拥有 xdg-shell 角色及原生 Surface，调用方不得自行销毁。
+Wayland Window 可通过 `granit_window_get_wayland` 借用 `wl_display*` 和 `wl_surface*`。
+Window 拥有 xdg-shell 角色及原生 Surface，调用方不得自行销毁。
 自动后端在 `WAYLAND_DISPLAY` 存在时优先选择 Wayland，否则选择 XCB；应用也可在 Window System
 描述中明确指定后端。
 

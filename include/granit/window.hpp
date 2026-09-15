@@ -5,6 +5,7 @@
 #define GRANIT_WINDOW_HPP_
 
 #include <granit/window/input.hpp>
+#include <granit/window/presentation.hpp>
 #include <granit/window/window.hpp>
 
 #endif

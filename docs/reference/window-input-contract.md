@@ -12,7 +12,8 @@
 - Window System 同时拥有窗口、Window Event、Input Event、键盘状态和指针状态。
 - 输入值类型位于 `<granit/window/input.h>` 与 `<granit/window/input.hpp>`。
 - 平台适配与 xkbcommon 保持为私有实现，不进入公共头文件。
-- Core Renderer 和 RenderPipeline 不依赖 Window；外部窗口所有者可以绕过 Window component。
+- Window 公开依赖 Core Renderer 以直接创建 Surface；Renderer 和 RenderPipeline 不依赖 Window，
+  外部窗口所有者可以绕过 Window component。
 
 ## 所有权与销毁顺序
 

@@ -14,6 +14,8 @@
 
 namespace granit {
 
+class surface;
+
 enum class window_backend : std::uint32_t {
   automatic = GRANIT_WINDOW_BACKEND_AUTO,
   win32 = GRANIT_WINDOW_BACKEND_WIN32,
@@ -138,6 +140,7 @@ public:
     }
     return from_native(value);
   }
+  [[nodiscard]] result create_surface(granit_renderer renderer, surface& output) const noexcept;
   [[nodiscard]] result native_win32(void*& instance, void*& native_window) const noexcept {
     return from_native(granit_window_get_win32(system_, handle_, &instance, &native_window));
   }
@@ -163,5 +166,7 @@ private:
 };
 
 } // namespace granit
+
+#include <granit/window/presentation.hpp>
 
 #endif

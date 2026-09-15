@@ -1,4 +1,5 @@
 granit_window_create
+granit_window_create_surface
 granit_window_destroy
 granit_window_get_keyboard_state
 granit_window_get_pointer_state

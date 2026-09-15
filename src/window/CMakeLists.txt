@@ -31,6 +31,7 @@ add_library(granit::window ALIAS granit_window)
 target_sources(
   granit_window
   PRIVATE window_api.cpp
+          presentation_api.cpp
           window_backend_internal.h
           input/input_api.cpp
           input/native_event.h
@@ -51,6 +52,8 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/window/export.h"
       "${PROJECT_SOURCE_DIR}/include/granit/window/input.h"
       "${PROJECT_SOURCE_DIR}/include/granit/window/input.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/window/presentation.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/window/presentation.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/window/window.h"
       "${PROJECT_SOURCE_DIR}/include/granit/window/window.hpp"
 )
@@ -76,6 +79,7 @@ target_include_directories(
 )
 target_link_libraries(
   granit_window
+  PUBLIC granit::granit
   PRIVATE $<$<BOOL:${GRANIT_HAS_XCB}>:${GRANIT_XCB_LIBRARY}>
           $<$<BOOL:${GRANIT_HAS_WAYLAND_SHELL}>:${GRANIT_WAYLAND_LIBRARY}>
           $<$<BOOL:${GRANIT_HAS_WAYLAND_INPUT}>:${GRANIT_XKBCOMMON_LIBRARY}>

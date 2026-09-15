@@ -109,6 +109,13 @@ public:
   [[nodiscard]] granit_renderer renderer_handle() const noexcept { return renderer_; }
 
 private:
+  friend class window;
+
+  void adopt(granit_renderer renderer, granit_surface handle) noexcept {
+    renderer_ = renderer;
+    handle_ = handle;
+  }
+
   granit_renderer renderer_{GRANIT_NULL_HANDLE};
   granit_surface handle_{GRANIT_NULL_HANDLE};
 };
