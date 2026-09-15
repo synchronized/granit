@@ -1,17 +1,19 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
-set(granit_platform_dir "${PROJECT_SOURCE_DIR}/src/platform")
+if(GRANIT_HAS_WAYLAND_SHELL)
+  add_subdirectory(platform/wayland)
+endif()
 
 add_library(granit_window)
 add_library(granit::window ALIAS granit_window)
 target_sources(
   granit_window
-  PRIVATE window_registry.cpp
+  PRIVATE window_api.cpp
           window_backend_internal.h
-          $<$<PLATFORM_ID:Windows>:${granit_platform_dir}/win32/window_backend.cpp>
-          $<$<BOOL:${GRANIT_HAS_XCB}>:${granit_platform_dir}/xcb/window_backend.cpp>
-          $<$<BOOL:${GRANIT_HAS_WAYLAND_SHELL}>:${granit_platform_dir}/wayland/window_backend.cpp>
+          $<$<PLATFORM_ID:Windows>:platform/win32/window.cpp>
+          $<$<BOOL:${GRANIT_HAS_XCB}>:platform/xcb/window.cpp>
+          $<$<BOOL:${GRANIT_HAS_WAYLAND_SHELL}>:platform/wayland/window.cpp>
           $<$<BOOL:${GRANIT_HAS_WAYLAND_SHELL}>:$<TARGET_OBJECTS:granit_xdg_shell_protocol>>
   PUBLIC
     FILE_SET HEADERS
@@ -76,3 +78,5 @@ install(
   DESTINATION "${GRANIT_INSTALL_CMAKEDIR}"
   COMPONENT Window
 )
+
+add_subdirectory(input)

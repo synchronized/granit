@@ -3,7 +3,7 @@
 
 #include <granit/window/window.h>
 
-#include "platform/window/window_backend_internal.h"
+#include "window/window_backend_internal.h"
 
 #if defined(GRANIT_WINDOW_HAS_XCB)
 #include <xcb/xcb.h>

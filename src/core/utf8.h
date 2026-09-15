@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_INPUT_UTF8_H_
-#define GRANIT_INPUT_UTF8_H_
+#ifndef GRANIT_CORE_UTF8_H_
+#define GRANIT_CORE_UTF8_H_
 
 #include <cstddef>
 #include <string_view>

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "platform/window/window_backend_internal.h"
+#include "window/window_backend_internal.h"
 
 #include <windows.h>
 #include <windowsx.h>

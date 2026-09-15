@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "platform/xcb/input_adapter.h"
+#include "window/platform/xcb/input.h"
 
 namespace granit::input::detail {
 namespace {

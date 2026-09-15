@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "input/utf8.h"
+#include "core/utf8.h"
 
 #include <catch2/catch_all.hpp>
 

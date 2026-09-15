@@ -277,11 +277,7 @@ install(
 
 # 原生窗口及其输入适配器尚无浏览器实现，保留真实的平台边界。
 if(NOT EMSCRIPTEN)
-  if(GRANIT_HAS_WAYLAND_SHELL)
-    add_subdirectory(platform/wayland)
-  endif()
-  add_subdirectory(platform/window)
-  add_subdirectory(input)
+  add_subdirectory(window)
   if(GRANIT_BUILD_INTEGRATION_SDL3)
     add_subdirectory(integrations/sdl3)
   endif()

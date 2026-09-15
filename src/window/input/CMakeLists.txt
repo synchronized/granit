@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
-set(granit_platform_dir "${PROJECT_SOURCE_DIR}/src/platform")
+set(granit_window_dir "${PROJECT_SOURCE_DIR}/src/window")
 
-add_library(granit_input_internal OBJECT utf8.cpp)
+add_library(granit_input_internal OBJECT "${PROJECT_SOURCE_DIR}/src/core/utf8.cpp")
 target_compile_features(granit_input_internal PRIVATE cxx_std_20)
 target_include_directories(
   granit_input_internal PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
@@ -15,10 +15,14 @@ set_target_properties(
              VISIBILITY_INLINES_HIDDEN YES
 )
 if(GRANIT_HAS_XCB)
-  target_sources(granit_input_internal PRIVATE "${granit_platform_dir}/xcb/input_adapter.cpp")
+  target_sources(
+    granit_input_internal PRIVATE "${granit_window_dir}/platform/xcb/input.cpp"
+  )
 endif()
 if(GRANIT_HAS_WAYLAND_INPUT)
-  target_sources(granit_input_internal PRIVATE "${granit_platform_dir}/wayland/input_adapter.cpp")
+  target_sources(
+    granit_input_internal PRIVATE "${granit_window_dir}/platform/wayland/input.cpp"
+  )
   target_include_directories(
     granit_input_internal SYSTEM PRIVATE "${GRANIT_XKBCOMMON_INCLUDE_DIR}"
   )
@@ -29,8 +33,8 @@ add_library(granit::input ALIAS granit_input)
 target_sources(
   granit_input
   PRIVATE input_api.cpp
-          "${granit_platform_dir}/input_adapter.cpp"
-          "${granit_platform_dir}/input_adapter.h"
+          platform_adapter.cpp
+          platform_adapter.h
           $<TARGET_OBJECTS:granit_input_internal>
   PUBLIC
     FILE_SET HEADERS
@@ -50,7 +54,7 @@ if(GRANIT_HAS_WAYLAND_INPUT)
   target_link_libraries(granit_input PRIVATE "${GRANIT_XKBCOMMON_LIBRARY}")
 endif()
 if(WIN32)
-  target_sources(granit_input PRIVATE "${granit_platform_dir}/win32/input_adapter.cpp")
+  target_sources(granit_input PRIVATE "${granit_window_dir}/platform/win32/input.cpp")
 endif()
 target_compile_features(granit_input PUBLIC cxx_std_20)
 target_include_directories(

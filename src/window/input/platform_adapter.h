@@ -6,7 +6,7 @@
 
 #include <granit/input/input.h>
 
-#include "platform/window/input_bridge.hpp"
+#include "window/input_bridge.hpp"
 
 #include <cstdint>
 #include <memory>

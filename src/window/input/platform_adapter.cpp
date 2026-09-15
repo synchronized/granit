@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "platform/input_adapter.h"
+#include "window/input/platform_adapter.h"
 
 #if defined(GRANIT_INPUT_HAS_WAYLAND)
-#include "platform/wayland/input_adapter.h"
+#include "window/platform/wayland/input.h"
 #endif
 #if defined(_WIN32)
-#include "platform/win32/input_adapter.h"
+#include "window/platform/win32/input.h"
 #endif
 #if defined(GRANIT_INPUT_HAS_XCB)
-#include "platform/xcb/input_adapter.h"
+#include "window/platform/xcb/input.h"
 #endif
 
 #include <cstddef>

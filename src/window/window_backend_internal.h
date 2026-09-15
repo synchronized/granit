@@ -6,7 +6,7 @@
 
 #include <granit/window/window.h>
 
-#include "platform/window/input_bridge.hpp"
+#include "window/input_bridge.hpp"
 
 #if defined(GRANIT_WINDOW_HAS_XCB)
 #include <xcb/xcb.h>

@@ -3,8 +3,8 @@
 
 #include <granit/input/input.h>
 
-#include "platform/input_adapter.h"
-#include "utf8.h"
+#include "core/utf8.h"
+#include "window/input/platform_adapter.h"
 
 #include <algorithm>
 #include <atomic>

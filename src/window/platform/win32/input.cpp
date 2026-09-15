@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "platform/win32/input_adapter.h"
+#include "window/platform/win32/input.h"
 
 #include <windows.h>
 #include <windowsx.h>

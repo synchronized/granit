@@ -206,7 +206,7 @@ D-03-graphics-pipeline.md
   公共路径、共享格式层、SDK、CLI 与测试归属已统一，并通过跨平台、共享、静态和安装 Consumer
   验收。
 - [S-44：0.25.0 Window、Input 与呈现边界收敛](S-44-0.25.0-window-input-presentation-convergence.md)
-  ——已规划；合并 Window/Input 生命周期，增加 Window Surface 便捷入口并隔离原生平台 API。
+  ——实现中；源码已按 Window component 归位，下一步合并 Input 生命周期。
 
 ## 状态
 
