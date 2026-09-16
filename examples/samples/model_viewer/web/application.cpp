@@ -23,7 +23,7 @@
 #include <granit/renderer/renderer.h>
 #include <granit/renderer/sampler.hpp>
 #include <granit/renderer/shader.hpp>
-#include <granit/renderer/surface.h>
+#include <granit/renderer/native_surface.h>
 #include <granit/renderer/swapchain.h>
 #include <granit/renderer/texture.hpp>
 #include <granit/renderer/texture_asset.h>
@@ -984,7 +984,7 @@ extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_renderer_failure_result() noexcep
 int granit::example::model_viewer::web::run_application(const application_options& configuration) {
   options = configuration;
   granit_renderer_desc desc = GRANIT_RENDERER_DESC_INIT;
-  desc.surface_types = GRANIT_SURFACE_TYPE_CANVAS_BIT;
+  desc.presentation_mode = GRANIT_PRESENTATION_ENABLED;
   desc.diagnostic_callback = diagnose;
   const auto result = granit_renderer_create(&desc, &state.renderer);
   if (result != GRANIT_SUCCESS) {

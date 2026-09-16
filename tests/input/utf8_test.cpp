@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "input/utf8.h"
+#include "core/utf8.h"
 
 #include <catch2/catch_all.hpp>
 
 #include <string>
 #include <string_view>
 
-using granit::input::detail::next_utf8_chunk;
-using granit::input::detail::utf8_chunk_result;
+using granit::detail::next_utf8_chunk;
+using granit::detail::utf8_chunk_result;
 
 TEST_CASE("UTF-8 分片保持码点边界", "[input][utf8]") {
   std::size_t length = 99;

@@ -5,6 +5,7 @@
 #include <granit/renderer/render_target.hpp>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/surface.hpp>
+#include <granit/renderer/native_surface.hpp>
 #include <granit/renderer/swapchain.hpp>
 
 #include <catch2/catch_all.hpp>
@@ -81,7 +82,7 @@ TEST_CASE("XCB Surface 可以完成 Swapchain 清屏和 Present", "[swapchain][x
   granit::renderer renderer;
   const auto renderer_result =
       renderer.initialize({.application_name = "granit-xcb-swapchain-tests",
-                           .surface_types = granit::surface_type::xcb});
+                           .presentation = granit::presentation_mode::enabled});
   if (environment_unavailable(renderer_result))
     SKIP("当前环境不支持 Vulkan XCB Swapchain");
   REQUIRE(renderer_result == granit::result::success);

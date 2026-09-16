@@ -3,6 +3,7 @@
 
 #include "../support/shader_asset_store.h"
 #include <granit/granit.hpp>
+#include <granit/renderer/native_surface.hpp>
 #include <granit/pipeline/canvas_draw_list.hpp>
 #include <granit/pipeline/render_pipeline.h>
 
@@ -108,7 +109,7 @@ int main(int argument_count, char** arguments) {
   granit::renderer renderer;
   auto result = renderer.initialize({.application_name = "Granit Render Pipeline Window",
                                      .enable_validation = true,
-                                     .surface_types = granit::surface_type::win32});
+                                     .presentation = granit::presentation_mode::enabled});
   std::vector<std::byte> shader_library_bytes;
   granit::shader_library shader_library;
   if (result.ok() && !shader_assets().initialize_library(renderer.native_handle(),

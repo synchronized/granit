@@ -5,13 +5,13 @@
 #include "model_viewer/desktop/presentation_policy.h"
 #include "model_viewer/desktop/sdl3_input.h"
 
-#include "imgui/imgui_theme.h"
-#include "sdl/sdl3_lifecycle.h"
-#include "model_viewer/application_core.h"
-#include "model_viewer/frame_executor.h"
 #include "imgui/imgui_frame_capture.h"
 #include "imgui/imgui_texture_registry.h"
+#include "imgui/imgui_theme.h"
+#include "model_viewer/application_core.h"
+#include "model_viewer/frame_executor.h"
 #include "model_viewer/viewer_panels.h"
+#include "sdl/sdl3_lifecycle.h"
 
 #include <SDL3/SDL.h>
 #include <backends/imgui_impl_sdl3.h>
@@ -256,15 +256,14 @@ granit::result capture_loading_frame(const granit::swapchain_info& swapchain_inf
   ImGui::End();
   ImGui::Render();
   return granit::example::imgui::capture_imgui_frame(
-      ImGui::GetDrawData(), granit::example::imgui::texture_registry::resolver, &textures,
-      output);
+      ImGui::GetDrawData(), granit::example::imgui::texture_registry::resolver, &textures, output);
 }
 
-granit::result
-render_loading_frame_data(granit::swapchain& swapchain,
-                          const granit::swapchain_info& swapchain_info,
-                          granit::frame_context& frame_context, granit::canvas_draw_list& canvas,
-                          const granit::example::imgui::frame_canvas_data& data) {
+granit::result render_loading_frame_data(granit::swapchain& swapchain,
+                                         const granit::swapchain_info& swapchain_info,
+                                         granit::frame_context& frame_context,
+                                         granit::canvas_draw_list& canvas,
+                                         const granit::example::imgui::frame_canvas_data& data) {
   auto result = canvas.clear();
   if (result.ok())
     result = data.append_to(canvas);
@@ -673,13 +672,10 @@ int main(int argc, char** argv) {
   granit::example::imgui::texture_registry textures;
   application_core core;
   result = core.begin_renderer();
-  granit::surface_type surface_type{};
-  if (result.ok())
-    result = granit::integration::sdl3::query_surface_type(window.get(), surface_type);
   if (result.ok()) {
     result = renderer.initialize({.application_name = "Granit Model Viewer",
                                   .enable_validation = options.enable_validation,
-                                  .surface_types = surface_type,
+                                  .presentation = granit::presentation_mode::enabled,
                                   .backend = options.backend});
   }
   granit::renderer_info renderer_info;
@@ -1127,8 +1123,9 @@ int main(int argc, char** argv) {
       changes = draw_viewer_panels(core.cpu_scene(), core.state(), panel_renderer,
                                    panel_performance, render_quality, previews);
       ImGui::Render();
-      result = granit::example::imgui::capture_imgui_frame(ImGui::GetDrawData(), granit::example::imgui::texture_registry::resolver,
-                                          &textures, ui_frame);
+      result = granit::example::imgui::capture_imgui_frame(
+          ImGui::GetDrawData(), granit::example::imgui::texture_registry::resolver, &textures,
+          ui_frame);
     }
     if (result.failed())
       break;

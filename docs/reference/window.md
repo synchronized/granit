@@ -6,10 +6,10 @@
 ## 当前状态
 
 Window 是独立可选 component，CMake 使用者目标为 `granit::window`。当前已实现 Win32、XCB 与
-Wayland Window System、顶层窗口、轮询事件、当前状态和原生句柄查询。
+Wayland Window System、顶层窗口、显式事件处理、窗口与输入事件轮询、状态和原生值查询。
 
-Window 不依赖 Renderer 或 Vulkan。应用可以只使用 Window，也可以把查询到的原生值交给
-Renderer Surface。
+Window 公开依赖核心 Renderer，但不暴露 Vulkan。应用可以直接从 Granit Window 创建 Renderer
+Surface；外部窗口仍通过 Renderer 的原生 Surface 高级入口接入。
 
 ## 创建与销毁
 
@@ -56,6 +56,8 @@ C++ 使用 `granit::window::get_state`，输出类型为 `granit::window_state`�
 ## 事件轮询
 
 ```c
+granit_window_system_process_events(system);
+
 granit_window_event event = GRANIT_WINDOW_EVENT_INIT;
 while (granit_window_poll_event(system, &event) == GRANIT_SUCCESS) {
   /* 处理 event.type。 */
@@ -63,7 +65,9 @@ while (granit_window_poll_event(system, &event) == GRANIT_SUCCESS) {
 }
 ```
 
-队列为空返回 `GRANIT_ERROR_NOT_READY`。Win32 后端产生：
+`granit_window_system_process_events` 是唯一的平台事件泵，同时更新窗口与输入状态及两个事件
+队列。`granit_window_poll_event` 只读取窗口事件队列，不隐式处理平台消息；队列为空返回
+`GRANIT_ERROR_NOT_READY`。输入轮询和状态查询见[Window 输入](input.md)。Win32 后端产生：
 
 - `GRANIT_WINDOW_EVENT_CLOSE_REQUESTED`
 - `GRANIT_WINDOW_EVENT_RESIZED`
@@ -83,26 +87,31 @@ configure 后才返回；后续 configure 转换为尺寸和焦点事件，tople
 ## Renderer 接入
 
 ```c
-void* instance = 0;
-void* hwnd = 0;
-granit_window_get_win32(system, window, &instance, &hwnd);
+granit_surface surface = GRANIT_NULL_HANDLE;
+granit_window_create_surface(system, window, renderer, &surface);
 ```
 
-查询只借出原生值，Window 仍拥有 HWND。应用使用这些值填入
-`granit_surface_desc::source.win32` 并调用 `granit_surface_create`，同时保证按 Swapchain、
-Surface、Window、Window System 的顺序销毁。
+Surface 由 Renderer 拥有。Window 不保存 Renderer 或 Surface；应用按 Swapchain、Surface、Window、
+Window System 的顺序销毁。函数校验 Window System、Window 归属和创建线程，平台来源在 Window
+内部读取，不需要普通调用方判断 Win32、XCB 或 Wayland。C++ 使用
+`granit::window::create_surface(renderer, surface)`，输出为 `granit::surface` RAII 对象。
+
+原生互操作仍可显式包含 `<granit/window/native.h>` 或对应 C++ 头，并使用
+`granit_window_get_win32`、`granit_window_get_xcb` 与 `granit_window_get_wayland`；查询值仅在
+Window 存活期间借用。这些查询不进入普通 Window 聚合头。
 
 在 Win32 Window 上查询 XCB 或 Wayland 值返回 `GRANIT_ERROR_UNSUPPORTED`，输出参数清零。
-XCB Window 可通过 `granit_window_get_xcb` 借用 connection 和 `xcb_window_t` 数值，并交给
-统一的 `granit_surface_create`。未设置或无法连接 `DISPLAY` 时，创建 Window System 返回
+XCB Window 可通过 `granit_window_get_xcb` 借用 connection 和 `xcb_window_t` 数值。未设置或
+无法连接 `DISPLAY` 时，创建 Window System 返回
 `GRANIT_ERROR_BACKEND_UNAVAILABLE`。
 
-Wayland Window 可通过 `granit_window_get_wayland` 借用 `wl_display*` 和 `wl_surface*`，并交给
-统一的 `granit_surface_create`。Window 拥有 xdg-shell 角色及原生 Surface，调用方不得自行销毁。
+Wayland Window 可通过 `granit_window_get_wayland` 借用 `wl_display*` 和 `wl_surface*`。
+Window 拥有 xdg-shell 角色及原生 Surface，调用方不得自行销毁。
 自动后端在 `WAYLAND_DISPLAY` 存在时优先选择 Wayland，否则选择 XCB；应用也可在 Window System
 描述中明确指定后端。
 
 ## 线程约束
 
-Window System 记录创建线程。窗口创建、销毁、事件轮询、状态和原生值查询必须在该线程执行；跨线程
-调用返回 `GRANIT_ERROR_INVALID_ARGUMENT`。销毁 Window System 会级联销毁仍存活的窗口。
+Window System 记录创建线程。窗口创建和销毁、事件处理与轮询、窗口和输入状态及原生值查询必须在
+该线程执行；跨线程调用返回 `GRANIT_ERROR_INVALID_ARGUMENT`。销毁 Window System 会级联销毁
+仍存活的窗口和输入状态。

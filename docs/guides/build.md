@@ -33,10 +33,10 @@
 `GRANIT_WARNINGS_AS_ERRORS` 设为 `ON`，以便尽早发现问题。作为子项目手动引入时，两项开关默认
 保持 `OFF`；所有警告选项均为目标私有属性，不会传递给使用者。
 
-Wayland Window 需要 `wayland-client`、`wayland-scanner` 和 `wayland-protocols`；Wayland Input
-额外查找 `libxkbcommon`。缺少 `libxkbcommon` 时只禁用 Wayland Input，XCB Input 和 Wayland
-Window 仍可构建。上述库均不进入 Granit 公共头文件；静态链接 Input 时最终应用仍需链接系统
-`libxkbcommon`。
+Wayland Window 需要 `wayland-client`、`wayland-scanner` 和 `wayland-protocols`，其输入支持额外
+查找 `libxkbcommon`。缺少 `libxkbcommon` 时禁用 Wayland 输入，XCB 输入和 Wayland 窗口仍可
+构建。上述库均不进入 Granit 公共头文件；静态链接 Window 且启用 Wayland 输入时，最终应用仍需
+链接系统 `libxkbcommon`。
 
 桌面平台只构建 Vulkan 后端，不需要 Dawn SDK。浏览器 WebGPU 由 Emscripten 构建静态接入，
 其环境和运行方法见[浏览器 WebGPU 示例](webgpu-browser-example.md)。
@@ -101,8 +101,9 @@ cmake --build build/consumer
 ctest --test-dir build/consumer --output-on-failure
 ```
 
-Consumer CTest 会运行 Core C/C++、RenderPipeline C/C++、Window C 和 Input C/C++ 七条路径，
-并从安装目标自动补充共享库搜索路径；不需要把 DLL 或 SO 复制进 Consumer 构建目录。
+Consumer CTest 会运行 Core C/C++、RenderPipeline C/C++，以及覆盖窗口和输入入口的三条 Window
+路径，共七条路径。测试从安装目标自动补充共享库搜索路径；不需要把 DLL 或 SO 复制进 Consumer
+构建目录。
 
 维护安装规则时还可运行包选择测试，确认兼容与精确版本能够找到包，而错误主版本和未知必需
 component 会被拒绝：
@@ -131,9 +132,9 @@ Windows 共享验证不会把 DLL 复制到 Consumer 目录，而是从安装前
 
 | 平台 | 编译器 | 链接模式 | 安装 Consumer | 当前验证状态 |
 | --- | --- | --- | --- | --- |
-| Windows x64 | MSVC | 共享、静态 | C11、C++20、RenderPipeline、Window、Input | Release CI 已通过 |
-| Linux x64 | Clang | 共享、静态 | C11、C++20、RenderPipeline、Window、Input | Release CI 已通过 |
-| Linux x64 | GCC | 共享、静态 | C11、C++20、RenderPipeline、Window、Input | Release CI 已通过 |
+| Windows x64 | MSVC | 共享、静态 | C11、C++20、RenderPipeline、Window（含输入） | Release CI 已通过 |
+| Linux x64 | Clang | 共享、静态 | C11、C++20、RenderPipeline、Window（含输入） | Release CI 已通过 |
+| Linux x64 | GCC | 共享、静态 | C11、C++20、RenderPipeline、Window（含输入） | Release CI 已通过 |
 
 该矩阵描述当前持续验证范围，不等同于 API 或 ABI 稳定承诺。Windows Clang/clang-cl preset 可用于
 开发，但尚未进入安装 Consumer 的必过矩阵。2026-08-18 的跨平台验收结果见

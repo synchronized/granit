@@ -14,6 +14,7 @@
 #include <vector>
 
 #include <granit/core/version.h>
+#include <granit/renderer/native_surface.h>
 #include <granit/renderer/renderer.h>
 
 namespace granit::detail {
@@ -153,8 +154,7 @@ granit_result vulkan_instance::initialize(const vulkan_instance_desc& desc) {
     if (desc.enable_validation) {
       extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
-    if (desc.surface_types != 0 &&
-        !instance_extension_available(VK_KHR_SURFACE_EXTENSION_NAME))
+    if (desc.surface_types != 0 && !instance_extension_available(VK_KHR_SURFACE_EXTENSION_NAME))
       return GRANIT_ERROR_UNSUPPORTED;
     if (desc.surface_types != 0)
       extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);

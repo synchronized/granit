@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <granit/granit.h>
+#include <granit/renderer/native_surface.h>
 #include <unity.h>
 
 void setUp(void) {}

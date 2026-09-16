@@ -8,6 +8,7 @@
 #include "support/pbr_test_support.h"
 
 #include <granit/granit.hpp>
+#include <granit/renderer/native_surface.hpp>
 
 #include <windows.h>
 
@@ -212,7 +213,7 @@ int main(int argument_count, char** arguments) {
   granit::renderer renderer;
   auto result = renderer.initialize({.application_name = "Granit Window HDR",
                                      .enable_validation = true,
-                                     .surface_types = granit::surface_type::win32});
+                                     .presentation = granit::presentation_mode::enabled});
   granit::surface surface;
   if (result.ok())
     result =

@@ -3,6 +3,7 @@
 
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/surface.hpp>
+#include <granit/renderer/native_surface.hpp>
 
 #include <catch2/catch_all.hpp>
 
@@ -81,7 +82,7 @@ TEST_CASE("Vulkan Renderer 明确拒绝 Canvas Surface", "[surface][canvas]") {
   granit::renderer renderer;
   const auto renderer_result =
       renderer.initialize({.application_name = "granit-canvas-surface-tests",
-                           .surface_types = granit::surface_type::canvas});
+                           .presentation = granit::presentation_mode::enabled});
   if (renderer_result == granit::result::backend_unavailable ||
       renderer_result == granit::result::incompatible_driver ||
       renderer_result == granit::result::no_suitable_device) {
@@ -134,7 +135,7 @@ TEST_CASE("Win32 Surface 支持创建、移动和销毁", "[surface][win32]") {
 
   granit::renderer renderer;
   const auto renderer_result = renderer.initialize(
-      {.application_name = "granit-surface-tests", .surface_types = granit::surface_type::win32});
+      {.application_name = "granit-surface-tests", .presentation = granit::presentation_mode::enabled});
   if (environment_unavailable(renderer_result)) {
     SKIP("当前运行环境不支持 Vulkan Win32 Surface");
   }
@@ -178,7 +179,7 @@ TEST_CASE("Renderer 销毁时自动使所属 Surface 失效", "[surface][lifetim
   REQUIRE(window.valid());
 
   granit_renderer_desc renderer_desc = GRANIT_RENDERER_DESC_INIT;
-  renderer_desc.surface_types = GRANIT_SURFACE_TYPE_WIN32_BIT;
+  renderer_desc.presentation_mode = GRANIT_PRESENTATION_ENABLED;
   granit_renderer renderer = GRANIT_NULL_HANDLE;
   const auto renderer_result = granit_renderer_create(&renderer_desc, &renderer);
   if (environment_unavailable(granit::from_native(renderer_result))) {

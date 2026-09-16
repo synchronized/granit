@@ -8,7 +8,7 @@
 #include <cstring>
 #include <string_view>
 
-#include <granit/renderer/surface.h>
+#include <granit/renderer/native_surface.h>
 
 namespace granit::detail {
 

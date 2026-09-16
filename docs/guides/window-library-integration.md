@@ -8,6 +8,8 @@
 本指南说明如何将 SDL3 或 GLFW 创建的窗口直接连接到 Granit Surface。SDL3 使用者可以选择
 `granit::integration_sdl3` 自动查询原生值；本文保留平台直连方法，供 GLFW、定制集成和排错使用。
 第三方库继续拥有窗口、事件循环与输入；Granit 只借用创建 Surface 所需的原生值。
+直连代码需要显式包含 `<granit/renderer/native_surface.h>` 或
+`<granit/renderer/native_surface.hpp>`；这些来源描述不由普通聚合头携带。
 
 当前直接映射关系为：
 
@@ -25,7 +27,7 @@
 
 1. SDL3 使用 `SDL_WINDOW_VULKAN` 创建窗口；GLFW 使用 `GLFW_NO_API`，不要创建 OpenGL Context。
 2. 查询窗口实际使用的 Win32、X11 或 Wayland 后端及原生值。
-3. 使用对应 `surface_type` 创建 Renderer。
+3. 使用 `presentation_mode::enabled` 创建 Renderer。
 4. 从原生值创建 Granit Surface 和 Swapchain。
 5. 在第三方库事件循环中处理 Resize、最小化和关闭。
 6. 按 Swapchain、Surface、Renderer、第三方窗口的顺序销毁。
@@ -50,7 +52,7 @@ void* hwnd = SDL_GetPointerProperty(
 granit::renderer renderer;
 auto result = renderer.initialize({
     .application_name = "SDL3 Granit",
-    .surface_types = granit::surface_type::win32,
+    .presentation = granit::presentation_mode::enabled,
 });
 granit::surface surface;
 if (result.ok())
@@ -70,7 +72,7 @@ void* wl_surface = SDL_GetPointerProperty(
 granit::renderer renderer;
 auto result = renderer.initialize({
     .application_name = "SDL3 Granit",
-    .surface_types = granit::surface_type::wayland,
+    .presentation = granit::presentation_mode::enabled,
 });
 granit::surface surface;
 if (result.ok())
@@ -99,7 +101,7 @@ auto* connection = XGetXCBConnection(xlib_display);
 granit::renderer renderer;
 auto result = renderer.initialize({
     .application_name = "SDL3 Granit",
-    .surface_types = granit::surface_type::xcb,
+    .presentation = granit::presentation_mode::enabled,
 });
 granit::surface surface;
 if (result.ok()) {
@@ -129,7 +131,7 @@ HINSTANCE instance = reinterpret_cast<HINSTANCE>(GetWindowLongPtrW(hwnd, GWLP_HI
 surface.initialize(renderer.native_handle(), granit::surface_desc::win32(instance, hwnd));
 ```
 
-Renderer 创建时声明 `granit::surface_type::win32`。
+Renderer 创建时启用呈现。
 
 ### Wayland
 
@@ -143,7 +145,7 @@ surface.initialize(
     renderer.native_handle(), granit::surface_desc::wayland(display, wl_surface));
 ```
 
-Renderer 创建时声明 `granit::surface_type::wayland`。
+Renderer 创建时启用呈现。
 
 ### X11 转 XCB
 
@@ -160,7 +162,7 @@ surface.initialize(
     granit::surface_desc::xcb(connection, static_cast<std::uint32_t>(x11_window)));
 ```
 
-Renderer 创建时声明 `granit::surface_type::xcb`，应用同时链接 GLFW 和 X11-xcb。
+Renderer 创建时启用呈现，应用同时链接 GLFW 和 X11-xcb。
 
 ## Resize 与事件循环
 

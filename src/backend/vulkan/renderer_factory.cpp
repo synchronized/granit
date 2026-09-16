@@ -2,10 +2,12 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "renderer/renderer_factory.h"
-#include "renderer/renderer_registry.h"
 #include "core/diagnostic_sink.h"
+#include "renderer/renderer_registry.h"
 
 #include "backend/vulkan/renderer_state.h"
+
+#include <granit/renderer/native_surface.h>
 
 #include <new>
 #include <string>
@@ -16,9 +18,9 @@ namespace granit::detail {
 namespace {
 
 granit_result create_vulkan_renderer(std::string_view application_name, bool enable_validation,
-                                        std::uint32_t surface_types, std::uint32_t frames_in_flight,
-                                        granit_diagnostic_callback diagnostic_callback,
-                                        void* diagnostic_user_data, granit_renderer& renderer) {
+                                     std::uint32_t surface_types, std::uint32_t frames_in_flight,
+                                     granit_diagnostic_callback diagnostic_callback,
+                                     void* diagnostic_user_data, granit_renderer& renderer) {
   try {
     auto state = std::make_shared<vulkan_renderer_state>();
     const auto initialize_result =
@@ -56,7 +58,18 @@ granit_result create_default_renderer(const granit_renderer_desc& desc, granit_r
           ? default_application_name
           : std::string_view{desc.application_name, desc.application_name_length};
   const auto validation_enabled = (desc.flags & GRANIT_RENDERER_ENABLE_VALIDATION_BIT) != 0;
-  const auto surface_types = desc.surface_types;
+  std::uint32_t surface_types = 0;
+  if (desc.presentation_mode == GRANIT_PRESENTATION_ENABLED) {
+#if defined(_WIN32)
+    surface_types |= GRANIT_SURFACE_TYPE_WIN32_BIT;
+#endif
+#if defined(GRANIT_HAS_XCB)
+    surface_types |= GRANIT_SURFACE_TYPE_XCB_BIT;
+#endif
+#if defined(GRANIT_HAS_WAYLAND)
+    surface_types |= GRANIT_SURFACE_TYPE_WAYLAND_BIT;
+#endif
+  }
   const auto frames_in_flight = desc.frames_in_flight;
   const auto diagnostic_callback = desc.diagnostic_callback;
   auto* diagnostic_user_data = desc.diagnostic_user_data;
@@ -67,9 +80,9 @@ granit_result create_default_renderer(const granit_renderer_desc& desc, granit_r
     return GRANIT_ERROR_BACKEND_UNAVAILABLE;
   }
 
- granit_result vulkan_result =
+  granit_result vulkan_result =
       create_vulkan_renderer(application_name, validation_enabled, surface_types, frames_in_flight,
-                      diagnostic_callback, diagnostic_user_data, renderer);
+                             diagnostic_callback, diagnostic_user_data, renderer);
   return vulkan_result;
 }
 

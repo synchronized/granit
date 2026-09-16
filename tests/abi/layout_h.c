@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include <granit/granit.h>
+#include <granit/renderer/native_surface.h>
 
 #include "snapshots/0.4.0/core_identity.h"
 
@@ -46,6 +47,8 @@ GRANIT_ABI_ASSERT(granit_abi_renderer_desc_size, sizeof(granit_renderer_desc) ==
 GRANIT_ABI_ASSERT(granit_abi_renderer_desc_application_name,
                   offsetof(granit_renderer_desc, application_name) == 8);
 GRANIT_ABI_ASSERT(granit_abi_renderer_desc_flags, offsetof(granit_renderer_desc, flags) == 20);
+GRANIT_ABI_ASSERT(granit_abi_renderer_desc_presentation,
+                  offsetof(granit_renderer_desc, presentation_mode) == 24);
 GRANIT_ABI_ASSERT(granit_abi_renderer_desc_reserved,
                   offsetof(granit_renderer_desc, reserved) == 32);
 GRANIT_ABI_ASSERT(granit_abi_renderer_desc_callback,

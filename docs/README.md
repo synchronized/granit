@@ -57,11 +57,13 @@
 22. [0.23.0 资产目录收敛计划](plans/S-41-0.23.0-asset-layout-convergence.md)
 23. [0.24.0 测试架构收敛计划](plans/S-42-0.24.0-test-architecture-convergence.md)
 24. [0.24.0 AssetTools 源码布局收敛计划](plans/S-43-0.24.0-asset-tools-source-layout.md)
+25. [0.25.0 Window、Input 与呈现边界收敛计划](plans/S-44-0.25.0-window-input-presentation-convergence.md)
 
 ## 操作指南
 
 - [构建、测试、安装与 CMake 集成](guides/build.md)
 - [发布验收](guides/release.md)
+- [从 0.24 迁移到 0.25](guides/migrate-0.24-to-0.25.md)
 - [从 0.2 迁移到 0.3](guides/migrate-0.2-to-0.3.md)
 - [从 0.3 迁移到 0.4](guides/migrate-0.3-to-0.4.md)
 - [从 0.4 迁移到 0.5](guides/migrate-0.4-to-0.5.md)
@@ -137,9 +139,9 @@
 
 ### 窗口输出
 
-- [Window 与 Input component 契约](reference/window-input-contract.md)
+- [Window 与输入契约](reference/window-input-contract.md)
 - [Window component](reference/window.md)
-- [Input component](reference/input.md)
+- [Window 输入](reference/input.md)
 - [Surface](reference/surface.md)
 - [Swapchain](reference/swapchain.md)
 - [SDL3 与 GLFW 窗口接入](guides/window-library-integration.md)

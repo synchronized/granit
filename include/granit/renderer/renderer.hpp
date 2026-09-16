@@ -21,12 +21,9 @@
 
 namespace granit {
 
-enum class surface_type : std::uint32_t {
-  none = 0,
-  win32 = GRANIT_SURFACE_TYPE_WIN32_BIT,
-  xcb = GRANIT_SURFACE_TYPE_XCB_BIT,
-  wayland = GRANIT_SURFACE_TYPE_WAYLAND_BIT,
-  canvas = GRANIT_SURFACE_TYPE_CANVAS_BIT,
+enum class presentation_mode : std::uint32_t {
+  disabled = GRANIT_PRESENTATION_DISABLED,
+  enabled = GRANIT_PRESENTATION_ENABLED,
 };
 
 enum class renderer_backend : std::uint32_t {
@@ -35,15 +32,10 @@ enum class renderer_backend : std::uint32_t {
   webgpu = GRANIT_RENDERER_BACKEND_WEBGPU,
 };
 
-[[nodiscard]] constexpr surface_type operator|(surface_type left, surface_type right) noexcept {
-  return static_cast<surface_type>(static_cast<std::uint32_t>(left) |
-                                   static_cast<std::uint32_t>(right));
-}
-
 struct renderer_desc {
   std::string_view application_name{"Granit Application"};
   bool enable_validation{};
-  surface_type surface_types{surface_type::none};
+  presentation_mode presentation{presentation_mode::disabled};
   std::uint32_t frames_in_flight{GRANIT_DEFAULT_FRAMES_IN_FLIGHT};
   diagnostic_callback diagnostics{};
   void* diagnostic_user_data{};
@@ -172,7 +164,7 @@ public:
         .application_name = desc.application_name.data(),
         .application_name_length = static_cast<std::uint32_t>(desc.application_name.size()),
         .flags = desc.enable_validation ? GRANIT_RENDERER_ENABLE_VALIDATION_BIT : UINT32_C(0),
-        .surface_types = static_cast<std::uint32_t>(desc.surface_types),
+        .presentation_mode = static_cast<granit_presentation_mode>(desc.presentation),
         .frames_in_flight = desc.frames_in_flight,
         .reserved = 0,
         .diagnostic_callback = desc.diagnostics,

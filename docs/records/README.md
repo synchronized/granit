@@ -19,6 +19,7 @@
 
 ## 稳定化与跨平台
 
+- [2026-09-15 S-44F 0.25.0 本地候选包验收](2026-09-15-s44f-local-candidate-validation.md)
 - [2026-09-15 Granit 0.24.0 发布验收](2026-09-15-v0.24.0-release-acceptance.md)
 - [2026-09-15 Granit 0.24.0 跨平台验收](2026-09-15-v0.24.0-cross-platform-acceptance.md)
 - [2026-09-15 0.24.0 句柄类型安全本地验收](2026-09-15-0.24-handle-type-safety.md)

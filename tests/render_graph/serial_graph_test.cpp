@@ -5,6 +5,7 @@
 
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/surface.hpp>
+#include <granit/renderer/native_surface.hpp>
 #include <granit/renderer/swapchain.hpp>
 
 #include <catch2/catch_all.hpp>
@@ -218,7 +219,7 @@ TEST_CASE("串行 Render Graph 提交 Swapchain Frame", "[render_graph][swapchai
   REQUIRE(window.valid());
   granit::renderer renderer;
   const auto initialize = renderer.initialize(
-      {.application_name = "granit-graph-window", .surface_types = granit::surface_type::win32});
+      {.application_name = "granit-graph-window", .presentation = granit::presentation_mode::enabled});
   if (environment_unavailable(initialize) || initialize == granit::result::unsupported) {
     SKIP("当前运行环境不支持 Vulkan Win32 Swapchain");
   }

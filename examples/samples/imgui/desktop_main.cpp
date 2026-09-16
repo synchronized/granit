@@ -6,9 +6,9 @@
 #include <backends/imgui_impl_sdl3.h>
 #include <imgui.h>
 
+#include "imgui/imgui_theme.h"
 #include "samples/imgui/content.h"
 #include "samples/imgui/resources.h"
-#include "imgui/imgui_theme.h"
 #include "sdl/sdl3_lifecycle.h"
 
 #include <granit/granit.hpp>
@@ -297,9 +297,8 @@ int main(int argc, char** argv) {
   if (!SDL_Init(SDL_INIT_VIDEO))
     return 1;
   granit::example::sdl::sdl_quit quit;
-  std::unique_ptr<SDL_Window, granit::example::sdl::window_deleter> window(
-      SDL_CreateWindow("Granit SDL3 + ImGui", 1280, 720,
-                       SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY));
+  std::unique_ptr<SDL_Window, granit::example::sdl::window_deleter> window(SDL_CreateWindow(
+      "Granit SDL3 + ImGui", 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY));
   if (!window)
     return 1;
 
@@ -313,16 +312,12 @@ int main(int argc, char** argv) {
   granit::example::apply_imgui_theme();
   ImGui::GetIO().IniFilename = nullptr;
 
-  granit::surface_type surface_type{};
-  auto result = granit::integration::sdl3::query_surface_type(window.get(), surface_type);
   granit::renderer renderer;
-  if (result.ok()) {
-    result =
-        renderer.initialize({.application_name = "Granit SDL3 ImGui",
-                             .enable_validation = validation_enabled,
-                             .surface_types = surface_type,
-                             .frames_in_flight = static_cast<std::uint32_t>(frame_slot_count)});
-  }
+  auto result =
+      renderer.initialize({.application_name = "Granit SDL3 ImGui",
+                           .enable_validation = validation_enabled,
+                           .presentation = granit::presentation_mode::enabled,
+                           .frames_in_flight = static_cast<std::uint32_t>(frame_slot_count)});
   granit::surface surface;
   if (result.ok()) {
     result =

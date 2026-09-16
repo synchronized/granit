@@ -153,6 +153,8 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/shader_library.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/surface.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/surface.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/native_surface.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/native_surface.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/texture.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/texture.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/texture_asset.h"
@@ -277,11 +279,7 @@ install(
 
 # 原生窗口及其输入适配器尚无浏览器实现，保留真实的平台边界。
 if(NOT EMSCRIPTEN)
-  if(GRANIT_HAS_WAYLAND_SHELL)
-    add_subdirectory(platform/wayland)
-  endif()
-  add_subdirectory(platform/window)
-  add_subdirectory(input)
+  add_subdirectory(window)
   if(GRANIT_BUILD_INTEGRATION_SDL3)
     add_subdirectory(integrations/sdl3)
   endif()

@@ -8,20 +8,18 @@ set_property(DIRECTORY APPEND PROPERTY LABELS package)
 
 include(CTest)
 
-find_package(granit 0.24 CONFIG REQUIRED COMPONENTS RenderPipeline Window Input)
+find_package(granit 0.25 CONFIG REQUIRED COMPONENTS RenderPipeline Window)
 
-if(NOT granit_VERSION VERSION_EQUAL "0.24.0")
+if(NOT granit_VERSION VERSION_EQUAL "0.25.0")
   message(FATAL_ERROR "Granit 包版本不符合预期: ${granit_VERSION}")
 endif()
 
 get_target_property(granit_core_linkage granit::granit TYPE)
 get_target_property(granit_pipeline_linkage granit::render_pipeline TYPE)
 get_target_property(granit_window_linkage granit::window TYPE)
-get_target_property(granit_input_linkage granit::input TYPE)
 if(NOT granit_core_linkage STREQUAL granit_pipeline_linkage OR
-   NOT granit_core_linkage STREQUAL granit_window_linkage OR
-   NOT granit_core_linkage STREQUAL granit_input_linkage)
-  message(FATAL_ERROR "核心库、RenderPipeline、Window 与 Input component 的链接类型不一致")
+   NOT granit_core_linkage STREQUAL granit_window_linkage)
+  message(FATAL_ERROR "核心库、RenderPipeline 与 Window component 的链接类型不一致")
 endif()
 if(granit_core_linkage STREQUAL "STATIC_LIBRARY")
   set(granit_consumer_linkage_definition GRANIT_CONSUMER_EXPECT_STATIC)
@@ -70,11 +68,11 @@ target_link_libraries(granit_window_c_consumer PRIVATE granit::window)
 set_target_properties(granit_window_c_consumer PROPERTIES C_STANDARD 11 C_STANDARD_REQUIRED YES)
 
 add_executable(granit_input_c_consumer input_main.c)
-target_link_libraries(granit_input_c_consumer PRIVATE granit::input)
+target_link_libraries(granit_input_c_consumer PRIVATE granit::window)
 set_target_properties(granit_input_c_consumer PROPERTIES C_STANDARD 11 C_STANDARD_REQUIRED YES)
 
 add_executable(granit_input_cpp_consumer input_main.cpp)
-target_link_libraries(granit_input_cpp_consumer PRIVATE granit::input)
+target_link_libraries(granit_input_cpp_consumer PRIVATE granit::window)
 target_compile_features(granit_input_cpp_consumer PRIVATE cxx_std_20)
 
 foreach(

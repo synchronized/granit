@@ -47,10 +47,9 @@ typedef struct granit_renderer_status {
 
 #define GRANIT_RENDERER_ENABLE_VALIDATION_BIT (UINT32_C(1) << 0)
 
-#define GRANIT_SURFACE_TYPE_WIN32_BIT (UINT32_C(1) << 0)
-#define GRANIT_SURFACE_TYPE_XCB_BIT (UINT32_C(1) << 1)
-#define GRANIT_SURFACE_TYPE_WAYLAND_BIT (UINT32_C(1) << 2)
-#define GRANIT_SURFACE_TYPE_CANVAS_BIT (UINT32_C(1) << 3)
+typedef uint32_t granit_presentation_mode;
+#define GRANIT_PRESENTATION_DISABLED UINT32_C(0)
+#define GRANIT_PRESENTATION_ENABLED UINT32_C(1)
 
 #define GRANIT_DEFAULT_FRAMES_IN_FLIGHT UINT32_C(2)
 #define GRANIT_MAX_FRAMES_IN_FLIGHT UINT32_C(4)
@@ -187,7 +186,7 @@ typedef struct granit_renderer_desc {
   const char* application_name;
   uint32_t application_name_length;
   uint32_t flags;
-  uint32_t surface_types;
+  granit_presentation_mode presentation_mode;
   uint32_t frames_in_flight;
   uint32_t reserved;
   granit_diagnostic_callback diagnostic_callback;
@@ -204,7 +203,7 @@ typedef struct granit_renderer_desc {
    0,                                                                                              \
    UINT32_C(0),                                                                                    \
    UINT32_C(0),                                                                                    \
-   UINT32_C(0),                                                                                    \
+   GRANIT_PRESENTATION_DISABLED,                                                                   \
    GRANIT_DEFAULT_FRAMES_IN_FLIGHT,                                                                \
    UINT32_C(0),                                                                                    \
    0,                                                                                              \

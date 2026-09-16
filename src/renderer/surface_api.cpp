@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/renderer/surface.h>
+#include <granit/renderer/native_surface.h>
 
 #include "renderer/renderer_registry.h"
 #include "renderer/surface_validation.h"

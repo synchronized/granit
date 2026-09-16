@@ -5,6 +5,7 @@
 #include <granit/renderer/render_target.hpp>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/surface.hpp>
+#include <granit/renderer/native_surface.hpp>
 #include <granit/renderer/swapchain.hpp>
 
 #include <catch2/catch_all.hpp>
@@ -135,7 +136,7 @@ TEST_CASE("Wayland Surface 可以完成 Swapchain 清屏和 Present", "[swapchai
 
   granit::renderer renderer;
   const auto renderer_result = renderer.initialize(
-      {.application_name = "granit-wayland-tests", .surface_types = granit::surface_type::wayland});
+      {.application_name = "granit-wayland-tests", .presentation = granit::presentation_mode::enabled});
   if (environment_unavailable(renderer_result))
     SKIP("当前环境不支持 Vulkan Wayland Swapchain");
   REQUIRE(renderer_result == granit::result::success);

@@ -7,6 +7,7 @@
 #include <granit/renderer/render_target.hpp>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/surface.hpp>
+#include <granit/renderer/native_surface.hpp>
 #include <granit/renderer/swapchain.hpp>
 
 #include <catch2/catch_all.hpp>
@@ -72,7 +73,7 @@ TEST_CASE("Swapchain 支持创建、查询、重建和销毁", "[swapchain][win3
   granit::renderer renderer;
   const auto renderer_result = renderer.initialize({.application_name = "granit-swapchain-tests",
                                                     .enable_validation = true,
-                                                    .surface_types = granit::surface_type::win32});
+                                                    .presentation = granit::presentation_mode::enabled});
   if (swapchain_environment_unavailable(renderer_result)) {
     SKIP("当前运行环境不支持 Vulkan Win32 Swapchain");
   }
@@ -260,7 +261,7 @@ TEST_CASE("Surface 销毁时自动使所属 Swapchain 失效", "[swapchain][life
   granit::renderer renderer;
   const auto renderer_result =
       renderer.initialize({.application_name = "granit-swapchain-lifetime-tests",
-                           .surface_types = granit::surface_type::win32});
+                           .presentation = granit::presentation_mode::enabled});
   if (swapchain_environment_unavailable(renderer_result)) {
     SKIP("当前运行环境不支持 Vulkan Win32 Swapchain");
   }

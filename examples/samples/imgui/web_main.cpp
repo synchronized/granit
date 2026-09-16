@@ -14,6 +14,7 @@
 #include "samples/imgui/resources.h"
 
 #include <granit/granit.hpp>
+#include <granit/renderer/native_surface.hpp>
 #include <granit/integrations/imgui/renderer.hpp>
 #include <granit/pipeline/canvas_draw_list.hpp>
 
@@ -342,7 +343,7 @@ int main() {
   state.imgui_ready = true;
   std::puts("GRANIT_DIAGNOSTIC:ImGui platform ready");
   const auto result = state.renderer.initialize({.application_name = "Granit Web ImGui",
-                                                 .surface_types = granit::surface_type::canvas,
+                                                 .presentation = granit::presentation_mode::enabled,
                                                  .frames_in_flight = 2,
                                                  .diagnostics = diagnose,
                                                  .backend = granit::renderer_backend::webgpu});

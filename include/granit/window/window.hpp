@@ -9,9 +9,12 @@
 #include <utility>
 
 #include <granit/core/result.hpp>
+#include <granit/window/input.hpp>
 #include <granit/window/window.h>
 
 namespace granit {
+
+class surface;
 
 enum class window_backend : std::uint32_t {
   automatic = GRANIT_WINDOW_BACKEND_AUTO,
@@ -61,6 +64,21 @@ public:
   [[nodiscard]] result poll(window_event& event) noexcept {
     event.struct_size = sizeof(window_event);
     return from_native(granit_window_poll_event(handle_, &event));
+  }
+  [[nodiscard]] result process_events() noexcept {
+    return from_native(granit_window_system_process_events(handle_));
+  }
+  [[nodiscard]] result poll(input_event& event) noexcept {
+    event.struct_size = sizeof(input_event);
+    return from_native(granit_window_poll_input_event(handle_, &event));
+  }
+  [[nodiscard]] result keyboard(granit_window window, keyboard_state& state) const noexcept {
+    state = GRANIT_KEYBOARD_STATE_INIT;
+    return from_native(granit_window_get_keyboard_state(handle_, window, &state));
+  }
+  [[nodiscard]] result pointer(granit_window window, pointer_state& state) const noexcept {
+    state = GRANIT_POINTER_STATE_INIT;
+    return from_native(granit_window_get_pointer_state(handle_, window, &state));
   }
   [[nodiscard]] result reset() noexcept {
     if (!valid())
@@ -122,22 +140,12 @@ public:
     }
     return from_native(value);
   }
-  [[nodiscard]] result native_win32(void*& instance, void*& native_window) const noexcept {
-    return from_native(granit_window_get_win32(system_, handle_, &instance, &native_window));
-  }
-
+  [[nodiscard]] result create_surface(granit_renderer renderer, surface& output) const noexcept;
   [[nodiscard]] result get_state(window_state& state) const noexcept {
     state = GRANIT_WINDOW_STATE_INIT;
     return from_native(granit_window_get_state(system_, handle_, &state));
   }
 
-  [[nodiscard]] result native_xcb(void*& connection, std::uint32_t& native_window) const noexcept {
-    return from_native(granit_window_get_xcb(system_, handle_, &connection, &native_window));
-  }
-
-  [[nodiscard]] result native_wayland(void*& display, void*& surface) const noexcept {
-    return from_native(granit_window_get_wayland(system_, handle_, &display, &surface));
-  }
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
   [[nodiscard]] granit_window native_handle() const noexcept { return handle_; }
 
@@ -147,5 +155,7 @@ private:
 };
 
 } // namespace granit
+
+#include <granit/window/presentation.hpp>
 
 #endif
