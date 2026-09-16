@@ -3,222 +3,133 @@
 
 # 开发计划文档
 
-本目录记录单项路线图任务的实施设计，回答“具体如何实现”。计划允许在验证过程中修改，不代表
-已经实现的公共能力，也不自动构成稳定 API/ABI 承诺。
+本目录保存单项路线图任务的目标、设计、步骤和验收条件。计划不代表已经实现的公共能力；当前
+行为以 Reference、Concept 和仓库实现为准。全局优先级见[路线图](../roadmap.md)，执行结果见
+[实施记录](../records/README.md)。
 
-## 与其他文档的关系
+## 正在实施
 
-- 根目录 `README.md`：项目定位、快速开始和文档入口。
-- `docs/README.md`：完整文档分类和推荐阅读顺序。
-- `docs/concepts/architecture.md`：长期有效的架构边界和已经确认的决策。
-- `docs/roadmap.md`：阶段、优先级、依赖关系和状态摘要。
-- `docs/plans/*.md`：单项任务的 API 草案、内部设计、步骤、测试和未决问题。
-- 根目录 `DOCUMENTATION_GUIDE.md`：所有文档类型、模板和生命周期的统一规范。
+- [S-45：0.26.0 文档一致性与历史收敛](S-45-0.26.0-documentation-convergence.md)——修正当前
+  事实漂移，收敛文档职责与自动检查。
 
-计划中经过实现验证且长期有效的结论，应同步回架构或对应功能文档。计划完成后保留记录并补充
-最终差异；已经失效且不再具备参考价值的草案可移动到 `archive/`，不直接删除历史依据。
+## 暂缓与重新评估
 
-## 命名规则
+- [D-09：Bindless Resource Table](D-09-bindless-resource-table.md)——等待真实绑定压力证据。
+- [H-09B：透明 PBR 正确性](H-09B-transparent-pbr-correctness.md)——等待明确产品场景和正确性需求。
 
-文件名使用路线图中的稳定任务编号和简短英文主题：
+## 已完成计划
 
-```text
-R-01-memory-allocation.md
-R-02-resource-model.md
-R-03-buffer.md
-F-01-command-recorder.md
-D-03-graphics-pipeline.md
-```
+以下文件保留已经实施的设计与最终差异。面向使用者的当前行为不应依赖这些历史计划。
 
-## 当前计划
+### 资源、命令与性能
 
-- [S-45：0.26.0 文档一致性与历史收敛](S-45-0.26.0-documentation-convergence.md)——实施中；
-  修正当前事实漂移，收敛 Concept、Reference、Roadmap、Plan 与 Record 职责，并增加确定性检查。
-- [R-01：GPU 内存分配方案](R-01-memory-allocation.md)——已完成基础接入。
-- [R-02：第一版资源模型](R-02-resource-model.md)——已完成。
-- [R-03：Buffer 生命周期与映射](R-03-buffer.md)——已完成。
-- [R-04：Buffer 初始数据与同步上传](R-04-buffer-upload.md)——已完成。
-- [R-05：Texture 与 Texture View 生命周期](R-05-texture-view.md)——已完成。
-- [R-06：Sampler 生命周期与能力限制](R-06-sampler.md)——已完成。
-- [R-07：Swapchain Backbuffer 资源接入](R-07-swapchain-backbuffer.md)——已完成。
-- [V-01：资源生命周期验证与诊断](V-01-lifetime-validation.md)——已完成。
-- [R-08：GPU 资源延迟销毁基础](R-08-deferred-destruction.md)——普通资源真实完成点与 Swapchain
-  presentation 安全退役均已完成。
-- [R-09：统一 Render Target Attachment](R-09-render-target-attachment.md)——已完成。
-- [R-10：通用资源传输](R-10-resource-transfer.md)——已完成同步回读、显式复制、子资源状态跟踪和
-  mipmap 生成；异步 Readback 与多区域批量入口等待真实需求。
-- [R-10C：Mipmap 生成](R-10C-mipmap-generation.md)——已完成子资源跟踪、能力门禁、公共命令及
-  非二次幂、Cube 数组层和失败路径验证。
-- [F-01：Command Recorder 基础](F-01-command-recorder.md)——已完成。
-- [F-02：基础命令录制](F-02-command-recording.md)——Buffer 命令与 Dynamic Rendering 已完成。
-- [F-03：帧同步内部抽象](F-03-frame-synchronization.md)——Fence、二进制 Semaphore 和每帧上下文
-  已完成，等待 F-04 接入提交调度。
-- [F-04：Queue 提交与 frames-in-flight](F-04-queue-submission.md)——异步提交、帧槽轮转和 Queue
-  串行化已完成。
-- [F-05：资源状态跟踪与屏障](F-05-resource-state-tracking.md)——Buffer 屏障和 Attachment Layout
-  提交顺序解析已完成。
-- [F-06：Swapchain 帧循环](F-06-swapchain-frame-loop.md)——Frame 令牌、acquire、Semaphore 提交链
-  与 present 已完成。
-- [F-07：窗口帧恢复边界](F-07-recovery-boundaries.md)——Frame 回收、零尺寸、Surface Lost 与
-  Renderer 全局 Device Lost 门禁已完成。
-- [F-10：公共帧上下文与 Recorder 轮转](F-10-public-frame-context.md)——已完成。
-- [F-11：Canvas 绑定缓存与多纹理录制](F-11-canvas-binding-cache.md)——已完成；跨平台 CI 已通过。
-- [F-12：帧循环性能诊断与提交优化](F-12-frame-loop-performance.md)——已完成；全帧基线与
-  Validation 归因表明生产路径暂无通用提交或 Swapchain 调度改造依据。
-- [D-01：Shader 输入与离线编译策略](D-01-shader-input.md)——运行时 SPIR-V 输入、离线工具、
-  反射边界和错误语义已确认。
-- [D-02：Shader Module 生命周期](D-02-shader-module.md)——SPIR-V 校验、Shader 句柄、Vulkan
-  Module 和 RAII 已完成。
-- [D-03：Graphics Pipeline 与 Bind Group](D-03-graphics-pipeline.md)——已完成。
-- [D-05：基础绘制命令](D-05-draw-commands.md)——已完成。
-- [D-06：基础渲染示例](D-06-examples.md)——已完成。
-- [D-07：Compute Pipeline 与 Dispatch](D-07-compute-pipeline.md)——已完成。
-- [D-08：Graphics Pipeline 完整状态、缓存与重载边界](D-08-pipeline-production.md)——设计已确认。
-- [D-09：Bindless Resource Table 边界](D-09-bindless-resource-table.md)——草案；H-02E 只预留绑定
-  模型，完成真实场景测量后再实现 Renderer 能力。
-- [D-10：动态 Uniform Buffer Offset](D-10-dynamic-uniform-buffer-offsets.md)——已完成；动态绑定、
-  公共设备限制查询、像素 Smoke Test 与跨平台矩阵均已验收。
-- [P-01：并行录制、资源创建与上传压力测试](P-01-parallel-recording.md)——已完成。
-- [P-02：CPU 并发与资源管理性能基线](P-02-performance-baseline.md)——已完成。
-- [P-03：锁竞争归因与批量 API 优化](P-03-contention-and-batching.md)——已完成。
-- [P-04：持久化上传分配器与批量上传](P-04-upload-allocator.md)——已完成。
-- [P-05：线程池与外部执行器边界](P-05-executor-boundary.md)——已完成；当前不引入线程池或
-  公开执行器 API。
-- [P-06：Render Graph 职责与模块边界](P-06-render-graph-boundary.md)——已完成；功能实现转入
-  H-01。
-- [H-02：材质参数、Shader 变体与离线构建](H-02-material-system.md)——已完成内部原型；包含
-  离线包、参数/资源实例、Pipeline 缓存、热替换、错误材质回退和性能基线，尚未安装导出。
-- [H-02E3：持久化材质包格式](H-02-material-package-format.md)——已完成；包含确定性容器、
-  SHA-256、材质语义往返、源 JSON 构建、调试导出和损坏输入防护。
-- [H-03：金属度/粗糙度 PBR 渲染模块](H-03-pbr-renderer.md)——已完成；包含 Pipeline 状态、
-  CPU BRDF、默认纹理、显式 Draw 输入、Render Graph 适配、生命周期/性能基线和 GPU 像素回归。
-- [H-04：场景提交与可见性输入适配层](H-04-scene-submission.md)——已完成；包含快照、Frustum、
-  多 View、光源筛选、PBR Render Graph 适配、生命周期验证和性能基线。
-- [H-05：光照与后处理参考管线](H-05-lighting-pipeline.md)——已完成；包含多光源、阴影、IBL、
-  HDR/Tone Mapping、性能基线、降级组合、窗口、多 View、统一 Render Graph、2,000 帧生命周期和
-  跨平台安装 Consumer 验证。
-- [H-06：Unlit、2D 与 UI 渲染路径](H-06-unlit-2d-ui.md)——已完成内部技术路线验证；公共 UI、
-  Debug Draw 与 Text ABI 后续分别设计。
-- [H-07：高级参考渲染套件](H-07-reference-render-pipeline.md)——已完成；公共 ABI、自动 Draw、
-  离屏/窗口用户路径、安装 component、输出与性能验收均已闭合。
-- [H-08：公共 UI、Debug Draw 与 Text components](H-08-ui-debug-text-components.md)——已完成；公共
-  Canvas、Debug Draw、R8 Text Atlas、Pipeline 自动录制和第三方 Adapter 边界均已验收。
-- [H-09：高级渲染能力真实负载评估](H-09-advanced-rendering-evaluation.md)——已完成；四项能力均按
-  独立证据暂缓原型，详见[完成记录](../records/H-09-advanced-rendering-evaluation.md)。
-- [H-09B：透明 PBR 正确性草案](H-09B-transparent-pbr-correctness.md)——已确认评估契约；现有基线和
-  产品需求不足以支持进入原型，暂时保留 Unlit 透明路径。
-- [S-01：C ABI 回归验证](S-01-abi-regression.md)——已完成 Core、RenderPipeline、Window 与 Input
-  的版本化正式快照、共享库导出和布局回归。
-- [S-02：统一诊断、GPU 调试名称与 Device Lost 报告](S-02-diagnostics.md)——已完成；统一诊断
-  sink、公共回调、GPU 调试名称、首次 Device Lost 报告及边界回归均已落地。
-- [S-03：安装包与外部 Consumer 验证](S-03-package-consumers.md)——已完成；Windows/Linux
-  共享与静态安装 Consumer、版本选择和导出审计均已通过 CI。
-- [S-04：Linux XCB 与 Wayland Surface](S-04-linux-surface.md)——实现已完成；XCB、Wayland、窗口
-  示例和无头集成测试已通过 Linux GCC/Clang 共享与静态运行矩阵。
-- [S-06：版本与兼容承诺](S-06-compatibility-policy.md)——0.x 策略、component 契约、变更记录和
-  发布验收准备已完成；最终稳定承诺等待版本与 component 范围决策。
-- [S-07：Window、Event 与 Input 边界](S-07-window-events.md)——Win32、XCB 与 Wayland Window、
-  统一事件及 Renderer 集成均已实现并通过跨平台 CI。Renderer Surface 仍允许 SDL、
-  GLFW、Qt 和引擎直接接入。
-- [S-07E：Input component 边界](S-07E-input-component.md)——历史阶段已完成；独立组件与
-  内部桥接已在 [S-44](S-44-0.25.0-window-input-presentation-convergence.md) 合并移除。
-- [S-08：SDL3 与 ImGui 第三方集成](S-08-third-party-integrations.md)——已完成；Win32 及 Linux
-  X11/Wayland 共享与静态运行矩阵均已通过，第三方依赖不进入核心。
-- [S-09：0.3.0 公共 SDK 易用性与集成体验](S-09-0.3.0-sdk-usability.md)——已完成；公共使用路径、
-  契约、诊断、安装 Consumer、迁移说明和 Release 预验证均已验收。
-- [S-10：0.4.0 多后端与 WebGPU](S-10-0.4.0-webgpu-backend.md)——已完成；统一 Registry、私有
-  HAL 与浏览器闭环均已验收；其中桌面 WebGPU 原型后来由 S-16 移除。
-- [S-10C：WGSL Shader 工具链](S-10C-wgsl-toolchain.md)——已完成；以 WGSL 为源码权威，已形成
-  SPIR-V、反射清单、确定性资产、诊断和缓存闭环。
-- [S-12：WebGPU 公共能力补齐](S-12-webgpu-feature-parity.md)——已完成；公共后端选择、模型绘制
-  所需资源与命令已验收；当前共同 Fixture 覆盖桌面 Vulkan 和浏览器 WebGPU。
-- [S-13：跨后端模型查看器](S-13-cross-backend-model-viewer.md)——已完成；示例私有 glTF 加载器、
-  PBR 头盔、轨道相机、ImGui、三个运行目标及跨后端截图/性能验收均已闭合。
-- [S-13H：模型查看器环境光照](S-13H-model-viewer-environment-lighting.md)——已完成；复用 Group 3
-  IBL 布局，为模型查看器补齐可再分发的摄影棚环境与跨后端验收。
-- [S-13I：跨后端渲染质量配置](S-13I-render-quality.md)——已完成；统一 MSAA、FXAA、Specular AA、
-  Mipmap 与各向异性过滤的能力查询、公开选项和跨后端验收。
-- [S-15：私有 HAL 结构整理](S-15-internal-hal-structure.md)——已完成；集中后端能力发现与
-  Registry 依赖，并整理 HAL 契约和具体后端目录。
-- [S-16：WebGPU 收敛到 Emscripten 浏览器](S-16-browser-only-webgpu.md)——已完成；删除桌面
-  Dawn、动态 Provider 与 SDK/CI 成本，保留统一 HAL 和浏览器 WebGPU。
-- [S-17：Render Pipeline 内部职责收敛](S-17-render-pipeline-internal-structure.md)——已完成；
-  拆分提交数据、Forward/Shadow/Tone Mapping 录制与 GPU 指标管理，公共 API/ABI 保持不变。
-- [S-18：0.5.0 平台扩展与上游集成](S-18-0.5.0-platform-upstream-integration.md)——已完成；真实
-  Consumer 基线、窗口状态、资源契约和 SDK 验收均已闭环，Android 延期。
-- [S-19：Model Viewer 渲染线程](S-19-model-viewer-render-thread.md)——已完成；桌面使用有界渲染
-  线程和异步上传，浏览器保持同步执行。
-- [S-20：Shader Asset 后端变体](S-20-shader-asset-variants.md)——已完成；后端 sidecar、能力选择和
-  WGSL/HLSL portable 前端已形成闭环。
-- [S-21：可复现 Shader Toolchain 包](S-21-shader-toolchain-package.md)——已完成；发布带版本、许可
-  和 SHA-256 清单的离线编译工具包，并让官方 CI 使用严格锁定策略。
-- [S-22：0.7.0 SDK 稳定化与上游集成](S-22-0.7.0-sdk-stabilization.md)——S-22A component 契约
-  清单、安装 SDK 门禁、上游边界审计和发布候选验收均已完成。
-- [S-23：0.8.0 运行时 Shader 与材质资产契约](S-23-0.8.0-runtime-shader-assets.md)——已完成；
-  `.grshader` 已进入 Core，`.grmat` 已引用同一 Shader Asset 身份，发布矩阵与产物预验证均已通过。
-- [S-24：0.9.0 公共 PBR 与渲染资产收敛](S-24-0.9.0-public-pbr-assets.md)——已完成；
-  公共 PBR Shader、四组 Binding、安装资产与 Model Viewer Consumer 已统一。
-- [S-25：0.10.0 环境资源与帧构造背压](S-25-0.10.0-environment-and-frame-backpressure.md)——
-  已完成；Environment Map、GRENV v3、Model Viewer 迁移与构造前背压已通过发布验收。
-- [S-26：0.11.0 WebGPU 能力对齐与浏览器 Model Viewer](S-26-0.11.0-webgpu-parity-and-web-model-viewer.md)——
-  已完成；补齐可移植传输与 Mipmap，交付正式浏览器 Model Viewer，并明确 Timestamp 能力边界。
-- [S-27：0.12.0 上游资产与标准材质契约](S-27-0.12.0-upstream-asset-contracts.md)——已完成；
-  公共化 Shader Asset 检查、标准 PBR Schema/模板与构建树资产目录，消除上游私有格式依赖。
-- [S-28：0.13.0 异步 GPU 操作与 Web 运行时完善](S-28-0.13.0-async-gpu-and-web-runtime.md)——
-  已完成；异步操作、WebGPU Timestamp、浏览器分阶段加载、跨后端一致性与发布验收均已通过。
-- [S-29：0.14.0 异步管线指标与资源流送](S-29-0.14.0-async-pipeline-metrics-and-streaming.md)——
-  已完成；Render Pipeline 异步指标、有界异步 Upload Batch、Model Viewer 接入和跨后端验收均已
-  落地。
-- [S-30：0.15.0 异步回读与管线预热](S-30-0.15.0-async-readback-and-pipeline-warmup.md)——
-  已完成；有界异步 Readback、稳定键 Pipeline 预热和能力边界已经落地。
-- [S-31：0.16.0 严格非阻塞异步调度](S-31-0.16.0-nonblocking-async.md)——已完成；异步传输
-  饱和时立即返回可重试背压，Vulkan Pipeline 冷创建移入私有后台任务。
-- [S-32：0.17.0 WebGPU 原生异步 Pipeline 预热](S-32-0.17.0-webgpu-async-pipeline-warmup.md)——
-  已完成；WebGPU 原生异步创建、统一私有 HAL、资源保活与 Web PBR 预热均已落地。
-- [S-33：开发与发布流水线提速](S-33-ci-release-acceleration.md)——已完成；建立快速检查、软件
-  WebGPU 降级回归、统一缓存和不可变 Release Candidate 晋级。
-- [S-34：0.18.0 压缩纹理与格式能力契约](S-34-0.18.0-compressed-textures.md)——已完成；增加通用
-  GPU 块压缩格式、布局计算、设备能力查询和跨后端上传契约。
-- [S-35：0.19.0 纹理资产变体与流式加载契约](S-35-0.19.0-texture-asset-variants.md)——已完成；
-  已落地确定性纹理 Manifest、设备驱动的变体选择和逐 mip Upload Batch 契约。
-- [S-36：0.20.0 示例框架与跨平台 Model Viewer 稳定化](S-36-0.20.0-example-framework-and-model-viewer.md)——
-  已完成；交互、帧延迟、示例分层、目录迁移、双后端视觉与发布验收均已闭合。
-- [S-37：0.21.0 Shader Library 与后端无关材质](S-37-0.21.0-shader-library-and-material-boundary.md)——
-  已完成；主体实现以及 Windows、Linux、Vulkan、Emscripten、浏览器 WebGPU、远端 SDK 和不可变
-  Release Candidate 验收均已通过。
-- [S-37H：WebGPU Provider 边界收敛](S-37H-webgpu-provider-boundary-collapse.md)——已完成；已删除
-  浏览器静态后端遗留的 Provider ABI、函数表、dispatch、domain adapter 和冗余 owner，并按领域
-  拆分后端私有设备实现，通过远端 Linux 与发布验收。
-- [S-37K：Shader 工具接口与组织收敛](S-37K-shader-tooling-api-structure.md)——已完成；已完成共享
-  类型、统一 Compiler、Compilation/Reflection、私有 Shader Object、Library Builder、CLI、CMake
-  适配与本地发布验收。
-- [S-37L：HLSL-first Shader 作者入口](S-37L-hlsl-first-shader-authoring.md)——已完成；L1 至 L6 已
-  完成作者入口、内建资产、旧接口和发布边界收敛，并通过完整跨平台与候选包验收。
-- [S-38：0.22.0 AssetTools SDK 与工具链交付](S-38-0.22.0-asset-tools-and-toolchain.md)——已完成；
-  四个资产领域、工具链交付及跨平台 Release Candidate 均已通过验收。
-- [S-39：0.23.0 空帧与覆盖层可靠性](S-39-0.23.0-empty-frame-and-overlay-reliability.md)——已完成；
-  桌面、浏览器、Windows/Linux 共享/静态安装包、Consumer 与候选包已通过。
-- [S-40：0.23.0 Shader Toolchain 配置可靠性](S-40-0.23.0-shader-toolchain-configuration-reliability.md)——
-  已完成；旧缓存迁移、配置顺序、锁定快照和跨平台模式矩阵已通过。
-- [S-41：0.23.0 资产目录收敛](S-41-0.23.0-asset-layout-convergence.md)——已完成；作者输入、
-  安装快照、内建快照、格式实现与测试 Fixture 已分离，并通过跨平台候选包验收。
-- [S-42：0.24.0 测试架构收敛](S-42-0.24.0-test-architecture-convergence.md)——已完成；
-  测试布局、两个核心 Smoke 和工作流职责选择已收敛，并通过跨平台与发布候选验收。
-- [S-43：0.24.0 AssetTools 源码布局收敛](S-43-0.24.0-asset-tools-source-layout.md)——已完成；
-  公共路径、共享格式层、SDK、CLI 与测试归属已统一，并通过跨平台、共享、静态和安装 Consumer
-  验收。
-- [S-44：0.25.0 Window、Input 与呈现边界收敛](S-44-0.25.0-window-input-presentation-convergence.md)
-  ——已完成；Window/Input 生命周期、直接 Surface 入口、平台无关呈现模式和 0.25.0 SDK
-  跨平台验收均已完成。
+- [R-01：GPU 内存分配](R-01-memory-allocation.md)
+- [R-02：资源模型](R-02-resource-model.md)
+- [R-03：Buffer](R-03-buffer.md)
+- [R-04：Buffer 上传](R-04-buffer-upload.md)
+- [R-05：Texture 与 View](R-05-texture-view.md)
+- [R-06：Sampler](R-06-sampler.md)
+- [R-07：Swapchain Backbuffer](R-07-swapchain-backbuffer.md)
+- [R-08：延迟销毁](R-08-deferred-destruction.md)
+- [R-09：Render Target Attachment](R-09-render-target-attachment.md)
+- [R-10：资源传输](R-10-resource-transfer.md)
+- [R-10C：Mipmap 生成](R-10C-mipmap-generation.md)
+- [F-01：Command Recorder](F-01-command-recorder.md)
+- [F-02：命令录制](F-02-command-recording.md)
+- [F-03：帧同步](F-03-frame-synchronization.md)
+- [F-04：Queue 提交](F-04-queue-submission.md)
+- [F-05：资源状态跟踪](F-05-resource-state-tracking.md)
+- [F-06：Swapchain 帧循环](F-06-swapchain-frame-loop.md)
+- [F-07：恢复边界](F-07-recovery-boundaries.md)
+- [F-10：公共 Frame Context](F-10-public-frame-context.md)
+- [F-11：Canvas 绑定缓存](F-11-canvas-binding-cache.md)
+- [F-12：帧循环性能](F-12-frame-loop-performance.md)
+- [D-01：Shader 输入](D-01-shader-input.md)
+- [D-02：Shader Module](D-02-shader-module.md)
+- [D-03：Graphics Pipeline](D-03-graphics-pipeline.md)
+- [D-05：绘制命令](D-05-draw-commands.md)
+- [D-06：基础示例](D-06-examples.md)
+- [D-07：Compute Pipeline](D-07-compute-pipeline.md)
+- [D-08：Pipeline 生产能力](D-08-pipeline-production.md)
+- [D-10：动态 Uniform Offset](D-10-dynamic-uniform-buffer-offsets.md)
+- [P-01：并行录制压力](P-01-parallel-recording.md)
+- [P-02：性能基线](P-02-performance-baseline.md)
+- [P-03：竞争与批量](P-03-contention-and-batching.md)
+- [P-04：上传分配器](P-04-upload-allocator.md)
+- [P-05：执行器边界](P-05-executor-boundary.md)
+- [P-06：Render Graph 边界](P-06-render-graph-boundary.md)
+- [V-01：生命周期验证](V-01-lifetime-validation.md)
 
-## 状态
+### 高层渲染
 
-- **草案**：仍有影响实现方向的未决问题。
-- **已确认**：主要设计已经同意，可以进入实现。
-- **实现中**：代码和测试正在落地。
-- **已完成**：验收通过，并记录最终实现差异和提交。
-- **已暂停**：存在明确阻塞或优先级调整，必须写明原因。
+- [H-02：材质系统](H-02-material-system.md)
+- [H-02E3：材质包格式](H-02-material-package-format.md)
+- [H-03：PBR Renderer](H-03-pbr-renderer.md)
+- [H-04：场景提交](H-04-scene-submission.md)
+- [H-05：光照与后处理](H-05-lighting-pipeline.md)
+- [H-06：Unlit、2D 与 UI](H-06-unlit-2d-ui.md)
+- [H-07：参考渲染管线](H-07-reference-render-pipeline.md)
+- [H-08：UI、Debug 与 Text](H-08-ui-debug-text-components.md)
+- [H-09：高级渲染评估](H-09-advanced-rendering-evaluation.md)
 
-计划结构、ADR/Guide 模板、篇幅和拆分规则统一遵循
-[项目文档规范](../../DOCUMENTATION_GUIDE.md)。草案代码只用于表达接口方向，不保证与最终实现
-逐字一致；文档不得把计划能力描述为仓库当前已经具备的功能。
+### 稳定化、平台与发布版本
+
+- [S-01：ABI 回归](S-01-abi-regression.md)
+- [S-02：诊断](S-02-diagnostics.md)
+- [S-03：安装 Consumer](S-03-package-consumers.md)
+- [S-04：Linux Surface](S-04-linux-surface.md)
+- [S-06：兼容策略](S-06-compatibility-policy.md)
+- [S-07：Window 与事件](S-07-window-events.md)
+- [S-07E：历史 Input component](S-07E-input-component.md)
+- [S-08：第三方集成](S-08-third-party-integrations.md)
+- [S-09：0.3.0 SDK 易用性](S-09-0.3.0-sdk-usability.md)
+- [S-10：0.4.0 WebGPU](S-10-0.4.0-webgpu-backend.md)
+- [S-10C：WGSL 工具链](S-10C-wgsl-toolchain.md)
+- [S-12：WebGPU 能力](S-12-webgpu-feature-parity.md)
+- [S-13：跨后端 Model Viewer](S-13-cross-backend-model-viewer.md)
+- [S-13H：环境光照](S-13H-model-viewer-environment-lighting.md)
+- [S-13I：渲染质量](S-13I-render-quality.md)
+- [S-15：私有 HAL](S-15-internal-hal-structure.md)
+- [S-16：浏览器 WebGPU](S-16-browser-only-webgpu.md)
+- [S-17：RenderPipeline 内部结构](S-17-render-pipeline-internal-structure.md)
+- [S-18：0.5.0 平台集成](S-18-0.5.0-platform-upstream-integration.md)
+- [S-19：Model Viewer 渲染线程](S-19-model-viewer-render-thread.md)
+- [S-20：Shader 资产变体](S-20-shader-asset-variants.md)
+- [S-21：Shader Toolchain 包](S-21-shader-toolchain-package.md)
+- [S-22：0.7.0 SDK 稳定化](S-22-0.7.0-sdk-stabilization.md)
+- [S-23：0.8.0 运行时 Shader 资产](S-23-0.8.0-runtime-shader-assets.md)
+- [S-24：0.9.0 公共 PBR 资产](S-24-0.9.0-public-pbr-assets.md)
+- [S-25：0.10.0 环境与背压](S-25-0.10.0-environment-and-frame-backpressure.md)
+- [S-26：0.11.0 WebGPU 与 Web Viewer](S-26-0.11.0-webgpu-parity-and-web-model-viewer.md)
+- [S-27：0.12.0 上游资产契约](S-27-0.12.0-upstream-asset-contracts.md)
+- [S-28：0.13.0 异步 GPU 与 Web](S-28-0.13.0-async-gpu-and-web-runtime.md)
+- [S-29：0.14.0 异步指标与流送](S-29-0.14.0-async-pipeline-metrics-and-streaming.md)
+- [S-30：0.15.0 回读与预热](S-30-0.15.0-async-readback-and-pipeline-warmup.md)
+- [S-31：0.16.0 非阻塞异步](S-31-0.16.0-nonblocking-async.md)
+- [S-32：0.17.0 WebGPU 异步预热](S-32-0.17.0-webgpu-async-pipeline-warmup.md)
+- [S-33：CI 与发布提速](S-33-ci-release-acceleration.md)
+- [S-34：0.18.0 压缩纹理](S-34-0.18.0-compressed-textures.md)
+- [S-35：0.19.0 纹理资产变体](S-35-0.19.0-texture-asset-variants.md)
+- [S-36：0.20.0 示例框架](S-36-0.20.0-example-framework-and-model-viewer.md)
+- [S-37：0.21.0 Shader Library](S-37-0.21.0-shader-library-and-material-boundary.md)
+- [S-37H：WebGPU Provider 收敛](S-37H-webgpu-provider-boundary-collapse.md)
+- [S-37K：Shader 工具接口](S-37K-shader-tooling-api-structure.md)
+- [S-37L：HLSL-first](S-37L-hlsl-first-shader-authoring.md)
+- [S-38：0.22.0 AssetTools](S-38-0.22.0-asset-tools-and-toolchain.md)
+- [S-39：0.23.0 空帧可靠性](S-39-0.23.0-empty-frame-and-overlay-reliability.md)
+- [S-40：0.23.0 Toolchain 配置](S-40-0.23.0-shader-toolchain-configuration-reliability.md)
+- [S-41：0.23.0 资产布局](S-41-0.23.0-asset-layout-convergence.md)
+- [S-42：0.24.0 测试架构](S-42-0.24.0-test-architecture-convergence.md)
+- [S-43：0.24.0 AssetTools 布局](S-43-0.24.0-asset-tools-source-layout.md)
+- [S-44：0.25.0 Window/Input/呈现](S-44-0.25.0-window-input-presentation-convergence.md)
+
+## 状态与维护
+
+- **草案**：仍有影响方向的未决问题。
+- **已确认**：主要设计已经同意，可以进入实施。
+- **实施中**：代码或文档正在落地。
+- **已完成**：验收通过并记录最终差异。
+- **已暂停**：存在明确阻塞或重新评估条件。
+
+计划完成后保留目标与最终差异，详细日志转入 Record，当前行为同步到 Reference 或 Concept。文档
+结构和生命周期统一遵循[项目文档规范](../../DOCUMENTATION_GUIDE.md)。

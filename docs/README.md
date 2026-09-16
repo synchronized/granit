@@ -26,39 +26,19 @@
 ### 理解高级渲染层
 
 1. [架构与 ABI](concepts/architecture.md)
-2. [路线图](roadmap.md)
-3. [Render Graph 边界](plans/P-06-render-graph-boundary.md)
-4. [高级参考渲染套件](plans/H-07-reference-render-pipeline.md)
-5. [Model Viewer 渲染线程计划](plans/S-19-model-viewer-render-thread.md)
+2. [Render Pipeline](reference/render-pipeline.md)
+3. [Material](reference/material.md)
+4. [Scene Snapshot](reference/scene-snapshot.md)
+5. [运行跨后端 Model Viewer](guides/model-viewer.md)
 
 ### 参与开发
 
 1. [开发规范](guides/development.md)
 2. [项目文档规范](../DOCUMENTATION_GUIDE.md)
-3. [开发计划索引](plans/README.md)
-4. [第三方依赖](../3rd/README.md)
-5. [0.11.0 WebGPU 能力与浏览器 Model Viewer 计划](plans/S-26-0.11.0-webgpu-parity-and-web-model-viewer.md)
-6. [0.12.0 上游资产与标准材质契约计划](plans/S-27-0.12.0-upstream-asset-contracts.md)
-7. [0.13.0 异步 GPU 操作与 Web 运行时计划](plans/S-28-0.13.0-async-gpu-and-web-runtime.md)
-8. [0.14.0 异步管线指标与资源流送计划](plans/S-29-0.14.0-async-pipeline-metrics-and-streaming.md)
-9. [0.15.0 异步回读与管线预热计划](plans/S-30-0.15.0-async-readback-and-pipeline-warmup.md)
-10. [0.16.0 严格非阻塞异步调度计划](plans/S-31-0.16.0-nonblocking-async.md)
-11. [0.17.0 WebGPU 原生异步 Pipeline 预热计划](plans/S-32-0.17.0-webgpu-async-pipeline-warmup.md)
-12. [开发与发布流水线提速计划](plans/S-33-ci-release-acceleration.md)
-13. [0.18.0 压缩纹理与格式能力契约计划](plans/S-34-0.18.0-compressed-textures.md)
-14. [0.19.0 纹理资产变体与流式加载计划](plans/S-35-0.19.0-texture-asset-variants.md)
-15. [0.20.0 示例框架与跨平台 Model Viewer 计划](plans/S-36-0.20.0-example-framework-and-model-viewer.md)
-16. [0.21.0 Shader Library 与后端无关材质计划](plans/S-37-0.21.0-shader-library-and-material-boundary.md)
-17. [WebGPU Provider 边界收敛计划](plans/S-37H-webgpu-provider-boundary-collapse.md)
-18. [HLSL-first Shader 作者入口计划](plans/S-37L-hlsl-first-shader-authoring.md)
-19. [0.22.0 AssetTools SDK 与工具链交付计划](plans/S-38-0.22.0-asset-tools-and-toolchain.md)
-20. [0.23.0 空帧与覆盖层可靠性计划](plans/S-39-0.23.0-empty-frame-and-overlay-reliability.md)
-21. [0.23.0 Shader Toolchain 配置可靠性计划](plans/S-40-0.23.0-shader-toolchain-configuration-reliability.md)
-22. [0.23.0 资产目录收敛计划](plans/S-41-0.23.0-asset-layout-convergence.md)
-23. [0.24.0 测试架构收敛计划](plans/S-42-0.24.0-test-architecture-convergence.md)
-24. [0.24.0 AssetTools 源码布局收敛计划](plans/S-43-0.24.0-asset-tools-source-layout.md)
-25. [0.25.0 Window、Input 与呈现边界收敛计划](plans/S-44-0.25.0-window-input-presentation-convergence.md)
-26. [0.26.0 文档一致性与历史收敛计划](plans/S-45-0.26.0-documentation-convergence.md)
+3. [路线图](roadmap.md)
+4. [0.26.0 当前计划](plans/S-45-0.26.0-documentation-convergence.md)
+5. [开发计划与完成历史](plans/README.md)
+6. [第三方依赖](../3rd/README.md)
 
 ## 操作指南
 
@@ -148,10 +128,6 @@
 - [Swapchain](reference/swapchain.md)
 - [SDL3 与 GLFW 窗口接入](guides/window-library-integration.md)
 - [SDL3 与 ImGui Integration](reference/third-party-integrations.md)
-
-### 输入
-
-- [Input 事件与状态值类型](reference/input.md)
 
 ## 架构与原理
 
