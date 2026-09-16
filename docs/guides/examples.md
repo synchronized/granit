@@ -3,9 +3,14 @@
 
 # 示例程序
 
-本文是示例目录和运行入口，不重复维护具体示例的完整构建参数。Granit 只保留两个面向使用者的
-示例系列；版本查询、离屏清屏、
+本文是示例目录和运行入口，不重复维护具体示例的完整构建参数。Granit 保留一个最小 API 示例和两个
+面向使用者的完整示例系列；版本查询、离屏清屏、
 纹理回读和平台窗口等单能力验证位于 `tests/smoke`，由构建与 CTest 覆盖，不再作为示例发布。
+
+## Minimal Renderer
+
+`granit_minimal_renderer_example` 是教程和安装 Consumer 的最小入口，只创建 Renderer、查询设备
+信息与限制并正常退出。完整步骤见[创建第一个 Renderer](../tutorials/01-first-renderer.md)。
 
 ## SDL3 + ImGui
 

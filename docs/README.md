@@ -11,9 +11,10 @@
 
 ### 第一次使用参考渲染管线
 
-1. [Render Pipeline 离屏渲染教程](tutorials/render-pipeline-offscreen.md)
-2. [示例程序及运行方式](guides/examples.md)
-3. [Render Pipeline](reference/render-pipeline.md)
+1. [创建第一个 Renderer](tutorials/01-first-renderer.md)
+2. [Render Pipeline 离屏渲染教程](tutorials/render-pipeline-offscreen.md)
+3. [示例程序及运行方式](guides/examples.md)
+4. [Render Pipeline](reference/render-pipeline.md)
 
 ### 使用核心 Renderer
 
@@ -59,6 +60,7 @@
 
 教程从前置条件开始，连续完成一个可验证的目标；其中的 API 细节以对应参考文档为准。
 
+- [01：创建第一个 Renderer](tutorials/01-first-renderer.md)
 - [使用 Render Pipeline 完成第一次离屏渲染](tutorials/render-pipeline-offscreen.md)
 - [运行跨后端模型查看器](tutorials/model-viewer.md)
 

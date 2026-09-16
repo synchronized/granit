@@ -17,8 +17,8 @@
 
 ## 待开始
 
-- [S-46：API 教程与可运行示例阶梯](S-46-api-tutorial-example-ladder.md)——先确认从底层到高层的
-  C++20 API 学习路径，再新增最小示例和编号教程。
+- [S-46：API 教程与可运行示例阶梯](S-46-api-tutorial-example-ladder.md)——已完成路径设计和
+  `minimal_renderer`，正在推进资源、Pipeline 与窗口教程。
 
 ## 暂缓与重新评估
 
