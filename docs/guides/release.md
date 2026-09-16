@@ -45,7 +45,7 @@ ctest --preset <static-release-preset>
 `cmake/check_installed_package.cmake` 和 `tests/consumer`。稳定发布不得跳过失败测试、关闭警告或降低
 验证等级。
 
-0.25.0 候选还要检查 Window 的完整导出快照、已移除的 `Input` component/头/符号、普通聚合头
+当前版本候选还要检查 Window 的完整导出快照、已移除的历史 component/头/符号、普通聚合头
 不会引入原生 Window 或 Surface 描述，并分别验证 Granit Window 直接创建 Surface 与 SDL3/外部
 窗口的高级入口。浏览器构建和 WebGPU Smoke、Linux XCB/Wayland 与 Windows Win32 Surface
 闭环均属于此版本的跨平台验收；本机无法覆盖的平台须在 Actions 中补齐后才能发布。

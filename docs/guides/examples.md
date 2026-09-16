@@ -3,7 +3,8 @@
 
 # 示例程序
 
-Granit 只保留两个面向使用者的示例系列。它们用于展示完整应用集成；版本查询、离屏清屏、
+本文是示例目录和运行入口，不重复维护具体示例的完整构建参数。Granit 只保留两个面向使用者的
+示例系列；版本查询、离屏清屏、
 纹理回读和平台窗口等单能力验证位于 `tests/smoke`，由构建与 CTest 覆盖，不再作为示例发布。
 
 ## SDL3 + ImGui
@@ -30,7 +31,8 @@ build/windows-clang-release/bin/granit_sdl3_imgui_example.exe `
 CSV 记录窗口尺寸、帧槽、Validation、Present Mode、CPU 阶段和 GPU Timestamp；退出前尚未回收
 的样本保持空值，不按零处理。
 
-同一份 ImGui 内容也可通过 SDL3 和浏览器 WebGPU 运行。先激活 Emscripten 环境，再执行：
+同一份 ImGui 内容也可通过 SDL3 和浏览器 WebGPU 运行。浏览器构建、HTTP 服务和自动化测试的
+完整步骤见[浏览器 WebGPU 指南](webgpu-browser-example.md)；这里仅保留最小运行入口：
 
 ```powershell
 $env:EMSDK = "D:/sunday/programs/emsdk"

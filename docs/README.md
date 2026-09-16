@@ -49,7 +49,6 @@
 - [示例程序及运行方式](guides/examples.md)
 - [运行跨后端模型查看器](guides/model-viewer.md)
 - [运行浏览器 WebGPU 平台 Smoke](guides/webgpu-browser-example.md)
-- [批量与异步上传](guides/upload-batch.md)
 - [异步回读与 Pipeline 预热](guides/async-readback-and-pipeline-warmup.md)
 - [纹理同步回读](guides/texture-readback.md)
 
@@ -85,6 +84,7 @@
 - [Shader Module](reference/shader.md)
 - [Shader Library](reference/shader-library.md)
 - [Graphics 与 Compute Pipeline](reference/pipeline.md)
+- [Upload Batch](reference/upload-batch.md)
 
 ### 高级 Render Pipeline component
 

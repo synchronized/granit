@@ -19,10 +19,16 @@
 | `BUILD_SHARED_LIBS` | `ON` | 构建共享库；设为 `OFF` 时构建静态库 |
 | `GRANIT_BUILD_TESTING` | `ON` | 构建测试 |
 | `GRANIT_BUILD_EXAMPLES` | 顶层项目为 `ON` | 构建示例 |
+| `GRANIT_BUILD_MODEL_VIEWER_EXAMPLE` | `OFF` | 构建跨后端 Model Viewer 桌面/浏览器目标 |
+| `GRANIT_BUILD_WEB_IMGUI_EXAMPLE` | `ON` | 构建浏览器 SDL3 + ImGui 示例 |
 | `GRANIT_FETCH_EXAMPLE_GLTF_DEPENDENCIES` | `OFF` | 下载 Model Viewer 锁定的 glTF 私有依赖 |
 | `GRANIT_BUILD_BENCHMARKS` | `OFF` | 构建独立性能基准程序 |
 | `GRANIT_BUILD_TOOLS` | `OFF` | 单独构建离线工具；示例或 benchmark 会自动构建所需工具 |
 | `GRANIT_BUILD_ASSET_TOOLS` | `OFF` | 构建并安装可供编辑器链接的 AssetTools SDK |
+| `GRANIT_BUILD_INTEGRATION_SDL3` | `OFF` | 构建 SDL3 Surface 集成组件 |
+| `GRANIT_BUILD_INTEGRATION_IMGUI` | `OFF` | 构建 ImGui Draw Data 集成组件 |
+| `GRANIT_FETCH_INTEGRATION_DEPENDENCIES` | `OFF` | 下载锁定版本的 SDL3 与 ImGui 集成依赖 |
+| `GRANIT_BUILD_EMSCRIPTEN_PLATFORM` | `OFF` | 构建 Emscripten 平台验证目标 |
 | `GRANIT_ENABLE_XCB` | Linux 上 `ON` | 找到 XCB 开发头时启用私有 XCB Surface 后端 |
 | `GRANIT_ENABLE_WAYLAND` | Linux 上 `ON` | 找到 Wayland 协议工具时启用 Wayland 后端 |
 | `GRANIT_ENABLE_WARNINGS` | `ON` | 为 Granit 自有目标启用编译警告 |
@@ -32,6 +38,9 @@
 仓库提供的开发 presets 会获取示例所需的锁定 glTF 私有依赖，并将
 `GRANIT_WARNINGS_AS_ERRORS` 设为 `ON`，以便尽早发现问题。作为子项目手动引入时，两项开关默认
 保持 `OFF`；所有警告选项均为目标私有属性，不会传递给使用者。
+
+Model Viewer 和 SDL3/ImGui 集成的组合配置见[模型查看器指南](model-viewer.md)；浏览器构建和
+平台验证见[浏览器 WebGPU 指南](webgpu-browser-example.md)。
 
 Wayland Window 需要 `wayland-client`、`wayland-scanner` 和 `wayland-protocols`，其输入支持额外
 查找 `libxkbcommon`。缺少 `libxkbcommon` 时禁用 Wayland 输入，XCB 输入和 Wayland 窗口仍可

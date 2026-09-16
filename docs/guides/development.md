@@ -1,10 +1,11 @@
 <!-- SPDX-License-Identifier: MIT -->
 <!-- Copyright (c) 2026 Granit contributors -->
 
-# 开发规范
+# 开发工作流与仓库约定
 
-项目文档的职责、分类、模板和维护流程统一遵循
-[项目文档规范](../../DOCUMENTATION_GUIDE.md)。完整文档入口见[文档中心](../README.md)。
+本文只说明开发者日常构建、测试、目录定位和提交流程。公共接口、CMake、代码和文档的强制规范
+分别以仓库根目录的 [AGENTS.md](../../AGENTS.md) 与[项目文档规范](../../DOCUMENTATION_GUIDE.md)
+为准；完整文档入口见[文档中心](../README.md)。如果本文与上述文件冲突，以它们为准。
 
 ## 公共头文件布局
 
