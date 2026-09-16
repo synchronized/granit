@@ -11,6 +11,7 @@
 | 示例 | 目标 | 用途 |
 |---|---|---|
 | Minimal Renderer | `granit_minimal_renderer_example` | 展示 Renderer 创建、能力查询和最小生命周期 |
+| Triangle | `granit_triangle_example` | 展示 Shader Library、Graphics Pipeline、离屏绘制和回读 |
 | ImGui | `granit_sdl3_imgui_example`、`granit_imgui_web` | 验证 SDL3 输入、ImGui 和 Canvas 的跨后端集成 |
 | Model Viewer | `granit_model_viewer_example`、`granit_model_viewer_web` | 展示模型加载、PBR、交互、异步上传和质量设置 |
 

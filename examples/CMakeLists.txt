@@ -4,6 +4,7 @@
 set_property(DIRECTORY APPEND PROPERTY LABELS integration)
 
 add_subdirectory(samples/minimal_renderer)
+add_subdirectory(samples/triangle)
 
 if(EMSCRIPTEN)
   # 浏览器集成测试复用模型查看器运行层，关闭示例时也只创建其私有支撑库。

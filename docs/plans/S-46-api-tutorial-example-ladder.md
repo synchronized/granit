@@ -5,7 +5,7 @@
 
 ## 状态
 
-**实施中。** 学习路径和示例边界已确认；`minimal_renderer` 及第一篇基础教程已经落地。
+**实施中。** 学习路径和示例边界已确认；`minimal_renderer`、`triangle` 及对应教程已经落地。
 
 ## 背景与目标
 
@@ -71,10 +71,10 @@ examples/samples/
 1. **S-46A 路径与目标设计（已完成）**：确认四个基础阶段的 API 依赖、示例目标名称、构建选项和
    跨平台范围。
 2. **S-46B `minimal_renderer`（已完成）**：新增最小 C++ Consumer 示例，验证动态库定位和生命周期。
-3. **S-46C `triangle`**：新增无第三方窗口依赖的最小 GPU 渲染示例，覆盖资源、Shader、Pipeline 和
-   回读或确定性输出验证。
-4. **S-46D 基础教程**：编写 `01`～`03` 教程，分别对应 Renderer、资源上传、Shader/Pipeline；每篇
-   教程链接对应 Reference 和完整示例。
+3. **S-46C `triangle`（已完成）**：新增无第三方窗口依赖的最小 GPU 渲染示例，覆盖 Shader、Pipeline、
+   离屏绘制和回读验证。
+4. **S-46D 基础教程（进行中）**：已完成 `01`～`03` 的 Renderer、资源上传和 Shader/Pipeline
+   说明；后续补充可直接运行的资源上传步骤，并为每篇教程链接对应 Reference 和完整示例。
 5. **S-46E 窗口与高层教程**：编写 `04`，整理现有 Render Pipeline 和 Model Viewer 为 `05`、`06`，
    同步修复文档中心和交叉链接。
 6. **S-46F 验收与维护**：补充 CMake/CTest 文档检查、示例 Smoke、安装 Consumer 验证和 Tutorial

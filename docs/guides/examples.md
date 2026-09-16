@@ -12,6 +12,12 @@
 `granit_minimal_renderer_example` 是教程和安装 Consumer 的最小入口，只创建 Renderer、查询设备
 信息与限制并正常退出。完整步骤见[创建第一个 Renderer](../tutorials/01-first-renderer.md)。
 
+## Triangle
+
+`granit_triangle_example` 是无窗口的离屏 GPU 示例，使用 AssetTools 生成跨后端 Shader Library，
+创建 Graphics Pipeline，绘制 64×64 三角形并读取中心像素。完整步骤见[创建 Shader 与 Graphics
+Pipeline](../tutorials/03-shader-and-pipeline.md)。
+
 ## SDL3 + ImGui
 
 `granit_sdl3_imgui_example` 展示 SDL3 窗口、输入、ImGui Platform Backend、Canvas 转换、
