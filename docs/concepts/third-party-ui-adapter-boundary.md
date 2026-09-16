@@ -1,7 +1,11 @@
 <!-- SPDX-License-Identifier: MIT -->
 <!-- Copyright (c) 2026 Granit contributors -->
 
-# 第三方 UI 与字体适配
+# 第三方 UI 与字体适配边界
+
+本文说明第三方 UI 与字体系统如何接入 Granit，以及适配器在数据转换、资源所有权和线程同步上的
+边界。它不是某个具体 UI 库的安装或操作指南；SDL3、ImGui 的构建选项和 API 用法见[第三方集成
+参考](../reference/third-party-integrations.md)。
 
 Granit 不接管第三方 UI 的控件树、输入或字体系统。适配器只在每帧把第三方输出转换成 Canvas 或
 Text 输入，第三方库不成为 Renderer 的传递依赖。

@@ -52,7 +52,6 @@
 - [批量与异步上传](guides/upload-batch.md)
 - [异步回读与 Pipeline 预热](guides/async-readback-and-pipeline-warmup.md)
 - [纹理同步回读](guides/texture-readback.md)
-- [第三方 UI 与字体适配](guides/third-party-ui-adapters.md)
 
 ## 教程
 
@@ -113,6 +112,7 @@
 
 - [总体架构、ABI 与渲染分层](concepts/architecture.md)
 - [Vulkan Loader、Instance 与后端边界](concepts/vulkan-backend.md)
+- [第三方 UI 与字体适配边界](concepts/third-party-ui-adapter-boundary.md)
 - [分阶段路线图](roadmap.md)
 
 ## 计划与历史
