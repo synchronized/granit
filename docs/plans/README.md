@@ -118,8 +118,8 @@ D-03-graphics-pipeline.md
 - [S-07：Window、Event 与 Input 边界](S-07-window-events.md)——Win32、XCB 与 Wayland Window、
   统一事件及 Renderer 集成均已实现并通过跨平台 CI。Renderer Surface 仍允许 SDL、
   GLFW、Qt 和引擎直接接入。
-- [S-07E：Input component 边界](S-07E-input-component.md)——已完成；独立可选组件、Window 内部
-  事件分发桥、键盘、指针和文本路径均已通过跨平台 CI。
+- [S-07E：Input component 边界](S-07E-input-component.md)——历史阶段已完成；独立组件与
+  内部桥接已在 [S-44](S-44-0.25.0-window-input-presentation-convergence.md) 合并移除。
 - [S-08：SDL3 与 ImGui 第三方集成](S-08-third-party-integrations.md)——已完成；Win32 及 Linux
   X11/Wayland 共享与静态运行矩阵均已通过，第三方依赖不进入核心。
 - [S-09：0.3.0 公共 SDK 易用性与集成体验](S-09-0.3.0-sdk-usability.md)——已完成；公共使用路径、
@@ -206,7 +206,8 @@ D-03-graphics-pipeline.md
   公共路径、共享格式层、SDK、CLI 与测试归属已统一，并通过跨平台、共享、静态和安装 Consumer
   验收。
 - [S-44：0.25.0 Window、Input 与呈现边界收敛](S-44-0.25.0-window-input-presentation-convergence.md)
-  ——实现中；源码已按 Window component 归位，下一步合并 Input 生命周期。
+  ——验收中；Window/Input 生命周期、直接 Surface 入口和平台无关呈现模式已落地，正在验证
+  0.25.0 候选包。
 
 ## 状态
 

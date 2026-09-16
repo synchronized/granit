@@ -8,9 +8,9 @@ set_property(DIRECTORY APPEND PROPERTY LABELS package)
 
 include(CTest)
 
-find_package(granit 0.24 CONFIG REQUIRED COMPONENTS RenderPipeline Window)
+find_package(granit 0.25 CONFIG REQUIRED COMPONENTS RenderPipeline Window)
 
-if(NOT granit_VERSION VERSION_EQUAL "0.24.0")
+if(NOT granit_VERSION VERSION_EQUAL "0.25.0")
   message(FATAL_ERROR "Granit 包版本不符合预期: ${granit_VERSION}")
 endif()
 

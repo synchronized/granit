@@ -63,6 +63,7 @@
 
 - [构建、测试、安装与 CMake 集成](guides/build.md)
 - [发布验收](guides/release.md)
+- [从 0.24 迁移到 0.25](guides/migrate-0.24-to-0.25.md)
 - [从 0.2 迁移到 0.3](guides/migrate-0.2-to-0.3.md)
 - [从 0.3 迁移到 0.4](guides/migrate-0.3-to-0.4.md)
 - [从 0.4 迁移到 0.5](guides/migrate-0.4-to-0.5.md)

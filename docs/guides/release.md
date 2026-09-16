@@ -22,7 +22,7 @@
 | Core | 未冻结 | 正式 ABI 快照、C 契约、共享/静态 Consumer |
 | RenderPipeline | 未冻结 | 正式 ABI 快照、component 契约、安装 Consumer |
 | Window | 未冻结 | 正式 ABI 快照、平台矩阵、component 契约 |
-| Input | 未冻结 | 正式 ABI 快照、平台矩阵、component 契约 |
+| AssetTools | 实验性 | 工具链包、资产格式与安装 Consumer |
 | IntegrationSDL3 / IntegrationImGui | 实验性 | 第三方版本范围、目标导出和 smoke test |
 
 没有独立 ABI 快照的可选 component 不得在发布说明中标记为 ABI 稳定。
@@ -44,6 +44,11 @@ ctest --preset <static-release-preset>
 随后安装两种链接模式，并运行 `cmake/check_install_exports.cmake`、
 `cmake/check_installed_package.cmake` 和 `tests/consumer`。稳定发布不得跳过失败测试、关闭警告或降低
 验证等级。
+
+0.25.0 候选还要检查 Window 的完整导出快照、已移除的 `Input` component/头/符号、普通聚合头
+不会引入原生 Window 或 Surface 描述，并分别验证 Granit Window 直接创建 Surface 与 SDL3/外部
+窗口的高级入口。浏览器构建和 WebGPU Smoke、Linux XCB/Wayland 与 Windows Win32 Surface
+闭环均属于此版本的跨平台验收；本机无法覆盖的平台须在 Actions 中补齐后才能发布。
 
 ## 4. ABI 与包审计
 

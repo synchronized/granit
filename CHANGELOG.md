@@ -8,6 +8,22 @@
 
 ## Unreleased
 
+以下内容属于 0.25.0 候选版本，发布时再归入带日期的版本章节。
+
+### 变更
+
+- Window System 现在统一管理窗口与输入事件，显式 `process_events` 同时填充两套队列；
+  Granit Window 可以直接创建 Renderer Surface。
+- Renderer 创建描述以平台无关的呈现模式开启 Surface 能力；原生 Window getter 和原生
+  Surface 描述移至显式包含的高级头。
+
+### 兼容性与迁移
+
+- 删除独立 `Input` component、运行时和旧公共头；`surface_types` 改为
+  `presentation_mode`，SDL3 `query_surface_type` 入口也已删除。使用者需重新配置、编译，
+  并按[0.24 到 0.25 迁移指南](docs/guides/migrate-0.24-to-0.25.md)更新事件循环和呈现创建。
+- 当前版本仍处于 0.x，不承诺 Core、RenderPipeline、Window 与 AssetTools 的稳定 ABI。
+
 ## 0.24.0 - 2026-09-15
 
 ### 变更

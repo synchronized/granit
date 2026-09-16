@@ -77,6 +77,6 @@ if (status.failed()) {
 
 ## Component 边界
 
-本契约只覆盖核心 `granit` C ABI。RenderPipeline、Window、Input 与 Integration 使用独立库和
+本契约只覆盖核心 `granit` C ABI。RenderPipeline、Window 与 Integration 使用独立库和
 CMake component；核心稳定不自动冻结这些可选 component。当前稳定等级见
 [版本与兼容策略](compatibility.md)。

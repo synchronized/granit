@@ -13,14 +13,58 @@ cmake_path(NORMAL_PATH GRANIT_INSTALL_PREFIX OUTPUT_VARIABLE install_prefix)
 set(required_files
     "include/granit/granit.h"
     "include/granit/granit.hpp"
+    "include/granit/renderer/native_surface.h"
+    "include/granit/renderer/native_surface.hpp"
     "lib/cmake/granit/granitConfig.cmake"
     "lib/cmake/granit/granitConfigVersion.cmake"
     "lib/cmake/granit/granitTargets.cmake"
     "lib/cmake/granit/granitRenderPipelineTargets.cmake"
 )
+if(EXISTS "${install_prefix}/lib/cmake/granit/granitWindowTargets.cmake")
+  list(APPEND required_files
+       "include/granit/window/input.h"
+       "include/granit/window/input.hpp"
+       "include/granit/window/presentation.h"
+       "include/granit/window/presentation.hpp"
+       "include/granit/window/native.h"
+       "include/granit/window/native.hpp")
+endif()
 foreach(required_file IN LISTS required_files)
   if(NOT EXISTS "${install_prefix}/${required_file}")
     message(FATAL_ERROR "安装结果缺少必要文件: ${required_file}")
+  endif()
+endforeach()
+
+foreach(obsolete_file IN ITEMS
+    "include/granit/input.h"
+    "include/granit/input.hpp"
+    "include/granit/input"
+    "lib/cmake/granit/granitInputTargets.cmake")
+  if(EXISTS "${install_prefix}/${obsolete_file}")
+    message(FATAL_ERROR "0.25.0 安装结果仍包含旧 Input 入口：${obsolete_file}")
+  endif()
+endforeach()
+
+foreach(aggregate_header IN ITEMS
+    "include/granit/granit.h"
+    "include/granit/granit.hpp"
+    "include/granit/window/window.h"
+    "include/granit/window/window.hpp"
+    "include/granit/renderer/renderer.h"
+    "include/granit/renderer/renderer.hpp"
+    "include/granit/renderer/surface.h")
+  if(EXISTS "${install_prefix}/${aggregate_header}")
+    file(READ "${install_prefix}/${aggregate_header}" aggregate_content)
+    foreach(native_marker IN ITEMS
+        "<granit/window/native.h>"
+        "<granit/window/native.hpp>"
+        "<granit/renderer/native_surface.h>"
+        "<granit/renderer/native_surface.hpp>")
+      string(FIND "${aggregate_content}" "${native_marker}" native_position)
+      if(NOT native_position EQUAL -1)
+        message(FATAL_ERROR "普通入口 ${aggregate_header} 包含原生头：${native_marker}")
+      endif()
+    endforeach()
   endif()
 endforeach()
 

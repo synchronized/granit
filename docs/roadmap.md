@@ -51,7 +51,7 @@
 | 三十一、0.23.0 空帧与覆盖层可靠性 | 已发布 | S-39～S-41 已随 0.23.0 发布 |
 | 三十二、0.24.0 测试架构收敛 | 已发布 | S-42 已随 0.24.0 发布 |
 | 三十三、0.24.0 AssetTools 源码布局收敛 | 已发布 | S-43 已随 0.24.0 发布 |
-| 三十四、0.25.0 Window/Input/呈现收敛 | 进行中 | S-44A～S-44B 已完成 |
+| 三十四、0.25.0 Window/Input/呈现收敛 | 验收中 | S-44A～S-44E 已完成，S-44F 候选包验证中 |
 
 ## 一、工程与 ABI 基础
 
@@ -176,8 +176,9 @@
   契约审计、变更记录和发布验收清单均已落地；最终 S-06D 等待稳定版本决策。
 - **[S-07](plans/S-07-window-events.md) / P2**：可选 Window 组件及 Win32/XCB/Wayland Window、
   统一事件、原生值查询和 Renderer 集成已实现并通过跨平台 CI。
-- **[S-07E](plans/S-07E-input-component.md) / P2**：Input 独立组件、C ABI、Win32 键盘文本指针及
-  XCB、Wayland 键鼠文本与安装 Consumer 已实现，Linux 运行矩阵已通过。
+- **[S-07E](plans/S-07E-input-component.md) / P2**：历史阶段曾实现独立 Input 组件、键鼠文本
+  和安装 Consumer；0.25.0 已按 [S-44](plans/S-44-0.25.0-window-input-presentation-convergence.md)
+  合并其运行时。
 - **[S-08](plans/S-08-third-party-integrations.md) / P2**：独立 SDL3/ImGui 目标、安装边界、SDL3
   Surface、ImGui Draw Data 转换、字体上传、组合示例与 S-08F 测量已完成；Win32 及 Linux
   X11/Wayland 共享与静态 smoke test 均已通过。
@@ -511,7 +512,7 @@
 
 ## 三十四、0.25.0 Window、Input 与呈现边界收敛
 
-**状态：进行中；S-44A～S-44B 已完成。**
+**状态：验收中；S-44A～S-44E 已完成，S-44F 候选包验证中。**
 
 - **[S-44](plans/S-44-0.25.0-window-input-presentation-convergence.md) / P1**：将只服务 Window 的
   Input 运行时并入 Window System，保留独立事件和值类型，删除第二套句柄、动态库和私有桥接。
@@ -524,7 +525,7 @@
 
 ## 近期执行顺序
 
-1. 实施 S-44，先做源码等价归位，再合并 Input 生命周期，最后调整呈现与原生接入边界。
+1. 完成 S-44F 的安装包、跨平台和浏览器验收后评审 0.25.0。
 2. 公共执行器与场景 API 继续等待第二个真实复用证据。
 3. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
 4. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
