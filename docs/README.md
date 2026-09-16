@@ -119,6 +119,7 @@
 
 - [变更记录](../CHANGELOG.md)
 - [开发计划索引](plans/README.md)
+- [已完成计划索引](plans/completed.md)
 - [架构决策索引](decisions/README.md)
 - [实施记录索引](records/README.md)
 - [版本验收模板](templates/version-acceptance.md)

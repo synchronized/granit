@@ -209,6 +209,10 @@ endif()
 
 function(granit_check_document_index directory index_file prefix)
   file(READ "${index_file}" granit_index_content)
+  if(ARGC GREATER 3 AND EXISTS "${ARGV3}")
+    file(READ "${ARGV3}" granit_secondary_index_content)
+    string(APPEND granit_index_content "\n" "${granit_secondary_index_content}")
+  endif()
   file(GLOB granit_indexed_docs LIST_DIRECTORIES FALSE "${directory}/*.md")
   foreach(granit_indexed_doc IN LISTS granit_indexed_docs)
     get_filename_component(granit_indexed_name "${granit_indexed_doc}" NAME)
@@ -270,6 +274,7 @@ granit_check_document_index(
   "${granit_docs_root}/docs/plans"
   "${granit_docs_root}/docs/plans/README.md"
   ""
+  "${granit_docs_root}/docs/plans/completed.md"
 )
 granit_check_document_index(
   "${granit_docs_root}/docs/records"

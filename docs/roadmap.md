@@ -73,7 +73,7 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 
 - [Changelog](../CHANGELOG.md)：面向使用者的逐版本变化和迁移影响。
 - [迁移指南](guides/migrate-0.24-to-0.25.md)：最近一次破坏性版本迁移。
-- [计划索引](plans/README.md)：当前、暂缓与全部已完成任务。
+- [计划索引](plans/README.md)：当前与暂缓任务；[完成计划索引](plans/completed.md)保存已验收计划。
 - [实施记录](records/README.md)：跨平台、性能和发布验收证据。
 
 扩大公共 API 前应先更新对应 Plan 和本路线图状态，并明确验证与退出条件。

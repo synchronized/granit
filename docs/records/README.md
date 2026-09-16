@@ -6,6 +6,8 @@
 本目录保存已经发生的实施过程、验证结果和历史差异。记录不是当前 API、架构或未来计划的权威
 来源；阅读当前行为时应返回对应 Reference、Concept 或 Plan。
 
+已经被后续记录替代或主要用于追溯的长篇历史记录见[历史实施记录](history/README.md)。
+
 ## 高层渲染
 
 - [P-06/H-01 Render Graph 实施记录](P-06-render-graph-implementation.md)
