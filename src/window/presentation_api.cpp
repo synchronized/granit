@@ -4,7 +4,7 @@
 #include <granit/renderer/native_surface.h>
 #include <granit/window/presentation.h>
 
-#include "window/window_backend_internal.h"
+#include "window/registry.h"
 
 extern "C" granit_result granit_window_create_surface(granit_window_system system_handle,
                                                       granit_window window_handle,

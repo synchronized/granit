@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "window/window_backend_internal.h"
+#include "window/platform/backend.h"
+
+#include <xcb/xcb.h>
 
 #include <cstdlib>
 #include <cstring>

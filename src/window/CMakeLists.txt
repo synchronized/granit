@@ -30,10 +30,17 @@ add_library(granit_window)
 add_library(granit::window ALIAS granit_window)
 target_sources(
   granit_window
-  PRIVATE window_api.cpp
+  PRIVATE system_api.cpp
+          window_api.cpp
           presentation_api.cpp
-          window_backend_internal.h
+          registry.cpp
+          registry.h
+          event_queue.cpp
+          event_queue.h
+          platform/backend.h
           input/input_api.cpp
+          input/input_state.cpp
+          input/input_state.h
           input/native_event.h
           input/platform_adapter.cpp
           input/platform_adapter.h
