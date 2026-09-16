@@ -75,8 +75,8 @@ examples/samples/
    离屏绘制和回读验证。
 4. **S-46D 基础教程（进行中）**：已完成 `01`～`03` 的 Renderer、资源上传和 Shader/Pipeline
    说明；后续补充可直接运行的资源上传步骤，并为每篇教程链接对应 Reference 和完整示例。
-5. **S-46E 窗口与高层教程**：编写 `04`，整理现有 Render Pipeline 和 Model Viewer 为 `05`、`06`，
-   同步修复文档中心和交叉链接。
+5. **S-46E 窗口与高层教程（已完成）**：编写 `04`，整理现有 Render Pipeline 和 Model Viewer 为
+   `05`、`06`，同步修复文档中心和交叉链接。
 6. **S-46F 验收与维护**：补充 CMake/CTest 文档检查、示例 Smoke、安装 Consumer 验证和 Tutorial
    阅读路径检查。
 

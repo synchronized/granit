@@ -62,7 +62,7 @@ Canvas 绘制，不是 DOM/CSS 仿制界面，因此可用于核对桌面与 Web
 浏览器 Emscripten WebGPU 中加载 glTF/GLB、上传 GPU Scene 并显示 PBR 模型；桌面目标还提供
 编辑器式面板。该目标需要显式启用模型查看器及对应 Integration。
 
-构建、资产获取、命令行参数和排错见[跨后端模型查看器教程](../tutorials/model-viewer.md)。
+构建、资产获取、命令行参数和排错见[跨后端模型查看器教程](../tutorials/06-model-viewer.md)。
 
 ## ImGui 固定画面验收
 
@@ -101,7 +101,7 @@ ctest --preset windows-clang-debug -R "^granit\.smoke\."
 
 其中纹理回读测试仍可直接运行并传入 `.rgba` 输出路径，详见
 [纹理同步回读](texture-readback.md)。Render Pipeline 的分步说明见
-[离屏渲染教程](../tutorials/render-pipeline-offscreen.md)。
+[离屏渲染教程](../tutorials/05-render-pipeline-offscreen.md)。
 
 ## 资源归属
 

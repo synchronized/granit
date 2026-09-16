@@ -14,9 +14,10 @@
 1. [创建第一个 Renderer](tutorials/01-first-renderer.md)
 2. [创建资源并上传数据](tutorials/02-resources-and-upload.md)
 3. [创建 Shader 与 Graphics Pipeline](tutorials/03-shader-and-pipeline.md)
-4. [Render Pipeline 离屏渲染教程](tutorials/render-pipeline-offscreen.md)
-5. [示例程序及运行方式](guides/examples.md)
-6. [Render Pipeline](reference/render-pipeline.md)
+4. [窗口与帧循环](tutorials/04-window-and-frame-loop.md)
+5. [Render Pipeline 离屏渲染教程](tutorials/05-render-pipeline-offscreen.md)
+6. [示例程序及运行方式](guides/examples.md)
+7. [Render Pipeline](reference/render-pipeline.md)
 
 ### 使用核心 Renderer
 
@@ -33,14 +34,14 @@
 2. [Render Pipeline](reference/render-pipeline.md)
 3. [Material](reference/material.md)
 4. [Scene Snapshot](reference/scene-snapshot.md)
-5. [运行跨后端 Model Viewer](tutorials/model-viewer.md)
+5. [运行跨后端 Model Viewer](tutorials/06-model-viewer.md)
 
 ### 参与开发
 
 1. [开发规范](guides/development.md)
 2. [项目文档规范](../DOCUMENTATION_GUIDE.md)
 3. [路线图](roadmap.md)
-4. [0.26.0 当前计划](plans/S-45-0.26.0-documentation-convergence.md)
+4. [API 教程与可运行示例阶梯计划](plans/S-46-api-tutorial-example-ladder.md)
 5. [开发计划与完成历史](plans/README.md)
 6. [第三方依赖](../3rd/README.md)
 
@@ -65,8 +66,9 @@
 - [01：创建第一个 Renderer](tutorials/01-first-renderer.md)
 - [02：创建资源并上传数据](tutorials/02-resources-and-upload.md)
 - [03：创建 Shader 与 Graphics Pipeline](tutorials/03-shader-and-pipeline.md)
-- [使用 Render Pipeline 完成第一次离屏渲染](tutorials/render-pipeline-offscreen.md)
-- [运行跨后端模型查看器](tutorials/model-viewer.md)
+- [04：窗口与帧循环](tutorials/04-window-and-frame-loop.md)
+- [05：使用 Render Pipeline 完成第一次离屏渲染](tutorials/05-render-pipeline-offscreen.md)
+- [06：运行跨后端模型查看器](tutorials/06-model-viewer.md)
 
 ## API 与行为参考
 

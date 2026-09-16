@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: MIT -->
 <!-- Copyright (c) 2026 Granit contributors -->
 
-# 跨后端模型查看器教程
+# 06：跨后端模型查看器教程
 
 本教程使用同一套 CPU Scene、GPU Scene 和 Render Pipeline，在桌面 Vulkan 与浏览器
 Emscripten WebGPU 上显示 glTF 2.0 模型。桌面目标叠加 ImGui 调试面板；该示例及其 glTF 加载器

@@ -94,7 +94,7 @@ granit_require_document_text(
   "独立安装 Consumer 执行命令"
 )
 granit_require_document_text(
-  "docs/tutorials/render-pipeline-offscreen.md"
+  "docs/tutorials/05-render-pipeline-offscreen.md"
   "granit.gpu.render_pipeline"
   "RenderPipeline 教程验证命令"
 )

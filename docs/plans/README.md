@@ -18,7 +18,7 @@
 ## 待开始
 
 - [S-46：API 教程与可运行示例阶梯](S-46-api-tutorial-example-ladder.md)——已完成路径设计和
-  `minimal_renderer`、`triangle` 及基础 Renderer/Pipeline 教程，正在推进资源与窗口教程。
+  `minimal_renderer`、`triangle` 及 `01`～`06` 教程，正在推进基础教程验收与维护收敛。
 
 ## 暂缓与重新评估
 
