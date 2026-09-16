@@ -15,6 +15,11 @@
 完整的已完成计划见[完成计划索引](completed.md)。计划文件仍保留在本目录中，便于追溯设计目标、
 验收条件和最终差异；当前行为应以 Reference、Concept 和仓库实现为准。
 
+## 待开始
+
+- [S-46：API 教程与可运行示例阶梯](S-46-api-tutorial-example-ladder.md)——先确认从底层到高层的
+  C++20 API 学习路径，再新增最小示例和编号教程。
+
 ## 暂缓与重新评估
 
 - [D-09：Bindless Resource Table](D-09-bindless-resource-table.md)——等待真实绑定压力证据。
