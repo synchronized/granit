@@ -19,12 +19,14 @@ S-45 已完成当前事实修正、Concept/Reference 职责收敛、导航压缩
 - Roadmap 从 535 行压缩为当前能力、正在实施、暂缓候选和长期方向。
 - H-02、H-03、H-05、H-07 原入口收敛为约 30 行摘要，完整逐阶段内容保存在
   `docs/records/history/`。
+- Changelog 记录每个发布版本；迁移指南只覆盖需要用户手工处理的破坏性升级，历史指南由独立索引
+  管理。
 
 ## 自动检查
 
 `cmake/check_documentation.cmake` 现在检查：
 
-- 245 个自有 Markdown 文件的相对链接；
+- 247 个自有 Markdown 文件的相对链接；
 - Guide、Reference、Concept、Plan 与 Record 的分类索引；
 - 根 README 180 行上限、CMake 使用入口和教程验证命令；
 - CMake 项目版本、README 最新版本、Release 链接和当前 Changelog 标题一致；

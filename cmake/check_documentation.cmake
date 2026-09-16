@@ -227,8 +227,39 @@ function(granit_check_document_index directory index_file prefix)
   endforeach()
 endfunction()
 
+function(granit_check_guide_index directory main_index migration_index)
+  file(READ "${main_index}" granit_main_index_content)
+  file(READ "${migration_index}" granit_migration_index_content)
+  file(GLOB granit_guide_docs LIST_DIRECTORIES FALSE "${directory}/*.md")
+  foreach(granit_guide_doc IN LISTS granit_guide_docs)
+    get_filename_component(granit_guide_name "${granit_guide_doc}" NAME)
+    if(granit_guide_name MATCHES "^migrate-")
+      set(granit_expected_target "${granit_guide_name}")
+      set(granit_index_content "${granit_migration_index_content}")
+      set(granit_index_description "迁移指南索引")
+    else()
+      set(granit_expected_target "guides/${granit_guide_name}")
+      set(granit_index_content "${granit_main_index_content}")
+      set(granit_index_description "文档中心")
+    endif()
+    string(FIND "${granit_index_content}" "](${granit_expected_target})" granit_index_position)
+    if(granit_index_position EQUAL -1)
+      file(RELATIVE_PATH granit_unindexed_relative "${granit_docs_root}" "${granit_guide_doc}")
+      set_property(
+        GLOBAL APPEND PROPERTY GRANIT_DOCUMENTATION_INDEX_ERRORS
+        "${granit_unindexed_relative}: 未加入${granit_index_description}"
+      )
+    endif()
+  endforeach()
+endfunction()
+
 set_property(GLOBAL PROPERTY GRANIT_DOCUMENTATION_INDEX_ERRORS "")
-foreach(granit_category IN ITEMS guides reference concepts)
+granit_check_guide_index(
+  "${granit_docs_root}/docs/guides"
+  "${granit_docs_root}/docs/README.md"
+  "${granit_docs_root}/docs/guides/migrations.md"
+)
+foreach(granit_category IN ITEMS reference concepts)
   granit_check_document_index(
     "${granit_docs_root}/docs/${granit_category}"
     "${granit_docs_root}/docs/README.md"
