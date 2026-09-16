@@ -3,8 +3,9 @@
 
 # Granit 文档中心
 
-这里是 Granit 使用指南、参考资料、架构说明和开发计划的统一入口。根 README 只负责项目介绍与
-快速开始；具体事实以本页链接的对应文档为准。
+这里是 Granit 教程、操作指南、参考资料、架构说明和开发计划的统一入口。根 README 只负责项目
+介绍与快速开始；具体事实以本页链接的对应文档为准。教程用于从零完成完整目标，指南用于解决已知
+任务，参考文档用于查询当前 API、格式和行为契约。
 
 ## 推荐阅读顺序
 
@@ -29,7 +30,7 @@
 2. [Render Pipeline](reference/render-pipeline.md)
 3. [Material](reference/material.md)
 4. [Scene Snapshot](reference/scene-snapshot.md)
-5. [运行跨后端 Model Viewer](guides/model-viewer.md)
+5. [运行跨后端 Model Viewer](tutorials/model-viewer.md)
 
 ### 参与开发
 
@@ -42,21 +43,28 @@
 
 ## 操作指南
 
+指南面向已经了解目标的使用者，重点是构建、集成、迁移、验证和排错步骤；不承担完整入门教程或
+逐项 API 定义。
+
 - [构建、测试、安装与 CMake 集成](guides/build.md)
 - [发布验收](guides/release.md)
 - [版本迁移指南索引](guides/migrations.md)
 - [从 0.24 迁移到 0.25](guides/migrate-0.24-to-0.25.md)
 - [示例程序及运行方式](guides/examples.md)
-- [运行跨后端模型查看器](guides/model-viewer.md)
 - [运行浏览器 WebGPU 平台 Smoke](guides/webgpu-browser-example.md)
 - [异步回读与 Pipeline 预热](guides/async-readback-and-pipeline-warmup.md)
 - [纹理同步回读](guides/texture-readback.md)
 
 ## 教程
 
+教程从前置条件开始，连续完成一个可验证的目标；其中的 API 细节以对应参考文档为准。
+
 - [使用 Render Pipeline 完成第一次离屏渲染](tutorials/render-pipeline-offscreen.md)
+- [运行跨后端模型查看器](tutorials/model-viewer.md)
 
 ## API 与行为参考
+
+参考文档是当前行为、格式、所有权和限制的权威来源，通常不提供从零开始的完整操作流程。
 
 ### 核心与数学
 

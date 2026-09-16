@@ -1,12 +1,12 @@
 <!-- SPDX-License-Identifier: MIT -->
 <!-- Copyright (c) 2026 Granit contributors -->
 
-# 运行跨后端模型查看器
+# 跨后端模型查看器教程
 
-模型查看器使用同一套 CPU Scene、GPU Scene 和 Render Pipeline，在桌面 Vulkan 与浏览器
+本教程使用同一套 CPU Scene、GPU Scene 和 Render Pipeline，在桌面 Vulkan 与浏览器
 Emscripten WebGPU 上显示 glTF 2.0 模型。桌面目标叠加 ImGui 调试面板；该示例及其 glTF 加载器
 不属于 Granit 安装 SDK。本指南只负责模型资产、桌面运行、性能和固定画面验收；Emscripten
-工具链、浏览器服务和通用浏览器测试见[浏览器 WebGPU 指南](webgpu-browser-example.md)。
+工具链、浏览器服务和通用浏览器测试见[浏览器 WebGPU 指南](../guides/webgpu-browser-example.md)。
 
 ## 构建桌面查看器
 
@@ -175,7 +175,7 @@ Adapter、资产路径及量化统计，供 Actions 一并上传。`.rgba` 文�
 Emscripten 构建生成面向使用者的 `granit_model_viewer_web.html`，默认通过网络加载 Khronos
 Flight Helmet；`?model=<URL>` 可以覆盖模型地址。它与桌面目标复用同一个 Application Core、
 CPU/GPU Scene、PBR 和 Environment Map。详细构建及 URL 用法见
-[浏览器 WebGPU 示例](webgpu-browser-example.md)。该指南负责浏览器构建和通用验证；本页只保留
+[浏览器 WebGPU 示例](../guides/webgpu-browser-example.md)。该指南负责浏览器构建和通用验证；本页只保留
 模型查看器特有的页面行为说明。
 
 页面右上角的 DOM 工具面板可调整 MSAA、FXAA、Specular AA、各向异性，以及曝光、环境光和

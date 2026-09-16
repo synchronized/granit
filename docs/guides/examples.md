@@ -51,7 +51,7 @@ Canvas 绘制，不是 DOM/CSS 仿制界面，因此可用于核对桌面与 Web
 浏览器 Emscripten WebGPU 中加载 glTF/GLB、上传 GPU Scene 并显示 PBR 模型；桌面目标还提供
 编辑器式面板。该目标需要显式启用模型查看器及对应 Integration。
 
-构建、资产获取、命令行参数和排错见[跨后端模型查看器指南](model-viewer.md)。
+构建、资产获取、命令行参数和排错见[跨后端模型查看器教程](../tutorials/model-viewer.md)。
 
 ## ImGui 固定画面验收
 
