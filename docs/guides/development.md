@@ -13,7 +13,8 @@
 - `include/granit/granit.h` 与 `granit.hpp`：面向普通用户的聚合入口。
 - Window、Asset、Scene 等高层模块只在实际实现时增加目录，底层模块不得反向依赖高层。
 
-核心库统一通过 `granit::granit` 使用；Window、Input 等独立组件使用各自的目标。
+核心库统一通过 `granit::granit` 使用；Window、AssetTools 等独立组件使用各自的目标。输入事件与
+状态属于 Window component，不存在独立 Input 目标。
 核心源码目录分层不等同于拆分动态库。
 
 ## 开发阶段兼容策略
@@ -68,7 +69,7 @@ Vulkan-Headers 与 Volk 必须锁定同一 registry 版本并成对升级，升�
 - `src/CMakeLists.txt` 统一创建核心目标、版本头和公共头文件集合；后端目录只追加源码和私有配置。
 - 版本查询、结果码、Render Graph 和安装导出跨平台共用；只有尚无浏览器实现的原生组件保持
   平台条件，不用 `EMSCRIPTEN` 代替具体功能的可用性判断。
-- Window、Input、SDL3 与 ImGui 集成的目标和安装规则位于各自源码目录的 `CMakeLists.txt`。
+- Window、AssetTools、SDL3 与 ImGui 集成的目标和安装规则位于各自源码目录的 `CMakeLists.txt`。
 - 浏览器目标使用 `cmake/granit_web.cmake` 复用 Port、页面和输出配置；Fetch、Asyncify 与预加载
   资产由实际需要它们的运行层或可执行目标声明。
 - 新增跨目录配置时明确变量作用域和目标依赖；保留既有目标名、preset 和安装接口。

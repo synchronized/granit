@@ -48,11 +48,12 @@ Granit 采用“Bring Your Own Engine”边界，不接管使用者的 ECS、Sce
 | [核心 Renderer](docs/reference/renderer.md) | `granit::granit` | 0.x，未冻结 | GPU 资源、命令、Pipeline、同步与提交 |
 | [参考渲染管线](docs/reference/render-pipeline.md) | `granit::render_pipeline` | 0.x，未冻结 | Forward PBR、Lighting、Canvas、Debug Draw 与 Text |
 | [Window](docs/reference/window.md) | `granit::window` | 0.x，未冻结 | Win32、XCB、Wayland 窗口、输入事件与 Surface 接入 |
+| [AssetTools](docs/reference/asset-tools.md) | `granit::asset_tools` | 实验性 | Shader、Material、Texture 与 Environment 离线构建和检查 |
 | [第三方集成](docs/reference/third-party-integrations.md) | `granit::integration_sdl3`、`granit::integration_imgui` | 实验性 | SDL3 Surface 与 ImGui Draw Data 转换 |
 
 ## 使用发布包
 
-[Granit 0.10.0 Release](https://github.com/synchronized/granit/releases/tag/v0.10.0) 提供 Windows 与
+[Granit 0.25.0 Release](https://github.com/synchronized/granit/releases/tag/v0.25.0) 提供 Windows 与
 Linux x64 的共享库、静态库安装包及 `SHA256SUMS`。下载后先验证校验和，再解压到固定目录；压缩包
 内的顶层目录就是 CMake package 前缀：
 
