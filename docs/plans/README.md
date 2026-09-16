@@ -206,8 +206,8 @@ D-03-graphics-pipeline.md
   公共路径、共享格式层、SDK、CLI 与测试归属已统一，并通过跨平台、共享、静态和安装 Consumer
   验收。
 - [S-44：0.25.0 Window、Input 与呈现边界收敛](S-44-0.25.0-window-input-presentation-convergence.md)
-  ——验收中；Window/Input 生命周期、直接 Surface 入口和平台无关呈现模式已落地，正在验证
-  0.25.0 候选包。
+  ——已完成；Window/Input 生命周期、直接 Surface 入口、平台无关呈现模式和 0.25.0 SDK
+  跨平台验收均已完成。
 
 ## 状态
 

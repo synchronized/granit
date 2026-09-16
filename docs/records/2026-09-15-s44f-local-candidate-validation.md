@@ -20,8 +20,10 @@
   C/C++ Consumer 3/3 通过。Chrome 无头 WebGPU 平台 Smoke、上传回滚与错误诊断通过；
   浏览器 ImGui 1×/2× DPI 及多帧渲染验收通过。
 
-## 仍需跨平台验证
+## 远端跨平台验证
 
-本机没有 Linux/WSL 发行版，无法直接运行 Linux 共享/静态安装包及 XCB/Wayland 真实 Surface
-闭环。发布前须在同一提交上运行 Linux 和 Windows 的远端矩阵，确认安装 Consumer 与平台
-Surface 测试全部通过；本地结果不代替这一项。
+2026-09-16 在 PR #70 的特性分支完成远端矩阵：Linux 运行 `35046346482`，GCC/Clang 的
+共享与静态构建、测试、安装 Consumer 以及 X11/Wayland Integration 7 个任务全部通过；Windows
+首次运行发现工作流仍要求已删除的 `granit_input.dll`，修正旧断言后，运行 `35046898267` 的
+MSVC 共享、静态和 Shader Toolchain 3 个任务全部通过。最新提交的 Documentation 运行
+`35046906985` 通过。
