@@ -27,17 +27,17 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 
 各能力的准确使用方式和限制以 [Reference](README.md#api-与行为参考) 为准。
 
-## 正在实施
+## 最近完成
 
 ### S-45：0.26.0 文档一致性与历史收敛
 
-**状态：实施中，P1。**
+**状态：已完成，P1。**
 
-[S-45](plans/S-45-0.26.0-documentation-convergence.md) 修正当前文档与 0.25.0 实现之间的事实
-漂移，收敛 Concept、Reference、Roadmap、Plan 与 Record 职责，并扩展确定性文档检查。本任务不
+[S-45](plans/S-45-0.26.0-documentation-convergence.md) 已修正当前文档与 0.25.0 实现之间的事实
+漂移，收敛 Concept、Reference、Roadmap、Plan 与 Record 职责，并扩展确定性文档检查。本任务未
 修改公共 API、ABI、资产格式或运行时行为。
 
-当前顺序：
+完成内容：
 
 1. 修正版本、组件和发布状态。
 2. 让 Concept 与 Reference 反映当前后端和资源能力。
