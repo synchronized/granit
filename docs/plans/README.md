@@ -32,6 +32,8 @@ D-03-graphics-pipeline.md
 
 ## 当前计划
 
+- [S-45：0.26.0 文档一致性与历史收敛](S-45-0.26.0-documentation-convergence.md)——实施中；
+  修正当前事实漂移，收敛 Concept、Reference、Roadmap、Plan 与 Record 职责，并增加确定性检查。
 - [R-01：GPU 内存分配方案](R-01-memory-allocation.md)——已完成基础接入。
 - [R-02：第一版资源模型](R-02-resource-model.md)——已完成。
 - [R-03：Buffer 生命周期与映射](R-03-buffer.md)——已完成。
