@@ -47,11 +47,10 @@ Window 在 0.25.0 合并输入生命周期，并使用 0.25.0 完整符号快照
 | `Window` | `granit::window` | Core | 稳定候选 | 验证平台后端、输入与宿主循环契约 |
 | `AssetTools` | `granit::asset_tools` | Threads、可选离线工具链 | 实验性 | 统一离线资产构建、检查与 CLI |
 | `IntegrationSDL3` | `granit::integration_sdl3` | Core、SDL3 | 实验性 | 保持可选适配层，不进入 Core |
-| `IntegrationImGui` | `granit::integration_imgui` | Core、RenderPipeline、ImGui | 实验性 | 保持可选适配层，不承诺第三方 ABI |
+| `IntegrationImGui` | `granit::integration_imgui` | Core、RP、ImGui | 实验性 | 可选；第三方 ABI 不稳定 |
 
 component 名、依赖和当前等级是安装 SDK 契约的一部分；底层 Vulkan/WebGPU 实现、示例私有代码、
-测试目标和 `src/` 内部模块不属于可安装 component。0.22.0 的实施与验收范围见
-[S-38 计划](../plans/S-38-0.22.0-asset-tools-and-toolchain.md)。
+测试目标和 `src/` 内部模块不属于可安装 component。当前优先级和重新评估条件见[路线图](../roadmap.md)。
 
 ## 版本规则
 

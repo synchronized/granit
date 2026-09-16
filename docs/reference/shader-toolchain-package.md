@@ -97,15 +97,8 @@ cmake \
 验证成功只说明解包后的文件与清单一致。发布系统仍须校验归档摘要，官方 CI 仍须使用
 `GRANIT_SHADER_TOOLCHAIN_POLICY=locked` 完成真实编译能力测试。
 
-仓库的 `Shader Toolchain Packages` 手动 Actions 工作流固定 Vulkan SDK 下载地址、归档 SHA-256、
-Dawn 修订和全部工具版本。Windows 与 Linux 分别构建 Tint、组装精简目录、执行包内清单校验，
-再以 `locked` 策略运行 HLSL 双后端 AssetTools 测试，最后上传带独立 SHA-256 文件的临时
-Artifact。当前锁定产物已作为独立预发行版本发布；后续工具升级仍须先完成两平台远端验证和
-许可证复核，再发布新标签，不能覆盖已有归档。
-
-工作流分别缓存 Dawn 第三方源码、编译目标和最终 Tint/许可证产物。最终产物缓存键包含平台、
-架构、编译器契约版本及 Tint 修订；命中时不再获取或编译 Dawn。该缓存只用于加速，组包后仍执行
-清单和真实编译能力验证，不能替代可发布归档及其 SHA-256。
+发布工作流可以使用本清单验证归档内容，但工作流、缓存和发布标签不是工具链包格式的一部分。
+发布系统仍须在包外校验归档 SHA-256，并在 `locked` 策略下完成真实编译能力测试。
 
 ## 下载锁定工具链
 
@@ -130,5 +123,4 @@ cmake -S . -B build \
 请求 `AssetTools` component 后可 `include("${granit_SHADER_TOOLCHAIN_MODULE}")` 并调用
 `granit_find_shader_toolchain()`。
 
-工具链发布页为
-[Shader Toolchain v20260720.160313](https://github.com/synchronized/granit/releases/tag/shader-toolchain-v20260720.160313-0bc38adde72b)。
+锁定工具链发布页见 [Granit Releases](https://github.com/synchronized/granit/releases)。

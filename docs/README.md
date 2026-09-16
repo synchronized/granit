@@ -81,6 +81,7 @@
 - [Shader 工具链包清单](reference/shader-toolchain-package.md)
 - [Command Recorder](reference/command-recorder.md)
 - [Frame Context](reference/frame-context.md)
+- [Timestamp Query](reference/timestamp-query.md)
 - [Shader Module](reference/shader.md)
 - [Shader Library](reference/shader-library.md)
 - [Graphics 与 Compute Pipeline](reference/pipeline.md)

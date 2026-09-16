@@ -112,7 +112,8 @@ ID，也不可保存到文件或跨进程使用。不同结果的查询仍可并
 - Library Builder 将目标后端和必需特性纳入缓存键与变体记录。
 - `granit_asset_tools_shader_index_find_content_id` 从内存中的 `.grshidx.json` 查询逻辑 Shader 名称，
   供 CLI 和上游资产管线生成稳定内容 ID 引用，无需访问 SDK 私有 JSON 类型。
-- `granit_asset_tools_shader_reflection_get_binding_count` 和 `granit_asset_tools_shader_reflection_get_binding` 按
+- `granit_asset_tools_shader_reflection_get_binding_count` 和
+  `granit_asset_tools_shader_reflection_get_binding` 按
   Group、Binding 数字顺序返回结构化绑定。记录包含资源类型、访问模式、数组数量和 Buffer
   最小绑定尺寸。
 - Vertex 输入和 Fragment 输出按 Location、Component 排序，记录标量类型、位宽及向量宽度；
@@ -130,7 +131,8 @@ ID，也不可保存到文件或跨进程使用。不同结果的查询仍可并
   `expected_bindings`。SDK 会按 Group/Binding 比较最终 SPIR-V；缺失、多余或重复记录都会失败，
   编译失败时删除输出文件。零值关闭该检查。
 - 参数有效后，即使编译或检查失败也可能返回非零句柄。调用者应读取 `status` 和诊断，最后按类型
-  调用 `granit_asset_tools_shader_compilation_destroy` 或 `granit_asset_tools_shader_reflection_destroy`；C++ 包装
+  调用 `granit_asset_tools_shader_compilation_destroy` 或
+  `granit_asset_tools_shader_reflection_destroy`；C++ 包装
   会自动销毁。
 - 查询得到的字符串和载荷视图由 SDK 持有，在所属句柄销毁前有效，调用者不得释放或修改。不得让
   查询与同一句柄的销毁并发执行。
