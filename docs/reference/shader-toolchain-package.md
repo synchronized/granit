@@ -1,11 +1,12 @@
 <!-- SPDX-License-Identifier: MIT -->
 <!-- Copyright (c) 2026 Granit contributors -->
 
-# Shader 工具链包清单
+# AssetTools Shader 工具链包清单
 
-Shader 工具链包使用 `shader-toolchain.json` 描述宿主平台归档中的工具、运行库和许可证文件。
-生成器记录完整文件集合，验证器要求文件集合、大小和 SHA-256 全部一致；缺失、篡改、重复登记或
-额外文件都会使验证失败。
+本文件描述 AssetTools 使用的离线 Shader 构建依赖包，不是 Granit 的 SDK 组件，也不是应用运行时
+依赖。工具链包使用 `shader-toolchain.json` 描述宿主平台归档中的工具、运行库和许可证文件。生成器
+记录完整文件集合，验证器要求文件集合、大小和 SHA-256 全部一致；缺失、篡改、重复登记或额外文件
+都会使验证失败。
 
 ## 目录与角色
 
