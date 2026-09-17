@@ -12,15 +12,14 @@
 #include <granit/window/export.h>
 #include <granit/window/window.h>
 
-typedef enum granit_input_event_type {
-  GRANIT_INPUT_EVENT_KEY = 1,
-  GRANIT_INPUT_EVENT_TEXT = 2,
-  GRANIT_INPUT_EVENT_POINTER_MOVED = 3,
-  GRANIT_INPUT_EVENT_POINTER_BUTTON = 4,
-  GRANIT_INPUT_EVENT_POINTER_WHEEL = 5,
-  GRANIT_INPUT_EVENT_POINTER_ENTERED = 6,
-  GRANIT_INPUT_EVENT_POINTER_LEFT = 7
-} granit_input_event_type;
+typedef uint32_t granit_input_event_type;
+#define GRANIT_INPUT_EVENT_KEY UINT32_C(1)
+#define GRANIT_INPUT_EVENT_TEXT UINT32_C(2)
+#define GRANIT_INPUT_EVENT_POINTER_MOVED UINT32_C(3)
+#define GRANIT_INPUT_EVENT_POINTER_BUTTON UINT32_C(4)
+#define GRANIT_INPUT_EVENT_POINTER_WHEEL UINT32_C(5)
+#define GRANIT_INPUT_EVENT_POINTER_ENTERED UINT32_C(6)
+#define GRANIT_INPUT_EVENT_POINTER_LEFT UINT32_C(7)
 
 /** USB HID Keyboard/Keypad usage 对应的稳定物理键位置。 */
 typedef enum granit_physical_key {
@@ -196,7 +195,7 @@ typedef union granit_input_event_data {
 
 typedef struct granit_input_event {
   uint32_t struct_size;
-  uint32_t type;
+  granit_input_event_type type;
   granit_window window;
   uint64_t timestamp_ns;
   granit_input_event_data data;

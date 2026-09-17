@@ -59,13 +59,12 @@ typedef struct granit_window_desc {
    GRANIT_WINDOW_VISIBLE_BIT | GRANIT_WINDOW_RESIZABLE_BIT,                                        \
    UINT32_C(0)}
 
-typedef enum granit_window_event_type {
-  GRANIT_WINDOW_EVENT_CLOSE_REQUESTED = 1,
-  GRANIT_WINDOW_EVENT_RESIZED = 2,
-  GRANIT_WINDOW_EVENT_FOCUS_CHANGED = 3,
-  GRANIT_WINDOW_EVENT_SCALE_CHANGED = 4,
-  GRANIT_WINDOW_EVENT_NATIVE_HANDLE_CHANGED = 5
-} granit_window_event_type;
+typedef uint32_t granit_window_event_type;
+#define GRANIT_WINDOW_EVENT_CLOSE_REQUESTED UINT32_C(1)
+#define GRANIT_WINDOW_EVENT_RESIZED UINT32_C(2)
+#define GRANIT_WINDOW_EVENT_FOCUS_CHANGED UINT32_C(3)
+#define GRANIT_WINDOW_EVENT_SCALE_CHANGED UINT32_C(4)
+#define GRANIT_WINDOW_EVENT_NATIVE_HANDLE_CHANGED UINT32_C(5)
 
 typedef union granit_window_event_data {
   struct {
@@ -91,7 +90,7 @@ typedef union granit_window_event_data {
 
 typedef struct granit_window_event {
   uint32_t struct_size;
-  uint32_t type;
+  granit_window_event_type type;
   granit_window window;
   uint64_t timestamp_ns;
   granit_window_event_data data;
