@@ -45,8 +45,8 @@ HLSL portable 路径需要资产构建机安装 DXC 与 Tint，但应用运行�
 `GRANIT_SHADER_TOOLCHAIN_MODE` 控制工具链来源：
 
 - `off` 禁用 HLSL 构建且不查找工具、不访问网络；Material、Texture 和 Environment 仍可使用；
-- `system` 是默认值，只搜索显式 `GRANIT_SHADER_TOOLCHAIN_ROOT`、Vulkan SDK 和 `PATH`；
-- `auto` 先执行 `system` 搜索，缺少完整 DXC/Tint 时下载锁定发布包；
+- `system` 只搜索显式 `GRANIT_SHADER_TOOLCHAIN_ROOT`、Vulkan SDK 和 `PATH`；
+- `auto` 是默认值，先执行 `system` 搜索，缺少完整 DXC/Tint 时下载锁定发布包；
 - `download` 忽略偶然发现的系统工具并使用锁定缓存包。显式 Root 在所有模式中优先。
 
 下载缓存由 `GRANIT_SHADER_TOOLCHAIN_CACHE_DIR` 指定，默认位于构建树。下载过程使用进程锁、临时

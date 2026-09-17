@@ -78,3 +78,9 @@ if(NOT EMSCRIPTEN)
 
   set(granit_wayland_protocol_dir "${PROJECT_BINARY_DIR}/generated/wayland")
 endif()
+
+if(EMSCRIPTEN)
+  set(GRANIT_IS_EMSCRIPTEN ON)
+else()
+  set(GRANIT_IS_EMSCRIPTEN OFF)
+endif()

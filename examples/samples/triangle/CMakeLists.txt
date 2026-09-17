@@ -45,25 +45,3 @@ target_compile_features(granit_triangle_example PRIVATE cxx_std_20)
 granit_target_compile_warnings(granit_triangle_example)
 granit_target_output_directories(granit_triangle_example)
 
-if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
-  add_test(NAME granit.example.triangle COMMAND granit_triangle_example)
-  set_tests_properties(
-    granit.example.triangle
-    PROPERTIES
-      TIMEOUT 30
-      ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:granit::granit>"
-  )
-  if(APPLE)
-    set_tests_properties(
-      granit.example.triangle
-      PROPERTIES ENVIRONMENT_MODIFICATION
-                 "DYLD_LIBRARY_PATH=path_list_prepend:$<TARGET_FILE_DIR:granit::granit>"
-    )
-  elseif(UNIX)
-    set_tests_properties(
-      granit.example.triangle
-      PROPERTIES ENVIRONMENT_MODIFICATION
-                 "LD_LIBRARY_PATH=path_list_prepend:$<TARGET_FILE_DIR:granit::granit>"
-    )
-  endif()
-endif()

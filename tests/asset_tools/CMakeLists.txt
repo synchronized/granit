@@ -5,7 +5,7 @@ set_property(DIRECTORY APPEND PROPERTY LABELS integration tooling)
 
 find_package(Threads REQUIRED)
 
-if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+if(GRANIT_TESTING_ENABLED)
 
   add_executable(
     granit_asset_tools_handle_safety_test
@@ -458,7 +458,7 @@ find_program(
   HINTS "$ENV{VULKAN_SDK}/Bin" "$ENV{VULKAN_SDK}/bin"
 )
 
-if(GRANIT_BUILD_TESTING AND BUILD_TESTING AND GRANIT_DXC_EXECUTABLE)
+if(GRANIT_TESTING_ENABLED AND GRANIT_DXC_EXECUTABLE)
   set(GRANIT_MATERIAL_FIXTURE "${CMAKE_CURRENT_BINARY_DIR}/material_fixture.spv")
   add_custom_command(
     OUTPUT "${GRANIT_MATERIAL_FIXTURE}"
@@ -515,11 +515,11 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING AND GRANIT_DXC_EXECUTABLE)
       "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/unlit/unlit.vert.spv"
       "${granit_test_shader_fixture_dir}/minimal.comp.spv" "${GRANIT_MATERIAL_FIXTURE}"
   )
-elseif(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+elseif(GRANIT_TESTING_ENABLED)
   message(WARNING "未找到 dxc，跳过 Granit Shader 工具端到端测试")
 endif()
 
-if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+if(GRANIT_TESTING_ENABLED)
   add_test(
     NAME granit.shader_toolchain.manifest
     COMMAND

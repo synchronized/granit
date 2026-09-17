@@ -90,7 +90,7 @@ target_link_libraries(
 set_target_properties(granit_example_gltf_support PROPERTIES FOLDER "Examples")
 granit_target_compile_warnings(granit_example_gltf_support)
 
-if(NOT EMSCRIPTEN AND GRANIT_BUILD_TESTING AND BUILD_TESTING)
+if(NOT EMSCRIPTEN AND GRANIT_TESTING_ENABLED)
   add_executable(granit_example_gltf_support_test resource_uri_test.cpp)
   target_link_libraries(
     granit_example_gltf_support_test

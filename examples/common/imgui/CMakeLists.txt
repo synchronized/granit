@@ -29,7 +29,7 @@ if(TARGET granit::integration_imgui)
   set_target_properties(granit_example_imgui PROPERTIES FOLDER "Examples")
   granit_target_compile_warnings(granit_example_imgui)
 
-  if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+  if(GRANIT_TESTING_ENABLED)
     add_executable(
       granit_example_imgui_test imgui_frame_capture_test.cpp imgui_texture_registry_test.cpp
     )
