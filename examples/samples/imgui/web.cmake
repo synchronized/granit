@@ -6,8 +6,8 @@ include(granit_web)
 set(SDL_SHARED OFF CACHE BOOL "" FORCE)
 set(SDL_STATIC ON CACHE BOOL "" FORCE)
 set(SDL_INSTALL OFF CACHE BOOL "" FORCE)
-granit_prepare_sdl3_dependency(TRUE)
-granit_prepare_imgui_dependency(TRUE)
+granit_prepare_sdl3_dependency(download)
+granit_prepare_imgui_dependency(download)
 
 add_library(
   granit_web_imgui_support STATIC

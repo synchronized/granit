@@ -19,8 +19,7 @@ cmake -S . -B build/model-viewer -G Ninja `
   -DGRANIT_BUILD_MODEL_VIEWER_EXAMPLE=ON `
   -DGRANIT_BUILD_INTEGRATION_SDL3=ON `
   -DGRANIT_BUILD_INTEGRATION_IMGUI=ON `
-  -DGRANIT_FETCH_INTEGRATION_DEPENDENCIES=ON `
-  -DGRANIT_FETCH_EXAMPLE_GLTF_DEPENDENCIES=ON
+  -DGRANIT_DEPENDENCY_POLICY=auto
 cmake --build build/model-viewer --target granit_model_viewer_example
 ```
 
@@ -32,7 +31,7 @@ cmake --build build/model-viewer --target granit_model_viewer_example
 cmake `
   -DGRANIT_SOURCE_DIR="$PWD" `
   -DGRANIT_FLIGHT_HELMET_OUTPUT_DIR="$PWD/build/assets/FlightHelmet" `
-  -P cmake/fetch_flight_helmet.cmake
+  -P cmake/assets/fetch_flight_helmet.cmake
 ```
 
 环境光源也采用独立清单下载，不进入默认 Git 工作树：
@@ -40,7 +39,7 @@ cmake `
 ```powershell
 cmake `
   -DGRANIT_MODEL_VIEWER_ENVIRONMENT_OUTPUT_DIR="$PWD/build/assets/StudioSmall03" `
-  -P cmake/fetch_model_viewer_environment.cmake
+  -P cmake/assets/fetch_model_viewer_environment.cmake
 ```
 
 该命令获取 Poly Haven 以 CC0-1.0 发布的 `Studio Small 03` 1K HDR，并同时校验文件大小和

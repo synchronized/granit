@@ -18,7 +18,7 @@
         "CMAKE_EXPORT_COMPILE_COMMANDS": true,
         "GRANIT_BUILD_TESTING": true,
         "GRANIT_BUILD_EXAMPLES": true,
-        "GRANIT_FETCH_EXAMPLE_GLTF_DEPENDENCIES": true,
+        "GRANIT_DEPENDENCY_POLICY": "auto",
         "GRANIT_WARNINGS_AS_ERRORS": true
       }
     },
@@ -129,10 +129,9 @@
         "CMAKE_TOOLCHAIN_FILE": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
         "BUILD_SHARED_LIBS": false,
         "GRANIT_BUILD_EMSCRIPTEN_PLATFORM": true,
-        "GRANIT_FETCH_EXAMPLE_GLTF_DEPENDENCIES": true,
+        "GRANIT_DEPENDENCY_POLICY": "auto",
         "GRANIT_BUILD_TESTING": true,
         "GRANIT_BUILD_EXAMPLES": true,
-        "GRANIT_BUILD_MODEL_VIEWER_EXAMPLE": true,
         "GRANIT_BUILD_BENCHMARKS": false,
         "GRANIT_BUILD_TOOLS": false,
         "GRANIT_BUILD_ASSET_TOOLS": false,
@@ -149,7 +148,7 @@
       "cacheVariables": {
         "GRANIT_BUILD_TESTING": true,
         "GRANIT_BUILD_EXAMPLES": true,
-        "GRANIT_FETCH_EXAMPLE_GLTF_DEPENDENCIES": true,
+        "GRANIT_DEPENDENCY_POLICY": "auto",
         "GRANIT_WARNINGS_AS_ERRORS": true
       }
     },

@@ -21,7 +21,7 @@ Granit 提供两个默认关闭的 C++20 可选集成组件：
 cmake -S . -B build/integrations \
   -DGRANIT_BUILD_INTEGRATION_SDL3=ON \
   -DGRANIT_BUILD_INTEGRATION_IMGUI=ON \
-  -DGRANIT_FETCH_INTEGRATION_DEPENDENCIES=ON
+  -DGRANIT_DEPENDENCY_POLICY=auto
 ```
 
 当前锁定 SDL 3.4.10 与 ImGui 1.92.9。下载模式用于源码树编译、测试和示例验证；为避免把下载的

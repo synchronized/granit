@@ -33,10 +33,10 @@ jobs:
           path: build/toolchains
           key: >-
             shader-toolchain-${{ runner.os }}-
-            ${{ hashFiles('cmake/download_shader_toolchain.cmake',
-            'cmake/GranitShaderToolchain.cmake') }}
+            ${{ hashFiles('cmake/toolchain/download_shader_toolchain.cmake',
+            'cmake/toolchain/GranitShaderToolchain.cmake') }}
       - name: 下载并校验锁定 Shader 工具链
-        run: cmake -DDESTINATION=build/toolchains -P cmake/download_shader_toolchain.cmake
+        run: cmake -DDESTINATION=build/toolchains -P cmake/toolchain/download_shader_toolchain.cmake
       - name: 验证锁定 Shader 工具链
         shell: bash
         run: |
@@ -125,12 +125,12 @@ jobs:
             -DGRANIT_SOURCE_DIR="$PWD" \
             -DGRANIT_BUILD_DIR="$PWD/build/${{ steps.preset.outputs.name }}" \
             -DGRANIT_INSTALL_PREFIX="$prefix" \
-            -P cmake/check_install_exports.cmake
+            -P tests/cmake/check_install_exports.cmake
           cmake \
             -DGRANIT_SOURCE_DIR="$PWD" \
             -DGRANIT_INSTALL_PREFIX="$prefix" \
             -DGRANIT_TEST_BINARY_DIR="$PWD/build/package/${{ steps.preset.outputs.name }}" \
-            -P cmake/check_installed_package.cmake
+            -P tests/cmake/check_installed_package.cmake
           cmake -S tests/consumer -B "build/consumer/${{ steps.preset.outputs.name }}" \
             -G Ninja -DCMAKE_PREFIX_PATH="$prefix" \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
@@ -184,7 +184,7 @@ jobs:
           cmake --preset "${{ steps.preset.outputs.name }}" \
             -DGRANIT_BUILD_INTEGRATION_SDL3=ON \
             -DGRANIT_BUILD_INTEGRATION_IMGUI=ON \
-            -DGRANIT_FETCH_INTEGRATION_DEPENDENCIES=ON \
+            -DGRANIT_DEPENDENCY_POLICY=auto \
             -DFETCHCONTENT_BASE_DIR="$GITHUB_WORKSPACE/.cache/fetchcontent" \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
