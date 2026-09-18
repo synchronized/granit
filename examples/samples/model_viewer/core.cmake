@@ -16,10 +16,10 @@ add_custom_command(
     "${CMAKE_COMMAND}"
     "-DINPUT=${granit_installed_asset_snapshot_dir}/libraries/pbr_standard.grshlib"
     "-DOUTPUT=${granit_model_viewer_shader_library_include}"
-    -P "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+    -P "${PROJECT_SOURCE_DIR}/cmake/assets/embed_binary.cmake"
   DEPENDS
     "${granit_installed_asset_snapshot_dir}/libraries/pbr_standard.grshlib"
-    "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+    "${PROJECT_SOURCE_DIR}/cmake/assets/embed_binary.cmake"
   COMMENT "内嵌模型查看器 PBR Shader Library"
   VERBATIM
 )
@@ -55,10 +55,10 @@ add_custom_command(
   COMMAND
     "${CMAKE_COMMAND}" "-DINPUT=${granit_model_viewer_material_package}"
     "-DOUTPUT=${granit_model_viewer_material_include}"
-    -P "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+    -P "${PROJECT_SOURCE_DIR}/cmake/assets/embed_binary.cmake"
   DEPENDS
     "${granit_model_viewer_material_package}"
-    "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+    "${PROJECT_SOURCE_DIR}/cmake/assets/embed_binary.cmake"
   COMMENT "内嵌模型查看器 PBR 材质归档"
   VERBATIM
 )
@@ -117,7 +117,7 @@ if(NOT CMAKE_CROSSCOMPILING)
   granit_target_compile_warnings(granit_model_viewer_offscreen_acceptance)
 endif()
 
-if(NOT EMSCRIPTEN AND GRANIT_BUILD_TESTING AND BUILD_TESTING)
+if(GRANIT_HAS_NATIVE_WINDOW AND GRANIT_TESTING_ENABLED)
   add_executable(
     granit_example_model_viewer_support_test
     "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/application_core_test.cpp"
@@ -162,7 +162,7 @@ if(TARGET granit::integration_imgui)
   set_target_properties(granit_example_model_viewer_imgui PROPERTIES FOLDER "Examples")
   granit_target_compile_warnings(granit_example_model_viewer_imgui)
 
-  if(NOT EMSCRIPTEN AND GRANIT_BUILD_TESTING AND BUILD_TESTING)
+  if(GRANIT_HAS_NATIVE_WINDOW AND GRANIT_TESTING_ENABLED)
     add_executable(
     granit_example_model_viewer_imgui_test
     "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/viewer_panels_test.cpp"

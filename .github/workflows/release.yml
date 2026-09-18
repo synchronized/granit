@@ -34,7 +34,7 @@ jobs:
       - name: 校验标签与项目版本
         run: >-
           cmake -DGRANIT_SOURCE_DIR="$PWD" -DGRANIT_RELEASE_TAG="$RELEASE_TAG"
-          -P cmake/check_release_version.cmake
+          -P tests/cmake/check_release_version.cmake
 
   windows-package:
     if: github.event_name == 'workflow_dispatch'
@@ -57,8 +57,8 @@ jobs:
           path: build/toolchains
           key: >-
             shader-toolchain-${{ runner.os }}-
-            ${{ hashFiles('cmake/download_shader_toolchain.cmake',
-            'cmake/GranitShaderToolchain.cmake') }}
+            ${{ hashFiles('cmake/toolchain/download_shader_toolchain.cmake',
+            'cmake/toolchain/GranitShaderToolchain.cmake') }}
       - name: 选择 preset 和产物名
         id: package
         shell: pwsh
@@ -86,7 +86,7 @@ jobs:
             -DGRANIT_SOURCE_DIR="$PWD" `
             -DGRANIT_BUILD_DIR="$PWD/build/${{ steps.package.outputs.preset }}" `
             -DGRANIT_INSTALL_PREFIX="$stage" `
-            -P cmake/check_install_exports.cmake
+            -P tests/cmake/check_install_exports.cmake
           Compress-Archive -Path $stage -DestinationPath "${{ steps.package.outputs.name }}.zip"
       - uses: actions/upload-artifact@v6
         with:
@@ -124,8 +124,8 @@ jobs:
           path: build/toolchains
           key: >-
             shader-toolchain-${{ runner.os }}-
-            ${{ hashFiles('cmake/download_shader_toolchain.cmake',
-            'cmake/GranitShaderToolchain.cmake') }}
+            ${{ hashFiles('cmake/toolchain/download_shader_toolchain.cmake',
+            'cmake/toolchain/GranitShaderToolchain.cmake') }}
       - name: 选择 preset 和产物名
         id: package
         shell: bash
@@ -164,7 +164,7 @@ jobs:
             -DGRANIT_SOURCE_DIR="$PWD" \
             -DGRANIT_BUILD_DIR="$PWD/build/${{ steps.package.outputs.preset }}" \
             -DGRANIT_INSTALL_PREFIX="$stage" \
-            -P cmake/check_install_exports.cmake
+            -P tests/cmake/check_install_exports.cmake
           tar -C "$PWD/stage" -czf "${{ steps.package.outputs.name }}.tar.gz" \
             "${{ steps.package.outputs.name }}"
       - uses: actions/upload-artifact@v6

@@ -1,6 +1,10 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+if(NOT TARGET ${GRANIT_IMGUI_TARGET})
+  return()
+endif()
+
 add_library(granit_integration_imgui)
 add_library(granit::integration_imgui ALIAS granit_integration_imgui)
 target_sources(

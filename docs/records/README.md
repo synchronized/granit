@@ -6,6 +6,8 @@
 本目录保存已经发生的实施过程、验证结果和历史差异。记录不是当前 API、架构或未来计划的权威
 来源；阅读当前行为时应返回对应 Reference、Concept 或 Plan。
 
+已经被后续记录替代或主要用于追溯的长篇历史记录见[历史实施记录](history/README.md)。
+
 ## 高层渲染
 
 - [P-06/H-01 Render Graph 实施记录](P-06-render-graph-implementation.md)
@@ -19,6 +21,7 @@
 
 ## 稳定化与跨平台
 
+- [2026-09-16 S-45 文档一致性基线](2026-09-16-s45-documentation-baseline.md)
 - [2026-09-16 Granit 0.25.0 发布验收](2026-09-16-v0.25.0-release-acceptance.md)
 - [2026-09-15 S-44F 0.25.0 本地候选包验收](2026-09-15-s44f-local-candidate-validation.md)
 - [2026-09-15 Granit 0.24.0 发布验收](2026-09-15-v0.24.0-release-acceptance.md)

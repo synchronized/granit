@@ -82,7 +82,7 @@ jobs:
         run: |
           git fetch --no-tags origin main
           git diff --check "$(git merge-base HEAD origin/main)" HEAD
-          cmake -DGRANIT_SOURCE_DIR="$PWD" -P cmake/check_documentation.cmake
+          cmake -DGRANIT_SOURCE_DIR="$PWD" -P tests/cmake/check_documentation.cmake
 
   native:
     if: needs.classify.outputs.suite != 'documentation' && needs.classify.outputs.suite != 'webgpu'

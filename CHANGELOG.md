@@ -204,6 +204,26 @@
 - Core 新增格式枚举、能力结构和两个 C ABI 导出。项目仍处于 0.x，Consumer 应重新编译并将
   CMake 请求版本更新为 0.18。压缩纹理读回和运行时 Mipmap 生成暂不支持。
 
+## 0.17.0 - 2026-09-06
+
+### 新增
+
+- 浏览器 WebGPU 使用原生异步 Render/Compute Pipeline 创建，Vulkan 后台任务与 WebGPU Future
+  通过同一私有 HAL 接入公共 Pipeline Warmup 状态机。
+- 新增从公共 Material 把实际变体加入 Pipeline Warmup 批次的入口，浏览器 Model Viewer 在首帧
+  前预热标准 PBR 变体并显示真实进度。
+
+### 变更
+
+- 异步操作在完成、取消或 Renderer 销毁前保留 Shader、Pipeline Layout 和创建描述，两个后端
+  使用一致的逐项结果和资源生命周期。
+- 严格非阻塞能力只在后端完整满足契约时报告；软件 WebGPU 无法异步编译时明确降级并返回诊断。
+
+### 兼容性与迁移
+
+- 0.16 Consumer 可以继续使用原有 Pipeline Warmup API；使用材质变体入口或 WebGPU 原生异步
+  预热时按[从 0.16 迁移到 0.17](docs/guides/migrate-0.16-to-0.17.md)处理事件推进和资源生命周期。
+
 ## 0.16.0 - 2026-09-06
 
 ### 变更

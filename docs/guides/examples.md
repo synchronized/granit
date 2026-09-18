@@ -3,8 +3,20 @@
 
 # 示例程序
 
-Granit 只保留两个面向使用者的示例系列。它们用于展示完整应用集成；版本查询、离屏清屏、
+本文是示例目录和运行入口，不重复维护具体示例的完整构建参数。Granit 保留一个最小 API 示例和两个
+面向使用者的完整示例系列；版本查询、离屏清屏、
 纹理回读和平台窗口等单能力验证位于 `tests/smoke`，由构建与 CTest 覆盖，不再作为示例发布。
+
+## Minimal Renderer
+
+`granit_minimal_renderer_example` 是教程和安装 Consumer 的最小入口，只创建 Renderer、查询设备
+信息与限制并正常退出。完整步骤见[创建第一个 Renderer](../tutorials/01-first-renderer.md)。
+
+## Triangle
+
+`granit_triangle_example` 是无窗口的离屏 GPU 示例，使用 AssetTools 生成跨后端 Shader Library，
+创建 Graphics Pipeline，绘制 64×64 三角形并读取中心像素。完整步骤见[创建 Shader 与 Graphics
+Pipeline](../tutorials/03-shader-and-pipeline.md)。
 
 ## SDL3 + ImGui
 
@@ -30,7 +42,8 @@ build/windows-clang-release/bin/granit_sdl3_imgui_example.exe `
 CSV 记录窗口尺寸、帧槽、Validation、Present Mode、CPU 阶段和 GPU Timestamp；退出前尚未回收
 的样本保持空值，不按零处理。
 
-同一份 ImGui 内容也可通过 SDL3 和浏览器 WebGPU 运行。先激活 Emscripten 环境，再执行：
+同一份 ImGui 内容也可通过 SDL3 和浏览器 WebGPU 运行。浏览器构建、HTTP 服务和自动化测试的
+完整步骤见[浏览器 WebGPU 指南](webgpu-browser-example.md)；这里仅保留最小运行入口：
 
 ```powershell
 $env:EMSDK = "D:/sunday/programs/emsdk"
@@ -49,7 +62,7 @@ Canvas 绘制，不是 DOM/CSS 仿制界面，因此可用于核对桌面与 Web
 浏览器 Emscripten WebGPU 中加载 glTF/GLB、上传 GPU Scene 并显示 PBR 模型；桌面目标还提供
 编辑器式面板。该目标需要显式启用模型查看器及对应 Integration。
 
-构建、资产获取、命令行参数和排错见[跨后端模型查看器指南](model-viewer.md)。
+构建、资产获取、命令行参数和排错见[跨后端模型查看器教程](../tutorials/06-model-viewer.md)。
 
 ## ImGui 固定画面验收
 
@@ -88,7 +101,7 @@ ctest --preset windows-clang-debug -R "^granit\.smoke\."
 
 其中纹理回读测试仍可直接运行并传入 `.rgba` 输出路径，详见
 [纹理同步回读](texture-readback.md)。Render Pipeline 的分步说明见
-[离屏渲染教程](../tutorials/render-pipeline-offscreen.md)。
+[离屏渲染教程](../tutorials/05-render-pipeline-offscreen.md)。
 
 ## 资源归属
 

@@ -5,7 +5,7 @@ set_property(DIRECTORY APPEND PROPERTY LABELS integration tooling)
 
 find_package(Threads REQUIRED)
 
-if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+if(GRANIT_TESTING_ENABLED)
 
   add_executable(
     granit_asset_tools_handle_safety_test
@@ -79,7 +79,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     COMMAND
       "${CMAKE_COMMAND}" "-DTOOL=$<TARGET_FILE:granit_asset_tool>"
       "-DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/texture-cli-test" -P
-      "${PROJECT_SOURCE_DIR}/cmake/check_texture_asset_tool.cmake"
+      "${PROJECT_SOURCE_DIR}/tests/cmake/check_texture_asset_tool.cmake"
   )
 
   add_executable(
@@ -108,7 +108,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
       "${CMAKE_COMMAND}" "-DTOOL=$<TARGET_FILE:granit_asset_tool>"
       "-DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/environment-cli-test"
       "-DFIXTURE=${granit_installed_asset_snapshot_dir}/environments/studio_small_03.grenv" -P
-      "${PROJECT_SOURCE_DIR}/cmake/check_environment_asset_tool.cmake"
+      "${PROJECT_SOURCE_DIR}/tests/cmake/check_environment_asset_tool.cmake"
   )
 
   set(granit_shader_fixture_object_dir "${CMAKE_CURRENT_BINARY_DIR}/test-objects")
@@ -312,7 +312,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
       "-DASSET_TOOLS_LIBRARY=$<TARGET_FILE:granit_asset_tools>"
       "-DINPUT=${granit_asset_sources_dir}/shaders/pbr/pbr_untextured.hlsl"
       "-DOUTPUT=${CMAKE_CURRENT_BINARY_DIR}/must-not-exist.spv" -P
-      "${PROJECT_SOURCE_DIR}/cmake/check_shader_tool_diagnostic.cmake"
+      "${PROJECT_SOURCE_DIR}/tests/cmake/check_shader_tool_diagnostic.cmake"
   )
 
   add_test(
@@ -458,7 +458,7 @@ find_program(
   HINTS "$ENV{VULKAN_SDK}/Bin" "$ENV{VULKAN_SDK}/bin"
 )
 
-if(GRANIT_BUILD_TESTING AND BUILD_TESTING AND GRANIT_DXC_EXECUTABLE)
+if(GRANIT_DXC_EXECUTABLE)
   set(GRANIT_MATERIAL_FIXTURE "${CMAKE_CURRENT_BINARY_DIR}/material_fixture.spv")
   add_custom_command(
     OUTPUT "${GRANIT_MATERIAL_FIXTURE}"
@@ -515,45 +515,45 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING AND GRANIT_DXC_EXECUTABLE)
       "${PROJECT_SOURCE_DIR}/tests/fixtures/generated/unlit/unlit.vert.spv"
       "${granit_test_shader_fixture_dir}/minimal.comp.spv" "${GRANIT_MATERIAL_FIXTURE}"
   )
-elseif(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+else()
   message(WARNING "未找到 dxc，跳过 Granit Shader 工具端到端测试")
 endif()
 
-if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+if(GRANIT_TESTING_ENABLED)
   add_test(
     NAME granit.shader_toolchain.manifest
     COMMAND
       "${CMAKE_COMMAND}"
-      -DGENERATOR=${PROJECT_SOURCE_DIR}/cmake/generate_shader_toolchain_manifest.cmake
-      -DVERIFIER=${PROJECT_SOURCE_DIR}/cmake/verify_shader_toolchain_manifest.cmake
+      -DGENERATOR=${PROJECT_SOURCE_DIR}/cmake/toolchain/generate_shader_toolchain_manifest.cmake
+      -DVERIFIER=${PROJECT_SOURCE_DIR}/cmake/toolchain/verify_shader_toolchain_manifest.cmake
       -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/shader-toolchain-manifest-test -P
-      "${PROJECT_SOURCE_DIR}/cmake/check_shader_toolchain_manifest.cmake"
+      "${PROJECT_SOURCE_DIR}/tests/cmake/check_shader_toolchain_manifest.cmake"
   )
   add_test(
     NAME granit.shader_toolchain.package
     COMMAND
       "${CMAKE_COMMAND}"
-      -DPACKAGER=${PROJECT_SOURCE_DIR}/cmake/package_shader_toolchain.cmake
-      -DGENERATOR=${PROJECT_SOURCE_DIR}/cmake/generate_shader_toolchain_manifest.cmake
-      -DVERIFIER=${PROJECT_SOURCE_DIR}/cmake/verify_shader_toolchain_manifest.cmake
+      -DPACKAGER=${PROJECT_SOURCE_DIR}/cmake/toolchain/package_shader_toolchain.cmake
+      -DGENERATOR=${PROJECT_SOURCE_DIR}/cmake/toolchain/generate_shader_toolchain_manifest.cmake
+      -DVERIFIER=${PROJECT_SOURCE_DIR}/cmake/toolchain/verify_shader_toolchain_manifest.cmake
       -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/shader-toolchain-package-test -P
-      "${PROJECT_SOURCE_DIR}/cmake/check_package_shader_toolchain.cmake"
+      "${PROJECT_SOURCE_DIR}/tests/cmake/check_package_shader_toolchain.cmake"
   )
   add_test(
     NAME granit.shader_toolchain.licenses
     COMMAND
       "${CMAKE_COMMAND}"
-      -DCOLLECTOR=${PROJECT_SOURCE_DIR}/cmake/collect_license_bundle.cmake
+      -DCOLLECTOR=${PROJECT_SOURCE_DIR}/cmake/assets/collect_license_bundle.cmake
       -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/shader-toolchain-license-test -P
-      "${PROJECT_SOURCE_DIR}/cmake/check_collect_license_bundle.cmake"
+      "${PROJECT_SOURCE_DIR}/tests/cmake/check_collect_license_bundle.cmake"
   )
   add_test(
     NAME granit.shader_toolchain.modes
     COMMAND
       "${CMAKE_COMMAND}"
-      "-DMODULE=${PROJECT_SOURCE_DIR}/cmake/GranitShaderToolchain.cmake"
+      "-DMODULE=${PROJECT_SOURCE_DIR}/cmake/toolchain/GranitShaderToolchain.cmake"
       "-DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/shader-toolchain-mode-test" -P
-      "${PROJECT_SOURCE_DIR}/cmake/check_shader_toolchain_modes.cmake"
+      "${PROJECT_SOURCE_DIR}/tests/cmake/check_shader_toolchain_modes.cmake"
   )
   set_property(
     TEST

@@ -48,11 +48,12 @@ Granit 采用“Bring Your Own Engine”边界，不接管使用者的 ECS、Sce
 | [核心 Renderer](docs/reference/renderer.md) | `granit::granit` | 0.x，未冻结 | GPU 资源、命令、Pipeline、同步与提交 |
 | [参考渲染管线](docs/reference/render-pipeline.md) | `granit::render_pipeline` | 0.x，未冻结 | Forward PBR、Lighting、Canvas、Debug Draw 与 Text |
 | [Window](docs/reference/window.md) | `granit::window` | 0.x，未冻结 | Win32、XCB、Wayland 窗口、输入事件与 Surface 接入 |
+| [AssetTools](docs/reference/asset-tools.md) | `granit::asset_tools` | 实验性 | Shader、Material、Texture 与 Environment 离线构建和检查 |
 | [第三方集成](docs/reference/third-party-integrations.md) | `granit::integration_sdl3`、`granit::integration_imgui` | 实验性 | SDL3 Surface 与 ImGui Draw Data 转换 |
 
 ## 使用发布包
 
-[Granit 0.10.0 Release](https://github.com/synchronized/granit/releases/tag/v0.10.0) 提供 Windows 与
+[Granit 0.25.0 Release](https://github.com/synchronized/granit/releases/tag/v0.25.0) 提供 Windows 与
 Linux x64 的共享库、静态库安装包及 `SHA256SUMS`。下载后先验证校验和，再解压到固定目录；压缩包
 内的顶层目录就是 CMake package 前缀：
 
@@ -100,7 +101,7 @@ build/windows-clang-debug/bin/granit_gpu_offscreen_smoke.exe
 ```
 
 完整构建说明见[构建与安装](docs/guides/build.md)，其他程序见[示例程序](docs/guides/examples.md)，
-跨后端模型查看器见[Model Viewer 指南](docs/guides/model-viewer.md)，浏览器自动验证入口见
+跨后端模型查看器见[Model Viewer 教程](docs/tutorials/06-model-viewer.md)，浏览器自动验证入口见
 [WebGPU 平台 Smoke 指南](docs/guides/webgpu-browser-example.md)。
 
 最小 C++20 程序只需包含聚合头并初始化 Renderer：

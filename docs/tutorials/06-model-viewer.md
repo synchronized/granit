@@ -1,11 +1,12 @@
 <!-- SPDX-License-Identifier: MIT -->
 <!-- Copyright (c) 2026 Granit contributors -->
 
-# 运行跨后端模型查看器
+# 06：跨后端模型查看器教程
 
-模型查看器使用同一套 CPU Scene、GPU Scene 和 Render Pipeline，在桌面 Vulkan 与浏览器
+本教程使用同一套 CPU Scene、GPU Scene 和 Render Pipeline，在桌面 Vulkan 与浏览器
 Emscripten WebGPU 上显示 glTF 2.0 模型。桌面目标叠加 ImGui 调试面板；该示例及其 glTF 加载器
-不属于 Granit 安装 SDK。
+不属于 Granit 安装 SDK。本指南只负责模型资产、桌面运行、性能和固定画面验收；Emscripten
+工具链、浏览器服务和通用浏览器测试见[浏览器 WebGPU 指南](../guides/webgpu-browser-example.md)。
 
 ## 构建桌面查看器
 
@@ -15,11 +16,9 @@ Emscripten WebGPU 上显示 glTF 2.0 模型。桌面目标叠加 ImGui 调试面
 ```powershell
 cmake -S . -B build/model-viewer -G Ninja `
   -DCMAKE_BUILD_TYPE=Release `
-  -DGRANIT_BUILD_MODEL_VIEWER_EXAMPLE=ON `
   -DGRANIT_BUILD_INTEGRATION_SDL3=ON `
   -DGRANIT_BUILD_INTEGRATION_IMGUI=ON `
-  -DGRANIT_FETCH_INTEGRATION_DEPENDENCIES=ON `
-  -DGRANIT_FETCH_EXAMPLE_GLTF_DEPENDENCIES=ON
+  -DGRANIT_DEPENDENCY_POLICY=auto
 cmake --build build/model-viewer --target granit_model_viewer_example
 ```
 
@@ -31,20 +30,22 @@ cmake --build build/model-viewer --target granit_model_viewer_example
 cmake `
   -DGRANIT_SOURCE_DIR="$PWD" `
   -DGRANIT_FLIGHT_HELMET_OUTPUT_DIR="$PWD/build/assets/FlightHelmet" `
-  -P cmake/fetch_flight_helmet.cmake
+  -P cmake/assets/fetch_flight_helmet.cmake
 ```
 
 环境光源也采用独立清单下载，不进入默认 Git 工作树：
 
 ```powershell
 cmake `
+  -DGRANIT_SOURCE_DIR="$PWD" `
   -DGRANIT_MODEL_VIEWER_ENVIRONMENT_OUTPUT_DIR="$PWD/build/assets/StudioSmall03" `
-  -P cmake/fetch_model_viewer_environment.cmake
+  -P cmake/assets/fetch_model_viewer_environment.cmake
 ```
 
 该命令获取 Poly Haven 以 CC0-1.0 发布的 `Studio Small 03` 1K HDR，并同时校验文件大小和
 SHA-256。来源和固定校验值见
-[`studio_small_03.manifest.json`](../../assets/generated/installed/environments/studio_small_03.manifest.json)。当前文件是后续
+[`studio_small_03.manifest.json`](../../assets/generated/installed/environments/studio_small_03.manifest.json)。
+当前文件是后续
 离线预处理的输入，不是 model-viewer 可直接加载的运行时环境包。
 
 使用 glTF IBL Sampler 生成未压缩 RGBA16F 输入后，通过仓库工具打包：
@@ -173,7 +174,8 @@ Adapter、资产路径及量化统计，供 Actions 一并上传。`.rgba` 文�
 Emscripten 构建生成面向使用者的 `granit_model_viewer_web.html`，默认通过网络加载 Khronos
 Flight Helmet；`?model=<URL>` 可以覆盖模型地址。它与桌面目标复用同一个 Application Core、
 CPU/GPU Scene、PBR 和 Environment Map。详细构建及 URL 用法见
-[浏览器 WebGPU 示例](webgpu-browser-example.md)。
+[浏览器 WebGPU 示例](../guides/webgpu-browser-example.md)。该指南负责浏览器构建和通用验证；本页只保留
+模型查看器特有的页面行为说明。
 
 页面右上角的 DOM 工具面板可调整 MSAA、FXAA、Specular AA、各向异性，以及曝光、环境光和
 主方向光强度。光照控件直接修改共享 Viewer Core 的状态，因此与桌面 Lighting 面板采用相同的

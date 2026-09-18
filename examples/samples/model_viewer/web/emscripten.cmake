@@ -30,10 +30,6 @@ target_link_options(
     "-sFETCH=1" "-sASYNCIFY=1"
 )
 
-if(NOT GRANIT_BUILD_EXAMPLES OR NOT GRANIT_BUILD_MODEL_VIEWER_EXAMPLE)
-  return()
-endif()
-
 # 面向使用者的浏览器模型查看器默认加载 Khronos Flight Helmet；`?model=<URL>` 可覆盖资产。
 add_executable(granit_model_viewer_web "${CMAKE_CURRENT_LIST_DIR}/main.cpp")
 target_compile_features(granit_model_viewer_web PRIVATE cxx_std_20)

@@ -266,7 +266,7 @@ typedef struct granit_component_mapping {
   granit_component_swizzle alpha;
 } granit_component_mapping;
 
-/** Texture View 描述；父 Texture 由未来创建函数单独传入。 */
+/** Texture View 描述；父 Texture 由创建函数单独传入。 */
 typedef struct granit_texture_view_desc {
   uint32_t struct_size;
   granit_texture_dimension dimension;

@@ -19,19 +19,25 @@
 | `BUILD_SHARED_LIBS` | `ON` | 构建共享库；设为 `OFF` 时构建静态库 |
 | `GRANIT_BUILD_TESTING` | `ON` | 构建测试 |
 | `GRANIT_BUILD_EXAMPLES` | 顶层项目为 `ON` | 构建示例 |
-| `GRANIT_FETCH_EXAMPLE_GLTF_DEPENDENCIES` | `OFF` | 下载 Model Viewer 锁定的 glTF 私有依赖 |
+| `GRANIT_BUILD_WEB_IMGUI_EXAMPLE` | `ON` | 构建浏览器 SDL3 + ImGui 示例 |
 | `GRANIT_BUILD_BENCHMARKS` | `OFF` | 构建独立性能基准程序 |
 | `GRANIT_BUILD_TOOLS` | `OFF` | 单独构建离线工具；示例或 benchmark 会自动构建所需工具 |
 | `GRANIT_BUILD_ASSET_TOOLS` | `OFF` | 构建并安装可供编辑器链接的 AssetTools SDK |
+| `GRANIT_BUILD_INTEGRATION_SDL3` | `OFF` | 构建 SDL3 Surface 集成组件 |
+| `GRANIT_BUILD_INTEGRATION_IMGUI` | `OFF` | 构建 ImGui Draw Data 集成组件 |
+| `GRANIT_DEPENDENCY_POLICY` | `auto` | 第三方依赖默认获取策略：`system`（只用系统包）/ `auto`（先系统后下载）/ `download`（强制下载锁定版） |
 | `GRANIT_ENABLE_XCB` | Linux 上 `ON` | 找到 XCB 开发头时启用私有 XCB Surface 后端 |
 | `GRANIT_ENABLE_WAYLAND` | Linux 上 `ON` | 找到 Wayland 协议工具时启用 Wayland 后端 |
 | `GRANIT_ENABLE_WARNINGS` | `ON` | 为 Granit 自有目标启用编译警告 |
 | `GRANIT_ENABLE_PEDANTIC_WARNINGS` | `OFF` | 启用 `-Wpedantic` 等严格标准扩展警告 |
 | `GRANIT_WARNINGS_AS_ERRORS` | `OFF` | 将 Granit 自有源码警告视为错误 |
 
-仓库提供的开发 presets 会获取示例所需的锁定 glTF 私有依赖，并将
-`GRANIT_WARNINGS_AS_ERRORS` 设为 `ON`，以便尽早发现问题。作为子项目手动引入时，两项开关默认
-保持 `OFF`；所有警告选项均为目标私有属性，不会传递给使用者。
+仓库提供的开发 presets 会将第三方依赖获取策略 `GRANIT_DEPENDENCY_POLICY` 设为 `auto`（缺失时
+下载锁定版本），并将 `GRANIT_WARNINGS_AS_ERRORS` 设为 `ON`，以便尽早发现问题。作为子项目手动
+引入时，依赖策略与警告选项默认保持 `auto` / `OFF`；所有警告选项均为目标私有属性，不会传递给使用者。
+
+Model Viewer 和 SDL3/ImGui 集成的组合配置见[模型查看器教程](../tutorials/06-model-viewer.md)；浏览器构建和
+平台验证见[浏览器 WebGPU 指南](webgpu-browser-example.md)。
 
 Wayland Window 需要 `wayland-client`、`wayland-scanner` 和 `wayland-protocols`，其输入支持额外
 查找 `libxkbcommon`。缺少 `libxkbcommon` 时禁用 Wayland 输入，XCB 输入和 Wayland 窗口仍可
@@ -112,7 +118,7 @@ component 会被拒绝：
 cmake -DGRANIT_SOURCE_DIR=/path/to/granit \
   -DGRANIT_INSTALL_PREFIX=/path/to/granit/install \
   -DGRANIT_TEST_BINARY_DIR=/path/to/granit/build/package-check \
-  -P /path/to/granit/cmake/check_installed_package.cmake
+  -P /path/to/granit/tests/cmake/check_installed_package.cmake
 ```
 
 安装导出审计用于检查必要文件，并防止源码路径、构建路径、测试库和 Vulkan 私有依赖泄漏：
@@ -121,7 +127,7 @@ cmake -DGRANIT_SOURCE_DIR=/path/to/granit \
 cmake -DGRANIT_SOURCE_DIR=/path/to/granit \
   -DGRANIT_BUILD_DIR=/path/to/granit/build \
   -DGRANIT_INSTALL_PREFIX=/path/to/granit/install \
-  -P /path/to/granit/cmake/check_install_exports.cmake
+  -P /path/to/granit/tests/cmake/check_install_exports.cmake
 ```
 
 共享库使用者还需要按照目标平台的部署规则，让运行进程能够找到 DLL、SO 或 dylib。

@@ -10,6 +10,8 @@
 
 | 示例 | 目标 | 用途 |
 |---|---|---|
+| Minimal Renderer | `granit_minimal_renderer_example` | 展示 Renderer 创建、能力查询和最小生命周期 |
+| Triangle | `granit_triangle_example` | 展示 Shader Library、Graphics Pipeline、离屏绘制和回读 |
 | ImGui | `granit_sdl3_imgui_example`、`granit_imgui_web` | 验证 SDL3 输入、ImGui 和 Canvas 的跨后端集成 |
 | Model Viewer | `granit_model_viewer_example`、`granit_model_viewer_web` | 展示模型加载、PBR、交互、异步上传和质量设置 |
 
@@ -25,6 +27,9 @@ examples/
 │  ├─ validation/ 截图与视觉回归比较
 │  └─ web/       浏览器资源请求、资源包与批量 Fetch
 └─ samples/      示例内容、平台入口及自身目标声明
+   ├─ minimal_renderer/  最小 C++ Renderer Consumer
+   ├─ imgui/             SDL3 + ImGui 完整集成
+   └─ model_viewer/      跨后端完整应用
 ```
 
 `common` 与 `samples` 都是仓库私有实现，不安装、不导出，也不构成公共 SDK。`common` 只保存被至少

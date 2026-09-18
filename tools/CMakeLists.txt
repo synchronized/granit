@@ -35,13 +35,15 @@ if(TARGET granit_asset_tools)
   granit_target_compile_warnings(granit_asset_tool)
   granit_target_output_directories(granit_asset_tool)
   set_target_properties(granit_asset_tool PROPERTIES FOLDER "Tools")
-  install(
-    TARGETS granit_asset_tool
-    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT AssetTools
-  )
+  if(GRANIT_BUILD_TOOLS)
+    install(
+      TARGETS granit_asset_tool
+      RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT AssetTools
+    )
+  endif()
 endif()
 
-if((GRANIT_BUILD_TESTING AND BUILD_TESTING) OR GRANIT_BUILD_BENCHMARKS)
+if(GRANIT_TESTING_ENABLED OR GRANIT_BUILD_BENCHMARKS)
   add_executable(
     granit_shader_fixture_tool
     "${PROJECT_SOURCE_DIR}/tests/support/shader_fixture_tool/main.cpp"

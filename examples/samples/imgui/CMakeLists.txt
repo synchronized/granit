@@ -1,15 +1,10 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
-if(EMSCRIPTEN)
-  if(GRANIT_BUILD_EXAMPLES AND GRANIT_BUILD_WEB_IMGUI_EXAMPLE)
+if(NOT GRANIT_HAS_NATIVE_WINDOW)
+  if(GRANIT_BUILD_EXAMPLES AND GRANIT_BUILD_INTEGRATION_IMGUI)
     include("${CMAKE_CURRENT_LIST_DIR}/web.cmake")
   endif()
-  return()
-endif()
-
-if(NOT GRANIT_BUILD_INTEGRATION_SDL3 OR NOT GRANIT_BUILD_INTEGRATION_IMGUI OR
-   NOT GRANIT_IMGUI_FETCHED)
   return()
 endif()
 
@@ -17,8 +12,6 @@ add_executable(
   granit_sdl3_imgui_example
   desktop_main.cpp
   resources.cpp
-  "${granit_imgui_SOURCE_DIR}/imgui_demo.cpp"
-  "${granit_imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp"
 )
 target_include_directories(
   granit_sdl3_imgui_example
@@ -29,6 +22,9 @@ target_include_directories(
 )
 target_link_libraries(
   granit_sdl3_imgui_example PRIVATE granit::integration_sdl3 granit::integration_imgui
+)
+target_link_libraries(
+  granit_sdl3_imgui_example PRIVATE ${GRANIT_IMGUI_DEMO_TARGET} ${GRANIT_IMGUI_BACKEND_SDL3_TARGET}
 )
 if(WIN32)
   add_custom_command(
@@ -42,15 +38,14 @@ if(WIN32)
 endif()
 granit_target_compile_warnings(granit_sdl3_imgui_example)
 granit_target_output_directories(granit_sdl3_imgui_example)
-if(WIN32 AND GRANIT_BUILD_TESTING AND BUILD_TESTING)
+if(WIN32 AND GRANIT_TESTING_ENABLED)
   add_test(NAME granit.example.sdl3_imgui COMMAND granit_sdl3_imgui_example --smoke-test)
   set_tests_properties(granit.example.sdl3_imgui PROPERTIES TIMEOUT 30
                        FAIL_REGULAR_EXPRESSION "销毁时仍有|ImGui Draw Data 转换失败")
 endif()
 
-if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
-  add_executable(granit_imgui_visual_test
-    "${PROJECT_SOURCE_DIR}/tests/integrations/imgui/visual_test.cpp" resources.cpp)
+if(GRANIT_TESTING_ENABLED)
+  add_executable(granit_imgui_visual_test visual_test.cpp resources.cpp)
   target_include_directories(granit_imgui_visual_test PRIVATE
     "${PROJECT_SOURCE_DIR}/examples" "${PROJECT_SOURCE_DIR}/examples/common")
   target_link_libraries(granit_imgui_visual_test PRIVATE granit::integration_imgui

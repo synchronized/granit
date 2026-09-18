@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: MIT -->
 <!-- Copyright (c) 2026 Granit contributors -->
 
-# 使用 Render Pipeline 完成第一次离屏渲染
+# 05：使用 Render Pipeline 完成第一次离屏渲染
 
 本教程通过仓库自带 GPU 集成测试渲染一个 64×64 的 PBR 三角形，并回读中心像素验证结果。完成后
 可以理解 Renderer、Mesh、Material、Scene Snapshot 和 Render Pipeline 如何组成一次完整渲染。
