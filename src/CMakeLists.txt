@@ -188,7 +188,7 @@ target_compile_definitions(
   PUBLIC $<$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>:GRANIT_STATIC_DEFINE>
 )
 
-if(EMSCRIPTEN)
+if(GRANIT_IS_EMSCRIPTEN)
   add_subdirectory(backend/webgpu)
 else()
   add_subdirectory(backend/vulkan)
@@ -278,7 +278,7 @@ install(
 )
 
 # 原生窗口及其输入适配器尚无浏览器实现，保留真实的平台边界。
-if(NOT EMSCRIPTEN)
+if(NOT GRANIT_IS_EMSCRIPTEN)
   add_subdirectory(window)
   if(GRANIT_BUILD_INTEGRATION_SDL3)
     add_subdirectory(integrations/sdl3)

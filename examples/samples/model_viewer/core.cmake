@@ -16,10 +16,10 @@ add_custom_command(
     "${CMAKE_COMMAND}"
     "-DINPUT=${granit_installed_asset_snapshot_dir}/libraries/pbr_standard.grshlib"
     "-DOUTPUT=${granit_model_viewer_shader_library_include}"
-    -P "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+    -P "${PROJECT_SOURCE_DIR}/cmake/assets/embed_binary.cmake"
   DEPENDS
     "${granit_installed_asset_snapshot_dir}/libraries/pbr_standard.grshlib"
-    "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+    "${PROJECT_SOURCE_DIR}/cmake/assets/embed_binary.cmake"
   COMMENT "内嵌模型查看器 PBR Shader Library"
   VERBATIM
 )
@@ -55,10 +55,10 @@ add_custom_command(
   COMMAND
     "${CMAKE_COMMAND}" "-DINPUT=${granit_model_viewer_material_package}"
     "-DOUTPUT=${granit_model_viewer_material_include}"
-    -P "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+    -P "${PROJECT_SOURCE_DIR}/cmake/assets/embed_binary.cmake"
   DEPENDS
     "${granit_model_viewer_material_package}"
-    "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+    "${PROJECT_SOURCE_DIR}/cmake/assets/embed_binary.cmake"
   COMMENT "内嵌模型查看器 PBR 材质归档"
   VERBATIM
 )

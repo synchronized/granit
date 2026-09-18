@@ -73,9 +73,9 @@ function(granit_add_render_pipeline_module)
       COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_pipeline_generated_dir}"
       COMMAND "${CMAKE_COMMAND}" "-DINPUT=${granit_pipeline_${kind}_archive}"
               "-DOUTPUT=${granit_pipeline_${kind}_library}"
-              -P "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+              -P "${PROJECT_SOURCE_DIR}/cmake/assets/embed_binary.cmake"
       DEPENDS ${granit_pipeline_${kind}_library_dependencies}
-              "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+              "${PROJECT_SOURCE_DIR}/cmake/assets/embed_binary.cmake"
       VERBATIM)
   endforeach()
 
@@ -148,10 +148,10 @@ function(granit_add_render_pipeline_module)
       "${CMAKE_COMMAND}"
       "-DINPUT=${granit_embedded_asset_snapshot_dir}/pipeline/unlit_canvas.grshlib"
       "-DOUTPUT=${granit_pipeline_canvas_shader_library}"
-      -P "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+      -P "${PROJECT_SOURCE_DIR}/cmake/assets/embed_binary.cmake"
     DEPENDS
       "${granit_embedded_asset_snapshot_dir}/pipeline/unlit_canvas.grshlib"
-      "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+      "${PROJECT_SOURCE_DIR}/cmake/assets/embed_binary.cmake"
     VERBATIM
   )
   add_custom_command(
@@ -161,10 +161,10 @@ function(granit_add_render_pipeline_module)
       "${CMAKE_COMMAND}"
       "-DINPUT=${granit_embedded_asset_snapshot_dir}/pipeline/unlit_canvas.grmat"
       "-DOUTPUT=${granit_pipeline_canvas_material}"
-      -P "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+      -P "${PROJECT_SOURCE_DIR}/cmake/assets/embed_binary.cmake"
     DEPENDS
       "${granit_embedded_asset_snapshot_dir}/pipeline/unlit_canvas.grmat"
-      "${PROJECT_SOURCE_DIR}/cmake/embed_binary.cmake"
+      "${PROJECT_SOURCE_DIR}/cmake/assets/embed_binary.cmake"
     VERBATIM
   )
   target_sources(

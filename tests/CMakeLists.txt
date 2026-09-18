@@ -41,7 +41,7 @@ add_test(
   NAME granit.backend.native_boundaries
   COMMAND
     "${CMAKE_COMMAND}" "-DSOURCE_DIR=${PROJECT_SOURCE_DIR}"
-    -P "${PROJECT_SOURCE_DIR}/cmake/check_backend_native_boundaries.cmake"
+    -P "${PROJECT_SOURCE_DIR}/tests/cmake/check_backend_native_boundaries.cmake"
 )
 
 add_test(
@@ -49,7 +49,7 @@ add_test(
   COMMAND
     "${CMAKE_COMMAND}"
     "-DGRANIT_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
-    -P "${PROJECT_SOURCE_DIR}/cmake/check_documentation.cmake"
+    -P "${PROJECT_SOURCE_DIR}/tests/cmake/check_documentation.cmake"
 )
 
 add_test(
@@ -57,7 +57,7 @@ add_test(
   COMMAND
     "${CMAKE_COMMAND}" "-DGRANIT_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
     "-DGRANIT_TEST_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/build-tree-consumers"
-    -P "${PROJECT_SOURCE_DIR}/cmake/check_build_tree_consumers.cmake"
+    -P "${PROJECT_SOURCE_DIR}/tests/cmake/check_build_tree_consumers.cmake"
 )
 
 add_test(
@@ -66,7 +66,7 @@ add_test(
     "${CMAKE_COMMAND}"
     "-DGRANIT_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
     "-DGRANIT_RELEASE_TAG=v${PROJECT_VERSION}"
-    -P "${PROJECT_SOURCE_DIR}/cmake/check_release_version.cmake"
+    -P "${PROJECT_SOURCE_DIR}/tests/cmake/check_release_version.cmake"
 )
 add_test(
   NAME granit.release_version_mismatch
@@ -74,7 +74,7 @@ add_test(
     "${CMAKE_COMMAND}"
     "-DGRANIT_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
     -DGRANIT_RELEASE_TAG=v999.0.0
-    -P "${PROJECT_SOURCE_DIR}/cmake/check_release_version.cmake"
+    -P "${PROJECT_SOURCE_DIR}/tests/cmake/check_release_version.cmake"
 )
 set_tests_properties(granit.release_version_mismatch PROPERTIES WILL_FAIL TRUE)
 

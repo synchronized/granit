@@ -41,8 +41,8 @@ cmake --build --preset <static-release-preset>
 ctest --preset <static-release-preset>
 ```
 
-随后安装两种链接模式，并运行 `cmake/check_install_exports.cmake`、
-`cmake/check_installed_package.cmake` 和 `tests/consumer`。稳定发布不得跳过失败测试、关闭警告或降低
+随后安装两种链接模式，并运行 `tests/cmake/check_install_exports.cmake`、
+`tests/cmake/check_installed_package.cmake` 和 `tests/consumer`。稳定发布不得跳过失败测试、关闭警告或降低
 验证等级。
 
 当前版本候选还要检查 Window 的完整导出快照、已移除的历史 component/头/符号、普通聚合头

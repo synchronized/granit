@@ -1,9 +1,15 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+if(EMSCRIPTEN)
+  set(GRANIT_IS_EMSCRIPTEN ON)
+else()
+  set(GRANIT_IS_EMSCRIPTEN OFF)
+endif()
+
 # 检查工具链并探测原生窗口能力；保留调用目录的变量作用域。
 if(GRANIT_BUILD_EMSCRIPTEN_PLATFORM)
-  if(NOT EMSCRIPTEN)
+  if(NOT GRANIT_IS_EMSCRIPTEN)
     message(FATAL_ERROR "Emscripten 平台验证目标必须使用 emcmake 或 Emscripten toolchain 配置")
   endif()
   if(BUILD_SHARED_LIBS)
@@ -22,11 +28,11 @@ if(GRANIT_BUILD_EMSCRIPTEN_PLATFORM)
       "S-10D 要求锁定 Emscripten 5.0.6：${granit_emcc_version_output}${granit_emcc_version_error}"
     )
   endif()
-elseif(EMSCRIPTEN)
+elseif(GRANIT_IS_EMSCRIPTEN)
   message(FATAL_ERROR "当前 Emscripten 构建必须显式启用 GRANIT_BUILD_EMSCRIPTEN_PLATFORM")
 endif()
 
-if(NOT EMSCRIPTEN)
+if(NOT GRANIT_IS_EMSCRIPTEN)
   set(GRANIT_HAS_XCB OFF)
   if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND GRANIT_ENABLE_XCB)
     find_path(GRANIT_XCB_INCLUDE_DIR xcb/xcb.h)
@@ -79,8 +85,3 @@ if(NOT EMSCRIPTEN)
   set(granit_wayland_protocol_dir "${PROJECT_BINARY_DIR}/generated/wayland")
 endif()
 
-if(EMSCRIPTEN)
-  set(GRANIT_IS_EMSCRIPTEN ON)
-else()
-  set(GRANIT_IS_EMSCRIPTEN OFF)
-endif()

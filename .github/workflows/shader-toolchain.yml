@@ -134,7 +134,7 @@ jobs:
           Copy-Item -LiteralPath $tools[0].FullName -Destination "$cache/bin/tint.exe"
           cmake -DROOT="$env:RUNNER_TEMP/dawn" `
             -DOUTPUT="$cache/licenses/Dawn-THIRD-PARTY-LICENSES.txt" `
-            -DCOMPONENT=Dawn-Tint -P cmake/collect_license_bundle.cmake
+            -DCOMPONENT=Dawn-Tint -P cmake/assets/collect_license_bundle.cmake
       - name: 保存锁定 Tint 产物
         if: steps.tint-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v5
@@ -158,7 +158,7 @@ jobs:
         run: |
           $name = "granit-shader-toolchain-$env:DAWN_VERSION-windows-x64"
           $stage = "$PWD/stage/$name"
-          cmake -DSTAGE="$stage" -DGENERATOR="$PWD/cmake/generate_shader_toolchain_manifest.cmake" `
+          cmake -DSTAGE="$stage" -DGENERATOR="$PWD/cmake/toolchain/generate_shader_toolchain_manifest.cmake" `
             -DDXC="$env:VULKAN_SDK_ROOT/Bin/dxc.exe" `
             -DTINT="$env:TINT_EXECUTABLE" -DDXC_VERSION="$env:DXC_VERSION" `
             -DDAWN_VERSION="$env:DAWN_VERSION" `
@@ -166,9 +166,9 @@ jobs:
             -DDXC_LICENSE_FILES="$env:DXC_LICENSE_FILES" `
             -DDAWN_LICENSE_FILES="$env:TINT_LICENSE" `
             -DRUNTIME_FILES="$env:VULKAN_SDK_ROOT/Bin/dxcompiler.dll" `
-            -P cmake/package_shader_toolchain.cmake
+            -P cmake/toolchain/package_shader_toolchain.cmake
           cmake -DSTAGE="$stage" -DMANIFEST="$stage/shader-toolchain.json" `
-            -P cmake/verify_shader_toolchain_manifest.cmake
+            -P cmake/toolchain/verify_shader_toolchain_manifest.cmake
           & "$stage/bin/dxc.exe" --version
           & "$stage/bin/tint.exe" --version
           $validation = "$env:RUNNER_TEMP/shader-tools-validation"
@@ -281,7 +281,7 @@ jobs:
           install -Dm755 "${tools[0]}" "$cache/bin/tint"
           cmake -DROOT="$RUNNER_TEMP/dawn" \
             -DOUTPUT="$cache/licenses/Dawn-THIRD-PARTY-LICENSES.txt" \
-            -DCOMPONENT=Dawn-Tint -P cmake/collect_license_bundle.cmake
+            -DCOMPONENT=Dawn-Tint -P cmake/assets/collect_license_bundle.cmake
       - name: 保存锁定 Tint 产物
         if: steps.tint-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v5
@@ -303,15 +303,15 @@ jobs:
           name="granit-shader-toolchain-$DAWN_VERSION-linux-x64"
           stage="$PWD/stage/$name"
           runtime="$VULKAN_SDK_ROOT/lib/libdxcompiler.so"
-          cmake -DSTAGE="$stage" -DGENERATOR="$PWD/cmake/generate_shader_toolchain_manifest.cmake" \
+          cmake -DSTAGE="$stage" -DGENERATOR="$PWD/cmake/toolchain/generate_shader_toolchain_manifest.cmake" \
             -DDXC="$VULKAN_SDK_ROOT/bin/dxc" \
             -DTINT="$TINT_EXECUTABLE" -DDXC_VERSION="$DXC_VERSION" \
             -DDAWN_VERSION="$DAWN_VERSION" \
             -DTINT_REVISION="$TINT_REVISION" -DDXC_LICENSE_FILES="$DXC_LICENSE_FILES" \
             -DDAWN_LICENSE_FILES="$TINT_LICENSE" \
-            -DRUNTIME_FILES="$runtime" -P cmake/package_shader_toolchain.cmake
+            -DRUNTIME_FILES="$runtime" -P cmake/toolchain/package_shader_toolchain.cmake
           cmake -DSTAGE="$stage" -DMANIFEST="$stage/shader-toolchain.json" \
-            -P cmake/verify_shader_toolchain_manifest.cmake
+            -P cmake/toolchain/verify_shader_toolchain_manifest.cmake
           LD_LIBRARY_PATH="$stage/lib" "$stage/bin/dxc" --version
           # 当前锁定的 Tint 没有版本参数，以能力帮助文本和源码修订共同确认身份。
           tint_help="$("$stage/bin/tint" --help 2>&1 || true)"

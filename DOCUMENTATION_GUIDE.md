@@ -279,7 +279,7 @@ Granit 当前采用渐进整理方式：
 - `docs/plans/*.md` 保存设计和实施计划；大段实现日志后续迁移到 `docs/records/`。
 - `benchmarks/results/` 继续保存可复现性能结果，不复制到计划正文。
 
-Granit 已通过 `cmake/check_documentation.cmake` 和 `granit.documentation` CTest 检查自有
+Granit 已通过 `tests/cmake/check_documentation.cmake` 和 `granit.documentation` CTest 检查自有
 Markdown 相对文件链接、根 README 篇幅、分类索引、项目版本与发布入口、Git 标签对应的 Changelog
 标题，以及当前文档中已删除 Input component 契约。未来措辞和文档类型判断暂不作为硬错误，避免
 误伤合理的限制与兼容性说明；迁移指南、Plan 和 Record 可以保留历史接口名称。

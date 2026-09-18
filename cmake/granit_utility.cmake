@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+include_guard(GLOBAL)
+
 # 编译警告只作用于 Granit 自有目标，不传递给第三方库或下游使用者。
 option(GRANIT_ENABLE_WARNINGS "启用 Granit 目标编译警告" ON)
 option(GRANIT_ENABLE_PEDANTIC_WARNINGS "启用 Granit 目标严格标准扩展警告" OFF)
@@ -97,4 +99,12 @@ function(granit_target_compile_warnings target)
       $<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang>:-Werror>
       $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Werror>
   )
+endfunction()
+
+function(granit_validate_enum var)
+    set(_allowed ${ARGN})
+    if(NOT ${var} IN_LIST _allowed)
+        message(FATAL_ERROR
+            "${var}='${${var}}' 无效。允许值：${_allowed}")
+    endif()
 endfunction()

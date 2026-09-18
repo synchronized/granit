@@ -33,7 +33,7 @@ shader-toolchain.json     # 完整性清单
 ```cmake
 cmake \
   -DSTAGE=<新的归档根目录> \
-  -DGENERATOR=cmake/generate_shader_toolchain_manifest.cmake \
+  -DGENERATOR=cmake/toolchain/generate_shader_toolchain_manifest.cmake \
   -DDXC=<dxc 路径> \
   -DTINT=<tint 路径> \
   -DDXC_VERSION=<版本> \
@@ -42,7 +42,7 @@ cmake \
   "-DDXC_LICENSE_FILES=<DXC 许可证列表>" \
   "-DDAWN_LICENSE_FILES=<Dawn/Tint 许可证列表>" \
   "-DRUNTIME_FILES=<必要运行库列表>" \
-  -P cmake/package_shader_toolchain.cmake
+  -P cmake/toolchain/package_shader_toolchain.cmake
 ```
 
 两组许可证列表均不能为空。官方工作流从锁定的 DXC 源码标签下载完整许可证和第三方声明，
@@ -58,7 +58,7 @@ cmake \
   -DROOT=<Dawn 源码根目录> \
   -DOUTPUT=<临时目录>/Dawn-THIRD-PARTY-LICENSES.txt \
   -DCOMPONENT=Dawn-Tint \
-  -P cmake/collect_license_bundle.cmake
+  -P cmake/assets/collect_license_bundle.cmake
 ```
 
 汇总器递归收集 `LICENSE*`、`COPYING*` 和 `NOTICE*`，按相对路径稳定排序并保留来源标记。该机制
@@ -75,7 +75,7 @@ cmake \
   -DTINT_REVISION=<源码修订> \
   "-DTOOL_FILES=bin/dxc;bin/tint" \
   "-DLICENSE_FILES=licenses/DXC.txt;licenses/Dawn.txt" \
-  -P cmake/generate_shader_toolchain_manifest.cmake
+  -P cmake/toolchain/generate_shader_toolchain_manifest.cmake
 ```
 
 `TOOL_FILES` 与 `LICENSE_FILES` 均不能为空，其中任一必需文件不存在都会失败。生成结果采用稳定路径
@@ -92,7 +92,7 @@ cmake \
 cmake \
   -DSTAGE=<归档根目录> \
   -DMANIFEST=<归档根目录>/shader-toolchain.json \
-  -P cmake/verify_shader_toolchain_manifest.cmake
+  -P cmake/toolchain/verify_shader_toolchain_manifest.cmake
 ```
 
 验证成功只说明解包后的文件与清单一致。发布系统仍须校验归档摘要，官方 CI 仍须使用
@@ -107,7 +107,7 @@ Windows x64 与 Linux x64 可以显式运行下载脚本。脚本选择当前宿
 原子解包并验证包内清单；已有目录只有再次通过校验才会复用：
 
 ```sh
-cmake -DDESTINATION=<缓存目录> -P cmake/download_shader_toolchain.cmake
+cmake -DDESTINATION=<缓存目录> -P cmake/toolchain/download_shader_toolchain.cmake
 ```
 
 也可以让可安装的 CMake 模块按模式完成查找或下载：

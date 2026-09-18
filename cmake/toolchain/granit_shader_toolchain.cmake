@@ -38,12 +38,9 @@ set(GRANIT_DXC_EXECUTABLE "" CACHE FILEPATH "DXC 可执行文件")
 set(GRANIT_TINT_EXECUTABLE "" CACHE FILEPATH "Tint 可执行文件")
 
 function(granit_find_shader_toolchain)
-  if(NOT GRANIT_SHADER_TOOLCHAIN_MODE STREQUAL "off" AND
-     NOT GRANIT_SHADER_TOOLCHAIN_MODE STREQUAL "system" AND
-     NOT GRANIT_SHADER_TOOLCHAIN_MODE STREQUAL "auto" AND
-     NOT GRANIT_SHADER_TOOLCHAIN_MODE STREQUAL "download")
-    message(FATAL_ERROR "GRANIT_SHADER_TOOLCHAIN_MODE 必须是 off、system、auto 或 download")
-  endif()
+  granit_validate_enum(GRANIT_SHADER_TOOLCHAIN_MODE   off system auto download)
+  granit_validate_enum(GRANIT_SHADER_TOOLCHAIN_POLICY compatible locked unchecked)
+
   if(GRANIT_SHADER_TOOLCHAIN_MODE STREQUAL "off")
     set(GRANIT_DXC_EXECUTABLE "" CACHE FILEPATH "DXC 可执行文件" FORCE)
     set(GRANIT_TINT_EXECUTABLE "" CACHE FILEPATH "Tint 可执行文件" FORCE)
@@ -51,11 +48,6 @@ function(granit_find_shader_toolchain)
     set(GRANIT_TINT_EXECUTABLE "" PARENT_SCOPE)
     message(STATUS "Granit Shader Toolchain: 已禁用")
     return()
-  endif()
-  if(NOT GRANIT_SHADER_TOOLCHAIN_POLICY STREQUAL "compatible" AND
-     NOT GRANIT_SHADER_TOOLCHAIN_POLICY STREQUAL "locked" AND
-     NOT GRANIT_SHADER_TOOLCHAIN_POLICY STREQUAL "unchecked")
-    message(FATAL_ERROR "GRANIT_SHADER_TOOLCHAIN_POLICY 必须是 compatible、locked 或 unchecked")
   endif()
   if(GRANIT_SHADER_TOOLCHAIN_MODE STREQUAL "download" AND NOT GRANIT_SHADER_TOOLCHAIN_ROOT)
     set(result_file "${CMAKE_BINARY_DIR}/granit-shader-toolchain-root.txt")
@@ -83,24 +75,22 @@ function(granit_find_shader_toolchain)
 
   if(NOT GRANIT_DXC_EXECUTABLE)
     find_program(
-      granit_dxc_executable
+      GRANIT_DXC_EXECUTABLE
       NAMES dxc
       HINTS
         "${granit_shader_toolchain_bin}"
         "$ENV{VULKAN_SDK}/Bin"
         "$ENV{VULKAN_SDK}/bin"
-      NO_CACHE
+      DOC "DXC 可执行文件"
     )
-    set(GRANIT_DXC_EXECUTABLE "${granit_dxc_executable}" CACHE FILEPATH "DXC 可执行文件" FORCE)
   endif()
   if(NOT GRANIT_TINT_EXECUTABLE)
     find_program(
-      granit_tint_executable
+      GRANIT_TINT_EXECUTABLE
       NAMES tint
       HINTS "${granit_shader_toolchain_bin}"
-      NO_CACHE
+      DOC "Tint 可执行文件"
     )
-    set(GRANIT_TINT_EXECUTABLE "${granit_tint_executable}" CACHE FILEPATH "Tint 可执行文件" FORCE)
   endif()
   set(granit_dxc_usable OFF)
   if(GRANIT_DXC_EXECUTABLE)
