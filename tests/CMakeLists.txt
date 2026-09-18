@@ -3,7 +3,7 @@
 
 add_subdirectory(core)
 
-if(EMSCRIPTEN)
+if(GRANIT_IS_EMSCRIPTEN)
   add_subdirectory(web)
   return()
 endif()

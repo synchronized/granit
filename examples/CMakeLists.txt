@@ -6,9 +6,9 @@ set_property(DIRECTORY APPEND PROPERTY LABELS integration)
 add_subdirectory(samples/minimal_renderer)
 # add_subdirectory(samples/triangle)
 
-if(EMSCRIPTEN)
+if(GRANIT_IS_EMSCRIPTEN)
   # 浏览器集成测试复用模型查看器运行层，关闭示例时也只创建其私有支撑库。
-  if(GRANIT_BUILD_MODEL_VIEWER_EXAMPLE OR GRANIT_TESTING_ENABLED)
+  if(GRANIT_BUILD_MODEL_VIEWER_EXAMPLE)
     add_subdirectory(common/gltf)
     add_subdirectory(common/imgui)
     add_subdirectory(common/web)

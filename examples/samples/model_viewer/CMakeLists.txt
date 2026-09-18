@@ -3,7 +3,7 @@
 
 # Model Viewer 的 Core、桌面壳层和 Web 壳层由示例自身统一编排。
 include("${CMAKE_CURRENT_LIST_DIR}/core.cmake")
-if(NOT EMSCRIPTEN)
+if(NOT GRANIT_IS_EMSCRIPTEN)
   add_subdirectory(desktop)
 endif()
 add_subdirectory(

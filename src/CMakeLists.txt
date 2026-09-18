@@ -7,7 +7,7 @@ granit_target_output_directories(granit)
 
 add_subdirectory(asset_formats)
 
-if(NOT EMSCRIPTEN AND
+if(NOT GRANIT_IS_EMSCRIPTEN AND
    (GRANIT_BUILD_TOOLS OR GRANIT_BUILD_ASSET_TOOLS OR GRANIT_BUILD_EXAMPLES OR
     GRANIT_BUILD_BENCHMARKS OR GRANIT_TESTING_ENABLED))
   add_subdirectory(asset_tools)

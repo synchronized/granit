@@ -8,10 +8,7 @@ else()
 endif()
 
 # 检查工具链并探测原生窗口能力；保留调用目录的变量作用域。
-if(GRANIT_BUILD_EMSCRIPTEN_PLATFORM)
-  if(NOT GRANIT_IS_EMSCRIPTEN)
-    message(FATAL_ERROR "Emscripten 平台验证目标必须使用 emcmake 或 Emscripten toolchain 配置")
-  endif()
+if(GRANIT_IS_EMSCRIPTEN)
   if(BUILD_SHARED_LIBS)
     message(FATAL_ERROR "Emscripten 平台验证目标只支持静态链接")
   endif()
@@ -28,8 +25,6 @@ if(GRANIT_BUILD_EMSCRIPTEN_PLATFORM)
       "S-10D 要求锁定 Emscripten 5.0.6：${granit_emcc_version_output}${granit_emcc_version_error}"
     )
   endif()
-elseif(GRANIT_IS_EMSCRIPTEN)
-  message(FATAL_ERROR "当前 Emscripten 构建必须显式启用 GRANIT_BUILD_EMSCRIPTEN_PLATFORM")
 endif()
 
 if(NOT GRANIT_IS_EMSCRIPTEN)

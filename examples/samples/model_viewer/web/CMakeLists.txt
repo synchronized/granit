@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
-if(EMSCRIPTEN)
+if(GRANIT_IS_EMSCRIPTEN)
   include("${CMAKE_CURRENT_LIST_DIR}/emscripten.cmake")
   return()
 endif()
