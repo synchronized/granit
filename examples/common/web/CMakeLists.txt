@@ -19,7 +19,7 @@ target_link_libraries(granit_example_web PUBLIC granit_example_gltf_support)
 set_target_properties(granit_example_web PROPERTIES FOLDER "Examples")
 granit_target_compile_warnings(granit_example_web)
 
-if(NOT GRANIT_IS_EMSCRIPTEN AND GRANIT_TESTING_ENABLED)
+if(GRANIT_HAS_NATIVE_WINDOW AND GRANIT_TESTING_ENABLED)
   add_executable(
     granit_example_web_test
     asset_request_test.cpp

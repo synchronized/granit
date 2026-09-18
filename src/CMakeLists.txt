@@ -7,9 +7,7 @@ granit_target_output_directories(granit)
 
 add_subdirectory(asset_formats)
 
-if(NOT GRANIT_IS_EMSCRIPTEN AND
-   (GRANIT_BUILD_TOOLS OR GRANIT_BUILD_ASSET_TOOLS OR GRANIT_BUILD_EXAMPLES OR
-    GRANIT_BUILD_BENCHMARKS OR GRANIT_TESTING_ENABLED))
+if(GRANIT_NEEDS_ASSET_TOOLS)
   add_subdirectory(asset_tools)
 endif()
 
@@ -188,10 +186,10 @@ target_compile_definitions(
   PUBLIC $<$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>:GRANIT_STATIC_DEFINE>
 )
 
-if(GRANIT_IS_EMSCRIPTEN)
-  add_subdirectory(backend/webgpu)
-else()
+if(GRANIT_HAS_VULKAN_BACKEND)
   add_subdirectory(backend/vulkan)
+else()
+  add_subdirectory(backend/webgpu)
 endif()
 
 target_compile_options(
@@ -278,12 +276,14 @@ install(
 )
 
 # 原生窗口及其输入适配器尚无浏览器实现，保留真实的平台边界。
-if(NOT GRANIT_IS_EMSCRIPTEN)
+if(GRANIT_HAS_NATIVE_WINDOW)
   add_subdirectory(window)
   if(GRANIT_BUILD_INTEGRATION_SDL3)
     add_subdirectory(integrations/sdl3)
   endif()
-  if(GRANIT_BUILD_INTEGRATION_IMGUI)
-    add_subdirectory(integrations/imgui)
-  endif()
+endif()
+
+# ImGui 集成只做 DrawData → Canvas 转换，跨平台可用。
+if(GRANIT_BUILD_INTEGRATION_IMGUI)
+  add_subdirectory(integrations/imgui)
 endif()

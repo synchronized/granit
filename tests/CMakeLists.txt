@@ -3,7 +3,7 @@
 
 add_subdirectory(core)
 
-if(GRANIT_IS_EMSCRIPTEN)
+if(NOT GRANIT_HAS_NATIVE_WINDOW)
   add_subdirectory(web)
   return()
 endif()

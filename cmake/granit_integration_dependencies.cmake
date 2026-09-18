@@ -24,6 +24,9 @@ endfunction()
 
 # 下载锁定版本 SDL3。
 function(granit_fetch_sdl3)
+  if(TARGET SDL3::SDL3)
+    return()
+  endif()
   include(FetchContent)
   set(SDL_TEST_LIBRARY OFF CACHE BOOL "" FORCE)
   set(SDL_TESTS OFF CACHE BOOL "" FORCE)
@@ -41,6 +44,9 @@ endfunction()
 
 # 下载锁定版本 ImGui 并封装为统一目标。
 function(granit_fetch_imgui)
+  if(TARGET granit_imgui_dependency)
+    return()
+  endif()
   include(FetchContent)
   FetchContent_Declare(
     granit_imgui

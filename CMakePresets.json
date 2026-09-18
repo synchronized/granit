@@ -129,6 +129,7 @@
         "CMAKE_TOOLCHAIN_FILE": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
         "BUILD_SHARED_LIBS": false,
         "GRANIT_DEPENDENCY_POLICY": "auto",
+        "GRANIT_BUILD_INTEGRATION_IMGUI": true,
         "GRANIT_BUILD_TESTING": true,
         "GRANIT_BUILD_EXAMPLES": true,
         "GRANIT_BUILD_BENCHMARKS": false,

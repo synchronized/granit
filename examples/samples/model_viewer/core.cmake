@@ -117,7 +117,7 @@ if(NOT CMAKE_CROSSCOMPILING)
   granit_target_compile_warnings(granit_model_viewer_offscreen_acceptance)
 endif()
 
-if(NOT GRANIT_IS_EMSCRIPTEN AND GRANIT_TESTING_ENABLED)
+if(GRANIT_HAS_NATIVE_WINDOW AND GRANIT_TESTING_ENABLED)
   add_executable(
     granit_example_model_viewer_support_test
     "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/application_core_test.cpp"
@@ -162,7 +162,7 @@ if(TARGET granit::integration_imgui)
   set_target_properties(granit_example_model_viewer_imgui PROPERTIES FOLDER "Examples")
   granit_target_compile_warnings(granit_example_model_viewer_imgui)
 
-  if(NOT GRANIT_IS_EMSCRIPTEN AND GRANIT_TESTING_ENABLED)
+  if(GRANIT_HAS_NATIVE_WINDOW AND GRANIT_TESTING_ENABLED)
     add_executable(
     granit_example_model_viewer_imgui_test
     "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/viewer_panels_test.cpp"

@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
-if(GRANIT_IS_EMSCRIPTEN)
+if(NOT GRANIT_HAS_NATIVE_TOOLS)
   return()
 endif()
 

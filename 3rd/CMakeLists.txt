@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
-if(NOT GRANIT_IS_EMSCRIPTEN)
+if(GRANIT_HAS_VULKAN_BACKEND)
   set(GRANIT_VULKAN_HEADERS_DIR
       "${CMAKE_CURRENT_SOURCE_DIR}/Vulkan-Headers-1.4.350/include")
   set(GRANIT_VOLK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/volk-1.4.350")
