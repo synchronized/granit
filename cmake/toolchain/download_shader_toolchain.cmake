@@ -39,12 +39,12 @@ file(MAKE_DIRECTORY "${destination_absolute}/downloads")
 set(archive "${destination_absolute}/downloads/${archive_name}")
 set(archive_temporary "${archive}.tmp")
 file(REMOVE "${archive_temporary}")
+message(STATUS "正在下载 Shader 工具链：${archive_name}")
 file(
   DOWNLOAD "${GRANIT_SHADER_TOOLCHAIN_RELEASE_BASE}/${archive_name}" "${archive_temporary}"
   EXPECTED_HASH "SHA256=${archive_sha256}"
   TLS_VERIFY ON
   STATUS download_status
-  SHOW_PROGRESS
 )
 list(GET download_status 0 download_code)
 list(GET download_status 1 download_message)

@@ -5,6 +5,9 @@ include_guard(GLOBAL)
 
 set(GRANIT_SDL3_LOCKED_VERSION "3.4.10")
 set(GRANIT_IMGUI_LOCKED_VERSION "1.92.9")
+# 锁定版本对应的 commit；下载用 commit 的不可变 tarball，避免 tag 被 force-push 后 SHA256 漂移。
+set(GRANIT_SDL3_LOCKED_COMMIT "8e37db5e797b6167f3a00d697d816a684bd259c7")
+set(GRANIT_IMGUI_LOCKED_COMMIT "01380c579715e62fb9a8d6ec0502c4ea83bfde6e")
 
 set(GRANIT_DEPENDENCY_POLICY_VALUES system auto download)
 
@@ -33,10 +36,11 @@ function(granit_fetch_sdl3)
   set(SDL_EXAMPLES OFF CACHE BOOL "" FORCE)
   FetchContent_Declare(
     granit_sdl3
-    GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
-    GIT_TAG "release-${GRANIT_SDL3_LOCKED_VERSION}"
-    GIT_SHALLOW TRUE
+    URL "https://github.com/libsdl-org/SDL/archive/${GRANIT_SDL3_LOCKED_COMMIT}.tar.gz"
+    URL_HASH SHA256=85aa3f7b01e91d9a0b2e8079b065c594e579c43d53d5671c8f68b20074cc896e
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
   )
+  message(STATUS "正在获取 SDL3 ${GRANIT_SDL3_LOCKED_VERSION} 依赖")
   FetchContent_MakeAvailable(granit_sdl3)
   set(GRANIT_SDL3_FETCHED TRUE PARENT_SCOPE)
   set(granit_sdl3_SOURCE_DIR "${granit_sdl3_SOURCE_DIR}" PARENT_SCOPE)
@@ -50,10 +54,11 @@ function(granit_fetch_imgui)
   include(FetchContent)
   FetchContent_Declare(
     granit_imgui
-    GIT_REPOSITORY https://github.com/ocornut/imgui.git
-    GIT_TAG "v${GRANIT_IMGUI_LOCKED_VERSION}"
-    GIT_SHALLOW TRUE
+    URL "https://github.com/ocornut/imgui/archive/${GRANIT_IMGUI_LOCKED_COMMIT}.tar.gz"
+    URL_HASH SHA256=c7bc489afefa2461c40a84812118e6dff86e7eadfc4b7e2f851a8c94ade8910d
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
   )
+  message(STATUS "正在获取 ImGui ${GRANIT_IMGUI_LOCKED_VERSION} 依赖")
   FetchContent_MakeAvailable(granit_imgui)
   add_library(
     granit_imgui_dependency STATIC
@@ -67,6 +72,33 @@ function(granit_fetch_imgui)
   set_target_properties(
     granit_imgui_dependency PROPERTIES POSITION_INDEPENDENT_CODE YES FOLDER "Third Party"
   )
+
+  add_library(
+    granit_imgui_dependency_demo STATIC
+    "${granit_imgui_SOURCE_DIR}/imgui_demo.cpp"
+  )
+  target_link_libraries(
+    granit_imgui_dependency_demo
+    PUBLIC granit_imgui_dependency
+  )
+  set_target_properties(
+    granit_imgui_dependency_demo PROPERTIES POSITION_INDEPENDENT_CODE YES FOLDER "Third Party"
+  )
+
+  if(TARGET SDL3::SDL3)
+    add_library(
+      granit_imgui_dependency_backend_sdl3 STATIC
+      "${granit_imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp"
+    )
+    target_link_libraries(
+      granit_imgui_dependency_backend_sdl3
+      PUBLIC granit_imgui_dependency SDL3::SDL3
+    )
+    set_target_properties(
+      granit_imgui_dependency_backend_sdl3 PROPERTIES POSITION_INDEPENDENT_CODE YES FOLDER "Third Party"
+    )
+  endif()
+
   set(GRANIT_IMGUI_FETCHED TRUE PARENT_SCOPE)
   set(granit_imgui_SOURCE_DIR "${granit_imgui_SOURCE_DIR}" PARENT_SCOPE)
 endfunction()
@@ -88,6 +120,8 @@ function(granit_prepare_sdl3_dependency)
       granit_fetch_sdl3()
     endif()
   endif()
+  set(GRANIT_SDL3_FETCHED "${GRANIT_SDL3_FETCHED}" PARENT_SCOPE)
+  set(granit_sdl3_SOURCE_DIR "${granit_sdl3_SOURCE_DIR}" PARENT_SCOPE)
 
   if(NOT TARGET SDL3::SDL3)
     message(FATAL_ERROR
@@ -114,15 +148,41 @@ function(granit_prepare_imgui_dependency)
       granit_fetch_imgui()
     endif()
   endif()
+  set(GRANIT_IMGUI_FETCHED "${GRANIT_IMGUI_FETCHED}" PARENT_SCOPE)
+  set(granit_imgui_SOURCE_DIR "${granit_imgui_SOURCE_DIR}" PARENT_SCOPE)
 
   if(TARGET granit_imgui_dependency)
     set(GRANIT_IMGUI_TARGET granit_imgui_dependency PARENT_SCOPE)
+    if(TARGET granit_imgui_dependency_demo)
+      set(GRANIT_IMGUI_DEMO_TARGET granit_imgui_dependency_demo PARENT_SCOPE)
+    endif()
+    if(TARGET granit_imgui_dependency_backend_sdl3)
+      set(GRANIT_IMGUI_BACKEND_SDL3_TARGET granit_imgui_dependency_backend_sdl3 PARENT_SCOPE)
+    endif()
   elseif(TARGET imgui::imgui)
     set(GRANIT_IMGUI_TARGET imgui::imgui PARENT_SCOPE)
+    if(TARGET imgui::imgui_demo)
+      set(GRANIT_IMGUI_DEMO_TARGET imgui::imgui_demo PARENT_SCOPE)
+    endif()
+    if(TARGET imgui::imgui_backend_sdl3)
+      set(GRANIT_IMGUI_BACKEND_SDL3_TARGET imgui::imgui_backend_sdl3 PARENT_SCOPE)
+    endif()
   elseif(TARGET ImGui::ImGui)
     set(GRANIT_IMGUI_TARGET ImGui::ImGui PARENT_SCOPE)
+    if(TARGET ImGui::ImGui_Demo)
+      set(GRANIT_IMGUI_DEMO_TARGET ImGui::ImGui_Demo PARENT_SCOPE)
+    endif()
+    if(TARGET ImGui::ImGui_Backend_SDL3)
+      set(GRANIT_IMGUI_BACKEND_SDL3_TARGET ImGui::ImGui_Backend_SDL3 PARENT_SCOPE)
+    endif()
   elseif(TARGET imgui)
     set(GRANIT_IMGUI_TARGET imgui PARENT_SCOPE)
+    if(TARGET imgui_demo)
+      set(GRANIT_IMGUI_DEMO_TARGET imgui_demo PARENT_SCOPE)
+    endif()
+    if(TARGET imgui_backend_sdl3)
+      set(GRANIT_IMGUI_BACKEND_SDL3_TARGET imgui_backend_sdl3 PARENT_SCOPE)
+    endif()
   else()
     message(FATAL_ERROR "已启用 ImGui Integration，但未找到可用的 ImGui 目标")
   endif()

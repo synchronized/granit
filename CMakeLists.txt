@@ -38,10 +38,10 @@ set(
   "Granit CMake 包配置安装目录"
 )
 
-if(GRANIT_BUILD_INTEGRATION_SDL3)
+if(GRANIT_NEEDS_SDL3)
   granit_prepare_sdl3_dependency()
 endif()
-if(GRANIT_BUILD_INTEGRATION_IMGUI)
+if(GRANIT_NEEDS_IMGUI)
   granit_prepare_imgui_dependency()
 endif()
 

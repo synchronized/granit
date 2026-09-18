@@ -16,7 +16,6 @@ Emscripten WebGPU 上显示 glTF 2.0 模型。桌面目标叠加 ImGui 调试面
 ```powershell
 cmake -S . -B build/model-viewer -G Ninja `
   -DCMAKE_BUILD_TYPE=Release `
-  -DGRANIT_BUILD_MODEL_VIEWER_EXAMPLE=ON `
   -DGRANIT_BUILD_INTEGRATION_SDL3=ON `
   -DGRANIT_BUILD_INTEGRATION_IMGUI=ON `
   -DGRANIT_DEPENDENCY_POLICY=auto
@@ -38,6 +37,7 @@ cmake `
 
 ```powershell
 cmake `
+  -DGRANIT_SOURCE_DIR="$PWD" `
   -DGRANIT_MODEL_VIEWER_ENVIRONMENT_OUTPUT_DIR="$PWD/build/assets/StudioSmall03" `
   -P cmake/assets/fetch_model_viewer_environment.cmake
 ```

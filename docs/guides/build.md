@@ -19,7 +19,6 @@
 | `BUILD_SHARED_LIBS` | `ON` | 构建共享库；设为 `OFF` 时构建静态库 |
 | `GRANIT_BUILD_TESTING` | `ON` | 构建测试 |
 | `GRANIT_BUILD_EXAMPLES` | 顶层项目为 `ON` | 构建示例 |
-| `GRANIT_BUILD_MODEL_VIEWER_EXAMPLE` | `OFF` | 构建跨后端 Model Viewer 桌面/浏览器目标 |
 | `GRANIT_BUILD_WEB_IMGUI_EXAMPLE` | `ON` | 构建浏览器 SDL3 + ImGui 示例 |
 | `GRANIT_BUILD_BENCHMARKS` | `OFF` | 构建独立性能基准程序 |
 | `GRANIT_BUILD_TOOLS` | `OFF` | 单独构建离线工具；示例或 benchmark 会自动构建所需工具 |

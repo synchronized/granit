@@ -51,6 +51,7 @@
 逐项 API 定义。
 
 - [构建、测试、安装与 CMake 集成](guides/build.md)
+- [CI 与验证](guides/ci.md)
 - [发布验收](guides/release.md)
 - [版本迁移指南索引](guides/migrations.md)
 - [从 0.24 迁移到 0.25](guides/migrate-0.24-to-0.25.md)

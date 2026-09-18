@@ -278,12 +278,13 @@ install(
 # 原生窗口及其输入适配器尚无浏览器实现，保留真实的平台边界。
 if(GRANIT_HAS_NATIVE_WINDOW)
   add_subdirectory(window)
-  if(GRANIT_BUILD_INTEGRATION_SDL3)
-    add_subdirectory(integrations/sdl3)
-  endif()
+endif()
+
+if(GRANIT_NEEDS_SDL3)
+  add_subdirectory(integrations/sdl3)
 endif()
 
 # ImGui 集成只做 DrawData → Canvas 转换，跨平台可用。
-if(GRANIT_BUILD_INTEGRATION_IMGUI)
+if(GRANIT_NEEDS_IMGUI)
   add_subdirectory(integrations/imgui)
 endif()

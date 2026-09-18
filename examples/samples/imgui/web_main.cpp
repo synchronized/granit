@@ -16,6 +16,7 @@
 #include <granit/granit.hpp>
 #include <granit/renderer/native_surface.hpp>
 #include <granit/integrations/imgui/renderer.hpp>
+#include <granit/integrations/sdl3/surface.hpp>
 #include <granit/pipeline/canvas_draw_list.hpp>
 
 #include <cstdint>
@@ -81,7 +82,8 @@ granit::result initialize_gpu_resources() {
   auto result = query_canvas_size(width, height);
   if (result.failed())
     return result;
-  result = state.surface.initialize(state.renderer.native_handle(), granit::surface_desc::canvas());
+  result = granit::integration::sdl3::create_surface(state.renderer.native_handle(), state.window, state.surface);
+
   if (result.ok()) {
     result =
         state.swapchain.initialize(state.renderer.native_handle(), state.surface.native_handle(),

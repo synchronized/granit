@@ -32,8 +32,7 @@ Windows 已安装但尚未导入 emsdk 环境时，先执行：
 
 Emscripten preset 默认开启测试和示例。关闭 `GRANIT_BUILD_TESTING` 可排除平台验证目标；
 关闭 `GRANIT_BUILD_EXAMPLES` 可排除示例可执行文件。两者均关闭时只构建库。
-模型查看器和 ImGui 示例分别受 `GRANIT_BUILD_MODEL_VIEWER_EXAMPLE`、
-`GRANIT_BUILD_WEB_IMGUI_EXAMPLE` 控制。构建产物继续统一输出到 `build/emscripten-release/web/`。
+构建产物继续统一输出到 `build/emscripten-release/web/`。
 
 ```powershell
 cmake --preset emscripten-release

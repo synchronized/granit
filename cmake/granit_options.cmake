@@ -1,7 +1,6 @@
 option(BUILD_SHARED_LIBS "构建共享库" ON)
 option(GRANIT_BUILD_TESTING "构建 Granit 测试" ON)
 option(GRANIT_BUILD_EXAMPLES "构建 Granit 示例" ${PROJECT_IS_TOP_LEVEL})
-option(GRANIT_BUILD_MODEL_VIEWER_EXAMPLE "构建跨后端模型查看器示例" OFF)
 option(GRANIT_BUILD_BENCHMARKS "构建 Granit benchmark 程序" OFF)
 option(GRANIT_BUILD_TOOLS "构建 Granit 离线工具" OFF)
 option(GRANIT_BUILD_ASSET_TOOLS "构建并安装 AssetTools SDK" OFF)
