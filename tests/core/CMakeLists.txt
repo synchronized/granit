@@ -9,7 +9,7 @@ target_link_libraries(granit_core_api_c_test PRIVATE granit::granit Unity::Unity
 set_target_properties(granit_core_api_c_test PROPERTIES LINKER_LANGUAGE CXX)
 granit_target_compile_warnings(granit_core_api_c_test)
 granit_target_output_directories(granit_core_api_c_test)
-add_test(NAME granit.core_api.c COMMAND granit_core_api_c_test)
+add_test(NAME granit.core.api.c COMMAND granit_core_api_c_test)
 
 add_executable(granit_cpp_version_test version_cpp_test.cpp)
 target_link_libraries(
@@ -17,11 +17,11 @@ target_link_libraries(
   PRIVATE granit::granit Catch2::Catch2WithMain
 )
 granit_target_compile_warnings(granit_cpp_version_test)
-add_test(NAME granit.cpp_version COMMAND granit_cpp_version_test)
+add_test(NAME granit.core.version.cpp COMMAND granit_cpp_version_test)
 
 granit_target_output_directories(granit_cpp_version_test)
 
-set_tests_properties(granit.core_api.c granit.cpp_version PROPERTIES
+set_tests_properties(granit.core.api.c granit.core.version.cpp PROPERTIES
   ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:granit::granit>"
 )
 
@@ -35,8 +35,7 @@ target_include_directories(
 )
 target_link_libraries(granit_sha256_test PRIVATE Catch2::Catch2WithMain)
 granit_target_compile_warnings(granit_sha256_test)
-add_test(NAME granit.sha256 COMMAND granit_sha256_test)
-set_property(TEST granit.sha256 APPEND PROPERTY LABELS unit)
+add_test(NAME granit.core.sha256 COMMAND granit_sha256_test)
 
 add_executable(
   granit_utf8_test
@@ -48,14 +47,13 @@ target_include_directories(
 )
 target_link_libraries(granit_utf8_test PRIVATE Catch2::Catch2WithMain)
 granit_target_compile_warnings(granit_utf8_test)
-add_test(NAME granit.utf8 COMMAND granit_utf8_test)
-set_property(TEST granit.utf8 APPEND PROPERTY LABELS unit)
+add_test(NAME granit.core.utf8 COMMAND granit_utf8_test)
 
 add_executable(granit_c_version_test version_c_test.c)
 target_link_libraries(granit_c_version_test PRIVATE granit::granit Unity::Unity)
 set_target_properties(granit_c_version_test PROPERTIES LINKER_LANGUAGE CXX)
 granit_target_compile_warnings(granit_c_version_test)
-add_test(NAME granit.c_version COMMAND granit_c_version_test)
+add_test(NAME granit.core.version.c COMMAND granit_c_version_test)
 
 
 add_executable(
@@ -69,7 +67,7 @@ target_link_libraries(
   PRIVATE granit::granit Catch2::Catch2WithMain
 )
 granit_target_compile_warnings(granit_handle_table_test)
-add_test(NAME granit.handle_table COMMAND granit_handle_table_test)
+add_test(NAME granit.core.handle_table COMMAND granit_handle_table_test)
 
 add_executable(
   granit_async_operation_state_test
@@ -81,7 +79,7 @@ target_link_libraries(
   granit_async_operation_state_test PRIVATE granit::granit Catch2::Catch2WithMain
 )
 granit_target_compile_warnings(granit_async_operation_state_test)
-add_test(NAME granit.async_operation_state COMMAND granit_async_operation_state_test)
+add_test(NAME granit.core.async_operation_state COMMAND granit_async_operation_state_test)
 
 add_executable(
   granit_resource_validation_test
@@ -94,7 +92,7 @@ target_link_libraries(
   PRIVATE granit::granit Catch2::Catch2WithMain
 )
 granit_target_compile_warnings(granit_resource_validation_test)
-add_test(NAME granit.resource_validation COMMAND granit_resource_validation_test)
+add_test(NAME granit.core.resource_validation COMMAND granit_resource_validation_test)
 
 
 add_executable(
@@ -116,7 +114,7 @@ target_compile_options(
   PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
 )
 granit_target_compile_warnings(granit_lifecycle_validation_test)
-add_test(NAME granit.lifecycle_validation COMMAND granit_lifecycle_validation_test)
+add_test(NAME granit.core.lifecycle_validation COMMAND granit_lifecycle_validation_test)
 
 add_executable(
   granit_retirement_queue_test
@@ -130,7 +128,7 @@ target_compile_options(
   PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
 )
 granit_target_compile_warnings(granit_retirement_queue_test)
-add_test(NAME granit.retirement_queue COMMAND granit_retirement_queue_test)
+add_test(NAME granit.core.retirement_queue COMMAND granit_retirement_queue_test)
 
 add_executable(granit_device_status_test device_status_test.cpp)
 target_include_directories(
@@ -143,7 +141,7 @@ target_compile_options(
   PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
 )
 granit_target_compile_warnings(granit_device_status_test)
-add_test(NAME granit.device_status COMMAND granit_device_status_test)
+add_test(NAME granit.core.device_status COMMAND granit_device_status_test)
 
 set(
   granit_core_test_targets
@@ -160,13 +158,13 @@ foreach(target IN LISTS granit_core_test_targets)
 endforeach()
 
 set_tests_properties(
-  granit.c_version
-  granit.handle_table
-  granit.async_operation_state
-  granit.resource_validation
-  granit.lifecycle_validation
-  granit.retirement_queue
-  granit.device_status
+  granit.core.version.c
+  granit.core.handle_table
+  granit.core.async_operation_state
+  granit.core.resource_validation
+  granit.core.lifecycle_validation
+  granit.core.retirement_queue
+  granit.core.device_status
   PROPERTIES ENVIRONMENT_MODIFICATION
              "PATH=path_list_prepend:$<TARGET_FILE_DIR:granit>"
 )

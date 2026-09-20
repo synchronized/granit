@@ -7,7 +7,7 @@ target_link_libraries(granit_pbr_test PRIVATE granit::pbr Catch2::Catch2WithMain
 target_compile_options(granit_pbr_test PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>)
 granit_target_compile_warnings(granit_pbr_test)
 granit_target_output_directories(granit_pbr_test)
-add_test(NAME granit.pbr COMMAND granit_pbr_test)
+add_test(NAME granit.material.pbr_adapter COMMAND granit_pbr_test)
 
 add_executable(
   granit_material_test
@@ -51,7 +51,7 @@ add_dependencies(
 )
 granit_target_compile_warnings(granit_material_test)
 granit_target_output_directories(granit_material_test)
-add_test(NAME granit.material COMMAND granit_material_test)
+add_test(NAME granit.material.assets COMMAND granit_material_test)
 
-set_property(TEST granit.pbr APPEND PROPERTY LABELS unit)
-set_property(TEST granit.material APPEND PROPERTY LABELS gpu integration)
+set_property(TEST granit.material.pbr_adapter APPEND PROPERTY LABELS unit)
+set_property(TEST granit.material.assets APPEND PROPERTY LABELS gpu integration)

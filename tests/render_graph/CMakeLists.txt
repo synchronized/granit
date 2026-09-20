@@ -18,6 +18,6 @@ target_compile_options(
   PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
 )
 granit_target_compile_warnings(granit_render_graph_test)
-add_test(NAME granit.render_graph COMMAND granit_render_graph_test)
+add_test(NAME granit.render_graph.compiler COMMAND granit_render_graph_test)
 
 granit_target_output_directories(granit_render_graph_test)

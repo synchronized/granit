@@ -30,11 +30,11 @@ add_subdirectory(packaging)
 add_subdirectory(smoke)
 
 add_test(
-  NAME granit.documentation
+  NAME granit.documentation.links
   COMMAND
     "${CMAKE_COMMAND}"
     "-DGRANIT_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
     -P "${PROJECT_SOURCE_DIR}/tests/cmake/check_documentation.cmake"
 )
 
-set_property(TEST granit.documentation APPEND PROPERTY LABELS unit)
+set_property(TEST granit.documentation.links APPEND PROPERTY LABELS unit)

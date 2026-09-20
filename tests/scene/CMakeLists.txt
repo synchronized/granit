@@ -14,6 +14,6 @@ target_include_directories(granit_scene_test PRIVATE "${PROJECT_SOURCE_DIR}/src"
 target_link_libraries(granit_scene_test PRIVATE granit::scene Catch2::Catch2WithMain)
 target_compile_options(granit_scene_test PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>)
 granit_target_compile_warnings(granit_scene_test)
-add_test(NAME granit.scene COMMAND granit_scene_test)
+add_test(NAME granit.scene.submission COMMAND granit_scene_test)
 
 granit_target_output_directories(granit_scene_test)

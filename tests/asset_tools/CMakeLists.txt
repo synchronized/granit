@@ -263,26 +263,28 @@ if(GRANIT_TESTING_ENABLED)
   )
   set_tests_properties(granit.asset_tools.shader.reject_fixture_command PROPERTIES WILL_FAIL TRUE)
   add_test(
-    NAME granit.asset_tools.reject_ungrouped_shader_command
+    NAME granit.asset_tools.shader.reject_ungrouped_command
     COMMAND granit_asset_tool inspect
   )
-  set_tests_properties(granit.asset_tools.reject_ungrouped_shader_command PROPERTIES WILL_FAIL TRUE)
+  set_tests_properties(granit.asset_tools.shader.reject_ungrouped_command PROPERTIES WILL_FAIL TRUE)
   set(granit_shader_object_id_output
       "${CMAKE_CURRENT_BINARY_DIR}/object-id-test/minimal_shader_ids.inc")
   add_test(
-    NAME granit.shader_fixture_tool.object_ids
+    NAME granit.asset_tools.shader.fixture.object_ids
     COMMAND granit_shader_fixture_tool object-ids
             --object
             "minimal_vertex_id=${granit_shader_fixture_object_dir}/minimal.vert.grshaderobj"
             --output "${granit_shader_object_id_output}"
   )
   add_test(
-    NAME granit.shader_fixture_tool.object_ids_compare
+    NAME granit.asset_tools.shader.fixture.object_ids_compare
     COMMAND "${CMAKE_COMMAND}" -E compare_files "${granit_shader_object_id_output}"
             "${granit_test_shader_fixture_dir}/minimal_shader_ids.inc"
   )
-  set_tests_properties(granit.shader_fixture_tool.object_ids_compare
-                       PROPERTIES DEPENDS granit.shader_fixture_tool.object_ids)
+  set_tests_properties(
+    granit.asset_tools.shader.fixture.object_ids_compare
+    PROPERTIES DEPENDS granit.asset_tools.shader.fixture.object_ids
+  )
   set(granit_shader_index_id_output
       "${CMAKE_CURRENT_BINARY_DIR}/index-id-test/material_shader_ids.inc")
   add_test(
@@ -293,7 +295,7 @@ if(GRANIT_TESTING_ENABLED)
             --output "${granit_shader_index_id_output}"
   )
   add_test(
-    NAME granit.shader_fixture_tool.library
+    NAME granit.asset_tools.shader.fixture.library
     COMMAND
       granit_shader_fixture_tool library
       --object "${granit_shader_fixture_object_dir}/minimal.vert.grshaderobj"
@@ -302,7 +304,7 @@ if(GRANIT_TESTING_ENABLED)
       --output "${CMAKE_CURRENT_BINARY_DIR}/library-test/minimal.grshlib"
   )
   set_tests_properties(
-    granit.shader_fixture_tool.library
+    granit.asset_tools.shader.fixture.library
     PROPERTIES PASS_REGULAR_EXPRESSION "Shader Library"
   )
   add_test(
@@ -521,7 +523,7 @@ endif()
 
 if(GRANIT_TESTING_ENABLED)
   add_test(
-    NAME granit.shader_toolchain.manifest
+    NAME granit.asset_tools.shader.toolchain.manifest
     COMMAND
       "${CMAKE_COMMAND}"
       -DGENERATOR=${PROJECT_SOURCE_DIR}/cmake/toolchain/generate_shader_toolchain_manifest.cmake
@@ -530,7 +532,7 @@ if(GRANIT_TESTING_ENABLED)
       "${PROJECT_SOURCE_DIR}/tests/cmake/check_shader_toolchain_manifest.cmake"
   )
   add_test(
-    NAME granit.shader_toolchain.package
+    NAME granit.asset_tools.shader.toolchain.package
     COMMAND
       "${CMAKE_COMMAND}"
       -DPACKAGER=${PROJECT_SOURCE_DIR}/cmake/toolchain/package_shader_toolchain.cmake
@@ -540,7 +542,7 @@ if(GRANIT_TESTING_ENABLED)
       "${PROJECT_SOURCE_DIR}/tests/cmake/check_package_shader_toolchain.cmake"
   )
   add_test(
-    NAME granit.shader_toolchain.licenses
+    NAME granit.asset_tools.shader.toolchain.licenses
     COMMAND
       "${CMAKE_COMMAND}"
       -DCOLLECTOR=${PROJECT_SOURCE_DIR}/cmake/assets/collect_license_bundle.cmake
@@ -548,7 +550,7 @@ if(GRANIT_TESTING_ENABLED)
       "${PROJECT_SOURCE_DIR}/tests/cmake/check_collect_license_bundle.cmake"
   )
   add_test(
-    NAME granit.shader_toolchain.modes
+    NAME granit.asset_tools.shader.toolchain.modes
     COMMAND
       "${CMAKE_COMMAND}"
       "-DMODULE=${PROJECT_SOURCE_DIR}/cmake/toolchain/GranitShaderToolchain.cmake"
@@ -557,10 +559,10 @@ if(GRANIT_TESTING_ENABLED)
   )
   set_property(
     TEST
-      granit.shader_toolchain.manifest
-      granit.shader_toolchain.package
-      granit.shader_toolchain.licenses
-      granit.shader_toolchain.modes
+      granit.asset_tools.shader.toolchain.manifest
+      granit.asset_tools.shader.toolchain.package
+      granit.asset_tools.shader.toolchain.licenses
+      granit.asset_tools.shader.toolchain.modes
     APPEND PROPERTY LABELS package release
   )
 

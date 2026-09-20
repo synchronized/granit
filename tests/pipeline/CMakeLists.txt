@@ -94,6 +94,6 @@ add_dependencies(
 )
 granit_target_compile_warnings(granit_pipeline_test)
 granit_target_output_directories(granit_pipeline_test)
-add_test(NAME granit.pipeline COMMAND granit_pipeline_test)
+add_test(NAME granit.pipeline.api COMMAND granit_pipeline_test)
 
-set_property(TEST granit.pipeline APPEND PROPERTY LABELS gpu integration)
+set_property(TEST granit.pipeline.api APPEND PROPERTY LABELS gpu integration)

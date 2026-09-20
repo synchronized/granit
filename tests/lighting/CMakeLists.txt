@@ -64,6 +64,6 @@ target_compile_definitions(
 add_dependencies(granit_lighting_test granit_test_shader_assets)
 granit_target_compile_warnings(granit_lighting_test)
 granit_target_output_directories(granit_lighting_test)
-add_test(NAME granit.lighting COMMAND granit_lighting_test)
+add_test(NAME granit.lighting.resources COMMAND granit_lighting_test)
 
-set_property(TEST granit.lighting APPEND PROPERTY LABELS gpu integration)
+set_property(TEST granit.lighting.resources APPEND PROPERTY LABELS gpu integration)

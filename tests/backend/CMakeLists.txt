@@ -18,7 +18,7 @@ target_link_libraries(
   PRIVATE granit::granit Catch2::Catch2WithMain
 )
 granit_target_compile_warnings(granit_backend_capabilities_test)
-add_test(NAME granit.backend_capabilities COMMAND granit_backend_capabilities_test)
+add_test(NAME granit.backend.capabilities COMMAND granit_backend_capabilities_test)
 
 add_executable(granit_backend_resources_test resources_test.cpp)
 target_include_directories(granit_backend_resources_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
@@ -27,7 +27,7 @@ target_link_libraries(
   PRIVATE granit::granit Catch2::Catch2WithMain
 )
 granit_target_compile_warnings(granit_backend_resources_test)
-add_test(NAME granit.backend_resources COMMAND granit_backend_resources_test)
+add_test(NAME granit.backend.resources COMMAND granit_backend_resources_test)
 
 
 add_executable(
@@ -74,7 +74,7 @@ target_link_libraries(
   PRIVATE granit::granit Catch2::Catch2WithMain ${CMAKE_DL_LIBS}
 )
 granit_target_compile_warnings(granit_vulkan_backend_test)
-add_test(NAME granit.vulkan_backend COMMAND granit_vulkan_backend_test)
+add_test(NAME granit.backend.vulkan COMMAND granit_vulkan_backend_test)
 
 foreach(
   target
@@ -85,7 +85,7 @@ foreach(
 endforeach()
 
 set_tests_properties(
-  granit.vulkan_backend
+  granit.backend.vulkan
   PROPERTIES ENVIRONMENT_MODIFICATION
              "PATH=path_list_prepend:$<TARGET_FILE_DIR:granit>"
 )

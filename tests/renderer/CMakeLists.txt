@@ -78,7 +78,7 @@ target_compile_definitions(
 add_dependencies(granit_renderer_test granit_shader_fixture_objects)
 granit_target_compile_warnings(granit_renderer_test)
 granit_target_output_directories(granit_renderer_test)
-add_test(NAME granit.renderer COMMAND granit_renderer_test)
+add_test(NAME granit.renderer.resources COMMAND granit_renderer_test)
 add_test(
   NAME granit.renderer.lifecycle_diagnostic
   COMMAND granit_renderer_test "[renderer][lifecycle]"
@@ -87,9 +87,12 @@ set_tests_properties(
   granit.renderer.lifecycle_diagnostic
   PROPERTIES PASS_REGULAR_EXPRESSION "\\[granit\\]\\[lifecycle\\].*Buffer=1"
 )
-set_property(TEST granit.renderer granit.renderer.lifecycle_diagnostic APPEND PROPERTY LABELS gpu integration)
+set_property(
+  TEST granit.renderer.resources granit.renderer.lifecycle_diagnostic
+  APPEND PROPERTY LABELS gpu integration
+)
 set_tests_properties(
-  granit.renderer
+  granit.renderer.resources
   PROPERTIES ENVIRONMENT_MODIFICATION
              "PATH=path_list_prepend:$<TARGET_FILE_DIR:granit>"
 )
