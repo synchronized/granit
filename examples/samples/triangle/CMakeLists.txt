@@ -44,4 +44,3 @@ target_link_libraries(granit_triangle_example PRIVATE granit::granit)
 target_compile_features(granit_triangle_example PRIVATE cxx_std_20)
 granit_target_compile_warnings(granit_triangle_example)
 granit_target_output_directories(granit_triangle_example)
-

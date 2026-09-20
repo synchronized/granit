@@ -90,4 +90,3 @@ if(GRANIT_HAS_NATIVE_WINDOW)
 
   set(granit_wayland_protocol_dir "${PROJECT_BINARY_DIR}/generated/wayland")
 endif()
-
