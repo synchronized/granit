@@ -2,89 +2,15 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <granit/window.h>
-#include <granit/window.hpp>
 #include <granit/window/native.h>
 
 #include <catch2/catch_all.hpp>
 
-#include <array>
-#include <cstddef>
-#include <cstring>
 #include <string_view>
 
-#if defined(_WIN32)
 #include <windows.h>
-#endif
-
-namespace {
-
-template <typename T, std::size_t VersionSize>
-void check_versioned_output(granit_result (*call)(T*), granit_result expected) {
-  alignas(T) std::array<std::byte, VersionSize + 8> storage{};
-  std::memset(storage.data(), 0x5a, storage.size());
-  auto* output = reinterpret_cast<T*>(storage.data());
-  const auto capacity = static_cast<uint32_t>(VersionSize);
-  std::memcpy(&output->struct_size, &capacity, sizeof(capacity));
-  CHECK(call(output) == expected);
-  CHECK(output->struct_size == VersionSize);
-  for (std::size_t index = VersionSize; index < storage.size(); ++index)
-    CHECK(storage[index] == std::byte{0x5a});
-}
-
-} // namespace
-
-TEST_CASE("Input 版本化输出不写越调用方容量", "[input][abi]") {
-  check_versioned_output<granit_input_event, GRANIT_INPUT_EVENT_VERSION_1_SIZE>(
-      [](granit_input_event* output) { return granit_window_poll_input_event(UINT64_MAX, output); },
-      GRANIT_ERROR_INVALID_HANDLE);
-  check_versioned_output<granit_keyboard_state, GRANIT_KEYBOARD_STATE_VERSION_1_SIZE>(
-      [](granit_keyboard_state* output) {
-        return granit_window_get_keyboard_state(UINT64_MAX, UINT64_C(1), output);
-      },
-      GRANIT_ERROR_INVALID_HANDLE);
-  check_versioned_output<granit_pointer_state, GRANIT_POINTER_STATE_VERSION_1_SIZE>(
-      [](granit_pointer_state* output) {
-        return granit_window_get_pointer_state(UINT64_MAX, UINT64_C(1), output);
-      },
-      GRANIT_ERROR_INVALID_HANDLE);
-}
-
-TEST_CASE("Window System 直接拥有输入状态和事件队列", "[input]") {
-#if defined(_WIN32)
-  granit_window_system_desc window_system_desc = GRANIT_WINDOW_SYSTEM_DESC_INIT;
-  granit_window_system window_system = GRANIT_NULL_HANDLE;
-  REQUIRE(granit_window_system_create(&window_system_desc, &window_system) == GRANIT_SUCCESS);
-
-  granit_window_desc window_desc = GRANIT_WINDOW_DESC_INIT;
-  window_desc.width = 96;
-  window_desc.height = 72;
-  window_desc.flags = 0;
-  granit_window window = GRANIT_NULL_HANDLE;
-  REQUIRE(granit_window_create(window_system, &window_desc, &window) == GRANIT_SUCCESS);
-
-  granit_keyboard_state keyboard = GRANIT_KEYBOARD_STATE_INIT;
-  granit_pointer_state pointer = GRANIT_POINTER_STATE_INIT;
-  CHECK(granit_window_get_keyboard_state(window_system, window, &keyboard) == GRANIT_SUCCESS);
-  CHECK(granit_window_get_pointer_state(window_system, window, &pointer) == GRANIT_SUCCESS);
-  CHECK(keyboard.struct_size == sizeof(granit_keyboard_state));
-  CHECK(pointer.struct_size == sizeof(granit_pointer_state));
-
-  granit_input_event input_event = GRANIT_INPUT_EVENT_INIT;
-  CHECK(granit_window_poll_input_event(window_system, &input_event) == GRANIT_ERROR_NOT_READY);
-
-  REQUIRE(granit_window_destroy(window_system, window) == GRANIT_SUCCESS);
-  keyboard.modifiers = UINT32_MAX;
-  CHECK(granit_window_get_keyboard_state(window_system, window, &keyboard) ==
-        GRANIT_ERROR_INVALID_HANDLE);
-  CHECK(keyboard.modifiers == 0);
-  REQUIRE(granit_window_system_destroy(window_system) == GRANIT_SUCCESS);
-#else
-  SUCCEED("平台运行测试由对应 Window 后端环境覆盖");
-#endif
-}
 
 TEST_CASE("Win32 Input 转换键盘、文本和指针消息", "[input][win32]") {
-#if defined(_WIN32)
   granit_window_system_desc window_system_desc = GRANIT_WINDOW_SYSTEM_DESC_INIT;
   granit_window_system window_system = GRANIT_NULL_HANDLE;
   REQUIRE(granit_window_system_create(&window_system_desc, &window_system) == GRANIT_SUCCESS);
@@ -167,7 +93,4 @@ TEST_CASE("Win32 Input 转换键盘、文本和指针消息", "[input][win32]") 
 
   REQUIRE(granit_window_destroy(window_system, window) == GRANIT_SUCCESS);
   REQUIRE(granit_window_system_destroy(window_system) == GRANIT_SUCCESS);
-#else
-  SUCCEED("仅在 Win32 验证平台消息转换");
-#endif
 }

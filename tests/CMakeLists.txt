@@ -643,54 +643,8 @@ granit_target_compile_warnings(granit_vulkan_backend_test)
 add_test(NAME granit.vulkan_backend COMMAND granit_vulkan_backend_test)
 
 add_subdirectory(headers)
-
-add_executable(granit_window_test window/window_api_test.cpp)
-target_link_libraries(granit_window_test PRIVATE granit::window Catch2::Catch2WithMain)
-if(GRANIT_HAS_XCB)
-  target_compile_definitions(granit_window_test PRIVATE GRANIT_TEST_HAS_XCB)
-  target_include_directories(granit_window_test SYSTEM PRIVATE "${GRANIT_XCB_INCLUDE_DIR}")
-  target_link_libraries(granit_window_test PRIVATE "${GRANIT_XCB_LIBRARY}")
-endif()
-if(GRANIT_HAS_WAYLAND_SHELL)
-  target_compile_definitions(granit_window_test PRIVATE GRANIT_TEST_HAS_WAYLAND)
-endif()
-granit_target_compile_warnings(granit_window_test)
-granit_target_output_directories(granit_window_test)
-add_test(NAME granit.window COMMAND granit_window_test)
-
-add_executable(
-  granit_window_input_test
-  input/input_api_test.cpp
-  input/emscripten_input_adapter_test.cpp
-  "${PROJECT_SOURCE_DIR}/src/window/platform/emscripten/input.cpp"
-  $<TARGET_OBJECTS:granit_window_input_internal>
-)
-if(GRANIT_HAS_XCB)
-  target_sources(granit_window_input_test PRIVATE input/xcb_input_adapter_test.cpp)
-endif()
-if(GRANIT_HAS_WAYLAND_INPUT)
-  target_sources(granit_window_input_test PRIVATE input/wayland_input_adapter_test.cpp)
-  target_link_libraries(granit_window_input_test PRIVATE "${GRANIT_XKBCOMMON_LIBRARY}")
-endif()
-target_include_directories(granit_window_input_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
-target_link_libraries(granit_window_input_test PRIVATE granit::window Catch2::Catch2WithMain)
-granit_target_compile_warnings(granit_window_input_test)
-granit_target_output_directories(granit_window_input_test)
-add_test(NAME granit.window_input COMMAND granit_window_input_test)
-
-add_executable(granit_window_renderer_test window/window_renderer_test.cpp)
-target_link_libraries(
-  granit_window_renderer_test PRIVATE granit::window granit::granit Catch2::Catch2WithMain
-)
-if(GRANIT_HAS_XCB)
-  target_compile_definitions(granit_window_renderer_test PRIVATE GRANIT_TEST_HAS_XCB)
-endif()
-if(GRANIT_HAS_WAYLAND_SHELL)
-  target_compile_definitions(granit_window_renderer_test PRIVATE GRANIT_TEST_HAS_WAYLAND)
-endif()
-granit_target_compile_warnings(granit_window_renderer_test)
-granit_target_output_directories(granit_window_renderer_test)
-add_test(NAME granit.window_renderer COMMAND granit_window_renderer_test)
+add_subdirectory(window)
+add_subdirectory(input)
 
 if(GRANIT_BUILD_INTEGRATION_SDL3)
   add_executable(granit_integration_sdl3_surface_test integrations/sdl3/surface_test.cpp)
@@ -744,8 +698,6 @@ set_property(
     granit.pbr
     granit.scene
     granit.vulkan_backend
-    granit.window
-    granit.window_input
   APPEND PROPERTY LABELS unit
 )
 set_property(TEST granit.documentation APPEND PROPERTY LABELS unit)
@@ -757,10 +709,6 @@ set_property(
   TEST granit.lighting granit.pipeline granit.material granit.renderer
        granit.renderer.lifecycle_diagnostic
   APPEND PROPERTY LABELS gpu integration
-)
-set_property(
-  TEST granit.window_renderer
-  APPEND PROPERTY LABELS gpu integration platform
 )
 if(GRANIT_BUILD_INTEGRATION_IMGUI)
   set_property(TEST granit.integration.imgui APPEND PROPERTY LABELS integration)
