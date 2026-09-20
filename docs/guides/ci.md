@@ -34,34 +34,35 @@ feature 分支 ──PR──> quick-check ──合并──> main
                               release（自动发布）
 ```
 
-三个验证层级：`quick-check` 是 PR 门禁，`linux`/`windows`/`emscripten` 是发布前的完整验证，
-`release` 是打 tag 后的发布。各 workflow 的配置见下文，发布细节见[发布验收](release.md)。
-
-> 上表的 PR 门禁是目标流程；当前 `quick-check` 仍为手动触发（见[触发机制](#触发机制)），
-> 如需每次 PR 自动门禁，可为 `quick-check` 接入 `pull_request` 触发。
+三个验证层级：`quick-check` 是 PR 的快速反馈，`linux`/`windows`/`emscripten` 是 PR 的完整
+验证门禁（也是发布前的全平台验证），`release` 是打 tag 后的发布。各 workflow 的配置见下文，
+发布细节见[发布验收](release.md)。
 
 ## 触发机制
 
-除发布和 CI 镜像外，**所有 workflow 都是手动触发（`workflow_dispatch`）**，不会在
-`pull_request` 上自动运行。需要验证时，在 Actions 页面手动运行对应 workflow（见
-[手动触发](#手动触发)），或由外部调度触发。
+PR 打开或更新时会自动运行 `quick-check`（快速反馈）与 `linux`/`windows`/`emscripten`
+（完整验证）。各 workflow 的触发方式：
 
-唯一的自动触发是：
+| Workflow | 自动触发 | 手动触发 |
+| --- | --- | --- |
+| `quick-check` | `pull_request` | `workflow_dispatch`（`suite` 参数） |
+| `linux` / `windows` / `emscripten` | `pull_request` | `workflow_dispatch` |
+| `release` | 推送 `v*` tag | `workflow_dispatch`（发布候选） |
+| `linux-ci-image` | 向 `main` 推送且改动 Dockerfile | `workflow_dispatch` |
+| `documentation` / `package-shader-toolchain` | — | `workflow_dispatch` |
 
-| Workflow | 自动触发条件 |
-| --- | --- |
-| `release` | 推送 `v*` tag |
-| `linux-ci-image` | 向 `main` 推送且改动 `.github/ci/linux/Dockerfile` |
+要让这些 PR check 成为 merge 门禁，还需在 main 分支设置 branch protection，把它们设为
+required check。
 
 ## Workflow 清单
 
 | Workflow | 触发 | 职责 | 平台 / 矩阵 |
 | --- | --- | --- | --- |
-| `quick-check` | 手动（`suite` 参数） | 按改动范围的快速检查 | Linux |
+| `quick-check` | PR + 手动（`suite` 参数） | 按改动范围的快速检查 | Linux |
 | `documentation` | 手动 | 文档相对链接与分类索引检查 | Linux |
-| `linux` | 手动 | Linux 完整验证（构建、测试、安装、Consumer） | clang / gcc × shared / static |
-| `windows` | 手动 | Windows 完整验证 | MSVC × shared / static |
-| `emscripten` | 手动 | 浏览器 WebGPU 构建与行为验证 | Linux + Emscripten |
+| `linux` | PR + 手动 | Linux 完整验证（构建、测试、安装、Consumer） | clang / gcc × shared / static |
+| `windows` | PR + 手动 | Windows 完整验证 | MSVC × shared / static |
+| `emscripten` | PR + 手动 | 浏览器 WebGPU 构建与行为验证 | Linux + Emscripten |
 | `release` | `v*` tag + 手动 | 发布产物构建、校验与发布 | win / linux × shared / static |
 | `package-shader-toolchain` | 手动（`run_windows` / `run_linux`） | 打包锁定 Shader 工具链 | win / linux |
 | `linux-ci-image` | 手动 + `main` 改 Dockerfile | 构建自定义 CI Runner 镜像 | Linux |

@@ -4,6 +4,7 @@
 name: Quick Check
 
 on:
+  pull_request:
   workflow_dispatch:
     inputs:
       suite:
@@ -44,7 +45,7 @@ jobs:
           REQUESTED_SUITE: ${{ inputs.suite }}
         run: |
           set -euo pipefail
-          suite="$REQUESTED_SUITE"
+          suite="${REQUESTED_SUITE:-auto}"
           if [[ "$suite" == auto ]]; then
             web_paths='^(tests/web/|examples/common/web/|examples/samples/model_viewer/web/|'
             web_paths+='examples/samples/imgui/(web\.cmake|web_main\.cpp)|'
