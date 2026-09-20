@@ -3,13 +3,12 @@
 
 #include "../support/shader_asset_store.h"
 #include <granit/granit.hpp>
-#include <granit/renderer/native_surface.hpp>
 #include <granit/pipeline/canvas_draw_list.hpp>
 #include <granit/pipeline/render_pipeline.h>
-
-#include <windows.h>
+#include <granit/window.hpp>
 
 #include <array>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -19,6 +18,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <vector>
 
 namespace {
@@ -32,14 +32,6 @@ granit::tests::shader_asset_store& shader_assets() {
   if (!loaded)
     std::abort();
   return store;
-}
-
-LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM word, LPARAM value) {
-  if (message == WM_DESTROY) {
-    PostQuitMessage(0);
-    return 0;
-  }
-  return DefWindowProcW(window, message, word, value);
 }
 
 granit_matrix4 identity() {
@@ -89,27 +81,26 @@ granit_result create_scene(granit_renderer renderer, std::uint32_t width, std::u
 } // namespace
 
 int main(int argument_count, char** arguments) {
-  SetConsoleOutputCP(CP_UTF8);
   const bool smoke_test = argument_count == 2 && std::string_view{arguments[1]} == "--smoke-test";
-  const auto instance = GetModuleHandleW(nullptr);
-  constexpr wchar_t class_name[] = L"GranitRenderPipelineWindowExample";
-  WNDCLASSW window_class{};
-  window_class.lpfnWndProc = window_proc;
-  window_class.hInstance = instance;
-  window_class.lpszClassName = class_name;
-  if (RegisterClassW(&window_class) == 0)
-    return 1;
-  const auto window =
-      CreateWindowExW(0, class_name, L"Granit Render Pipeline", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
-                      CW_USEDEFAULT, 800, 600, nullptr, nullptr, instance, nullptr);
-  if (window == nullptr)
-    return 1;
-  ShowWindow(window, SW_SHOW);
+  granit::window_system window_system;
+  auto result = window_system.initialize();
+  if (result == granit::result::backend_unavailable)
+    return 77;
+  granit::window window;
+  if (result.ok()) {
+    result = window.initialize(window_system.native_handle(),
+                               {.title = "Granit Render Pipeline", .width = 800, .height = 600});
+  }
+  granit::window_state window_state{};
+  if (result.ok())
+    result = window.get_state(window_state);
 
   granit::renderer renderer;
-  auto result = renderer.initialize({.application_name = "Granit Render Pipeline Window",
-                                     .enable_validation = true,
-                                     .presentation = granit::presentation_mode::enabled});
+  if (result.ok()) {
+    result = renderer.initialize({.application_name = "Granit Render Pipeline Window",
+                                  .enable_validation = true,
+                                  .presentation = granit::presentation_mode::enabled});
+  }
   std::vector<std::byte> shader_library_bytes;
   granit::shader_library shader_library;
   if (result.ok() && !shader_assets().initialize_library(renderer.native_handle(),
@@ -117,15 +108,12 @@ int main(int argument_count, char** arguments) {
     result = granit::result::initialization_failed;
   granit::surface surface;
   if (result.ok())
-    result =
-        surface.initialize(renderer.native_handle(), granit::surface_desc::win32(instance, window));
-  RECT client{};
-  GetClientRect(window, &client);
+    result = window.create_surface(renderer.native_handle(), surface);
   granit::swapchain swapchain;
   if (result.ok()) {
     result = swapchain.initialize(renderer.native_handle(), surface.native_handle(),
-                                  {.width = static_cast<std::uint32_t>(client.right),
-                                   .height = static_cast<std::uint32_t>(client.bottom)});
+                                  {.width = window_state.framebuffer_width,
+                                   .height = window_state.framebuffer_height});
   }
   granit::swapchain_info info;
   if (result.ok())
@@ -221,7 +209,6 @@ int main(int argument_count, char** arguments) {
   }
   if (result.failed()) {
     std::cerr << "初始化失败：" << granit::result_message(result) << '\n';
-    DestroyWindow(window);
     return 1;
   }
 
@@ -231,20 +218,31 @@ int main(int argument_count, char** arguments) {
   std::uint32_t rendered_frames = 0;
   std::uint32_t completed_recreates = 0;
   while (running) {
-    MSG message{};
-    while (PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE) != 0) {
-      if (message.message == WM_QUIT)
+    result = window_system.process_events();
+    granit::window_event event{};
+    while (result.ok() && (result = window_system.poll(event)).ok()) {
+      if (event.window != window.native_handle())
+        continue;
+      if (event.type == GRANIT_WINDOW_EVENT_CLOSE_REQUESTED)
         running = false;
-      TranslateMessage(&message);
-      DispatchMessageW(&message);
+      if (event.type == GRANIT_WINDOW_EVENT_RESIZED ||
+          event.type == GRANIT_WINDOW_EVENT_SCALE_CHANGED ||
+          event.type == GRANIT_WINDOW_EVENT_NATIVE_HANDLE_CHANGED) {
+        recreate = true;
+      }
     }
+    if (result == granit::result::not_ready)
+      result = granit::result::success;
+    if (result.ok())
+      result = window.get_state(window_state);
+    if (result.failed())
+      break;
     if (!running)
       break;
-    GetClientRect(window, &client);
-    const auto width = static_cast<std::uint32_t>(client.right - client.left);
-    const auto height = static_cast<std::uint32_t>(client.bottom - client.top);
+    const auto width = window_state.framebuffer_width;
+    const auto height = window_state.framebuffer_height;
     if (width == 0 || height == 0) {
-      WaitMessage();
+      std::this_thread::sleep_for(std::chrono::milliseconds{16});
       continue;
     }
     if (recreate || width != info.width || height != info.height) {
@@ -305,13 +303,10 @@ int main(int argument_count, char** arguments) {
     if (result.failed())
       break;
     ++rendered_frames;
-    if (smoke_test && rendered_frames == 1) {
-      SetWindowPos(window, nullptr, 0, 0, 700, 520, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
-    } else if (smoke_test && rendered_frames == 3) {
-      SetWindowPos(window, nullptr, 0, 0, 860, 640, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
-    } else if (smoke_test && rendered_frames >= 5 && completed_recreates >= 2) {
+    if (smoke_test && (rendered_frames == 1 || rendered_frames == 3))
+      recreate = true;
+    else if (smoke_test && rendered_frames >= 5 && completed_recreates >= 2)
       running = false;
-    }
   }
 
   static_cast<void>(granit_render_pipeline_destroy(renderer.native_handle(), pipeline));
@@ -319,8 +314,6 @@ int main(int argument_count, char** arguments) {
   static_cast<void>(granit_scene_snapshot_destroy(renderer.native_handle(), empty_scene));
   static_cast<void>(granit_material_destroy(renderer.native_handle(), material));
   static_cast<void>(granit_mesh_destroy(renderer.native_handle(), mesh));
-  if (IsWindow(window) != FALSE)
-    DestroyWindow(window);
   if (result.failed())
     std::cerr << "渲染失败：" << granit::result_message(result) << '\n';
   if (smoke_test && completed_recreates < 2) {

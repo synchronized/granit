@@ -8,11 +8,10 @@
 #include "support/pbr_test_support.h"
 
 #include <granit/granit.hpp>
-#include <granit/renderer/native_surface.hpp>
-
-#include <windows.h>
+#include <granit/window.hpp>
 
 #include <array>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -20,17 +19,10 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <vector>
 
 namespace {
-
-LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM word, LPARAM value) {
-  if (message == WM_DESTROY) {
-    PostQuitMessage(0);
-    return 0;
-  }
-  return DefWindowProcW(window, message, word, value);
-}
 
 bool shader_encodes_srgb(granit::texture_format format) {
   return format == granit::texture_format::rgba8_unorm ||
@@ -193,38 +185,34 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
 } // namespace
 
 int main(int argument_count, char** arguments) {
-  SetConsoleOutputCP(CP_UTF8);
   const bool smoke_test = argument_count == 2 && std::string_view{arguments[1]} == "--smoke-test";
-  const auto instance = GetModuleHandleW(nullptr);
-  constexpr wchar_t class_name[] = L"GranitWindowHdrExample";
-  WNDCLASSW window_class{};
-  window_class.lpfnWndProc = window_proc;
-  window_class.hInstance = instance;
-  window_class.lpszClassName = class_name;
-  if (RegisterClassW(&window_class) == 0)
-    return 1;
-  HWND window =
-      CreateWindowExW(0, class_name, L"Granit HDR Tone Mapping", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
-                      CW_USEDEFAULT, 800, 600, nullptr, nullptr, instance, nullptr);
-  if (window == nullptr)
-    return 1;
-  ShowWindow(window, SW_SHOW);
+  granit::window_system window_system;
+  auto result = window_system.initialize();
+  if (result == granit::result::backend_unavailable)
+    return 77;
+  granit::window window;
+  if (result.ok()) {
+    result = window.initialize(window_system.native_handle(),
+                               {.title = "Granit HDR Tone Mapping", .width = 800, .height = 600});
+  }
+  granit::window_state window_state{};
+  if (result.ok())
+    result = window.get_state(window_state);
 
   granit::renderer renderer;
-  auto result = renderer.initialize({.application_name = "Granit Window HDR",
-                                     .enable_validation = true,
-                                     .presentation = granit::presentation_mode::enabled});
+  if (result.ok()) {
+    result = renderer.initialize({.application_name = "Granit Window HDR",
+                                  .enable_validation = true,
+                                  .presentation = granit::presentation_mode::enabled});
+  }
   granit::surface surface;
   if (result.ok())
-    result =
-        surface.initialize(renderer.native_handle(), granit::surface_desc::win32(instance, window));
-  RECT client{};
-  GetClientRect(window, &client);
+    result = window.create_surface(renderer.native_handle(), surface);
   granit::swapchain swapchain;
   if (result.ok()) {
     result = swapchain.initialize(renderer.native_handle(), surface.native_handle(),
-                                  {.width = static_cast<std::uint32_t>(client.right),
-                                   .height = static_cast<std::uint32_t>(client.bottom)});
+                                  {.width = window_state.framebuffer_width,
+                                   .height = window_state.framebuffer_height});
   }
   granit::swapchain_info info;
   if (result.ok())
@@ -303,20 +291,31 @@ int main(int argument_count, char** arguments) {
   bool recreate = false;
   std::uint32_t rendered_frames = 0;
   while (running) {
-    MSG message{};
-    while (PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE) != 0) {
-      if (message.message == WM_QUIT)
+    result = window_system.process_events();
+    granit::window_event event{};
+    while (result.ok() && (result = window_system.poll(event)).ok()) {
+      if (event.window != window.native_handle())
+        continue;
+      if (event.type == GRANIT_WINDOW_EVENT_CLOSE_REQUESTED)
         running = false;
-      TranslateMessage(&message);
-      DispatchMessageW(&message);
+      if (event.type == GRANIT_WINDOW_EVENT_RESIZED ||
+          event.type == GRANIT_WINDOW_EVENT_SCALE_CHANGED ||
+          event.type == GRANIT_WINDOW_EVENT_NATIVE_HANDLE_CHANGED) {
+        recreate = true;
+      }
     }
+    if (result == granit::result::not_ready)
+      result = granit::result::success;
+    if (result.ok())
+      result = window.get_state(window_state);
+    if (result.failed())
+      break;
     if (!running)
       break;
-    GetClientRect(window, &client);
-    const auto width = static_cast<std::uint32_t>(client.right - client.left);
-    const auto height = static_cast<std::uint32_t>(client.bottom - client.top);
+    const auto width = window_state.framebuffer_width;
+    const auto height = window_state.framebuffer_height;
     if (width == 0 || height == 0) {
-      WaitMessage();
+      std::this_thread::sleep_for(std::chrono::milliseconds{16});
       continue;
     }
     if (recreate || width != info.width || height != info.height) {
@@ -350,18 +349,15 @@ int main(int argument_count, char** arguments) {
       break;
     if (smoke_test) {
       ++rendered_frames;
-      if (rendered_frames == 1) {
-        SetWindowPos(window, nullptr, 0, 0, 640, 480, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
-      } else if (rendered_frames == 3) {
+      if (rendered_frames == 1)
+        recreate = true;
+      else if (rendered_frames == 3)
         running = false;
-      }
     }
   }
 
   static_cast<void>(resources.reset());
   static_cast<void>(pbr_lighting.reset());
-  if (IsWindow(window) != FALSE)
-    DestroyWindow(window);
   if (result.failed())
     std::cerr << "窗口 HDR 渲染失败：" << granit::result_message(result) << '\n';
   return result.failed() ? 1 : 0;
