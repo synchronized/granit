@@ -2,6 +2,57 @@
 # Copyright (c) 2026 Granit contributors
 
 add_library(
+  granit_c_header_test
+  OBJECT
+    ../abi/layout_h.c
+    content_id_h.c
+    diagnostic_h.c
+    async_operation_h.c
+    command_recorder_h.c
+    frame_h.c
+    frame_context_h.c
+    math_types_h.c
+    input_h.c
+    timestamp_query_h.c
+    pipeline_h.c
+    buffer_h.c
+    renderer_h.c
+    render_target_h.c
+    resource_types_h.c
+    sampler_h.c
+    shader_h.c
+    shader_types_h.c
+    shader_library_h.c
+    result_h.c
+    surface_h.c
+    swapchain_h.c
+    texture_h.c
+    texture_asset_h.c
+    types_h.c
+    version_h.c
+    upload_batch_h.c
+    readback_batch_h.c
+    pipeline_warmup_h.c
+    window_h.c
+    window_native_h.c
+    pipeline_material_h.c
+    pipeline_pbr_material_h.c
+    pipeline_mesh_h.c
+    pipeline_render_pipeline_h.c
+    pipeline_scene_h.c
+    pipeline_canvas_draw_list_h.c
+    pipeline_debug_draw_list_h.c
+    pipeline_environment_map_h.c
+    pipeline_text_draw_list_h.c
+    pipeline_text_atlas_h.c
+)
+target_compile_features(granit_c_header_test PRIVATE c_std_11)
+target_link_libraries(
+  granit_c_header_test PRIVATE granit::granit granit::render_pipeline granit::window
+)
+granit_target_compile_warnings(granit_c_header_test)
+
+add_library(
   granit_cpp_header_test
   OBJECT
     content_id_hpp.cpp
