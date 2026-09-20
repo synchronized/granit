@@ -3,8 +3,42 @@
 
 # CI 与验证
 
-本文档说明 `.github/workflows/` 下各个 workflow 的职责、触发方式与覆盖矩阵，帮助判断
-"一次改动应该跑哪些检查"以及"某个 preset 是否进入 CI 必过矩阵"。
+本文档说明 `.github/workflows/` 下各个 workflow 的职责、触发方式与覆盖矩阵，以及它们
+在"开发到发布"流程中的位置，帮助判断"一次改动应该跑哪些检查"以及"某个 preset 是否进入
+CI 必过矩阵"。
+
+## 开发到发布的工作流
+
+Granit 采用主干开发（GitHub Flow）：feature 分支通过 PR 合并到 `main`，发布时从 `main`
+打 tag。各 workflow 落在流程的不同验证层级：
+
+| 阶段 | 动作 | 相关 workflow / 脚本 |
+|---|---|---|
+| 开发 | feature 分支写代码，按需手动验证对应平台 | `linux` / `windows` / `emscripten`（按需） |
+| PR 门禁 | 开 PR，按 diff 快速检查 | `quick-check`（`suite=auto`） |
+| 合并 | PR 通过后合并到 `main` | — |
+| 发布准备 | 升级版本号、更新 README/CHANGELOG | `scripts/release.sh <version>` |
+| 完整验证 | 发布前跑全平台矩阵 | `linux` + `windows` + `emscripten` |
+| 打 tag | 创建并推送 `vX.Y.Z` | `git tag vX.Y.Z && git push` |
+| 发布 | tag 触发构建产物与发布 | `release` |
+
+```text
+feature 分支 ──PR──> quick-check ──合并──> main
+                                          │
+                            scripts/release.sh <version>
+                                          │
+                     linux + windows + emscripten（完整验证）
+                                          │
+                              git tag vX.Y.Z + push
+                                          │
+                              release（自动发布）
+```
+
+三个验证层级：`quick-check` 是 PR 门禁，`linux`/`windows`/`emscripten` 是发布前的完整验证，
+`release` 是打 tag 后的发布。各 workflow 的配置见下文，发布细节见[发布验收](release.md)。
+
+> 上表的 PR 门禁是目标流程；当前 `quick-check` 仍为手动触发（见[触发机制](#触发机制)），
+> 如需每次 PR 自动门禁，可为 `quick-check` 接入 `pull_request` 触发。
 
 ## 触发机制
 
@@ -29,7 +63,7 @@
 | `windows` | 手动 | Windows 完整验证 | MSVC × shared / static |
 | `emscripten` | 手动 | 浏览器 WebGPU 构建与行为验证 | Linux + Emscripten |
 | `release` | `v*` tag + 手动 | 发布产物构建、校验与发布 | win / linux × shared / static |
-| `shader-toolchain` | 手动（`run_windows` / `run_linux`） | 打包锁定 Shader 工具链 | win / linux |
+| `package-shader-toolchain` | 手动（`run_windows` / `run_linux`） | 打包锁定 Shader 工具链 | win / linux |
 | `linux-ci-image` | 手动 + `main` 改 Dockerfile | 构建自定义 CI Runner 镜像 | Linux |
 
 ## 各 workflow 说明
@@ -68,14 +102,14 @@
 测试）→ `checksums`（SHA-256）→ `publish`（创建 GitHub Release）→ `verify-public-release`
 （从公开 Release 重新下载校验）。流程细节见[发布](release.md)。
 
-### `shader-toolchain` —— 工具链打包（区别于验证）
+### `package-shader-toolchain` —— 工具链打包（区别于验证）
 
-注意区分两个同名概念：
+注意区分生产与消费两方：
 
 | 位置 | 角色 |
 | --- | --- |
-| `linux.yml` / `windows.yml` 内的 `shader-toolchain` job | **消费方**：下载并校验锁定工具链，供后续构建/测试使用 |
-| 独立的 `shader-toolchain.yml` | **生产方**：构建 DXC/Tint 并打包成锁定工具链产物 |
+| `linux.yml` / `windows.yml` 内的 `restore-shader-toolchain` job | **消费方**：下载并校验锁定工具链，供后续构建/测试使用 |
+| 独立的 `package-shader-toolchain.yml` | **生产方**：构建 DXC/Tint 并打包成锁定工具链产物 |
 
 ## CI 覆盖矩阵
 
