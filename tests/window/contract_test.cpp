@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <granit/window.h>
+#include <granit/window.hpp>
 
 #include <catch2/catch_all.hpp>
 
@@ -73,4 +74,25 @@ TEST_CASE("Window System 在当前平台直接拥有输入状态和事件队列"
         GRANIT_ERROR_INVALID_HANDLE);
   CHECK(keyboard.modifiers == 0);
   REQUIRE(granit_window_system_destroy(window_system) == GRANIT_SUCCESS);
+}
+
+TEST_CASE("Window创建把空Window System归类为无效句柄", "[window][contract]") {
+  CHECK(granit_window_system_process_events(UINT64_MAX) == GRANIT_ERROR_INVALID_HANDLE);
+  granit_surface surface = UINT64_C(42);
+  CHECK(granit_window_create_surface(UINT64_MAX, UINT64_C(1), UINT64_C(1), &surface) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(surface == GRANIT_NULL_HANDLE);
+  CHECK(granit_window_create_surface(UINT64_MAX, UINT64_C(1), UINT64_C(1), nullptr) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+
+  granit_window_desc desc = GRANIT_WINDOW_DESC_INIT;
+  desc.width = 1;
+  desc.height = 1;
+  granit_window handle = UINT64_C(1);
+  CHECK(granit_window_create(GRANIT_NULL_HANDLE, &desc, &handle) == GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(handle == GRANIT_NULL_HANDLE);
+
+  granit::window window;
+  CHECK(window.initialize(GRANIT_NULL_HANDLE, {.title = "", .width = 1, .height = 1}) ==
+        granit::result::invalid_handle);
 }

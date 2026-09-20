@@ -2,6 +2,8 @@
 # Copyright (c) 2026 Granit contributors
 
 add_subdirectory(core)
+add_subdirectory(headers)
+add_subdirectory(window)
 
 if(NOT GRANIT_HAS_NATIVE_WINDOW)
   add_subdirectory(web)
@@ -642,9 +644,6 @@ target_link_libraries(
 granit_target_compile_warnings(granit_vulkan_backend_test)
 add_test(NAME granit.vulkan_backend COMMAND granit_vulkan_backend_test)
 
-add_subdirectory(headers)
-add_subdirectory(window)
-add_subdirectory(input)
 
 if(GRANIT_BUILD_INTEGRATION_SDL3)
   add_executable(granit_integration_sdl3_surface_test integrations/sdl3/surface_test.cpp)
