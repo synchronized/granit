@@ -20,7 +20,7 @@ target_include_directories(
 )
 target_link_libraries(
   granit_web_model_viewer_platform
-  PUBLIC granit::granit granit_example_model_viewer_support granit_example_web
+  PUBLIC granit::granit granit::window granit_example_model_viewer_support granit_example_web
 )
 granit_target_webgpu(granit_web_model_viewer_platform)
 granit_target_compile_warnings(granit_web_model_viewer_platform)

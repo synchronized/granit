@@ -27,6 +27,7 @@ void granit_window_h_header_test(void) {
   (void)granit_test_window_system;
   (void)granit_test_window;
   granit_test_window_system_desc.backend = GRANIT_WINDOW_BACKEND_AUTO;
+  granit_test_window_system_desc.backend = GRANIT_WINDOW_BACKEND_EMSCRIPTEN;
   granit_test_window_desc.width = UINT32_C(640);
   granit_test_window_event.type = GRANIT_WINDOW_EVENT_RESIZED;
   granit_test_window_state.width = UINT32_C(640);

@@ -8,6 +8,16 @@
 
 ## Unreleased
 
+### 新增
+
+- Window component 新增 Emscripten 后端；浏览器应用可以通过与 Win32、XCB、Wayland 相同的
+  Window System、Window、输入轮询和 `granit_window_create_surface` 接口管理默认 Canvas。
+
+### 变更
+
+- Emscripten 安装包现在提供 `Window` component；浏览器 Model Viewer 已移除私有 DOM 输入和
+  Canvas Surface 创建路径，统一使用公共 Window 接口。
+
 ## 0.25.0 - 2026-09-16
 
 ### 变更

@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <granit/pipeline/render_pipeline.h>
+#include <granit/window/window.h>
 #include <unity.h>
 
 void setUp(void) {}
@@ -15,8 +16,13 @@ static void installed_pipeline_rejects_invalid_renderer(void) {
   TEST_ASSERT_TRUE(pipeline == GRANIT_NULL_HANDLE);
 }
 
+static void installed_window_exposes_browser_backend(void) {
+  TEST_ASSERT_EQUAL_UINT32(UINT32_C(4), GRANIT_WINDOW_BACKEND_EMSCRIPTEN);
+}
+
 int main(void) {
   UNITY_BEGIN();
   RUN_TEST(installed_pipeline_rejects_invalid_renderer);
+  RUN_TEST(installed_window_exposes_browser_backend);
   return UNITY_END();
 }

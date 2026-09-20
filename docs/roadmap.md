@@ -29,6 +29,14 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 
 ## 最近完成
 
+### S-47：Window 跨平台入口收敛
+
+**状态：已完成，P1。**
+
+[S-47](plans/S-47-window-platform-convergence.md) 已让 Emscripten 与桌面平台共享 Window System、
+窗口和输入事件、状态查询及 Surface 创建流程。浏览器安装包现在导出 Window component，Model
+Viewer 不再维护私有 DOM 输入和 Canvas Surface 生命周期。
+
 ### S-45：0.26.0 文档一致性与历史收敛
 
 **状态：已完成，P1。**

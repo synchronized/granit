@@ -275,10 +275,8 @@ install(
   COMPONENT RenderPipeline
 )
 
-# 原生窗口及其输入适配器尚无浏览器实现，保留真实的平台边界。
-if(GRANIT_HAS_NATIVE_WINDOW)
-  add_subdirectory(window)
-endif()
+# Window component 在桌面管理原生窗口，在浏览器管理默认 Canvas 与 DOM 输入。
+add_subdirectory(window)
 
 if(GRANIT_NEEDS_SDL3)
   add_subdirectory(integrations/sdl3)

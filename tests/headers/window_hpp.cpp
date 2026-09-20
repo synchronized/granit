@@ -14,3 +14,5 @@ static_assert(std::is_move_constructible_v<granit::window>);
 static_assert(!std::is_copy_constructible_v<granit::window>);
 static_assert(static_cast<std::uint32_t>(granit::window_backend::win32) ==
               GRANIT_WINDOW_BACKEND_WIN32);
+static_assert(static_cast<std::uint32_t>(granit::window_backend::emscripten) ==
+              GRANIT_WINDOW_BACKEND_EMSCRIPTEN);

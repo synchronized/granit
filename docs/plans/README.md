@@ -9,6 +9,8 @@
 
 ## 最近完成
 
+- [S-47：Window 跨平台入口收敛](S-47-window-platform-convergence.md)——让 Emscripten 与
+  Win32、XCB、Wayland 共享 Window、输入和 Surface 公共流程。
 - [S-45：0.26.0 文档一致性与历史收敛](S-45-0.26.0-documentation-convergence.md)——修正当前
   事实漂移，收敛文档职责与自动检查。
 

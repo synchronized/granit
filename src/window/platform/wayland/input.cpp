@@ -3,6 +3,8 @@
 
 #include "window/platform/wayland/input.h"
 
+#include "window/input/state_utils.h"
+
 #include <xkbcommon/xkbcommon.h>
 
 #include <new>
@@ -209,11 +211,6 @@ void set_key(granit_keyboard_state& state, std::uint32_t key, bool pressed) noex
     state.pressed_keys[key / 64] &= ~mask;
 }
 
-bool key_is_pressed(const granit_keyboard_state& state, std::uint32_t key) noexcept {
-  return key != GRANIT_PHYSICAL_KEY_UNKNOWN && key < 256 &&
-         (state.pressed_keys[key / 64] & (UINT64_C(1) << (key % 64))) != 0;
-}
-
 std::uint32_t button_bit(std::uint32_t button) noexcept {
   switch (button) {
   case UINT32_C(0x110):
@@ -285,19 +282,7 @@ void wayland_input_adapter::modifiers(granit_window window, std::uint32_t depres
     static_cast<void>(
         xkb_state_update_mask(implementation_->state, depressed, latched, locked, 0, 0, group));
     auto& keyboard = sink.keyboard(sink.user_data, window);
-    keyboard.modifiers = 0;
-    const auto add_pressed = [&](std::uint32_t physical, std::uint32_t modifier) {
-      if (key_is_pressed(keyboard, physical))
-        keyboard.modifiers |= modifier;
-    };
-    add_pressed(GRANIT_PHYSICAL_KEY_LEFT_SHIFT, GRANIT_MODIFIER_LEFT_SHIFT_BIT);
-    add_pressed(GRANIT_PHYSICAL_KEY_RIGHT_SHIFT, GRANIT_MODIFIER_RIGHT_SHIFT_BIT);
-    add_pressed(GRANIT_PHYSICAL_KEY_LEFT_CONTROL, GRANIT_MODIFIER_LEFT_CONTROL_BIT);
-    add_pressed(GRANIT_PHYSICAL_KEY_RIGHT_CONTROL, GRANIT_MODIFIER_RIGHT_CONTROL_BIT);
-    add_pressed(GRANIT_PHYSICAL_KEY_LEFT_ALT, GRANIT_MODIFIER_LEFT_ALT_BIT);
-    add_pressed(GRANIT_PHYSICAL_KEY_RIGHT_ALT, GRANIT_MODIFIER_RIGHT_ALT_BIT);
-    add_pressed(GRANIT_PHYSICAL_KEY_LEFT_SUPER, GRANIT_MODIFIER_LEFT_SUPER_BIT);
-    add_pressed(GRANIT_PHYSICAL_KEY_RIGHT_SUPER, GRANIT_MODIFIER_RIGHT_SUPER_BIT);
+    keyboard.modifiers = pressed_key_modifiers(keyboard);
     const auto active = [&](const char* name) {
       return xkb_state_mod_name_is_active(implementation_->state, name, XKB_STATE_MODS_EFFECTIVE) >
              0;
@@ -317,21 +302,9 @@ void wayland_input_adapter::key(granit_window window, std::uint32_t key, bool pr
   const auto symbol = implementation_ != nullptr && implementation_->state != nullptr
                           ? xkb_state_key_get_one_sym(implementation_->state, xkb_key)
                           : XKB_KEY_NoSymbol;
-  const bool repeated = pressed && key_is_pressed(keyboard, physical);
+  const bool repeated = pressed && input_key_pressed(keyboard, physical);
   set_key(keyboard, physical, pressed);
-  keyboard.modifiers = 0;
-  const auto add_pressed = [&](std::uint32_t physical_key, std::uint32_t modifier) {
-    if (key_is_pressed(keyboard, physical_key))
-      keyboard.modifiers |= modifier;
-  };
-  add_pressed(GRANIT_PHYSICAL_KEY_LEFT_SHIFT, GRANIT_MODIFIER_LEFT_SHIFT_BIT);
-  add_pressed(GRANIT_PHYSICAL_KEY_RIGHT_SHIFT, GRANIT_MODIFIER_RIGHT_SHIFT_BIT);
-  add_pressed(GRANIT_PHYSICAL_KEY_LEFT_CONTROL, GRANIT_MODIFIER_LEFT_CONTROL_BIT);
-  add_pressed(GRANIT_PHYSICAL_KEY_RIGHT_CONTROL, GRANIT_MODIFIER_RIGHT_CONTROL_BIT);
-  add_pressed(GRANIT_PHYSICAL_KEY_LEFT_ALT, GRANIT_MODIFIER_LEFT_ALT_BIT);
-  add_pressed(GRANIT_PHYSICAL_KEY_RIGHT_ALT, GRANIT_MODIFIER_RIGHT_ALT_BIT);
-  add_pressed(GRANIT_PHYSICAL_KEY_LEFT_SUPER, GRANIT_MODIFIER_LEFT_SUPER_BIT);
-  add_pressed(GRANIT_PHYSICAL_KEY_RIGHT_SUPER, GRANIT_MODIFIER_RIGHT_SUPER_BIT);
+  keyboard.modifiers = pressed_key_modifiers(keyboard);
   if (implementation_ != nullptr && implementation_->state != nullptr) {
     const auto active = [&](const char* name) {
       return xkb_state_mod_name_is_active(implementation_->state, name, XKB_STATE_MODS_EFFECTIVE) >

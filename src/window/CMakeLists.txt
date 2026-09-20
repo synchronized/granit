@@ -19,6 +19,9 @@ if(GRANIT_HAS_WAYLAND_INPUT)
     granit_window_input_internal SYSTEM PRIVATE "${GRANIT_XKBCOMMON_INCLUDE_DIR}"
   )
 endif()
+if(GRANIT_IS_EMSCRIPTEN)
+  target_sources(granit_window_input_internal PRIVATE platform/emscripten/input.cpp)
+endif()
 granit_target_compile_warnings(granit_window_input_internal)
 set_target_properties(
   granit_window_input_internal
@@ -44,12 +47,14 @@ target_sources(
           input/native_event.h
           input/platform_adapter.cpp
           input/platform_adapter.h
+          input/state_utils.h
           $<TARGET_OBJECTS:granit_window_input_internal>
           $<$<PLATFORM_ID:Windows>:platform/win32/window.cpp>
           $<$<PLATFORM_ID:Windows>:platform/win32/input.cpp>
           $<$<BOOL:${GRANIT_HAS_XCB}>:platform/xcb/window.cpp>
           $<$<BOOL:${GRANIT_HAS_WAYLAND_SHELL}>:platform/wayland/window.cpp>
           $<$<BOOL:${GRANIT_HAS_WAYLAND_SHELL}>:$<TARGET_OBJECTS:granit_xdg_shell_protocol>>
+          $<$<BOOL:${GRANIT_IS_EMSCRIPTEN}>:platform/emscripten/window.cpp>
   PUBLIC
     FILE_SET HEADERS
     BASE_DIRS "${PROJECT_SOURCE_DIR}/include"

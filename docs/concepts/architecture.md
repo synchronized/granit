@@ -181,10 +181,11 @@ Vulkan 与 WebGPU 不必提供完全对称的内部能力。共同语义由 Regi
 
 ### 操作系统平台层
 
-`src/window` 按 Window component 组织通用句柄与生命周期、输入状态和 Win32、XCB、Wayland
-后端。Window System 独占平台事件泵，同时维护窗口与输入的独立事件队列；输入没有第二套
-System 或动态库。通用 UTF-8 处理位于 `src/core`，平台解码与原生窗口生命周期位于各后端编译
-单元。Renderer 只通过公共 Surface API 接收 Window 创建的输出连接，不反向依赖 Window。
+`src/window` 按 Window component 组织通用句柄与生命周期、输入状态和 Win32、XCB、Wayland、
+Emscripten 后端。Window System 独占平台事件入口，同时维护窗口与输入的独立事件队列；输入没有
+第二套 System 或动态库。通用 UTF-8 处理位于 `src/core`，平台解码与窗口生命周期位于各后端编译
+单元。桌面后端管理原生顶层窗口，Emscripten 后端管理默认 Canvas 与 DOM 回调。Renderer 只通过
+公共 Surface API 接收 Window 创建的输出连接，不反向依赖 Window。
 
 `src/integrations` 不承担操作系统抽象，只保存 SDL3、ImGui 等第三方库与 Granit 公共接口之间的
 可选适配。平台层不得依赖这些集成目标；集成层可以调用 Granit 的 Window 或 Renderer

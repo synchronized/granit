@@ -94,8 +94,9 @@ npm test -- ../../build/emscripten-release/web granit_model_viewer_web.html `
 
 ## 安装静态库
 
-浏览器核心库与 RenderPipeline 使用同一套安装导出规则；当前不提供原生 Window/Input 组件。
-库输出统一放在构建目录的 `lib/`，浏览器 HTML/JS/Wasm 仍位于 `web/`。
+浏览器核心库、RenderPipeline 与 Window 使用同一套安装导出规则。Window 在浏览器中管理默认
+`#canvas`、DOM 输入和 Canvas Surface，不暴露浏览器原生对象。库输出统一放在构建目录的 `lib/`，
+浏览器 HTML/JS/Wasm 仍位于 `web/`。
 
 ```powershell
 cmake --install build/emscripten-release --prefix build/emscripten-sdk
@@ -106,5 +107,5 @@ ctest --test-dir build/emscripten-consumer --output-on-failure
 ```
 
 消费端使用相同的 Emscripten 工具链，通过 `find_package(granit CONFIG REQUIRED)` 链接
-`granit::granit`；需要参考渲染管线时请求 `RenderPipeline` 组件。显式指定 `granit_DIR` 可避免
-交叉编译工具链只在 sysroot 内搜索包。
+`granit::granit`；需要参考渲染管线或统一窗口输入时分别请求 `RenderPipeline`、`Window` 组件。
+显式指定 `granit_DIR` 可避免交叉编译工具链只在 sysroot 内搜索包。

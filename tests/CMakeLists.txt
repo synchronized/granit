@@ -718,7 +718,9 @@ add_test(NAME granit.window COMMAND granit_window_test)
 add_executable(
   granit_window_input_test
   input/input_api_test.cpp
+  input/emscripten_input_adapter_test.cpp
   input/utf8_test.cpp
+  "${PROJECT_SOURCE_DIR}/src/window/platform/emscripten/input.cpp"
   $<TARGET_OBJECTS:granit_window_input_internal>
 )
 if(GRANIT_HAS_XCB)
