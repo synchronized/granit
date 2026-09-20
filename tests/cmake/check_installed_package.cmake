@@ -10,6 +10,22 @@ if(NOT DEFINED GRANIT_TEST_CONFIGURATION)
   set(GRANIT_TEST_CONFIGURATION Release)
 endif()
 
+# 从根 CMakeLists.txt 读取当前版本，派生当前 minor、精确版本与下一 minor。
+file(READ "${GRANIT_SOURCE_DIR}/CMakeLists.txt" granit_root_cmake)
+string(
+  REGEX MATCH
+  "project\\([ \t\r\n]*granit[ \t\r\n]+VERSION[ \t\r\n]+([0-9]+)\\.([0-9]+)\\.([0-9]+)"
+  granit_project_match
+  "${granit_root_cmake}"
+)
+if(NOT granit_project_match)
+  message(FATAL_ERROR "无法从根 CMakeLists.txt 读取 Granit 版本")
+endif()
+set(granit_current_minor "${CMAKE_MATCH_1}.${CMAKE_MATCH_2}")
+set(granit_current_version "${CMAKE_MATCH_1}.${CMAKE_MATCH_2}.${CMAKE_MATCH_3}")
+math(EXPR granit_next_minor_number "${CMAKE_MATCH_2} + 1")
+set(granit_next_minor "${CMAKE_MATCH_1}.${granit_next_minor_number}")
+
 function(granit_check_package name expected_success)
   execute_process(
     COMMAND
@@ -44,16 +60,16 @@ function(granit_check_package name expected_success)
   endif()
 endfunction()
 
-granit_check_package(core_only TRUE -DGRANIT_REQUEST_VERSION=0.25)
-granit_check_package(render_pipeline TRUE -DGRANIT_REQUEST_VERSION=0.25
+granit_check_package(core_only TRUE -DGRANIT_REQUEST_VERSION=${granit_current_minor})
+granit_check_package(render_pipeline TRUE -DGRANIT_REQUEST_VERSION=${granit_current_minor}
                      -DGRANIT_REQUEST_COMPONENT=RenderPipeline)
-granit_check_package(window TRUE -DGRANIT_REQUEST_VERSION=0.25
+granit_check_package(window TRUE -DGRANIT_REQUEST_VERSION=${granit_current_minor}
                      -DGRANIT_REQUEST_COMPONENT=Window)
 if(EXISTS "${GRANIT_INSTALL_PREFIX}/lib/cmake/granit/granitAssetToolsTargets.cmake")
-  granit_check_package(asset_tools TRUE -DGRANIT_REQUEST_VERSION=0.25
+  granit_check_package(asset_tools TRUE -DGRANIT_REQUEST_VERSION=${granit_current_minor}
                        -DGRANIT_REQUEST_COMPONENT=AssetTools)
 else()
-  granit_check_package(asset_tools_unavailable FALSE -DGRANIT_REQUEST_VERSION=0.25
+  granit_check_package(asset_tools_unavailable FALSE -DGRANIT_REQUEST_VERSION=${granit_current_minor}
                        -DGRANIT_REQUEST_COMPONENT=AssetTools)
 endif()
 granit_check_package(older_0_7 FALSE -DGRANIT_REQUEST_VERSION=0.7)
@@ -77,8 +93,8 @@ granit_check_package(older_0_21 FALSE -DGRANIT_REQUEST_VERSION=0.21)
 granit_check_package(older_0_22 FALSE -DGRANIT_REQUEST_VERSION=0.22)
 granit_check_package(older_0_23 FALSE -DGRANIT_REQUEST_VERSION=0.23)
 granit_check_package(older_0_24 FALSE -DGRANIT_REQUEST_VERSION=0.24)
-granit_check_package(exact TRUE -DGRANIT_REQUEST_VERSION=0.25.0 -DGRANIT_REQUEST_EXACT=ON)
-granit_check_package(newer_minor FALSE -DGRANIT_REQUEST_VERSION=0.26)
+granit_check_package(exact TRUE -DGRANIT_REQUEST_VERSION=${granit_current_version} -DGRANIT_REQUEST_EXACT=ON)
+granit_check_package(newer_minor FALSE -DGRANIT_REQUEST_VERSION=${granit_next_minor})
 granit_check_package(incompatible_major FALSE -DGRANIT_REQUEST_VERSION=1.0)
 granit_check_package(unknown_component FALSE -DGRANIT_REQUEST_COMPONENT=Unknown)
 granit_check_package(removed_input FALSE -DGRANIT_REQUEST_COMPONENT=Input)
