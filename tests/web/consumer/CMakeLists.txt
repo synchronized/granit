@@ -23,7 +23,7 @@ endif()
 # 复用仓库测试及其依赖，验证安装目标，不将测试框架引入安装导出。
 get_filename_component(repository_dir "${CMAKE_CURRENT_SOURCE_DIR}/../../.." ABSOLUTE)
 set(GRANIT_BUILD_TESTING ON)
-include("${repository_dir}/cmake/utility.cmake")
+include("${repository_dir}/cmake/granit_utility.cmake")
 add_subdirectory("${repository_dir}/3rd" third_party)
 add_subdirectory("${repository_dir}/tests/core" core)
 add_executable(granit_web_pipeline_c_consumer pipeline_c_test.c)
