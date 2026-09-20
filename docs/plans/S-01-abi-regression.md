@@ -62,7 +62,7 @@ S-01 为这些边界建立自动回归，保证未来开始兼容承诺时已有
 - 静态库构建不依赖动态加载 API，现有 C/C++ Consumer 继续通过。
 - 文档明确区分“能够检测变化”和“承诺不发生变化”。
 
-首份 Core 与可选 component 快照位于 `tests/abi/snapshots/0.1.0`。它们是变更检测基线，不改变
+首份 Core 与可选 component 快照位于 `tests/contracts/abi/snapshots/0.1.0`。它们是变更检测基线，不改变
 当前 0.x 兼容承诺。
 
 ## 风险与未决问题

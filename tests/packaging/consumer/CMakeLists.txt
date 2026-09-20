@@ -9,7 +9,7 @@ set_property(DIRECTORY APPEND PROPERTY LABELS package)
 include(CTest)
 
 # 从根 CMakeLists.txt 读取期望版本，避免与发布版本号不同步。
-file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../../CMakeLists.txt" granit_root_cmake)
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../../../CMakeLists.txt" granit_root_cmake)
 string(
   REGEX MATCH
   "project\\([ \t\r\n]*granit[ \t\r\n]+VERSION[ \t\r\n]+([0-9]+)\\.([0-9]+)\\.([0-9]+)"

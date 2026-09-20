@@ -77,7 +77,7 @@ required check。
 | --- | --- | --- |
 | `webgpu` | 改动 Web 后端 / Web 示例 / `granit_web` / `emscripten.yml` | 编译 WebGPU 快速验证目标 |
 | `documentation` | 仅改动 `docs/`、`README`、`CHANGELOG` 等文档 | 文档检查 |
-| `headers` | 改动 `include/`、`tests/headers/`、`cmake/` | 头文件检查 |
+| `headers` | 改动 `include/`、`tests/contracts/headers/`、`cmake/` | 头文件检查 |
 | `core` | 其他改动或无改动 | 单元与 Smoke 测试 |
 
 `auto` 之外的四个值都可手动指定，跳过按 diff 判定的步骤。

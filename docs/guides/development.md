@@ -87,7 +87,8 @@ ctest --preset <preset>
 公开 C API 的行为测试使用 Unity，并由 C 编译器构建，确保 `.h` 公共入口没有意外引入
 C++ 语法。C++20 包装层和内部实现测试使用 Catch2 3。两套测试统一由 CTest 执行。
 
-新增公共 `.h` 或 `.hpp` 时，应在 `tests/headers/` 增加单独的编译单元，不能只通过总入口头文件
+新增公共 `.h` 或 `.hpp` 时，应在 `tests/contracts/headers/` 增加单独的编译单元，不能只通过
+总入口头文件
 间接验证。
 
 ## 分支、提交与 Actions

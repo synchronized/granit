@@ -62,7 +62,7 @@ jobs:
               '^(docs/|README\.md$|DOCUMENTATION_GUIDE\.md$|CHANGELOG\.md$)'; then
               suite=documentation
             elif printf '%s\n' "${files[@]}" | grep -qE \
-              '^(include/|tests/headers/|cmake/|CMakeLists\.txt$)'; then
+              '^(include/|tests/contracts/headers/|cmake/|CMakeLists\.txt$)'; then
               suite=headers
             else
               suite=core

@@ -30,7 +30,7 @@ function(granit_check_package name expected_success)
   execute_process(
     COMMAND
       "${CMAKE_COMMAND}"
-      -S "${GRANIT_SOURCE_DIR}/tests/package"
+      -S "${GRANIT_SOURCE_DIR}/tests/packaging/component_selection"
       -B "${GRANIT_TEST_BINARY_DIR}/${name}"
       "-DCMAKE_PREFIX_PATH=${GRANIT_INSTALL_PREFIX}"
       "-DCMAKE_BUILD_TYPE=${GRANIT_TEST_CONFIGURATION}"

@@ -102,7 +102,7 @@ cmake -S consumer -B consumer/build -DCMAKE_PREFIX_PATH=/path/to/granit/install
 仓库提供独立的 C11/C++20 Consumer 验证工程，可用于检查安装包而不访问源码目标：
 
 ```sh
-cmake -S tests/consumer -B build/consumer -DCMAKE_PREFIX_PATH=/path/to/granit/install
+cmake -S tests/packaging/consumer -B build/consumer -DCMAKE_PREFIX_PATH=/path/to/granit/install
 cmake --build build/consumer
 ctest --test-dir build/consumer --output-on-failure
 ```
@@ -118,7 +118,7 @@ component 会被拒绝：
 cmake -DGRANIT_SOURCE_DIR=/path/to/granit \
   -DGRANIT_INSTALL_PREFIX=/path/to/granit/install \
   -DGRANIT_TEST_BINARY_DIR=/path/to/granit/build/package-check \
-  -P /path/to/granit/tests/cmake/check_installed_package.cmake
+  -P /path/to/granit/tests/packaging/check_installed_package.cmake
 ```
 
 安装导出审计用于检查必要文件，并防止源码路径、构建路径、测试库和 Vulkan 私有依赖泄漏：

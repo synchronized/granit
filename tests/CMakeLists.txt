@@ -4,7 +4,6 @@
 set(GRANIT_TEST_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 
 add_subdirectory(core)
-add_subdirectory(headers)
 add_subdirectory(window)
 
 if(NOT GRANIT_HAS_NATIVE_WINDOW)
@@ -13,6 +12,7 @@ if(NOT GRANIT_HAS_NATIVE_WINDOW)
 endif()
 
 add_subdirectory(asset_tools)
+add_subdirectory(contracts/headers)
 add_subdirectory(backend)
 add_subdirectory(render_graph)
 add_subdirectory(math)
@@ -22,7 +22,8 @@ add_subdirectory(lighting)
 add_subdirectory(pipeline)
 add_subdirectory(material)
 add_subdirectory(renderer)
-add_subdirectory(abi)
+add_subdirectory(contracts/abi)
+add_subdirectory(packaging)
 
 set(granit_smoke_asset_dir "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke")
 set(
@@ -59,34 +60,4 @@ add_test(
     -P "${PROJECT_SOURCE_DIR}/tests/cmake/check_documentation.cmake"
 )
 
-add_test(
-  NAME granit.build_tree_consumers
-  COMMAND
-    "${CMAKE_COMMAND}" "-DGRANIT_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
-    "-DGRANIT_TEST_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/build-tree-consumers"
-    -P "${PROJECT_SOURCE_DIR}/tests/cmake/check_build_tree_consumers.cmake"
-)
-
-add_test(
-  NAME granit.release_version
-  COMMAND
-    "${CMAKE_COMMAND}"
-    "-DGRANIT_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
-    "-DGRANIT_RELEASE_TAG=v${PROJECT_VERSION}"
-    -P "${PROJECT_SOURCE_DIR}/tests/cmake/check_release_version.cmake"
-)
-add_test(
-  NAME granit.release_version_mismatch
-  COMMAND
-    "${CMAKE_COMMAND}"
-    "-DGRANIT_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
-    -DGRANIT_RELEASE_TAG=v999.0.0
-    -P "${PROJECT_SOURCE_DIR}/tests/cmake/check_release_version.cmake"
-)
-set_tests_properties(granit.release_version_mismatch PROPERTIES WILL_FAIL TRUE)
-
 set_property(TEST granit.documentation APPEND PROPERTY LABELS unit)
-set_property(
-  TEST granit.build_tree_consumers granit.release_version granit.release_version_mismatch
-  APPEND PROPERTY LABELS package release
-)

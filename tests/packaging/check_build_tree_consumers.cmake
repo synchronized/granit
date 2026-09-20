@@ -8,7 +8,7 @@ endif()
 foreach(mode IN ITEMS add_subdirectory fetch_content)
   execute_process(
     COMMAND
-      "${CMAKE_COMMAND}" -S "${GRANIT_SOURCE_DIR}/tests/build_tree"
+      "${CMAKE_COMMAND}" -S "${GRANIT_SOURCE_DIR}/tests/packaging/build_tree"
       -B "${GRANIT_TEST_BINARY_DIR}/${mode}" "-DGRANIT_SOURCE_DIR=${GRANIT_SOURCE_DIR}"
       "-DGRANIT_CONSUMER_MODE=${mode}"
     RESULT_VARIABLE result

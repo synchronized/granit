@@ -4,7 +4,6 @@
 add_library(
   granit_c_header_test
   OBJECT
-    ../abi/layout_h.c
     content_id_h.c
     diagnostic_h.c
     async_operation_h.c

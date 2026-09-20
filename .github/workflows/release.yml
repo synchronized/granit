@@ -34,7 +34,7 @@ jobs:
       - name: 校验标签与项目版本
         run: >-
           cmake -DGRANIT_SOURCE_DIR="$PWD" -DGRANIT_RELEASE_TAG="$RELEASE_TAG"
-          -P tests/cmake/check_release_version.cmake
+          -P tests/packaging/check_release_version.cmake
 
   windows-package:
     if: github.event_name == 'workflow_dispatch'

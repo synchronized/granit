@@ -93,14 +93,14 @@ jobs:
             -DGRANIT_SOURCE_DIR="$PWD" `
             -DGRANIT_INSTALL_PREFIX="$prefix" `
             -DGRANIT_TEST_BINARY_DIR="$PWD/build/package/$preset" `
-            -P tests/cmake/check_installed_package.cmake
+            -P tests/packaging/check_installed_package.cmake
       - name: 构建并运行独立 C 和 C++ Consumer
         shell: pwsh
         run: |
           $preset = '${{ steps.preset.outputs.name }}'
           $prefix = "$PWD/build/install/$preset"
           $consumer = "$PWD/build/consumer/$preset"
-          cmake -S tests/consumer -B $consumer -G Ninja -DCMAKE_BUILD_TYPE=Release `
+          cmake -S tests/packaging/consumer -B $consumer -G Ninja -DCMAKE_BUILD_TYPE=Release `
             -DCMAKE_PREFIX_PATH="$prefix" `
             -DCMAKE_C_COMPILER_LAUNCHER=sccache `
             -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
