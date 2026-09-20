@@ -46,7 +46,7 @@ CSV 记录窗口尺寸、帧槽、Validation、Present Mode、CPU 阶段和 GPU 
 完整步骤见[浏览器 WebGPU 指南](webgpu-browser-example.md)；这里仅保留最小运行入口：
 
 ```powershell
-$env:EMSDK = "D:/sunday/programs/emsdk"
+emsdk_env
 cmake --preset emscripten-release
 cmake --build --preset emscripten-release --target granit_imgui_web
 python -m http.server 8000 --directory build/emscripten-release/web

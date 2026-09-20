@@ -15,7 +15,7 @@ Framebuffer 尺寸的 `GRANIT_WINDOW_EVENT_SCALE_CHANGED`，但没有对应的�
 
 ## 审查范围
 
-- Gneiss 仓库：`D:/sunday/workspace/build/github/synchronized/gneiss`
+- Gneiss 仓库：`../gneiss`
 - Gneiss 分支：`feat/ver022-asset-hot-reload`
 - Granit 依赖：Package、Fetch 或父工程既有目标，最低版本 0.4，Fetch 锁定完整提交。
 - 审查方式：只读检查依赖解析、Application、Platform Service、Render Service、测试与现有计划。
