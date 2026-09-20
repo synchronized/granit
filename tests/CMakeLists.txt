@@ -239,18 +239,6 @@ granit_target_compile_warnings(granit_handle_table_test)
 add_test(NAME granit.handle_table COMMAND granit_handle_table_test)
 
 add_executable(
-  granit_sha256_test
-  core/sha256_test.cpp
-  "${PROJECT_SOURCE_DIR}/src/core/sha256.cpp"
-)
-target_include_directories(
-  granit_sha256_test PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/include"
-)
-target_link_libraries(granit_sha256_test PRIVATE Catch2::Catch2WithMain)
-granit_target_compile_warnings(granit_sha256_test)
-add_test(NAME granit.sha256 COMMAND granit_sha256_test)
-
-add_executable(
   granit_async_operation_state_test
   core/async_operation_state_test.cpp
   "${PROJECT_SOURCE_DIR}/src/core/async_operation_state.cpp"
@@ -654,52 +642,7 @@ target_link_libraries(
 granit_target_compile_warnings(granit_vulkan_backend_test)
 add_test(NAME granit.vulkan_backend COMMAND granit_vulkan_backend_test)
 
-add_library(
-  granit_cpp_header_test
-  OBJECT
-    headers/content_id_hpp.cpp
-    headers/diagnostic_hpp.cpp
-    headers/async_operation_hpp.cpp
-    headers/command_recorder_hpp.cpp
-    headers/frame_context_hpp.cpp
-    headers/math_types_hpp.cpp
-    headers/input_hpp.cpp
-    headers/timestamp_query_hpp.cpp
-    headers/pipeline_hpp.cpp
-    headers/buffer_hpp.cpp
-    headers/renderer_hpp.cpp
-    headers/render_target_hpp.cpp
-    headers/resource_types_hpp.cpp
-    headers/sampler_hpp.cpp
-    headers/shader_hpp.cpp
-    headers/shader_types_hpp.cpp
-    headers/shader_library_hpp.cpp
-    headers/result_hpp.cpp
-    headers/surface_hpp.cpp
-    headers/swapchain_hpp.cpp
-    headers/texture_hpp.cpp
-    headers/texture_asset_hpp.cpp
-    headers/types_hpp.cpp
-    headers/upload_batch_hpp.cpp
-    headers/readback_batch_hpp.cpp
-    headers/pipeline_warmup_hpp.cpp
-    headers/pipeline_material_hpp.cpp
-    headers/pipeline_pbr_material_hpp.cpp
-    headers/pipeline_mesh_hpp.cpp
-    headers/pipeline_render_pipeline_hpp.cpp
-    headers/pipeline_environment_map_hpp.cpp
-    headers/pipeline_scene_hpp.cpp
-      headers/pipeline_canvas_draw_list_hpp.cpp
-      headers/pipeline_debug_draw_list_hpp.cpp
-      headers/pipeline_text_draw_list_hpp.cpp
-      headers/pipeline_text_atlas_hpp.cpp
-    headers/window_hpp.cpp
-    headers/window_native_hpp.cpp
-)
-target_link_libraries(
-  granit_cpp_header_test PRIVATE granit::granit granit::render_pipeline granit::window
-)
-granit_target_compile_warnings(granit_cpp_header_test)
+add_subdirectory(headers)
 
 add_executable(granit_window_test window/window_api_test.cpp)
 target_link_libraries(granit_window_test PRIVATE granit::window Catch2::Catch2WithMain)
@@ -719,7 +662,6 @@ add_executable(
   granit_window_input_test
   input/input_api_test.cpp
   input/emscripten_input_adapter_test.cpp
-  input/utf8_test.cpp
   "${PROJECT_SOURCE_DIR}/src/window/platform/emscripten/input.cpp"
   $<TARGET_OBJECTS:granit_window_input_internal>
 )
@@ -790,7 +732,6 @@ set_property(
     granit.backend.native_boundaries
     granit.c_version
     granit.handle_table
-    granit.sha256
     granit.async_operation_state
     granit.resource_validation
     granit.backend_capabilities

@@ -1,0 +1,49 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Granit contributors
+
+add_library(
+  granit_cpp_header_test
+  OBJECT
+    content_id_hpp.cpp
+    diagnostic_hpp.cpp
+    async_operation_hpp.cpp
+    command_recorder_hpp.cpp
+    frame_context_hpp.cpp
+    math_types_hpp.cpp
+    input_hpp.cpp
+    timestamp_query_hpp.cpp
+    pipeline_hpp.cpp
+    buffer_hpp.cpp
+    renderer_hpp.cpp
+    render_target_hpp.cpp
+    resource_types_hpp.cpp
+    sampler_hpp.cpp
+    shader_hpp.cpp
+    shader_types_hpp.cpp
+    shader_library_hpp.cpp
+    result_hpp.cpp
+    surface_hpp.cpp
+    swapchain_hpp.cpp
+    texture_hpp.cpp
+    texture_asset_hpp.cpp
+    types_hpp.cpp
+    upload_batch_hpp.cpp
+    readback_batch_hpp.cpp
+    pipeline_warmup_hpp.cpp
+    pipeline_material_hpp.cpp
+    pipeline_pbr_material_hpp.cpp
+    pipeline_mesh_hpp.cpp
+    pipeline_render_pipeline_hpp.cpp
+    pipeline_environment_map_hpp.cpp
+    pipeline_scene_hpp.cpp
+    pipeline_canvas_draw_list_hpp.cpp
+    pipeline_debug_draw_list_hpp.cpp
+    pipeline_text_draw_list_hpp.cpp
+    pipeline_text_atlas_hpp.cpp
+    window_hpp.cpp
+    window_native_hpp.cpp
+)
+target_link_libraries(
+  granit_cpp_header_test PRIVATE granit::granit granit::render_pipeline granit::window
+)
+granit_target_compile_warnings(granit_cpp_header_test)
