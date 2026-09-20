@@ -1,6 +1,23 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+add_executable(granit_renderer_compute_test integration/compute_test.cpp)
+add_dependencies(granit_renderer_compute_test granit_test_shader_assets)
+target_link_libraries(granit_renderer_compute_test PRIVATE granit::granit)
+target_include_directories(
+  granit_renderer_compute_test PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/tests"
+)
+target_sources(
+  granit_renderer_compute_test PRIVATE $<TARGET_OBJECTS:granit_asset_format_shader>
+)
+target_compile_definitions(
+  granit_renderer_compute_test PRIVATE GRANIT_SMOKE_ASSET_DIR="${GRANIT_SMOKE_TEST_SHADER_DIR}"
+)
+granit_target_compile_warnings(granit_renderer_compute_test)
+granit_target_output_directories(granit_renderer_compute_test)
+add_test(NAME granit.renderer.compute COMMAND granit_renderer_compute_test)
+set_property(TEST granit.renderer.compute APPEND PROPERTY LABELS gpu integration)
+
 add_executable(
   granit_renderer_test
   command_recorder_test.cpp

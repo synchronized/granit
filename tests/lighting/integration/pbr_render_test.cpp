@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "../support/shader_asset_store.h"
-#include "../support/tone_mapping_shader_library.h"
+#include "support/shader_asset_store.h"
+#include "support/tone_mapping_shader_library.h"
 #include "lighting/shadow_ibl_resources.h"
 #include "lighting/tone_mapping_resources.h"
 #include "material/material_gpu_instance.h"
@@ -10,10 +10,10 @@
 #include "material/material_template_gpu.h"
 #include "material/pbr_default_resources.h"
 #include "material/pbr_material_schema.h"
-#include "reference/lighting/ibl_reference.h"
-#include "reference/lighting/lighting_reference.h"
-#include "reference/lighting/tone_mapping_reference.h"
-#include "reference/material/pbr_reference.h"
+#include "support/reference/lighting/ibl_reference.h"
+#include "support/reference/lighting/lighting_reference.h"
+#include "support/reference/lighting/tone_mapping_reference.h"
+#include "support/reference/material/pbr_reference.h"
 #include "support/pbr_test_support.h"
 
 #include <granit/granit.hpp>

@@ -11,7 +11,7 @@ add_test(NAME granit.pbr COMMAND granit_pbr_test)
 
 add_executable(
   granit_material_test
-  ../reference/material/pbr_reference.cpp
+  ../support/reference/material/pbr_reference.cpp
   material_gpu_instance_test.cpp
   material_hot_reload_test.cpp
   material_archive_test.cpp

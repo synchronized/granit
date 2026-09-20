@@ -95,7 +95,7 @@ granit_require_document_text(
 )
 granit_require_document_text(
   "docs/tutorials/05-render-pipeline-offscreen.md"
-  "granit.gpu.render_pipeline"
+  "granit.pipeline.render"
   "RenderPipeline 教程验证命令"
 )
 if(granit_project_version)

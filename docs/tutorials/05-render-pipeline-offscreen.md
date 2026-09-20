@@ -21,7 +21,7 @@ Windows Clang + Ninja：
 ```powershell
 cmake --preset windows-clang-debug
 cmake --build --preset windows-clang-debug
-build/windows-clang-debug/bin/granit_gpu_render_pipeline_test.exe
+build/windows-clang-debug/bin/granit_pipeline_render_test.exe
 ```
 
 成功时程序输出如下形式的消息，具体像素值可能因设备而异：
@@ -33,7 +33,7 @@ Render Pipeline 离屏渲染成功，中心像素：R, G, B
 也可以通过 CTest 单独运行：
 
 ```powershell
-ctest --preset windows-clang-debug -R "^granit.gpu.render_pipeline$"
+ctest --preset windows-clang-debug -R "^granit.pipeline.render$"
 ```
 
 ## 2. 创建 Renderer 和输出目标
@@ -137,4 +137,4 @@ Vertex Buffer 与 Renderer 由 C++ RAII 包装随后释放
 - 绕过参考管线，直接学习 [Command Recorder](../reference/command-recorder.md)。
 
 本教程对应的完整源码位于
-[`tests/gpu/render_pipeline_test.cpp`](../../tests/gpu/render_pipeline_test.cpp)。
+[`tests/pipeline/integration/render_pipeline_test.cpp`](../../tests/pipeline/integration/render_pipeline_test.cpp)。

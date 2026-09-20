@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "../support/shader_asset_store.h"
-#include "../support/tone_mapping_shader_library.h"
+#include "support/shader_asset_store.h"
+#include "support/tone_mapping_shader_library.h"
 #include "lighting/tone_mapping_resources.h"
 #include "material/pbr_material_schema.h"
 #include "support/pbr_test_support.h"

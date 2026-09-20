@@ -1,6 +1,32 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+add_executable(granit_pipeline_render_test integration/render_pipeline_test.cpp)
+add_dependencies(
+  granit_pipeline_render_test
+  granit_asset_tool
+  granit_render_pipeline_test_package
+  granit_test_shader_assets
+)
+target_link_libraries(granit_pipeline_render_test PRIVATE granit::render_pipeline)
+target_compile_definitions(
+  granit_pipeline_render_test
+  PRIVATE GRANIT_RENDER_PIPELINE_SMOKE_PACKAGE="${granit_render_pipeline_test_package}"
+          GRANIT_PIPELINE_ASSET_DIR="${GRANIT_PBR_TEST_SHADER_DIR}"
+)
+target_include_directories(
+  granit_pipeline_render_test PRIVATE "${PROJECT_SOURCE_DIR}/tests" "${PROJECT_SOURCE_DIR}/src"
+)
+target_sources(
+  granit_pipeline_render_test
+  PRIVATE "${granit_render_pipeline_test_package}"
+          $<TARGET_OBJECTS:granit_asset_format_shader>
+)
+granit_target_compile_warnings(granit_pipeline_render_test)
+granit_target_output_directories(granit_pipeline_render_test)
+add_test(NAME granit.pipeline.render COMMAND granit_pipeline_render_test)
+set_property(TEST granit.pipeline.render APPEND PROPERTY LABELS gpu integration)
+
 add_executable(
   granit_pipeline_test
   material_api_test.cpp

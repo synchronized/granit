@@ -88,8 +88,8 @@ ctest --preset <preset>
 C++ 语法。C++20 包装层和内部实现测试使用 Catch2 3。两套测试统一由 CTest 执行。
 
 新增公共 `.h` 或 `.hpp` 时，应在 `tests/contracts/headers/` 增加单独的编译单元，不能只通过
-总入口头文件
-间接验证。
+总入口头文件间接验证。测试的目录归属和 CTest 命名规则见
+[`tests/README.md`](../../tests/README.md)。
 
 ## 分支、提交与 Actions
 

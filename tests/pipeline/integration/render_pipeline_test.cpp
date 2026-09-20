@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "../support/shader_asset_store.h"
+#include "support/shader_asset_store.h"
 #include <granit/granit.hpp>
 #include <granit/pipeline/render_pipeline.h>
 #ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK

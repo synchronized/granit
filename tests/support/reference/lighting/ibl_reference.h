@@ -4,7 +4,7 @@
 #ifndef GRANIT_LIGHTING_IBL_REFERENCE_H
 #define GRANIT_LIGHTING_IBL_REFERENCE_H
 
-#include "reference/material/pbr_reference.h"
+#include "support/reference/material/pbr_reference.h"
 
 namespace granit::lighting {
 

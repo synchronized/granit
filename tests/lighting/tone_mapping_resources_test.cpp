@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "lighting/tone_mapping_resources.h"
-#include "reference/lighting/tone_mapping_reference.h"
+#include "support/reference/lighting/tone_mapping_reference.h"
 #include "support/tone_mapping_shader_library.h"
 
 #include <granit/granit.hpp>

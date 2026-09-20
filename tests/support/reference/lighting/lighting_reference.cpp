@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "reference/lighting/lighting_reference.h"
+#include "support/reference/lighting/lighting_reference.h"
 
 #include <algorithm>
 #include <cmath>
