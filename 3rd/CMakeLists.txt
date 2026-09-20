@@ -41,7 +41,7 @@ if(GRANIT_HAS_VULKAN_BACKEND)
   set(GRANIT_VMA_DIR "${GRANIT_VMA_DIR}" PARENT_SCOPE)
 endif()
 
-if(GRANIT_TESTING_ENABLED)
+if(GRANIT_BUILD_TESTING)
   include("${CMAKE_CURRENT_LIST_DIR}/unity.cmake")
   include("${CMAKE_CURRENT_LIST_DIR}/catch2.cmake")
 endif()
