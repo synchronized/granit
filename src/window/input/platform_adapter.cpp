@@ -12,6 +12,9 @@
 #if defined(GRANIT_WINDOW_HAS_XCB)
 #include "window/platform/xcb/input.h"
 #endif
+#if defined(__EMSCRIPTEN__)
+#include "window/platform/emscripten/input.h"
+#endif
 
 #include <cstddef>
 
@@ -23,6 +26,9 @@ struct platform_input_adapter::implementation {
 #endif
 #if defined(GRANIT_WINDOW_HAS_WAYLAND_INPUT)
   wayland_input_adapter wayland;
+#endif
+#if defined(__EMSCRIPTEN__)
+  emscripten_input_adapter emscripten;
 #endif
 };
 
@@ -51,48 +57,57 @@ void platform_input_adapter::handle(granit_window window,
   }
 #endif
 #if defined(GRANIT_WINDOW_HAS_WAYLAND_INPUT)
-  if (event.backend != GRANIT_WINDOW_INPUT_BACKEND_WAYLAND)
+  if (event.backend == GRANIT_WINDOW_INPUT_BACKEND_WAYLAND) {
+    const wayland_input_sink native_sink{sink.user_data, sink.keyboard, sink.pointer, sink.event,
+                                         sink.text};
+    switch (event.type) {
+    case GRANIT_WINDOW_INPUT_WAYLAND_KEYMAP:
+      static_cast<void>(implementation_->wayland.set_keymap(
+          reinterpret_cast<const char*>(event.word), static_cast<std::size_t>(event.value)));
+      break;
+    case GRANIT_WINDOW_INPUT_WAYLAND_KEY:
+      implementation_->wayland.key(window, event.detail, event.state != 0, native_sink);
+      break;
+    case GRANIT_WINDOW_INPUT_WAYLAND_MODIFIERS:
+      implementation_->wayland.modifiers(window, event.state, event.detail, event.data0,
+                                         event.data1, native_sink);
+      break;
+    case GRANIT_WINDOW_INPUT_WAYLAND_POINTER_ENTER:
+      implementation_->wayland.pointer_enter(window, static_cast<float>(event.x) / 256.0F,
+                                             static_cast<float>(event.y) / 256.0F, native_sink);
+      break;
+    case GRANIT_WINDOW_INPUT_WAYLAND_POINTER_LEAVE:
+      implementation_->wayland.pointer_leave(window, native_sink);
+      break;
+    case GRANIT_WINDOW_INPUT_WAYLAND_POINTER_MOTION:
+      implementation_->wayland.pointer_motion(window, static_cast<float>(event.x) / 256.0F,
+                                              static_cast<float>(event.y) / 256.0F, native_sink);
+      break;
+    case GRANIT_WINDOW_INPUT_WAYLAND_POINTER_BUTTON:
+      implementation_->wayland.pointer_button(window, event.detail, event.state != 0, native_sink);
+      break;
+    case GRANIT_WINDOW_INPUT_WAYLAND_POINTER_AXIS:
+      implementation_->wayland.pointer_axis(window, event.detail,
+                                            static_cast<float>(event.value) / 256.0F, native_sink);
+      break;
+    default:
+      break;
+    }
     return;
-  const wayland_input_sink native_sink{sink.user_data, sink.keyboard, sink.pointer, sink.event,
-                                       sink.text};
-  switch (event.type) {
-  case GRANIT_WINDOW_INPUT_WAYLAND_KEYMAP:
-    static_cast<void>(implementation_->wayland.set_keymap(reinterpret_cast<const char*>(event.word),
-                                                          static_cast<std::size_t>(event.value)));
-    break;
-  case GRANIT_WINDOW_INPUT_WAYLAND_KEY:
-    implementation_->wayland.key(window, event.detail, event.state != 0, native_sink);
-    break;
-  case GRANIT_WINDOW_INPUT_WAYLAND_MODIFIERS:
-    implementation_->wayland.modifiers(window, event.state, event.detail, event.data0, event.data1,
-                                       native_sink);
-    break;
-  case GRANIT_WINDOW_INPUT_WAYLAND_POINTER_ENTER:
-    implementation_->wayland.pointer_enter(window, static_cast<float>(event.x) / 256.0F,
-                                           static_cast<float>(event.y) / 256.0F, native_sink);
-    break;
-  case GRANIT_WINDOW_INPUT_WAYLAND_POINTER_LEAVE:
-    implementation_->wayland.pointer_leave(window, native_sink);
-    break;
-  case GRANIT_WINDOW_INPUT_WAYLAND_POINTER_MOTION:
-    implementation_->wayland.pointer_motion(window, static_cast<float>(event.x) / 256.0F,
-                                            static_cast<float>(event.y) / 256.0F, native_sink);
-    break;
-  case GRANIT_WINDOW_INPUT_WAYLAND_POINTER_BUTTON:
-    implementation_->wayland.pointer_button(window, event.detail, event.state != 0, native_sink);
-    break;
-  case GRANIT_WINDOW_INPUT_WAYLAND_POINTER_AXIS:
-    implementation_->wayland.pointer_axis(window, event.detail,
-                                          static_cast<float>(event.value) / 256.0F, native_sink);
-    break;
-  default:
-    break;
   }
-#else
+#endif
+#if defined(__EMSCRIPTEN__)
+  if (event.backend == GRANIT_WINDOW_INPUT_BACKEND_EMSCRIPTEN) {
+    const emscripten_input_sink native_sink{sink.user_data, sink.keyboard, sink.pointer, sink.event,
+                                            sink.text};
+    implementation_->emscripten.handle(window, event, native_sink);
+    return;
+  }
+#endif
+
   static_cast<void>(window);
   static_cast<void>(event);
   static_cast<void>(sink);
-#endif
 }
 
 void platform_input_adapter::clear_window(granit_window window) noexcept {
@@ -101,6 +116,9 @@ void platform_input_adapter::clear_window(granit_window window) noexcept {
 #endif
 #if defined(GRANIT_WINDOW_HAS_WAYLAND_INPUT)
   implementation_->wayland.clear_window(window);
+#endif
+#if defined(__EMSCRIPTEN__)
+  implementation_->emscripten.clear_window(window);
 #endif
 #if !defined(_WIN32) && !defined(GRANIT_WINDOW_HAS_WAYLAND_INPUT)
   static_cast<void>(window);

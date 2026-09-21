@@ -1,11 +1,12 @@
 <!-- SPDX-License-Identifier: MIT -->
 <!-- Copyright (c) 2026 Granit contributors -->
 
-# Shader 工具链包清单
+# AssetTools Shader 工具链包清单
 
-Shader 工具链包使用 `shader-toolchain.json` 描述宿主平台归档中的工具、运行库和许可证文件。
-生成器记录完整文件集合，验证器要求文件集合、大小和 SHA-256 全部一致；缺失、篡改、重复登记或
-额外文件都会使验证失败。
+本文件描述 AssetTools 使用的离线 Shader 构建依赖包，不是 Granit 的 SDK 组件，也不是应用运行时
+依赖。工具链包使用 `shader-toolchain.json` 描述宿主平台归档中的工具、运行库和许可证文件。生成器
+记录完整文件集合，验证器要求文件集合、大小和 SHA-256 全部一致；缺失、篡改、重复登记或额外文件
+都会使验证失败。
 
 ## 目录与角色
 
@@ -32,7 +33,7 @@ shader-toolchain.json     # 完整性清单
 ```cmake
 cmake \
   -DSTAGE=<新的归档根目录> \
-  -DGENERATOR=cmake/generate_shader_toolchain_manifest.cmake \
+  -DGENERATOR=cmake/toolchain/generate_shader_toolchain_manifest.cmake \
   -DDXC=<dxc 路径> \
   -DTINT=<tint 路径> \
   -DDXC_VERSION=<版本> \
@@ -41,7 +42,7 @@ cmake \
   "-DDXC_LICENSE_FILES=<DXC 许可证列表>" \
   "-DDAWN_LICENSE_FILES=<Dawn/Tint 许可证列表>" \
   "-DRUNTIME_FILES=<必要运行库列表>" \
-  -P cmake/package_shader_toolchain.cmake
+  -P cmake/toolchain/package_shader_toolchain.cmake
 ```
 
 两组许可证列表均不能为空。官方工作流从锁定的 DXC 源码标签下载完整许可证和第三方声明，
@@ -57,7 +58,7 @@ cmake \
   -DROOT=<Dawn 源码根目录> \
   -DOUTPUT=<临时目录>/Dawn-THIRD-PARTY-LICENSES.txt \
   -DCOMPONENT=Dawn-Tint \
-  -P cmake/collect_license_bundle.cmake
+  -P cmake/assets/collect_license_bundle.cmake
 ```
 
 汇总器递归收集 `LICENSE*`、`COPYING*` 和 `NOTICE*`，按相对路径稳定排序并保留来源标记。该机制
@@ -74,7 +75,7 @@ cmake \
   -DTINT_REVISION=<源码修订> \
   "-DTOOL_FILES=bin/dxc;bin/tint" \
   "-DLICENSE_FILES=licenses/DXC.txt;licenses/Dawn.txt" \
-  -P cmake/generate_shader_toolchain_manifest.cmake
+  -P cmake/toolchain/generate_shader_toolchain_manifest.cmake
 ```
 
 `TOOL_FILES` 与 `LICENSE_FILES` 均不能为空，其中任一必需文件不存在都会失败。生成结果采用稳定路径
@@ -91,21 +92,14 @@ cmake \
 cmake \
   -DSTAGE=<归档根目录> \
   -DMANIFEST=<归档根目录>/shader-toolchain.json \
-  -P cmake/verify_shader_toolchain_manifest.cmake
+  -P cmake/toolchain/verify_shader_toolchain_manifest.cmake
 ```
 
 验证成功只说明解包后的文件与清单一致。发布系统仍须校验归档摘要，官方 CI 仍须使用
 `GRANIT_SHADER_TOOLCHAIN_POLICY=locked` 完成真实编译能力测试。
 
-仓库的 `Shader Toolchain Packages` 手动 Actions 工作流固定 Vulkan SDK 下载地址、归档 SHA-256、
-Dawn 修订和全部工具版本。Windows 与 Linux 分别构建 Tint、组装精简目录、执行包内清单校验，
-再以 `locked` 策略运行 HLSL 双后端 AssetTools 测试，最后上传带独立 SHA-256 文件的临时
-Artifact。当前锁定产物已作为独立预发行版本发布；后续工具升级仍须先完成两平台远端验证和
-许可证复核，再发布新标签，不能覆盖已有归档。
-
-工作流分别缓存 Dawn 第三方源码、编译目标和最终 Tint/许可证产物。最终产物缓存键包含平台、
-架构、编译器契约版本及 Tint 修订；命中时不再获取或编译 Dawn。该缓存只用于加速，组包后仍执行
-清单和真实编译能力验证，不能替代可发布归档及其 SHA-256。
+发布工作流可以使用本清单验证归档内容，但工作流、缓存和发布标签不是工具链包格式的一部分。
+发布系统仍须在包外校验归档 SHA-256，并在 `locked` 策略下完成真实编译能力测试。
 
 ## 下载锁定工具链
 
@@ -113,7 +107,7 @@ Windows x64 与 Linux x64 可以显式运行下载脚本。脚本选择当前宿
 原子解包并验证包内清单；已有目录只有再次通过校验才会复用：
 
 ```sh
-cmake -DDESTINATION=<缓存目录> -P cmake/download_shader_toolchain.cmake
+cmake -DDESTINATION=<缓存目录> -P cmake/toolchain/download_shader_toolchain.cmake
 ```
 
 也可以让可安装的 CMake 模块按模式完成查找或下载：
@@ -130,5 +124,4 @@ cmake -S . -B build \
 请求 `AssetTools` component 后可 `include("${granit_SHADER_TOOLCHAIN_MODULE}")` 并调用
 `granit_find_shader_toolchain()`。
 
-工具链发布页为
-[Shader Toolchain v20260720.160313](https://github.com/synchronized/granit/releases/tag/shader-toolchain-v20260720.160313-0bc38adde72b)。
+锁定工具链发布页见 [Granit Releases](https://github.com/synchronized/granit/releases)。

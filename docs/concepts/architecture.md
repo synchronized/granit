@@ -5,26 +5,26 @@
 
 ## 当前稳定性状态
 
-项目处于早期开发阶段，本文描述的是当前设计方向，而不是已经冻结的兼容承诺。公共 C API、
-C++ 包装、结构体布局、符号集合和行为语义均可进行破坏性修改，不要求兼容仓库的旧提交或尚未
-发布的构建产物。
+项目处于 0.x 开发阶段，本文描述当前架构而不是已经冻结的兼容承诺。公共 C API、C++ 包装、
+结构体布局、符号集合和行为语义可以随次版本进行有记录的破坏性修改；已发布版本的变更必须更新
+版本、Changelog、迁移指南和回归基线。
 
-C ABI 分层仍作为架构约束，用于隔离动态库和 C++ 实现细节；这不表示当前 ABI 已经稳定。正式
-版本发布前将另行确定版本协商、弃用周期、符号兼容和结构体扩展策略。
+C ABI 分层用于隔离动态库和 C++ 实现细节；这不表示当前 ABI 已经稳定。首次稳定兼容承诺前仍需
+确定稳定 component 范围、弃用周期和符号兼容策略，当前规则见[兼容策略](../reference/compatibility.md)。
 
 ## 产品定位
 
-Granit 定位为基于 Vulkan 的中层、显式、可嵌入式渲染库，主要服务自研游戏引擎、实时应用和
-图形工具。它隐藏 Vulkan 的实例、设备、同步和资源管理细节，但保留现代图形 API 中明确的资源
-用途、命令记录、提交和生命周期语义。
+Granit 定位为中层、显式、可嵌入式多后端渲染库，主要服务自研游戏引擎、实时应用和图形工具。
+桌面使用 Vulkan，浏览器使用 WebGPU；公共层隐藏实例、设备、同步和资源管理细节，同时保留现代
+图形 API 中明确的资源用途、命令记录、提交和生命周期语义。
 
-核心库采用“Bring Your Own Engine”边界，不直接拥有使用者的 Scene、Entity、Camera、Light、
-动画或资产数据库。PBR、场景渲染、后处理套件和 Render Graph 可以在核心能力稳定后作为独立
-高层模块提供，不能反向污染稳定 C ABI。
+核心库采用“Bring Your Own Engine”边界，不直接拥有使用者的 ECS、动画或资产数据库。可选
+RenderPipeline component 提供 Scene Snapshot、Material、Forward PBR、光照、后处理和内部
+Render Graph；这些高层能力单向依赖核心 Renderer，不反向污染核心 C ABI。
 
-当前 Vulkan 后端覆盖完整生产路径，WebGPU 后端已覆盖 0.4.0 浏览器 MVP 所需的基础资源、Pipeline、
-命令与呈现闭环。两者通过私有 HAL 共享 Registry，但不承诺能力完全对称；Direct3D、Metal 和
-OpenGL 当前不在支持范围内。
+当前 Vulkan 后端覆盖桌面完整路径，浏览器 WebGPU 覆盖参考渲染管线、异步传输、Timestamp、
+Pipeline 预热和呈现闭环。两者通过私有 HAL 共享 Registry 和公共语义，但不承诺原生能力完全
+对称；Direct3D、Metal 和 OpenGL 当前不在支持范围内。
 
 ## 渲染目标模型
 
@@ -181,10 +181,11 @@ Vulkan 与 WebGPU 不必提供完全对称的内部能力。共同语义由 Regi
 
 ### 操作系统平台层
 
-`src/window` 按 Window component 组织通用句柄与生命周期、输入状态和 Win32、XCB、Wayland
-后端。Window System 独占平台事件泵，同时维护窗口与输入的独立事件队列；输入没有第二套
-System 或动态库。通用 UTF-8 处理位于 `src/core`，平台解码与原生窗口生命周期位于各后端编译
-单元。Renderer 只通过公共 Surface API 接收 Window 创建的输出连接，不反向依赖 Window。
+`src/window` 按 Window component 组织通用句柄与生命周期、输入状态和 Win32、XCB、Wayland、
+Emscripten 后端。Window System 独占平台事件入口，同时维护窗口与输入的独立事件队列；输入没有
+第二套 System 或动态库。通用 UTF-8 处理位于 `src/core`，平台解码与窗口生命周期位于各后端编译
+单元。桌面后端管理原生顶层窗口，Emscripten 后端管理默认 Canvas 与 DOM 回调。Renderer 只通过
+公共 Surface API 接收 Window 创建的输出连接，不反向依赖 Window。
 
 `src/integrations` 不承担操作系统抽象，只保存 SDL3、ImGui 等第三方库与 Granit 公共接口之间的
 可选适配。平台层不得依赖这些集成目标；集成层可以调用 Granit 的 Window 或 Renderer
@@ -220,10 +221,11 @@ Scene、Material、PBR 和 Lighting 不应各自维护含义相同但类型不�
 Granit，启用 `VK_NO_PROTOTYPES` 和 C++ namespace，不直接链接 `vulkan-1`。运行时由 Volk
 查找系统 Vulkan loader；头文件版本不改变 Granit 以 Vulkan 1.3 为最低运行能力的目标。
 
-Loader 初始化状态在进程内缓存。每个 Vulkan instance 使用独立 `VolkInstanceTable`，后续每个
-device 使用独立 `VolkDeviceTable`，不通过 Volk 全局 instance/device 加载函数共享可变分发表。
+Loader 初始化状态在进程内缓存。每个 Vulkan instance 和 device 分别使用独立
+`VolkInstanceTable` 与 `VolkDeviceTable`，不通过 Volk 全局 instance/device 加载函数共享可变
+分发表。
 
-首期设备要求为 Vulkan 1.3 graphics queue、dynamic rendering、synchronization2 和 maintenance4。
+当前设备要求为 Vulkan 1.3 graphics queue、dynamic rendering、synchronization2 和 maintenance4。
 设备类型优先级高于显存大小，枚举顺序作为最终稳定决胜条件。该策略当前属于内部默认行为，
 未来公共 renderer 描述可以增加设备 ID 或功耗偏好，而不暴露 `VkPhysicalDevice`。
 
@@ -231,17 +233,19 @@ device 使用独立 `VolkDeviceTable`，不通过 Volk 全局 instance/device �
 移除句柄，再在锁外释放 Vulkan device；已取得状态的并发内部操作可以结束，新操作无法继续取得
 已销毁句柄。每个 renderer 分配非零 domain，供后续子资源校验归属。
 
-平台窗口或 surface 所需的原生信息通过独立的平台描述结构传入。未来如需支持原生 Vulkan
-互操作，应放入明确标记的不稳定高级接口，不得污染基础 API。
+Granit Window 通过平台无关入口直接创建 Surface；外部窗口所有者通过显式包含的高级头传入带
+标签的平台描述。未来如需支持原生 Vulkan 互操作，应放入明确标记的不稳定高级接口，不得污染
+基础 API。
 
-GPU 资源内存计划由内部 Vulkan Memory Allocator（VMA）负责选择 Memory Type 和大块子分配。
+GPU 资源内存由内部 Vulkan Memory Allocator（VMA）负责选择 Memory Type 和大块子分配。
 公共 API 只表达 automatic、device、upload 和 readback 等访问意图，不暴露 VMA 类型、Vulkan
-memory property 或 heap index。VMA 不进入安装导出，具体接入计划见
-[R-01 GPU 内存分配方案](../plans/R-01-memory-allocation.md)。
+memory property 或 heap index。VMA 不进入安装导出；当前映射、上传和回读契约见
+[Buffer](../reference/buffer.md)与[Texture](../reference/texture.md)。
 
-资源公共模型区分 Buffer、Texture、Texture View 和 Sampler，并采用“完整模型、最小实现范围”。
-第一阶段优先实现 Buffer、2D Texture、默认 View 和基础 Sampler，详细边界见
-[R-02 第一版资源模型](../plans/R-02-resource-model.md)。
+资源公共模型区分 Buffer、Texture、Texture View 和 Sampler，并已覆盖上传、回读、复制、压缩
+格式、多采样附件、Mipmap、比较采样和各向异性。当前能力与限制见
+[资源类型](../reference/resource-types.md)、[Texture](../reference/texture.md)和
+[Sampler](../reference/sampler.md)。
 
 ## C ABI 规则
 
@@ -269,8 +273,8 @@ command recorder、shader、pipeline、swapchain 和 fence。零值统一表示�
 公共 ABI 只承诺句柄为 `uint64_t` 和零值无效，不公开或保证内部位布局。使用者不得解析、修改、
 持久化或跨进程传递句柄。
 
-句柄内部计划至少编码槽位索引和 generation，并由资源表记录资源类型与所属 renderer/device。
-每次使用均验证：
+当前句柄表编码槽位索引、generation 和资源类型，并由资源记录保存所属 Renderer domain。每次
+使用均验证：
 
 - 句柄是否存在且 generation 匹配。
 - 资源类型是否与当前操作匹配。
@@ -280,9 +284,9 @@ command recorder、shader、pipeline、swapchain 和 fence。零值统一表示�
 生命周期内有效，不可持久化，也不保证在动态库重新加载后继续有效。
 
 当前内部句柄表使用低 32 位槽位索引、中间 24 位 generation 和高 8 位资源类型，并在槽位中
-另外记录所属 domain。该布局属于实现细节，可以在不改变公共 ABI 的情况下调整。句柄表不拥有
-资源对象，也不在内部提供并发访问保证；未来 renderer/device 必须在外层协调查找与销毁，确保
-返回地址使用期间资源不会被并发释放。
+另外记录所属 domain。该布局属于实现细节，可以在不改变公共 ABI 的情况下调整。Registry 使用
+锁保护句柄与所有权映射，并在离开锁后通过共享状态完成后端操作；同一资源的并发写入和父子对象
+销毁仍遵循对应 Reference 的外部同步规则。
 
 颜色、范围、尺寸、viewport 和资源创建参数属于值数据，使用普通结构体而不是句柄。
 

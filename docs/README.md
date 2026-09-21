@@ -3,16 +3,21 @@
 
 # Granit 文档中心
 
-这里是 Granit 使用指南、参考资料、架构说明和开发计划的统一入口。根 README 只负责项目介绍与
-快速开始；具体事实以本页链接的对应文档为准。
+这里是 Granit 教程、操作指南、参考资料、架构说明和开发计划的统一入口。根 README 只负责项目
+介绍与快速开始；具体事实以本页链接的对应文档为准。教程用于从零完成完整目标，指南用于解决已知
+任务，参考文档用于查询当前 API、格式和行为契约。
 
 ## 推荐阅读顺序
 
 ### 第一次使用参考渲染管线
 
-1. [Render Pipeline 离屏渲染教程](tutorials/render-pipeline-offscreen.md)
-2. [示例程序及运行方式](guides/examples.md)
-3. [Render Pipeline](reference/render-pipeline.md)
+1. [创建第一个 Renderer](tutorials/01-first-renderer.md)
+2. [创建资源并上传数据](tutorials/02-resources-and-upload.md)
+3. [创建 Shader 与 Graphics Pipeline](tutorials/03-shader-and-pipeline.md)
+4. [窗口与帧循环](tutorials/04-window-and-frame-loop.md)
+5. [Render Pipeline 离屏渲染教程](tutorials/05-render-pipeline-offscreen.md)
+6. [示例程序及运行方式](guides/examples.md)
+7. [Render Pipeline](reference/render-pipeline.md)
 
 ### 使用核心 Renderer
 
@@ -26,77 +31,49 @@
 ### 理解高级渲染层
 
 1. [架构与 ABI](concepts/architecture.md)
-2. [路线图](roadmap.md)
-3. [Render Graph 边界](plans/P-06-render-graph-boundary.md)
-4. [高级参考渲染套件](plans/H-07-reference-render-pipeline.md)
-5. [Model Viewer 渲染线程计划](plans/S-19-model-viewer-render-thread.md)
+2. [Render Pipeline](reference/render-pipeline.md)
+3. [Material](reference/material.md)
+4. [Scene Snapshot](reference/scene-snapshot.md)
+5. [运行跨后端 Model Viewer](tutorials/06-model-viewer.md)
 
 ### 参与开发
 
 1. [开发规范](guides/development.md)
 2. [项目文档规范](../DOCUMENTATION_GUIDE.md)
-3. [开发计划索引](plans/README.md)
-4. [第三方依赖](../3rd/README.md)
-5. [0.11.0 WebGPU 能力与浏览器 Model Viewer 计划](plans/S-26-0.11.0-webgpu-parity-and-web-model-viewer.md)
-6. [0.12.0 上游资产与标准材质契约计划](plans/S-27-0.12.0-upstream-asset-contracts.md)
-7. [0.13.0 异步 GPU 操作与 Web 运行时计划](plans/S-28-0.13.0-async-gpu-and-web-runtime.md)
-8. [0.14.0 异步管线指标与资源流送计划](plans/S-29-0.14.0-async-pipeline-metrics-and-streaming.md)
-9. [0.15.0 异步回读与管线预热计划](plans/S-30-0.15.0-async-readback-and-pipeline-warmup.md)
-10. [0.16.0 严格非阻塞异步调度计划](plans/S-31-0.16.0-nonblocking-async.md)
-11. [0.17.0 WebGPU 原生异步 Pipeline 预热计划](plans/S-32-0.17.0-webgpu-async-pipeline-warmup.md)
-12. [开发与发布流水线提速计划](plans/S-33-ci-release-acceleration.md)
-13. [0.18.0 压缩纹理与格式能力契约计划](plans/S-34-0.18.0-compressed-textures.md)
-14. [0.19.0 纹理资产变体与流式加载计划](plans/S-35-0.19.0-texture-asset-variants.md)
-15. [0.20.0 示例框架与跨平台 Model Viewer 计划](plans/S-36-0.20.0-example-framework-and-model-viewer.md)
-16. [0.21.0 Shader Library 与后端无关材质计划](plans/S-37-0.21.0-shader-library-and-material-boundary.md)
-17. [WebGPU Provider 边界收敛计划](plans/S-37H-webgpu-provider-boundary-collapse.md)
-18. [HLSL-first Shader 作者入口计划](plans/S-37L-hlsl-first-shader-authoring.md)
-19. [0.22.0 AssetTools SDK 与工具链交付计划](plans/S-38-0.22.0-asset-tools-and-toolchain.md)
-20. [0.23.0 空帧与覆盖层可靠性计划](plans/S-39-0.23.0-empty-frame-and-overlay-reliability.md)
-21. [0.23.0 Shader Toolchain 配置可靠性计划](plans/S-40-0.23.0-shader-toolchain-configuration-reliability.md)
-22. [0.23.0 资产目录收敛计划](plans/S-41-0.23.0-asset-layout-convergence.md)
-23. [0.24.0 测试架构收敛计划](plans/S-42-0.24.0-test-architecture-convergence.md)
-24. [0.24.0 AssetTools 源码布局收敛计划](plans/S-43-0.24.0-asset-tools-source-layout.md)
-25. [0.25.0 Window、Input 与呈现边界收敛计划](plans/S-44-0.25.0-window-input-presentation-convergence.md)
+3. [路线图](roadmap.md)
+4. [API 教程与可运行示例阶梯计划](plans/S-46-api-tutorial-example-ladder.md)
+5. [开发计划与完成历史](plans/README.md)
+6. [第三方依赖](../3rd/README.md)
 
 ## 操作指南
 
+指南面向已经了解目标的使用者，重点是构建、集成、迁移、验证和排错步骤；不承担完整入门教程或
+逐项 API 定义。
+
 - [构建、测试、安装与 CMake 集成](guides/build.md)
+- [CI 与验证](guides/ci.md)
 - [发布验收](guides/release.md)
+- [版本迁移指南索引](guides/migrations.md)
 - [从 0.24 迁移到 0.25](guides/migrate-0.24-to-0.25.md)
-- [从 0.2 迁移到 0.3](guides/migrate-0.2-to-0.3.md)
-- [从 0.3 迁移到 0.4](guides/migrate-0.3-to-0.4.md)
-- [从 0.4 迁移到 0.5](guides/migrate-0.4-to-0.5.md)
-- [从 0.5 迁移到 0.6](guides/migrate-0.5-to-0.6.md)
-- [从 0.6 迁移到 0.7](guides/migrate-0.6-to-0.7.md)
-- [从 0.7 迁移到 0.8](guides/migrate-0.7-to-0.8.md)
-- [从 0.9 迁移到 0.10](guides/migrate-0.9-to-0.10.md)
-- [从 0.10 迁移到 0.11](guides/migrate-0.10-to-0.11.md)
-- [从 0.11 迁移到 0.12](guides/migrate-0.11-to-0.12.md)
-- [从 0.12 迁移到 0.13](guides/migrate-0.12-to-0.13.md)
-- [从 0.13 迁移到 0.14](guides/migrate-0.13-to-0.14.md)
-- [从 0.14 迁移到 0.15](guides/migrate-0.14-to-0.15.md)
-- [从 0.15 迁移到 0.16](guides/migrate-0.15-to-0.16.md)
-- [从 0.16 迁移到 0.17](guides/migrate-0.16-to-0.17.md)
-- [从 0.17 迁移到 0.18](guides/migrate-0.17-to-0.18.md)
-- [从 0.18 迁移到 0.19](guides/migrate-0.18-to-0.19.md)
-- [从 0.19 迁移到 0.20](guides/migrate-0.19-to-0.20.md)
-- [从 0.20 迁移到 0.21](guides/migrate-0.20-to-0.21.md)
-- [从 0.21 迁移到 0.22](guides/migrate-0.21-to-0.22.md)
-- [从 0.8 迁移到 0.9](guides/migrate-0.8-to-0.9.md)
 - [示例程序及运行方式](guides/examples.md)
-- [运行跨后端模型查看器](guides/model-viewer.md)
 - [运行浏览器 WebGPU 平台 Smoke](guides/webgpu-browser-example.md)
-- [批量与异步上传](guides/upload-batch.md)
 - [异步回读与 Pipeline 预热](guides/async-readback-and-pipeline-warmup.md)
 - [纹理同步回读](guides/texture-readback.md)
-- [第三方 UI 与字体适配](guides/third-party-ui-adapters.md)
 
 ## 教程
 
-- [使用 Render Pipeline 完成第一次离屏渲染](tutorials/render-pipeline-offscreen.md)
+教程从前置条件开始，连续完成一个可验证的目标；其中的 API 细节以对应参考文档为准。
+
+- [01：创建第一个 Renderer](tutorials/01-first-renderer.md)
+- [02：创建资源并上传数据](tutorials/02-resources-and-upload.md)
+- [03：创建 Shader 与 Graphics Pipeline](tutorials/03-shader-and-pipeline.md)
+- [04：窗口与帧循环](tutorials/04-window-and-frame-loop.md)
+- [05：使用 Render Pipeline 完成第一次离屏渲染](tutorials/05-render-pipeline-offscreen.md)
+- [06：运行跨后端模型查看器](tutorials/06-model-viewer.md)
 
 ## API 与行为参考
+
+参考文档是当前行为、格式、所有权和限制的权威来源，通常不提供从零开始的完整操作流程。
 
 ### 核心与数学
 
@@ -121,9 +98,11 @@
 - [Shader 工具链包清单](reference/shader-toolchain-package.md)
 - [Command Recorder](reference/command-recorder.md)
 - [Frame Context](reference/frame-context.md)
+- [Timestamp Query](reference/timestamp-query.md)
 - [Shader Module](reference/shader.md)
 - [Shader Library](reference/shader-library.md)
 - [Graphics 与 Compute Pipeline](reference/pipeline.md)
+- [Upload Batch](reference/upload-batch.md)
 
 ### 高级 Render Pipeline component
 
@@ -147,20 +126,18 @@
 - [SDL3 与 GLFW 窗口接入](guides/window-library-integration.md)
 - [SDL3 与 ImGui Integration](reference/third-party-integrations.md)
 
-### 输入
-
-- [Input 事件与状态值类型](reference/input.md)
-
 ## 架构与原理
 
 - [总体架构、ABI 与渲染分层](concepts/architecture.md)
 - [Vulkan Loader、Instance 与后端边界](concepts/vulkan-backend.md)
+- [第三方 UI 与字体适配边界](concepts/third-party-ui-adapter-boundary.md)
 - [分阶段路线图](roadmap.md)
 
 ## 计划与历史
 
 - [变更记录](../CHANGELOG.md)
 - [开发计划索引](plans/README.md)
+- [已完成计划索引](plans/completed.md)
 - [架构决策索引](decisions/README.md)
 - [实施记录索引](records/README.md)
 - [版本验收模板](templates/version-acceptance.md)

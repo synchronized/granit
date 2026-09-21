@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
-if(EMSCRIPTEN)
+if(NOT GRANIT_HAS_NATIVE_WINDOW)
   include("${CMAKE_CURRENT_LIST_DIR}/emscripten.cmake")
   return()
 endif()
@@ -17,7 +17,7 @@ target_link_libraries(granit_model_viewer_web_shell PUBLIC granit_model_viewer_c
 set_target_properties(granit_model_viewer_web_shell PROPERTIES FOLDER "Examples")
 granit_target_compile_warnings(granit_model_viewer_web_shell)
 
-if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
+if(GRANIT_TESTING_ENABLED)
   add_executable(granit_model_viewer_web_shell_test web_input_test.cpp)
   target_link_libraries(
     granit_model_viewer_web_shell_test

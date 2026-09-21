@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: MIT -->
 <!-- Copyright (c) 2026 Granit contributors -->
 
-# Graphics Pipeline
+# Graphics 与 Compute Pipeline
 
 Granit 当前提供 Graphics Pipeline、Bind Group Layout 和不可变 Bind Group。公共接口不暴露
 Vulkan Pipeline、Pipeline Layout 或 Dynamic Rendering 结构。

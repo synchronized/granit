@@ -20,7 +20,8 @@ enum class window_backend : std::uint32_t {
   automatic = GRANIT_WINDOW_BACKEND_AUTO,
   win32 = GRANIT_WINDOW_BACKEND_WIN32,
   xcb = GRANIT_WINDOW_BACKEND_XCB,
-  wayland = GRANIT_WINDOW_BACKEND_WAYLAND
+  wayland = GRANIT_WINDOW_BACKEND_WAYLAND,
+  emscripten = GRANIT_WINDOW_BACKEND_EMSCRIPTEN
 };
 
 struct window_system_desc {

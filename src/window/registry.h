@@ -65,6 +65,10 @@ struct window_record {
   bool configured{};
   bool focused{};
 #endif
+#if defined(__EMSCRIPTEN__)
+  std::uint32_t flags{};
+  bool focused{};
+#endif
 };
 
 struct window_system_record {

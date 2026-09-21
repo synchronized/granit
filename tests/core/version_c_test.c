@@ -10,8 +10,10 @@ void setUp(void) {}
 void tearDown(void) {}
 
 static void granit_test_public_types(void) {
+  const granit_handle expected_null_handle = 0;
+  const granit_handle null_handle = GRANIT_NULL_HANDLE;
   TEST_ASSERT_EQUAL_size_t(sizeof(uint64_t), sizeof(granit_handle));
-  TEST_ASSERT_EQUAL_UINT64(0, GRANIT_NULL_HANDLE);
+  TEST_ASSERT_EQUAL_MEMORY(&expected_null_handle, &null_handle, sizeof(granit_handle));
   TEST_ASSERT_EQUAL_UINT32(6, GRANIT_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER);
   {
     const granit_bind_groups_desc desc = GRANIT_BIND_GROUPS_DESC_INIT;

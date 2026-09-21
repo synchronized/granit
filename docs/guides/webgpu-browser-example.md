@@ -3,7 +3,9 @@
 
 # 运行浏览器 WebGPU 示例
 
-浏览器构建同时提供正式的 `granit_model_viewer_web` 和自动化
+本文负责 Emscripten 构建、浏览器服务、安装 Consumer 和通用自动化验证。模型查看器的资产准备、
+桌面运行和性能验收见[跨后端模型查看器教程](../tutorials/06-model-viewer.md)。浏览器构建同时提供正式的
+`granit_model_viewer_web` 和自动化
 `granit_web_platform_smoke`。两者复用同一个 Model Viewer Core；正式目标默认从 Khronos 加载
 Flight Helmet，Smoke 使用仓库内的小型确定性 Fixture。动态 Uniform、纹理传输和帧生命周期的
 测试图形只会由 Smoke 目标呈现，正式 Model Viewer 不会在模型出现前显示测试方块。浏览器端不会
@@ -30,8 +32,7 @@ Windows 已安装但尚未导入 emsdk 环境时，先执行：
 
 Emscripten preset 默认开启测试和示例。关闭 `GRANIT_BUILD_TESTING` 可排除平台验证目标；
 关闭 `GRANIT_BUILD_EXAMPLES` 可排除示例可执行文件。两者均关闭时只构建库。
-模型查看器和 ImGui 示例分别受 `GRANIT_BUILD_MODEL_VIEWER_EXAMPLE`、
-`GRANIT_BUILD_WEB_IMGUI_EXAMPLE` 控制。构建产物继续统一输出到 `build/emscripten-release/web/`。
+构建产物继续统一输出到 `build/emscripten-release/web/`。
 
 ```powershell
 cmake --preset emscripten-release
@@ -89,12 +90,13 @@ npm test -- ../../build/emscripten-release/web granit_model_viewer_web.html `
   model_viewer_fixture.gltf
 ```
 
-模型查看器的共享能力和桌面运行方法见[跨后端模型查看器](model-viewer.md)。
+模型查看器的浏览器页面只在本节说明构建和验证；共享能力和桌面运行方法见[跨后端模型查看器](../tutorials/06-model-viewer.md)。
 
 ## 安装静态库
 
-浏览器核心库与 RenderPipeline 使用同一套安装导出规则；当前不提供原生 Window/Input 组件。
-库输出统一放在构建目录的 `lib/`，浏览器 HTML/JS/Wasm 仍位于 `web/`。
+浏览器核心库、RenderPipeline 与 Window 使用同一套安装导出规则。Window 在浏览器中管理默认
+`#canvas`、DOM 输入和 Canvas Surface，不暴露浏览器原生对象。库输出统一放在构建目录的 `lib/`，
+浏览器 HTML/JS/Wasm 仍位于 `web/`。
 
 ```powershell
 cmake --install build/emscripten-release --prefix build/emscripten-sdk
@@ -105,5 +107,5 @@ ctest --test-dir build/emscripten-consumer --output-on-failure
 ```
 
 消费端使用相同的 Emscripten 工具链，通过 `find_package(granit CONFIG REQUIRED)` 链接
-`granit::granit`；需要参考渲染管线时请求 `RenderPipeline` 组件。显式指定 `granit_DIR` 可避免
-交叉编译工具链只在 sysroot 内搜索包。
+`granit::granit`；需要参考渲染管线或统一窗口输入时分别请求 `RenderPipeline`、`Window` 组件。
+显式指定 `granit_DIR` 可避免交叉编译工具链只在 sysroot 内搜索包。

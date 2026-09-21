@@ -26,6 +26,11 @@ extern "C" granit_result granit_window_create_surface(granit_window_system syste
 #if defined(_WIN32)
   desc.surface_type = GRANIT_SURFACE_TYPE_WIN32_BIT;
   desc.source.win32 = {found->second->instance, found->second->window};
+#elif defined(__EMSCRIPTEN__)
+  static constexpr char canvas_selector[] = "#canvas";
+  desc.surface_type = GRANIT_SURFACE_TYPE_CANVAS_BIT;
+  desc.source.canvas = {canvas_selector, static_cast<std::uint32_t>(sizeof(canvas_selector) - 1),
+                        0};
 #else
 #if defined(GRANIT_WINDOW_HAS_WAYLAND)
   if (system->backend == GRANIT_WINDOW_BACKEND_WAYLAND) {

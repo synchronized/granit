@@ -45,8 +45,8 @@ HLSL portable 路径需要资产构建机安装 DXC 与 Tint，但应用运行�
 `GRANIT_SHADER_TOOLCHAIN_MODE` 控制工具链来源：
 
 - `off` 禁用 HLSL 构建且不查找工具、不访问网络；Material、Texture 和 Environment 仍可使用；
-- `system` 是默认值，只搜索显式 `GRANIT_SHADER_TOOLCHAIN_ROOT`、Vulkan SDK 和 `PATH`；
-- `auto` 先执行 `system` 搜索，缺少完整 DXC/Tint 时下载锁定发布包；
+- `system` 只搜索显式 `GRANIT_SHADER_TOOLCHAIN_ROOT`、Vulkan SDK 和 `PATH`；
+- `auto` 是默认值，先执行 `system` 搜索，缺少完整 DXC/Tint 时下载锁定发布包；
 - `download` 忽略偶然发现的系统工具并使用锁定缓存包。显式 Root 在所有模式中优先。
 
 下载缓存由 `GRANIT_SHADER_TOOLCHAIN_CACHE_DIR` 指定，默认位于构建树。下载过程使用进程锁、临时
@@ -112,7 +112,8 @@ ID，也不可保存到文件或跨进程使用。不同结果的查询仍可并
 - Library Builder 将目标后端和必需特性纳入缓存键与变体记录。
 - `granit_asset_tools_shader_index_find_content_id` 从内存中的 `.grshidx.json` 查询逻辑 Shader 名称，
   供 CLI 和上游资产管线生成稳定内容 ID 引用，无需访问 SDK 私有 JSON 类型。
-- `granit_asset_tools_shader_reflection_get_binding_count` 和 `granit_asset_tools_shader_reflection_get_binding` 按
+- `granit_asset_tools_shader_reflection_get_binding_count` 和
+  `granit_asset_tools_shader_reflection_get_binding` 按
   Group、Binding 数字顺序返回结构化绑定。记录包含资源类型、访问模式、数组数量和 Buffer
   最小绑定尺寸。
 - Vertex 输入和 Fragment 输出按 Location、Component 排序，记录标量类型、位宽及向量宽度；
@@ -130,7 +131,8 @@ ID，也不可保存到文件或跨进程使用。不同结果的查询仍可并
   `expected_bindings`。SDK 会按 Group/Binding 比较最终 SPIR-V；缺失、多余或重复记录都会失败，
   编译失败时删除输出文件。零值关闭该检查。
 - 参数有效后，即使编译或检查失败也可能返回非零句柄。调用者应读取 `status` 和诊断，最后按类型
-  调用 `granit_asset_tools_shader_compilation_destroy` 或 `granit_asset_tools_shader_reflection_destroy`；C++ 包装
+  调用 `granit_asset_tools_shader_compilation_destroy` 或
+  `granit_asset_tools_shader_reflection_destroy`；C++ 包装
   会自动销毁。
 - 查询得到的字符串和载荷视图由 SDK 持有，在所属句柄销毁前有效，调用者不得释放或修改。不得让
   查询与同一句柄的销毁并发执行。

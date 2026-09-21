@@ -4,13 +4,14 @@
 name: Windows
 
 on:
+  pull_request:
   workflow_dispatch:
 
 env:
   SCCACHE_GHA_ENABLED: "true"
 
 jobs:
-  shader-toolchain:
+  restore-shader-toolchain:
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v5
@@ -23,11 +24,11 @@ jobs:
           path: build/toolchains
           key: >-
             shader-toolchain-${{ runner.os }}-
-            ${{ hashFiles('cmake/download_shader_toolchain.cmake',
-            'cmake/GranitShaderToolchain.cmake') }}
+            ${{ hashFiles('cmake/toolchain/download_shader_toolchain.cmake',
+            'cmake/toolchain/GranitShaderToolchain.cmake') }}
       - name: 下载并校验锁定 Shader 工具链
         shell: pwsh
-        run: cmake -DDESTINATION=build/toolchains -P cmake/download_shader_toolchain.cmake
+        run: cmake -DDESTINATION=build/toolchains -P cmake/toolchain/download_shader_toolchain.cmake
       - name: 验证锁定 Shader 工具链
         shell: pwsh
         run: |
@@ -87,19 +88,19 @@ jobs:
             -DGRANIT_SOURCE_DIR="$PWD" `
             -DGRANIT_BUILD_DIR="$PWD/build/$preset" `
             -DGRANIT_INSTALL_PREFIX="$prefix" `
-            -P cmake/check_install_exports.cmake
+            -P tests/cmake/check_install_exports.cmake
           cmake `
             -DGRANIT_SOURCE_DIR="$PWD" `
             -DGRANIT_INSTALL_PREFIX="$prefix" `
             -DGRANIT_TEST_BINARY_DIR="$PWD/build/package/$preset" `
-            -P cmake/check_installed_package.cmake
+            -P tests/packaging/check_installed_package.cmake
       - name: 构建并运行独立 C 和 C++ Consumer
         shell: pwsh
         run: |
           $preset = '${{ steps.preset.outputs.name }}'
           $prefix = "$PWD/build/install/$preset"
           $consumer = "$PWD/build/consumer/$preset"
-          cmake -S tests/consumer -B $consumer -G Ninja -DCMAKE_BUILD_TYPE=Release `
+          cmake -S tests/packaging/consumer -B $consumer -G Ninja -DCMAKE_BUILD_TYPE=Release `
             -DCMAKE_PREFIX_PATH="$prefix" `
             -DCMAKE_C_COMPILER_LAUNCHER=sccache `
             -DCMAKE_CXX_COMPILER_LAUNCHER=sccache

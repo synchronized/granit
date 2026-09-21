@@ -37,6 +37,11 @@ extern "C" granit_result granit_window_system_create(const granit_window_system_
 #else
   return GRANIT_ERROR_BACKEND_UNAVAILABLE;
 #endif
+#elif defined(__EMSCRIPTEN__)
+  if (desc->backend != GRANIT_WINDOW_BACKEND_AUTO &&
+      desc->backend != GRANIT_WINDOW_BACKEND_EMSCRIPTEN)
+    return GRANIT_ERROR_UNSUPPORTED;
+  return create_emscripten_system(output);
 #else
   return GRANIT_ERROR_UNSUPPORTED;
 #endif
@@ -60,6 +65,8 @@ extern "C" granit_result granit_window_system_destroy(granit_window_system handl
 #else
   return GRANIT_ERROR_UNSUPPORTED;
 #endif
+#elif defined(__EMSCRIPTEN__)
+  return destroy_emscripten_system(handle, system);
 #else
   return GRANIT_ERROR_UNSUPPORTED;
 #endif
@@ -83,6 +90,8 @@ extern "C" granit_result granit_window_system_process_events(granit_window_syste
     return process_xcb_events(system);
 #endif
   return GRANIT_ERROR_UNSUPPORTED;
+#elif defined(__EMSCRIPTEN__)
+  return process_emscripten_events(system);
 #else
   return GRANIT_ERROR_UNSUPPORTED;
 #endif

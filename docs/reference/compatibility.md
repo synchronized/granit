@@ -10,7 +10,8 @@ Granit 当前版本为 0.x，公共 API、C ABI、C++ 包装、CMake component �
 新动态库。
 
 “已有 ABI 回归测试”只表示仓库能够检测导出符号、结构布局和常量变化，不等于这些内容已经冻结。
-发生有意的 0.x 破坏性变更时，必须同步更新测试基线、迁移说明和版本号，不能静默漂移。
+发生有意的 0.x 破坏性变更时，必须同步更新测试基线、Changelog 和版本号；需要使用者执行明确
+操作时还必须提供迁移指南，不能静默漂移。
 已发布的 Core 0.20.0 和 0.21.0 完整符号快照保持不变；Core 0.22.0 使用新完整快照记录
 Texture 离线编码入口迁出后的导出集合，0.23.0 未改变该导出集合并继续以此快照回归；
 AssetTools 0.22.0 使用独立快照记录四个资产领域；
@@ -46,11 +47,10 @@ Window 在 0.25.0 合并输入生命周期，并使用 0.25.0 完整符号快照
 | `Window` | `granit::window` | Core | 稳定候选 | 验证平台后端、输入与宿主循环契约 |
 | `AssetTools` | `granit::asset_tools` | Threads、可选离线工具链 | 实验性 | 统一离线资产构建、检查与 CLI |
 | `IntegrationSDL3` | `granit::integration_sdl3` | Core、SDL3 | 实验性 | 保持可选适配层，不进入 Core |
-| `IntegrationImGui` | `granit::integration_imgui` | Core、RenderPipeline、ImGui | 实验性 | 保持可选适配层，不承诺第三方 ABI |
+| `IntegrationImGui` | `granit::integration_imgui` | Core、RP、ImGui | 实验性 | 可选；第三方 ABI 不稳定 |
 
 component 名、依赖和当前等级是安装 SDK 契约的一部分；底层 Vulkan/WebGPU 实现、示例私有代码、
-测试目标和 `src/` 内部模块不属于可安装 component。0.22.0 的实施与验收范围见
-[S-38 计划](../plans/S-38-0.22.0-asset-tools-and-toolchain.md)。
+测试目标和 `src/` 内部模块不属于可安装 component。当前优先级和重新评估条件见[路线图](../roadmap.md)。
 
 ## 版本规则
 
@@ -75,6 +75,11 @@ component 名、依赖和当前等级是安装 SDK 契约的一部分；底层 V
 2. 旧行为与新行为，以及使用者需要执行的迁移步骤。
 3. 导出符号、布局、Consumer、共享/静态和相关行为测试的同步变更。
 4. 版本号与变更记录更新；不能只修改基线来隐藏差异。
+
+迁移指南只用于需要使用者手工处理的升级路径，包括公共名称删除或重命名、生命周期和所有权变化、
+调用顺序变化，以及持久化格式转换。仅需重新配置和重新编译即可完成的兼容新增、内部重构和缺陷
+修复不单独创建迁移指南，由 Changelog 记录即可。API diff 和 ABI 基线用于评审与验证，不能替代
+Changelog 中对破坏性变化的说明。
 
 ## 进入稳定版本的门槛
 

@@ -6,26 +6,22 @@ include(granit_web)
 set(SDL_SHARED OFF CACHE BOOL "" FORCE)
 set(SDL_STATIC ON CACHE BOOL "" FORCE)
 set(SDL_INSTALL OFF CACHE BOOL "" FORCE)
-granit_prepare_sdl3_dependency(TRUE)
-granit_prepare_imgui_dependency(TRUE)
 
 add_library(
   granit_web_imgui_support STATIC
-  "${granit_imgui_SOURCE_DIR}/imgui_demo.cpp"
-  "${granit_imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp"
-  "${PROJECT_SOURCE_DIR}/src/integrations/imgui/renderer.cpp"
   "${PROJECT_SOURCE_DIR}/examples/samples/imgui/resources.cpp"
 )
 target_compile_features(granit_web_imgui_support PUBLIC cxx_std_20)
-target_compile_definitions(granit_web_imgui_support PUBLIC GRANIT_INTEGRATION_IMGUI_STATIC_DEFINE)
 target_include_directories(
   granit_web_imgui_support
   PUBLIC "${PROJECT_SOURCE_DIR}/examples" "${PROJECT_SOURCE_DIR}/examples/common"
          "${granit_imgui_SOURCE_DIR}" "${PROJECT_SOURCE_DIR}/include"
 )
 target_link_libraries(
-  granit_web_imgui_support PUBLIC granit::render_pipeline SDL3::SDL3
-                                  "${GRANIT_IMGUI_TARGET}"
+  granit_web_imgui_support PUBLIC granit::integration_sdl3 granit::integration_imgui
+)
+target_link_libraries(
+  granit_web_imgui_support PUBLIC ${GRANIT_IMGUI_DEMO_TARGET} ${GRANIT_IMGUI_BACKEND_SDL3_TARGET}
 )
 granit_target_webgpu(granit_web_imgui_support)
 granit_target_compile_warnings(granit_web_imgui_support)

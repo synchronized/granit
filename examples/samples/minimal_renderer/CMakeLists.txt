@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Granit contributors
+
+add_executable(granit_minimal_renderer_example main.cpp)
+target_link_libraries(granit_minimal_renderer_example PRIVATE granit::granit)
+target_compile_features(granit_minimal_renderer_example PRIVATE cxx_std_20)
+granit_target_compile_warnings(granit_minimal_renderer_example)
+granit_target_output_directories(granit_minimal_renderer_example)

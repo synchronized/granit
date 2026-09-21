@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
-if(NOT EMSCRIPTEN)
+if(GRANIT_HAS_VULKAN_BACKEND)
   set(GRANIT_VULKAN_HEADERS_DIR
       "${CMAKE_CURRENT_SOURCE_DIR}/Vulkan-Headers-1.4.350/include")
   set(GRANIT_VOLK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/volk-1.4.350")
@@ -41,99 +41,7 @@ if(NOT EMSCRIPTEN)
   set(GRANIT_VMA_DIR "${GRANIT_VMA_DIR}" PARENT_SCOPE)
 endif()
 
-if(NOT GRANIT_BUILD_TESTING OR NOT BUILD_TESTING)
-  return()
+if(GRANIT_BUILD_TESTING)
+  include("${CMAKE_CURRENT_LIST_DIR}/unity.cmake")
+  include("${CMAKE_CURRENT_LIST_DIR}/catch2.cmake")
 endif()
-
-# 父项目已经提供 Unity 目标时直接复用；否则尝试已安装包，最后使用内置源码。
-if(TARGET Unity::Unity)
-  message(STATUS "Granit C tests reuse the existing Unity::Unity target")
-elseif(TARGET unity::framework)
-  add_library(Unity::Unity ALIAS unity::framework)
-  message(STATUS "Granit C tests reuse the existing unity::framework target")
-elseif(TARGET unity)
-  add_library(Unity::Unity ALIAS unity)
-  message(STATUS "Granit C tests reuse the existing unity target")
-else()
-  find_package(unity 2.6 CONFIG QUIET)
-
-  if(TARGET Unity::Unity)
-    message(STATUS "Granit C tests use Unity from find_package")
-  elseif(TARGET unity::framework)
-    add_library(Unity::Unity ALIAS unity::framework)
-    message(STATUS "Granit C tests use unity::framework from find_package")
-  elseif(TARGET unity)
-    add_library(Unity::Unity ALIAS unity)
-    message(STATUS "Granit C tests use unity from find_package")
-  else()
-    set(GRANIT_UNITY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/unity-v2.6.1")
-    add_library(granit_unity STATIC "${GRANIT_UNITY_DIR}/src/unity.c")
-    add_library(Unity::Unity ALIAS granit_unity)
-    target_include_directories(
-      granit_unity
-      SYSTEM PUBLIC "${GRANIT_UNITY_DIR}/src"
-    )
-    set_target_properties(
-      granit_unity
-      PROPERTIES
-        C_STANDARD 11
-        C_STANDARD_REQUIRED YES
-        FOLDER "ThirdParty/Unity"
-    )
-    message(STATUS "Granit C tests use bundled Unity 2.6.1")
-  endif()
-endif()
-
-# 父项目已经提供完整 Catch2 目标时直接复用，避免重复编译测试框架。
-if(TARGET Catch2::Catch2WithMain)
-  message(STATUS "Granit tests reuse the existing Catch2::Catch2WithMain target")
-  return()
-endif()
-
-# 其次尝试使用系统或父项目包管理器提供的 Catch2 3。
-find_package(Catch2 3 CONFIG QUIET)
-if(TARGET Catch2::Catch2WithMain)
-  message(STATUS "Granit tests use Catch2 from find_package")
-  return()
-endif()
-
-set(GRANIT_CATCH2_DIR "${CMAKE_CURRENT_SOURCE_DIR}/catch-v3.15.0")
-
-# 某些父项目只提供 Catch2::Catch2；此时仅补充 main，不能再次编译 Catch2 实现。
-if(TARGET Catch2::Catch2)
-  add_library(
-    granit_catch2_with_main
-    STATIC "${PROJECT_SOURCE_DIR}/tests/support/catch_main.cpp"
-  )
-  add_library(Catch2::Catch2WithMain ALIAS granit_catch2_with_main)
-  target_compile_features(granit_catch2_with_main PUBLIC cxx_std_20)
-  target_link_libraries(granit_catch2_with_main PUBLIC Catch2::Catch2)
-  set_target_properties(
-    granit_catch2_with_main
-    PROPERTIES FOLDER "ThirdParty/Catch2"
-  )
-  message(STATUS "Granit tests reuse the existing Catch2::Catch2 target")
-  return()
-endif()
-
-add_library(granit_catch2 INTERFACE)
-add_library(Catch2::Catch2 ALIAS granit_catch2)
-target_include_directories(
-  granit_catch2
-  SYSTEM INTERFACE "${GRANIT_CATCH2_DIR}"
-)
-target_compile_features(granit_catch2 INTERFACE cxx_std_20)
-
-add_library(
-  granit_catch2_with_main
-  STATIC "${GRANIT_CATCH2_DIR}/catch2/catch_amalgamated.cpp"
-)
-add_library(Catch2::Catch2WithMain ALIAS granit_catch2_with_main)
-target_compile_features(granit_catch2_with_main PUBLIC cxx_std_20)
-target_link_libraries(granit_catch2_with_main PUBLIC Catch2::Catch2)
-set_target_properties(
-  granit_catch2_with_main
-  PROPERTIES FOLDER "ThirdParty/Catch2"
-)
-
-message(STATUS "Granit tests use bundled Catch2 3.15.0")

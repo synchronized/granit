@@ -39,7 +39,7 @@ depth.view = depth_view;
 ```
 
 调用者必须使用当前初始化宏或正确填写完整 `struct_size`，保留字段必须为零。颜色附件的
-`resolve_view` 是当前描述的一部分；项目尚未发布，不保留缺少该字段的旧尺寸分支。
+`resolve_view` 是当前描述的一部分；当前 0.x 接口不接受缺少该字段的旧结构尺寸。
 
 ## Load 与 Store
 
@@ -54,8 +54,8 @@ Store 支持：
 - `STORE`：保留本次渲染结果。
 - `DISCARD`：结束后不保证内容。
 
-`UNDEFINED` 只用于发现未初始化描述，不能作为有效操作。Swapchain Backbuffer 在 present 前需要
-保留内容，后续 F-06 会拒绝不适合 present 的 store 行为。
+`UNDEFINED` 只用于发现未初始化描述，不能作为有效操作。用于呈现的 Swapchain Backbuffer 应使用
+`STORE`；选择 `DISCARD` 后仍可提交和呈现，但窗口内容不受保证。
 
 ## C++20 包装
 
@@ -80,4 +80,5 @@ Store 支持：
 `resolve_view` 要求源颜色附件为多采样、解析目标为单采样，且二者格式和尺寸相同；解析目标也必须
 具有颜色附件用途。当前后端统一支持平均解析模式，公开描述暂不允许选择其他解析模式。
 
-详细设计见 [R-09 计划](../plans/R-09-render-target-attachment.md)。
+录制顺序和状态约束见 [Command Recorder](command-recorder.md)，Texture 与 View 限制见
+[Texture](texture.md)。

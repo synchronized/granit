@@ -3,533 +3,85 @@
 
 # 路线图
 
-本路线图只记录阶段、优先级、状态摘要和近期顺序，不构成版本或发布日期承诺。任务的设计、实施
-细节和验收记录位于[开发计划](plans/README.md)。
+本路线图只记录当前阶段、正在实施的任务、暂缓候选和长期方向，不构成版本或发布日期承诺。
+已发布版本的变化见 [Changelog](../CHANGELOG.md)，详细设计见[计划索引](plans/README.md)，实际执行
+证据见[实施记录](records/README.md)。
 
-## 优先级与状态
+## 当前阶段
 
-- **P0 核心路径**：形成首个完整、可验证渲染闭环所必需。
-- **P1 完整能力**：补齐通用性、生产可用性和性能。
-- **P2 扩展能力**：高层渲染、跨平台或需要真实负载验证的功能。
+Granit 已形成桌面 Vulkan、浏览器 WebGPU、C11 ABI、C++20 RAII、Window、RenderPipeline 与
+AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接口、文档和发布契约的可信度，再根据
+真实使用证据决定新的公共能力。
 
-状态使用“已完成、进行中、待开始、暂缓”。任务编号保持稳定；设计内容以对应 Plan 为权威来源。
-
-## 阶段总览
-
-| 阶段 | 状态 | 结果或下一目标 |
+| 能力域 | 状态 | 当前边界 |
 |---|---|---|
-| 一、工程与 ABI 基础 | 基本完成 | C/C++ 接口、句柄、测试和安装 Consumer 已建立 |
-| 二、Vulkan 与窗口输出 | 基本完成 | Renderer、Win32 Surface、Swapchain 和帧循环已实现 |
-| 三、GPU 资源 | 基本完成 | 资源、上传、回读、状态跟踪和安全退役已实现 |
-| 四、命令与帧同步 | 基本完成 | Recorder、提交、Frame、查询和恢复边界已实现 |
-| 五、基础渲染 | 已完成 | D-01～D-10 当前范围已完成；D-09 等待真实 Bindless 瓶颈 |
-| 六、多线程与性能 | 已完成 | 压力测试、基线、批量提交与上传批处理已完成 |
-| 七、可选高层渲染 | 已完成 | H-02～H-08 路线闭合，参考管线与公共 UI/Text 已验证 |
-| 八、稳定化与跨平台 | 持续进行 | ABI 策略、诊断和更多平台 Surface 待后续推进 |
-| 九、多后端与 Web 平台 | 已完成 | 桌面 Vulkan、浏览器 WebGPU 与私有 HAL 收敛已验收 |
-| 十、Android 移动平台 | 待开始 | 多后端边界已完成，等待规划 NDK、Surface 与移动生命周期 |
-| 十一、跨后端模型查看器 | 已完成 | PBR、环境光、质量选项与桌面渲染线程已验收 |
-| 十二、0.5.0 平台扩展与上游集成 | 已发布 | 平台扩展与上游集成已随 0.5.0 发布 |
-| 十三、0.6.0 Shader 资产与变体 | 已发布 | S-20、S-21 与发布验收均已完成 |
-| 十四、0.7.0 SDK 稳定化与上游集成 | 已发布 | component 契约与上游集成门禁已随 0.7.0 完成 |
-| 十五、0.8.0 运行时 Shader 与材质资产 | 已发布 | 运行时资产契约已随 0.8.0 发布 |
-| 十六、0.9.0 公共 PBR 与渲染资产收敛 | 已发布 | 公共 PBR、Binding、Model Viewer 与安装资产已收敛 |
-| 十七、0.10.0 环境资源与帧构造背压 | 已发布 | Environment Map 与帧构造背压已随 0.10.0 发布 |
-| 十八、0.11.0 WebGPU 能力与 Web Model Viewer | 已完成 | S-26 能力对齐、正式网页查看器与发布验收已完成 |
-| 十九、0.12.0 上游资产与标准材质契约 | 已发布 | Shader Asset 检查与标准材质契约已完成 |
-| 二十、0.13.0 异步 GPU 操作与 Web 运行时 | 已发布 | 异步操作、WebGPU Timestamp 与分阶段加载已完成 |
-| 二十一、0.14.0 异步指标与资源流送 | 已发布 | 异步指标和有界上传已完成 |
-| 二十二、0.15.0 异步回读与管线预热 | 已发布 | 批量回读和 Pipeline 预热已完成 |
-| 二十三、0.16.0 严格非阻塞异步调度 | 已发布 | 异步背压和后台 Pipeline 创建已完成 |
-| 二十四、0.17.0 WebGPU 异步 Pipeline 预热 | 已发布 | WebGPU 原生异步创建已完成 |
-| 二十五、开发与发布流水线提速 | 已完成 | 分层 CI 与不可变候选晋级已完成 |
-| 二十六、0.18.0 压缩纹理 | 已发布 | 压缩格式、能力查询与上传契约已完成 |
-| 二十七、0.19.0 纹理资产变体 | 已发布 | 纹理 Manifest、选择与逐 mip 上传已完成 |
-| 二十八、0.20.0 示例框架稳定化 | 已发布 | 示例分层、交互与双后端视觉验收已完成 |
-| 二十九、0.21.0 Shader Library 与后端无关材质 | 已完成 | S-37A～S-37L 与跨平台候选包验收均已完成 |
-| 三十、0.22.0 AssetTools SDK 与工具链交付 | 已发布 | AssetTools SDK 与工具链已随 0.22.0 发布 |
-| 三十一、0.23.0 空帧与覆盖层可靠性 | 已发布 | S-39～S-41 已随 0.23.0 发布 |
-| 三十二、0.24.0 测试架构收敛 | 已发布 | S-42 已随 0.24.0 发布 |
-| 三十三、0.24.0 AssetTools 源码布局收敛 | 已发布 | S-43 已随 0.24.0 发布 |
-| 三十四、0.25.0 Window/Input/呈现收敛 | 已完成 | S-44A～S-44F 与跨平台 SDK 验收已完成 |
+| Core 与 ABI | 可用，未冻结 | 结果码、强类型句柄、C/C++ 包装、诊断与安装 Consumer 已覆盖 |
+| Vulkan 桌面后端 | 可用 | Windows Win32 与 Linux XCB/Wayland，资源、命令、提交和呈现完整 |
+| WebGPU 浏览器后端 | 可用 | Emscripten 浏览器资源、PBR、异步操作、Timestamp 与呈现闭环 |
+| GPU 资源与 Pipeline | 可用 | Buffer、Texture、Sampler、Shader Library、Graphics/Compute 与传输 |
+| Frame 与 Swapchain | 可用 | Frame Context、在途槽、恢复边界、取消、Present 与延迟回收 |
+| RenderPipeline | 可用，未冻结 | Scene Snapshot、Material、Forward PBR、Shadow、IBL、UI 与后处理 |
+| Window 与 Input | 可用，未冻结 | 单一 Window System 管理窗口、事件、输入状态和直接 Surface 创建 |
+| AssetTools | 实验性 | HLSL-first Shader Library、Material、Texture、Environment 构建与检查 |
+| SDK 与发布 | 可用 | Windows/Linux shared/static、安装审计与不可变候选晋级 |
 
-## 一、工程与 ABI 基础
+各能力的准确使用方式和限制以 [Reference](README.md#api-与行为参考) 为准。
 
-**状态：基本完成。**
+## 最近完成
 
-已建立 C11 ABI、C++20 RAII、共享/静态构建、64 位安全句柄、结果码、CMake 安装导出、严格警告、
-纯 C/C++ 测试和独立公共头测试。
+### S-47：Window 跨平台入口收敛
 
-后续工作归入稳定化阶段：日志回调、自定义分配器、导出符号回归和正式 ABI 兼容策略。
+**状态：已完成，P1。**
 
-## 二、Vulkan 与窗口输出
+[S-47](plans/S-47-window-platform-convergence.md) 已让 Emscripten 与桌面平台共享 Window System、
+窗口和输入事件、状态查询及 Surface 创建流程。浏览器安装包现在导出 Window component，Model
+Viewer 不再维护私有 DOM 输入和 Canvas Surface 生命周期。
 
-**状态：基本完成。**
+### S-45：0.26.0 文档一致性与历史收敛
 
-已完成 Vulkan 1.3 Loader/Instance/Device、设备筛选、独立 Volk 函数表、Win32 Surface、Swapchain
-创建与重建，以及窗口 acquire/submit/present 流程。
+**状态：已完成，P1。**
 
-更多平台 Surface 和可选 Vulkan 原生互操作归入稳定化阶段。
+[S-45](plans/S-45-0.26.0-documentation-convergence.md) 已修正当前文档与 0.25.0 实现之间的事实
+漂移，收敛 Concept、Reference、Roadmap、Plan 与 Record 职责，并扩展确定性文档检查。本任务未
+修改公共 API、ABI、资产格式或运行时行为。
 
-## 三、GPU 资源
+完成内容：
 
-**状态：基本完成。**
+1. 修正版本、组件和发布状态。
+2. 让 Concept 与 Reference 反映当前后端和资源能力。
+3. 压缩路线图、计划索引和长实施记录。
+4. 增加版本身份与已删除 component 检查，完成 Documentation 验收。
 
-| 任务 | 优先级 | 状态 |
-|---|---:|---|
-| [R-01 GPU 内存分配](plans/R-01-memory-allocation.md) | P0 | 已完成 |
-| [R-02 资源模型](plans/R-02-resource-model.md) | P0 | 已完成 |
-| [R-03 Buffer](plans/R-03-buffer.md) | P0 | 已完成 |
-| [R-04 Buffer 上传](plans/R-04-buffer-upload.md) | P0 | 已完成 |
-| [R-05 Texture 与 View](plans/R-05-texture-view.md) | P0 | 已完成 |
-| [R-06 Sampler](plans/R-06-sampler.md) | P0 | 已完成 |
-| [R-07 Swapchain Backbuffer](plans/R-07-swapchain-backbuffer.md) | P0 | 已完成 |
-| [V-01 生命周期验证](plans/V-01-lifetime-validation.md) | P0 | 已完成 |
-| [R-08 延迟销毁](plans/R-08-deferred-destruction.md) | P0 | 已完成 |
-| [R-09 Render Target Attachment](plans/R-09-render-target-attachment.md) | P0 | 已完成 |
-| [R-10 通用资源传输](plans/R-10-resource-transfer.md) | P1 | 已完成；异步回读等待真实需求 |
+## 暂缓与重新评估条件
 
-## 四、命令与帧同步
+以下方向没有进入当前版本。只有满足对应证据后才建立新的实施计划。
 
-**状态：基本完成。**
+| 方向 | 当前决定 | 恢复条件 |
+|---|---|---|
+| [Bindless Resource Table](plans/D-09-bindless-resource-table.md) | 暂缓 | 真实材质绑定压力证明传统 Bind Group 成为瓶颈 |
+| [透明 PBR](plans/H-09B-transparent-pbr-correctness.md) | 暂缓 | 产品需要正确折射、排序或大量透明 PBR 材质 |
+| Clustered Forward | 暂缓 | 多光源负载稳定超过当前 Forward 路径预算 |
+| Cascaded Shadow Maps | 暂缓 | 大尺度室外场景证明单方向光 Shadow Map 不足 |
+| 公共 glTF/Scene SDK | 暂缓 | 至少第二个独立 Consumer 需要复用示例私有加载器 |
+| 公共执行器或线程池 | 暂缓 | 至少第二个模块需要相同调度与取消契约 |
+| Android | 待规划 | 明确 NDK、Surface、生命周期、输入和 CI 设备矩阵 |
+| 稳定 ABI | 待决策 | 稳定 component 范围和兼容门槛全部满足 |
 
-| 任务 | 优先级 | 状态 |
-|---|---:|---|
-| [F-01 Command Recorder](plans/F-01-command-recorder.md) | P0 | 已完成 |
-| [F-02 基础命令录制](plans/F-02-command-recording.md) | P0 | 当前命令范围已完成 |
-| [F-03 帧同步](plans/F-03-frame-synchronization.md) | P0 | 已完成 |
-| [F-04 Queue 提交](plans/F-04-queue-submission.md) | P0 | 已完成 |
-| [F-05 资源状态跟踪](plans/F-05-resource-state-tracking.md) | P0 | 当前命令范围已完成 |
-| [F-06 Swapchain 帧循环](plans/F-06-swapchain-frame-loop.md) | P0 | 已完成 |
-| [F-07 恢复边界](plans/F-07-recovery-boundaries.md) | P0 | 已完成 |
-| F-08 多 Recorder 批量提交 | P1 | 已完成 |
-| F-09 GPU 查询与标记 | P1 | Timestamp 已完成；统计与调试标记归入 S-02 |
-| [F-10 公共帧上下文](plans/F-10-public-frame-context.md) | P1 | 已完成 |
-| [F-11 Canvas 绑定缓存](plans/F-11-canvas-binding-cache.md) | P1 | 已完成；跨平台 CI 已通过 |
-| [F-12 帧循环性能诊断与提交优化](plans/F-12-frame-loop-performance.md) | P1 | 已完成；跨平台 CI 已通过 |
+这些方向互不构成前置依赖。测量或 Consumer 证据不足时继续使用当前实现，不提前扩展公共 ABI。
 
-## 五、基础渲染
+## 长期方向
 
-**状态：已完成；D-01～D-10 当前范围已验收。**
+- 保持 Renderer、RenderPipeline、Window、AssetTools 与第三方 Integration 的单向依赖。
+- 继续以 Vulkan 和浏览器 WebGPU 的共同语义为公共契约，不为表面对称模拟不安全能力。
+- 用格式版本管理持久化资产兼容，用 component 分别声明 API/ABI 稳定等级。
+- 优先改进真实上游接入、诊断、性能测量和发布复现，再增加渲染特性。
+- 原生后端互操作若出现明确需求，作为显式不稳定高级接口设计，不污染基础 API。
 
-| 任务 | 优先级 | 状态 |
-|---|---:|---|
-| [D-01 Shader 输入](plans/D-01-shader-input.md) | P0 | 已完成 |
-| [D-02 Shader Module](plans/D-02-shader-module.md) | P0 | 已完成 |
-| [D-03 Graphics Pipeline 与 Bind Group](plans/D-03-graphics-pipeline.md) | P0 | 已完成 |
-| D-04 Dynamic Rendering | P0 | 已完成 |
-| [D-05 Draw 命令](plans/D-05-draw-commands.md) | P0 | 已完成 |
-| [D-06 基础示例](plans/D-06-examples.md) | P0 | 已完成 |
-| [D-07 Compute Pipeline](plans/D-07-compute-pipeline.md) | P1 | 已完成 |
-| [D-08 Pipeline 生产能力](plans/D-08-pipeline-production.md) | P1 | 已完成 |
-| [D-09 Bindless Resource Table](plans/D-09-bindless-resource-table.md) | P2 | 草案；等待真实瓶颈 |
-| [D-10 动态 Uniform Buffer Offset](plans/D-10-dynamic-uniform-buffer-offsets.md) | P1 | 已完成 |
+## 历史入口
 
-## 六、多线程与性能
+- [Changelog](../CHANGELOG.md)：面向使用者的逐版本变化和迁移影响。
+- [迁移指南](guides/migrate-0.24-to-0.25.md)：最近一次破坏性版本迁移。
+- [计划索引](plans/README.md)：当前与暂缓任务；[完成计划索引](plans/completed.md)保存已验收计划。
+- [实施记录](records/README.md)：跨平台、性能和发布验收证据。
 
-**状态：已完成。**
-
-| 任务 | 优先级 | 状态 |
-|---|---:|---|
-| [P-01 并行录制与压力测试](plans/P-01-parallel-recording.md) | P1 | 已完成 |
-| [P-02 性能基线](plans/P-02-performance-baseline.md) | P1 | 已完成 |
-| [P-03 锁竞争与批量 API](plans/P-03-contention-and-batching.md) | P1 | 已完成 |
-| [P-04 Upload Batch](plans/P-04-upload-allocator.md) | P1 | 已完成 |
-| [P-05 外部执行器边界](plans/P-05-executor-boundary.md) | P2 | 已完成；当前不引入线程池 |
-| [P-06 Render Graph 边界](plans/P-06-render-graph-boundary.md) | P2 | 已完成；实现转入 H-01 |
-
-具体测量结果位于 [`benchmarks/results`](../benchmarks/results/README.md)。
-
-## 七、可选高层渲染
-
-**状态：已完成。**
-
-| 任务 | 优先级 | 状态 |
-|---|---:|---|
-| H-01 最小 Render Graph | P2 | 已完成；详细记录见 P-06 Plan |
-| [H-02 Material](plans/H-02-material-system.md) | P2 | 已完成内部原型 |
-| [H-03 PBR](plans/H-03-pbr-renderer.md) | P2 | 已完成 |
-| [H-04 Scene 提交](plans/H-04-scene-submission.md) | P2 | 已完成 |
-| [H-05 Lighting 与后处理](plans/H-05-lighting-pipeline.md) | P2 | 已完成 |
-| [H-06 Unlit、2D 与 UI](plans/H-06-unlit-2d-ui.md) | P2 | 已完成内部技术路线验证 |
-| [H-07 参考 Render Pipeline](plans/H-07-reference-render-pipeline.md) | P2 | 已完成 |
-| [H-08 公共 UI、Debug Draw 与 Text](plans/H-08-ui-debug-text-components.md) | P2 | 已完成 |
-| [H-09 高级渲染评估](plans/H-09-advanced-rendering-evaluation.md) | P2 | 已完成；四项原型分别暂缓 |
-
-高层模块只能依赖核心 Renderer，不能形成反向依赖。使用者始终可以绕过高层模块，直接使用资源、
-命令和 Pipeline API。
-
-## 八、稳定化与跨平台
-
-**状态：持续进行。**
-
-- **[S-01](plans/S-01-abi-regression.md) / P1**：已完成；导出、布局、版本扩展、共享/静态安装
-  Consumer 均有回归，并已建立 Granit 0.1.0 核心 C ABI 正式快照。当前仍不承诺稳定。
-- **[S-02](plans/S-02-diagnostics.md) / P1**：已完成；日志、诊断回调、GPU 调试名称和 Device Lost
-  报告。
-- **[S-03](plans/S-03-package-consumers.md) / P1**：实现已完成；安装包、真实外部 C/C++
-  Consumer 和版本验证已落地，Windows/Linux 共享与静态 CI 矩阵已通过。
-- **[S-04](plans/S-04-linux-surface.md) / P2**：实现已完成；XCB、Wayland Surface、窗口示例和
-  无头集成测试均已落地，Linux GCC/Clang 共享与静态运行矩阵已通过。
-- **S-05 / P2**：明确标记为不稳定的 Vulkan 原生互操作。
-- **[S-06](plans/S-06-compatibility-policy.md) / P2**：当前 0.x 策略、核心 ABI 快照、component
-  契约审计、变更记录和发布验收清单均已落地；最终 S-06D 等待稳定版本决策。
-- **[S-07](plans/S-07-window-events.md) / P2**：可选 Window 组件及 Win32/XCB/Wayland Window、
-  统一事件、原生值查询和 Renderer 集成已实现并通过跨平台 CI。
-- **[S-07E](plans/S-07E-input-component.md) / P2**：历史阶段曾实现独立 Input 组件、键鼠文本
-  和安装 Consumer；0.25.0 已按 [S-44](plans/S-44-0.25.0-window-input-presentation-convergence.md)
-  合并其运行时。
-- **[S-08](plans/S-08-third-party-integrations.md) / P2**：独立 SDL3/ImGui 目标、安装边界、SDL3
-  Surface、ImGui Draw Data 转换、字体上传、组合示例与 S-08F 测量已完成；Win32 及 Linux
-  X11/Wayland 共享与静态 smoke test 均已通过。
-- **[S-09](plans/S-09-0.3.0-sdk-usability.md) / P1**：已完成；公共使用路径、契约一致性、诊断、
-  安装 Consumer、迁移说明及 Windows/Linux 共享与静态 Release 预验证均已通过。
-
-## 九、多后端与 Web 平台
-
-**状态：已完成；桌面使用 Vulkan，WebGPU 由 Emscripten 浏览器提供。**
-
-- **[S-10](plans/S-10-0.4.0-webgpu-backend.md) / P2**：先定义后端无关的内部设备、资源、命令、
-  同步与 Surface 边界，在保持 Vulkan 后端功能和性能的前提下验证桌面 WebGPU 离屏 MVP；随后建立
-  WGSL 工具链，并接入 Emscripten、浏览器 Canvas 和事件循环。S-10A 内部能力、插件、资源、
-  Queue、Surface 与 Swapchain 边界迁移已经完成；S-10B 桌面 WebGPU 设备、资源、绑定、Pipeline、
-  命令提交和确定性离屏回读已通过 Windows/Linux 真实 Dawn 验证。S-10C 已完成 WGSL 权威输入、
-  诊断、反射、确定性资产与缓存闭环；S-10D 已完成 Emscripten 平台验证，S-10E1 已完成 Registry
-  资源、呈现与命令路径的核心去 Vulkan 化；S-10E2 已统一异步 Provider 生命周期、状态查询、
-  事件推进和终止错误传播。S-10E3 已完成 Canvas/Swapchain 插件状态机、Registry 动态 Backbuffer
-  和插件呈现资源适配器；Emscripten 静态 Provider 已通过 Debug/Release 浏览器异步初始化、Canvas、
-  Acquire/Cancel、状态与输入验证。S-10E4 已建立统一拥有 Provider、异步生命周期、能力和呈现
-  适配器的 WebGPU Renderer 状态对象；Vulkan/WebGPU 状态共同实现最小 Renderer 后端接口，
-  Registry 根记录已通过该接口统一状态、能力和事件推进，并已增加 WebGPU 静态 Provider 工厂
-  与通用销毁路径；Emscripten Smoke 已通过公共 Renderer、Canvas Surface、Swapchain、Frame 和
-  动态 Backbuffer API 驱动 WebGPU，并验证帧结束后的借用句柄失效。公共 Shader 描述已增加可选
-  WGSL 视图，WebGPU Shader 创建/销毁已接入 generation 句柄；空 Pipeline Layout、基础单颜色
-  Graphics Pipeline，以及最小三角形 Command Recorder/Queue Submit 已接入公共 API。浏览器
-  三角形示例与浏览器状态、输入及可读合成层像素验收已经完成；Windows、Linux 和 Emscripten
-  首轮矩阵均已通过。Emscripten 与桌面现统一包含同一 Registry 入口，具体后端实现集中在
-  `src/backend/vulkan` 与 `src/backend/webgpu`，Renderer 创建差异由独立工厂编译单元承接；旧类型
-  和旧入口已删除，静态 SDK 与独立浏览器 Consumer 已通过构建和无头
-  Chrome 验证。平台专用 Registry 已删除，两端共用唯一 Registry、句柄表、资源记录和公共 API
-  编译单元；Registry 根记录现统一使用后端无关 Renderer 状态，不再保留 Vulkan 专用根表。
-  Shader、Pipeline 与 Renderer 创建的平台差异已下沉到私有 HAL 和后端工厂；命令、帧与资源
-  记录也不再持有 Vulkan `renderer_state` 具体视图。最终 Windows、Linux 与 Emscripten 手动
-  Actions 矩阵全部通过，S-10 已完成。详细结果见
-  [S-10E WebGPU Renderer 阶段验收](records/2026-08-28-s10e-webgpu-renderer-acceptance.md)。
-- **[S-16](plans/S-16-browser-only-webgpu.md) / P1**：依据 ADR-005 删除桌面 Dawn、动态插件和
-  SDK 工作流；保留统一私有 HAL，并让 Emscripten WebGPU 静态后端直接服务浏览器目标。
-- 0.21.0 的 S-37H 已删除浏览器静态后端遗留的 Provider ABI、分发表和 domain adapter，并按领域
-  拆分后端私有设备实现；S-10 与 S-16 中的 Provider 描述保留为当时的实施历史。
-## 十、Android 移动平台
-
-**状态：待开始；不属于已发布的 0.4.0 交付范围。**
-
-- **S-11 / P2**：在多后端契约与 Emscripten 路径稳定后增加 Android 支持。首轮以 Android NDK
-  `arm64-v8a` 为基线，接入 `ANativeWindow`、应用暂停/恢复、Surface 重建、旋转与基础触控输入，
-  并只验证 Vulkan 后端；Android WebGPU 若产生明确需求，另行决策。
-- Android 交付需要独立规划 Gradle/Prefab 或 AAR 集成、按 ABI 打包、真机与模拟器测试以及移动端
-  GPU 能力降级。S-10 已完成；Android 的目标版本和任务拆分仍需单独确定。
-
-## 十一、跨后端模型查看器
-
-**状态：S-12、S-13、S-13H、S-13I 已完成。**
-
-- **[S-12](plans/S-12-webgpu-feature-parity.md) / P1**：补齐公共后端选择，以及模型绘制需要的
-  Vertex/Index Buffer、Texture、Sampler、Bind Group、动态 Uniform、Indexed Draw 和上传能力；
-  当前由共同 Fixture 验证桌面 Vulkan 与浏览器 WebGPU；桌面 Dawn 的历史验收已由 S-16 取代。
-- **[S-13](plans/S-13-cross-backend-model-viewer.md) / P1**：增加编辑器式模型查看器；glTF 加载器
-  首阶段只放在 `examples/common/gltf`，以许可适合再分发的头盔模型验证 PBR、轨道相机、ImGui
-  和三个运行目标。
-- **[S-13H](plans/S-13H-model-viewer-environment-lighting.md) / P1**：复用已有 Group 3 IBL 布局，
-  为模型查看器接入许可明确、离线预处理的摄影棚环境光，并恢复金属材质的环境反射。
-- **[S-13I](plans/S-13I-render-quality.md) / P1**：统一 MSAA、FXAA、Specular AA、Mipmap 与各向异性
-  过滤的能力查询、公开质量选项、查看器控制和跨后端验收。
-- **[S-15](plans/S-15-internal-hal-structure.md) / P1**：整理现有私有 HAL；在 Renderer 注册时集中
-  发现能力接口，收敛 Registry 依赖，并明确契约和具体后端的目录职责。公共 API/ABI 和
-  后端选择行为保持不变。
-- **[S-19](plans/S-19-model-viewer-render-thread.md) / P1**：为 Model Viewer 建立自有数据的
-  Frame Packet 和私有执行器；桌面 Vulkan 使用有界渲染线程，浏览器保持同步执行。任务已完成。
-- **S-14 / P2 / 条件性**：仅当至少两个非示例 Consumer 需要复用，且 S-13 已验证 CPU 数据模型后，
-  再将示例加载器提升为可安装的 `granit::integration_gltf`；此前不承诺公共 glTF SDK。
-
-## 十二、0.5.0 平台扩展与上游集成
-
-**状态：已完成；S-18A、S-18B1、S-18C 与 S-18E 已验收，Android 明确延期。**
-
-- **[S-18](plans/S-18-0.5.0-platform-upstream-integration.md) / P1**：以 Gneiss 等真实 Consumer 的
-  接入问题为输入，完善现有桌面与浏览器平台的宿主循环、Surface、输入、资源生命周期、诊断和
-  安装 SDK 契约；窗口当前状态查询和本地 SDK 验收已经完成。
-- Android 继续保留为独立 S-11，不属于 0.5.0 当前范围；glTF Integration 和高级渲染功能仍遵守
-  各自的需求触发条件。
-
-## 十三、0.6.0 Shader 资产与变体
-
-**状态：S-20 与 S-21 均已完成。**
-
-- **[S-20](plans/S-20-shader-asset-variants.md) / P1**：把 Shader 构建产物拆为后端无关清单与
-  可裁剪 WGSL/SPIR-V sidecar，并完成按后端及能力档位选择、失败语义和三种源码前端。
-- **[S-21](plans/S-21-shader-toolchain-package.md) / P1**：发布可下载、可校验的 Windows/Linux 离线
-  Shader Toolchain，使官方 CI 使用严格锁定策略。
-- 0.6.0 首先稳定资产契约，不同时改造 `.grmat` 或 Renderer Shader 创建接口。
-
-## 十四、0.7.0 SDK 稳定化与上游集成
-
-**状态：已完成；S-22A～S-22E 均已验收并随 0.7.0 发布。**
-
-- **[S-22](plans/S-22-0.7.0-sdk-stabilization.md) / P1**：收敛可安装 component 的职责、依赖、
-  成熟度和 Consumer 契约，并以 Gneiss 的公开使用路径作为只读集成证据。
-- 本阶段只修改 Granit；Android、公共 glTF Integration 和高级渲染能力继续按独立条件门控。
-- 0.7.0 形成稳定候选边界，但不提前宣布稳定 ABI；S-06D 留待首个稳定版本执行。
-
-## 十五、0.8.0 运行时 Shader 与材质资产
-
-**状态：已发布；S-23A～S-23F 均已验收。**
-
-- **[S-23](plans/S-23-0.8.0-runtime-shader-assets.md) / P1**：让 Core 从调用方提供的
-  `.grshader` 清单和 sidecar 字节选择并创建后端 Shader；让 `.grmat` 通过稳定内容 ID 引用同一
-  Shader Asset，消除工具、Renderer 与 Material 之间的平行 Shader 表示。
-- Granit 只负责内存字节的验证、能力选择和 GPU 对象创建；文件 I/O、资产数据库、异步加载、
-  缓存与热更新继续由 Gneiss 等上游决定。
-- 全部子阶段完成后统一提升到 0.8.0，不在开发提交中反复修改版本号。
-
-## 十六、0.9.0 公共 PBR 与渲染资产收敛
-
-**状态：已完成。**
-
-- **[S-24](plans/S-24-0.9.0-public-pbr-assets.md) / P1**：把 Model Viewer 已验证的完整纹理、方向光、
-  IBL、Specular AA 和调试能力收敛到公共 PBR Shader，统一四组 Binding 与离线变体规则。
-- Model Viewer 改为公共 PBR 的真实 Consumer，迁移材质引用后删除示例私有 PBR Shader。
-- 公共 PBR 资产随 RenderPipeline component 安装，并由独立 Consumer 及 Vulkan/WebGPU 视觉回归
-  验证；Core 继续只消费调用方提供的内存字节。
-- Android、公共 glTF SDK、TAA 和无真实需求依据的高级渲染能力不属于本版本。
-
-## 十七、0.10.0 环境资源与帧构造背压
-
-**状态：已完成。**
-
-- **[S-25](plans/S-25-0.10.0-environment-and-frame-backpressure.md) / P1**：让 Model Viewer 在昂贵
-  Frame Packet 构造前实施队列背压，并区分主动跳过与队列替换统计。
-- 将已验证的 IBL 纹理聚合、正式环境资产和默认环境收敛到 RenderPipeline component；Model Viewer
-  迁移为公共 Environment Map 的 Consumer。
-- 公共执行器、glTF SDK、Android、TAA 和高级渲染能力不属于 0.10.0。
-
-## 十八、0.11.0 WebGPU 能力对齐与浏览器 Model Viewer
-
-**状态：已完成；能力对齐、正式 Web Model Viewer 与跨平台发布验收均已通过。**
-
-- **[S-26](plans/S-26-0.11.0-webgpu-parity-and-web-model-viewer.md) / P1**：以公共 API 为边界建立
-  Vulkan/WebGPU 能力矩阵，补齐可移植的资源传输和 Mipmap，并明确 Timestamp Query 能力边界。
-- 保留快速浏览器 Smoke，并新增加载正式模型、环境和浏览器质量面板的用户级 Web Model Viewer。
-- Vulkan 专属同步、持久映射、Pipeline Cache 和原生互操作不做 WebGPU 模拟，通过能力查询和稳定
-  错误明确表达差异。
-- 桌面 Dawn、公共 glTF SDK、公共执行器、Android、TAA 和其他高级渲染能力不属于本版本。
-
-## 十九、0.12.0 上游资产与标准材质契约
-
-**状态：已完成；公共资产检查、标准 PBR 契约、统一资产目录与发布验收均已通过。**
-
-- **[S-27](plans/S-27-0.12.0-upstream-asset-contracts.md) / P1**：提供公共 Shader Asset 检查接口，
-  将稳定的 PBR Material Schema 与标准模板纳入安装 SDK。
-- 安装包、FetchContent 与 `add_subdirectory` 统一提供 `granit_RENDER_PIPELINE_ASSET_DIR`，让上游不再
-  推导 Granit 源码或二进制格式布局。
-- 通过仓库内独立 Consumer Fixture 验证 Gneiss 所需契约，不在本任务直接修改 Gneiss。
-- 异步 Timestamp、Web Worker、Android、公共 glTF SDK 和高级渲染能力不属于本版本。
-
-## 二十、0.13.0 异步 GPU 操作与 Web 运行时完善
-
-**状态：已完成；异步契约、双后端 Timestamp、Web 加载与发布验收均已通过。**
-
-- **[S-28](plans/S-28-0.13.0-async-gpu-and-web-runtime.md) / P1**：建立可轮询、可请求取消且不阻塞
-  浏览器主线程的后端无关异步 GPU 操作契约。
-- 在设备能力允许时补齐 WebGPU Timestamp Query，并使用同一契约验证 Vulkan/WebGPU 的状态、
-  结果码和生命周期一致性。
-- Web Model Viewer 分阶段执行下载、解析、上传和 Mipmap，提供真实进度、取消、错误详情与自托管、
-  相对 URL、CORS 和离线 Release Fixture 支持。
-- 公共 API 不接管线程池、文件系统、网络或 glTF 解析；取消不承诺撤销已经提交给 GPU 的命令。
-- 桌面 Dawn、Android、公共 glTF SDK、TAA、Bindless 和新的渲染后端不属于本版本。
-
-## 二十一、0.14.0 异步管线指标与资源流送
-
-**状态：已完成；异步指标、有界异步上传、Model Viewer 接入与跨后端验收均已通过。**
-
-- **[S-29](plans/S-29-0.14.0-async-pipeline-metrics-and-streaming.md) / P1**：让参考 Render Pipeline
-  内部使用 0.13.0 异步 Timestamp API，同时保持现有指标快照 ABI 和非阻塞查询方式。
-- 以 Gneiss 的真实接入为验收输入，补齐多帧槽乱序完成、失败、取消、关闭和能力降级语义。
-- 在现有 Upload Batch 上建立有界异步上传、回滚与资源切换基础；线程调度、资产解析和缓存仍由
-  上游负责。
-- 公共线程池、场景管理、glTF SDK、Android、TAA、Bindless 和新的渲染后端不属于本版本。
-
-## 二十二、0.15.0 异步回读与管线预热
-
-**状态：已完成。**
-
-- **[S-30](plans/S-30-0.15.0-async-readback-and-pipeline-warmup.md) / P1**：为 Buffer 与 Texture
-  建立有界批量异步 Readback，复用现有异步状态、取消、诊断和安全生命周期契约。
-- 提供批量 Pipeline 预热、逐项结果和稳定缓存键，让 Vulkan 与浏览器 WebGPU 把冷编译移出交互帧；
-  不支持真正异步创建的设备通过能力查询明确表达差异。
-- 截图编码、文件 I/O、任务线程和资产调度继续由上游负责；本版本不引入公共执行器。
-- Renderer 异步初始化、公共 glTF SDK、Android、TAA、Bindless 和新的渲染后端不属于本版本。
-
-## 二十三、0.16.0 严格非阻塞异步调度
-
-**状态：已完成。**
-
-- **[S-31](plans/S-31-0.16.0-nonblocking-async.md) / P1**：异步上传与回读在后端饱和时立即
-  返回可重试背压，不等待调用线程。
-- 为具备可靠异步创建能力的后端提供严格非阻塞 Pipeline 预热，并通过能力位表达降级。
-- 公共 API 继续不接管线程池、资产调度和文件系统。
-
-## 二十四、0.17.0 WebGPU 原生异步 Pipeline 预热
-
-**状态：已完成。**
-
-- **[S-32](plans/S-32-0.17.0-webgpu-async-pipeline-warmup.md) / P1**：接入 WebGPU 原生异步
-  Render/Compute Pipeline 创建，并在满足严格语义后报告对应能力。
-- Vulkan 私有后台任务与 WebGPU 回调收敛到同一内部 HAL 完成契约，Registry 只管理公共异步状态。
-- Web Model Viewer 在加载阶段预热标准 PBR 变体，提供真实进度、取消和失败详情。
-- 公共线程池、桌面 Dawn、Android、新后端、公共 glTF SDK 和高级渲染特性不属于本版本。
-
-## 二十五、开发与发布流水线提速
-
-**状态：已完成；不绑定公共 SDK 版本。**
-
-- **[S-33](plans/S-33-ci-release-acceleration.md) / P1**：把高频快速检查、后端集成验证和完整
-  发布矩阵分层，固化软件 WebGPU 适配器的 Pipeline 降级回归。
-- 缓存 Emscripten SDK/ports、锁定 Shader 工具链与编译结果；桌面 Dawn 已由 S-16 删除，不重新
-  引入对应依赖或缓存。
-- Release Candidate 构建一次并记录 tag、commit、run ID 和 SHA-256；正式标签只晋级完全匹配的
-  候选字节，不重复构建。
-
-## 二十六、0.18.0 压缩纹理与格式能力契约
-
-**状态：已完成。**
-
-- **[S-34](plans/S-34-0.18.0-compressed-textures.md) / P1**：增加 BC、ETC2、ASTC 通用格式、
-  紧密块布局计算和设备格式能力查询。
-- Vulkan 与浏览器 WebGPU 依据真实设备能力支持压缩纹理创建、上传和采样；即时、批量、命令录制
-  与异步上传共用同一验证规则。
-- KTX2/Basis 解析、压缩和平台包构建仍由 Gneiss 等资产工具负责；Granit 不引入容器依赖或运行时
-  转码器。
-- 压缩纹理 Readback 作为有条件范围，不能保持跨后端一致时不阻塞上传与采样主目标。
-
-## 二十七、0.19.0 纹理资产变体与流式加载契约
-
-**状态：已完成。**
-
-- **[S-35](plans/S-35-0.19.0-texture-asset-variants.md) / P1**：定义带版本、内容 ID 和严格边界
-  校验的 Texture Asset Manifest，并为 BC、ETC2、ASTC 与 RGBA8 变体提供设备驱动的确定性选择。
-- 逐 mip 加载复用现有异步 Upload Batch、取消、背压和资源保活契约；文件读取、网络、缓存、容器
-  解析和离线转码继续由 Gneiss 等上游负责。
-- Vulkan 与浏览器 WebGPU 使用同一公共测试语义；缺少对应压缩能力时只选择调用方显式提供的
-  兼容变体，否则返回明确错误。
-- KTX2/DDS 解析、Basis 运行时转码、压缩纹理运行时 Mipmap、公共文件 Resolver、Android、虚拟
-  纹理和 Bindless 不属于本版本。
-
-## 二十八、0.20.0 示例框架与跨平台 Model Viewer 稳定化
-
-**状态：已完成。**
-
-- **[S-36](plans/S-36-0.20.0-example-framework-and-model-viewer.md) / P1**：修复 Model Viewer 在
-  渲染背压和 ImGui 捕获下的输入丢失、旋转卡顿与高延迟，并覆盖焦点、HiDPI 和 Resize 边界。
-- 统一桌面 Vulkan 与浏览器 WebGPU 的示例核心和输入语义，以正式 Model Viewer Fixture 完成
-  浏览器加载、交互、像素容差和资源生命周期验收。
-- 将示例整理为私有 Framework、平台壳层和 Sample 内容三层；保留 `model_viewer` 与 `imgui`
-  两个用户级示例，后者使用 SDL3 验证 Vulkan/WebGPU 一致性，测试性质程序继续归入测试。
-- 公共执行器、公共 glTF SDK、Android、新后端和新渲染特性不属于本版本。
-
-## 二十九、0.21.0 Shader Library 与后端无关材质
-
-**状态：已完成；S-37A～S-37L 与跨平台不可变 Release Candidate 验收均已通过。**
-
-- **[S-37](plans/S-37-0.21.0-shader-library-and-material-boundary.md) / P1**：引入确定性、可裁剪的
-  `.grshlib`，由 Renderer 选择并校验 Vulkan/WebGPU 载荷，Material 和应用不再接收后端信息。
-- `.grmat` 升级到 v5 并显式声明绑定组契约；静态功能与动态参数分离，删除按 Pass 名称猜布局和
-  Canvas 按后端修正坐标的逻辑。
-- `.grshaderobj` 退出安装与运行时资产；离线单 Shader 结果只作为工具私有增量缓存。
-- **[S-37H](plans/S-37H-webgpu-provider-boundary-collapse.md) / P1**：删除浏览器静态 WebGPU 后端中
-  遗留的 Provider ABI、函数表、dispatch 和 domain adapter，按领域拆分后端私有设备实现。
-- **S-37I / P1**：以带标签的 `granit_surface_desc` 和单一创建函数统一平台 Surface 边界，删除
-  Win32、XCB、Wayland 与 Canvas 的旧公共创建入口。
-- **S-37J / P1**：Tone Mapping、Shadow 和 Debug Draw 的内建 Shader 统一由 `.grshlib` 提供，
-  删除运行时直接选择 SPIR-V/WGSL 的旁路。
-- **[S-37K](plans/S-37K-shader-tooling-api-structure.md) / P1**：已完成 Compiler、Compilation、
-  Reflection、私有 Shader Object、Library Builder、CLI 和 CMake 边界收敛。
-- **[S-37L](plans/S-37L-hlsl-first-shader-authoring.md) / P1**：已将作者输入收敛为 HLSL 与 Library
-  源清单，完成内建资产迁移、旧入口删除和跨平台发布门禁。
-- 文件 I/O、网络、资产数据库、运行时源码编译、Android、新后端、Bindless 和材质节点图不属于
-  本版本。
-
-## 三十、0.22.0 AssetTools SDK 与工具链交付
-
-**状态：已发布；S-38A～S-38G 与跨平台候选包验收均已随 0.22.0 完成。**
-
-- **[S-38](plans/S-38-0.22.0-asset-tools-and-toolchain.md) / P1**：将 Shader、Material、Texture 与
-  Environment 的离线构建能力收敛为一个 AssetTools SDK、component 和 CLI，同时保留各自独立的
-  运行时资产格式。
-- Shader Compiler 的 DXC/Tint 独立路径收敛为一个 Toolchain 根目录，并为安装 Consumer 提供
-  `off`、`system`、`auto` 与 `download` 获取模式；其他资产领域不依赖 Shader Toolchain。
-- Toolchain 继续通过不可变的独立 Release 交付，普通 Granit SDK 只记录锁定身份；下载必须经过
-  归档 SHA-256、包内清单和真实编译能力验证。
-- 已构建 `.grshlib` 的 Runtime 消费路径保持无工具链依赖；默认配置不访问网络。
-- 图片解码、纹理压缩、HDR 卷积、macOS、ARM64、运行时资产编译和把工具链嵌入每个 SDK 包不属于
-  本版本。
-
-## 三十一、0.23.0 空帧与覆盖层可靠性
-
-**状态：已发布；S-39～S-41 与跨平台验收均已随 0.23.0 完成。**
-
-- **[S-39](plans/S-39-0.23.0-empty-frame-and-overlay-reliability.md) / P1**：让有效 View 在零可见
-  Renderable 时仍完成清屏、Tone Mapping、Debug Draw、Canvas、Overlay 和 Frame 提交。
-- 统一空 Opaque submission 与 clear-only Rendering 的内部语义，不新增 UI-only 或清屏专用公共
-  API，不改变 C ABI。
-- 以离屏像素、桌面 Swapchain、浏览器 WebGPU 和安装后 RenderPipeline Consumer 完成验收。
-- 透明 PBR、通用 Render Graph 重构、Android、Bindless 和稳定 ABI 决策不属于本版本。
-- **[S-40](plans/S-40-0.23.0-shader-toolchain-configuration-reliability.md) / P1**：修复 0.22.0
-  遗留工具路径导致的配置失败，并让锁定 Toolchain 与仓库 Shader/Material 快照逐字节一致。
-- **[S-41](plans/S-41-0.23.0-asset-layout-convergence.md) / P1**：按生命周期分离作者输入、已提交
-  生成快照、内建资产、格式实现与测试 Fixture，保持安装布局和资产字节不变。
-
-## 三十二、0.24.0 测试架构收敛
-
-**状态：已完成并随 0.24.0 发布。**
-
-- **[S-42](plans/S-42-0.24.0-test-architecture-convergence.md) / P1**：将 Smoke 收敛为离屏 GPU
-  与窗口 Render Pipeline 两个端到端健康检查，其余测试按模块和环境归位。
-- Win32、XCB、Wayland 统一通过 Window component 验证；SDL3 保留外部窗口 adapter 边界，复用
-  测试私有 Swapchain 帧逻辑。
-- 以 CTest 标签建立日常、GPU、平台、浏览器、安装包与发布矩阵，不改变公共 API 或 ABI。
-
-## 三十三、0.24.0 AssetTools 源码布局收敛
-
-**状态：已完成并随 0.24.0 发布。**
-
-- **[S-43](plans/S-43-0.24.0-asset-tools-source-layout.md) / P1**：将公共头、SDK 实现、共享格式、
-  正式 CLI 和测试 Fixture 工具放入与其交付边界一致的目录。
-- 公共 include 路径统一为 `granit/asset_tools`，C++ 命名空间保持 `granit::asset_tools`；项目处于
-  0.x 阶段，不保留旧 `granit/tools` 转发入口。
-- Runtime 与 AssetTools 按领域复用私有格式 Object Library，正式 CLI 只依赖公开 AssetTools SDK。
-- AssetTools 六类结果句柄已统一类型、槽位和 generation 校验；Environment Map 与 Debug Draw List
-  的内部类型标记不再冲突，跨类型使用会返回无效句柄错误。
-
-## 三十四、0.25.0 Window、Input 与呈现边界收敛
-
-**状态：已完成；S-44A～S-44F 与跨平台 SDK 验收已完成。**
-
-- **[S-44](plans/S-44-0.25.0-window-input-presentation-convergence.md) / P1**：将只服务 Window 的
-  Input 运行时并入 Window System，保留独立事件和值类型，删除第二套句柄、动态库和私有桥接。
-- 为 Granit Window 增加直接创建 Renderer Surface 的便捷入口；外部窗口继续使用显式包含的原生
-  Surface 描述，Renderer 不依赖 Window。
-- 以平台无关的呈现模式取代 Renderer 创建描述中的平台 Surface 位，并把原生窗口接口移出普通
-  聚合头。
-- 将 Window/Input 产品源码收敛到 `src/window`，按通用运行时、Input 领域和具体平台组织。
-- 手柄、触摸、完整 IME、第三方输入转换、Android 和全局 Event Bus 不属于本版本。
-
-## 近期执行顺序
-
-1. 评审并合并 0.25.0 Window/Input/呈现收敛 Pull Request。
-2. 公共执行器与场景 API 继续等待第二个真实复用证据。
-3. S-14 只在复用条件成立后启动；不要为当前单个示例提前稳定 glTF 公共 API。
-4. S-06D 最终验收等待稳定版本与 component 范围决策；不在 0.x 阶段提前宣布稳定。
-5. H-09 的透明 PBR、CSM、Clustered Forward 与 Bindless 只在各自重新评估条件满足后独立恢复，
-   不作为当前稳定化工作的前置项。
-
-若前置抽象不足，应先更新对应 Plan 和本路线图状态，再扩大公共 API。
+扩大公共 API 前应先更新对应 Plan 和本路线图状态，并明确验证与退出条件。

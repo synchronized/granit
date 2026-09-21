@@ -39,7 +39,7 @@ Texture 格式，并根据颜色、深度或深度模板格式自动选择 aspec
 函数返回后不再访问调用方的 CPU 数据，当前 Vulkan 后端通过内部 staging buffer 完成同步上传。
 Texture 必须带有 `TRANSFER_DESTINATION` 用途。写入支持非压缩和设备支持的压缩颜色格式、单个
 mip 与 Cube 面；深度模板写入仍不支持。高频批量上传使用
-[Upload Batch](../guides/upload-batch.md)，与同步、异步和 Command Recorder 路径共享相同块布局。
+[Upload Batch](upload-batch.md)，与同步、异步和 Command Recorder 路径共享相同块布局。
 
 不同 Texture 可以由不同线程同时写入；Queue 提交和全局图像状态由 Renderer 内部排序。同一
 Texture 的多个写入、销毁或其他写操作必须由调用方提供顺序。

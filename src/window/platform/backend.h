@@ -60,6 +60,17 @@ granit_result get_wayland_window(const std::shared_ptr<window_system_record>& sy
                                  void** native_surface);
 #endif
 
+#if defined(__EMSCRIPTEN__)
+granit_result create_emscripten_system(granit_window_system* output);
+granit_result destroy_emscripten_system(granit_window_system handle,
+                                        const std::shared_ptr<window_system_record>& system);
+granit_result process_emscripten_events(const std::shared_ptr<window_system_record>& system);
+granit_result create_emscripten_window(const std::shared_ptr<window_system_record>& system,
+                                       const granit_window_desc* desc, granit_window* output);
+granit_result destroy_emscripten_window(const std::shared_ptr<window_system_record>& system,
+                                        granit_window handle);
+#endif
+
 } // namespace granit::window::detail
 
 #endif

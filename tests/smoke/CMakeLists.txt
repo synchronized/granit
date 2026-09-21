@@ -24,34 +24,33 @@ add_test(NAME granit.smoke.gpu_offscreen COMMAND granit_gpu_offscreen_smoke)
 
 set_property(TEST granit.smoke.gpu_offscreen APPEND PROPERTY LABELS gpu integration)
 
-if(WIN32)
-  granit_add_smoke_target(granit_render_pipeline_window_smoke render_pipeline_window.cpp)
-  target_link_libraries(granit_render_pipeline_window_smoke PRIVATE granit::render_pipeline user32)
-  target_compile_definitions(
-    granit_render_pipeline_window_smoke
-    PRIVATE GRANIT_RENDER_PIPELINE_SMOKE_PACKAGE="${granit_render_pipeline_test_package}"
-            GRANIT_PIPELINE_ASSET_DIR="${GRANIT_PBR_TEST_SHADER_DIR}"
-  )
-  target_include_directories(
-    granit_render_pipeline_window_smoke PRIVATE "${PROJECT_SOURCE_DIR}/tests"
-                                                "${PROJECT_SOURCE_DIR}/src"
-  )
-  add_dependencies(
-    granit_render_pipeline_window_smoke granit_asset_tool granit_render_pipeline_test_package
-  )
-  target_sources(
-    granit_render_pipeline_window_smoke
-    PRIVATE "${granit_render_pipeline_test_package}"
-            $<TARGET_OBJECTS:granit_asset_format_shader>
-  )
-  add_test(
-    NAME granit.smoke.render_pipeline_window
-    COMMAND granit_render_pipeline_window_smoke --smoke-test
-  )
-  set_tests_properties(
-    granit.smoke.render_pipeline_window
-    PROPERTIES TIMEOUT 30 FAIL_REGULAR_EXPRESSION "\\[granit\\]\\[vulkan\\]"
-               LABELS "smoke;gpu;integration;platform"
-  )
-
-endif()
+granit_add_smoke_target(granit_render_pipeline_window_smoke render_pipeline_window.cpp)
+target_link_libraries(
+  granit_render_pipeline_window_smoke PRIVATE granit::render_pipeline granit::window
+)
+target_compile_definitions(
+  granit_render_pipeline_window_smoke
+  PRIVATE GRANIT_RENDER_PIPELINE_SMOKE_PACKAGE="${granit_render_pipeline_test_package}"
+          GRANIT_PIPELINE_ASSET_DIR="${GRANIT_PBR_TEST_SHADER_DIR}"
+)
+target_include_directories(
+  granit_render_pipeline_window_smoke PRIVATE "${PROJECT_SOURCE_DIR}/tests"
+                                              "${PROJECT_SOURCE_DIR}/src"
+)
+add_dependencies(
+  granit_render_pipeline_window_smoke granit_asset_tool granit_render_pipeline_test_package
+)
+target_sources(
+  granit_render_pipeline_window_smoke
+  PRIVATE "${granit_render_pipeline_test_package}"
+          $<TARGET_OBJECTS:granit_asset_format_shader>
+)
+add_test(
+  NAME granit.smoke.render_pipeline_window
+  COMMAND granit_render_pipeline_window_smoke --smoke-test
+)
+set_tests_properties(
+  granit.smoke.render_pipeline_window
+  PROPERTIES TIMEOUT 30 SKIP_RETURN_CODE 77 FAIL_REGULAR_EXPRESSION "\\[granit\\]\\[vulkan\\]"
+             LABELS "smoke;gpu;integration;platform"
+)

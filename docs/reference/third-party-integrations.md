@@ -9,8 +9,10 @@ Granit 提供两个默认关闭的 C++20 可选集成组件：
 
 | 构建选项 | 使用者目标 | 安装 component | 当前能力 |
 |---|---|---|---|
-| `GRANIT_BUILD_INTEGRATION_SDL3` | `granit::integration_sdl3` | `IntegrationSDL3` | SDL Window 到 Surface |
-| `GRANIT_BUILD_INTEGRATION_IMGUI` | `granit::integration_imgui` | `IntegrationImGui` | Draw Data 到 Canvas |
+| `GRANIT_BUILD_INTEGRATION_SDL3` | `granit::integration_sdl3` | `IntegrationSDL3` |
+  SDL Window 到 Surface |
+| `GRANIT_BUILD_INTEGRATION_IMGUI` | `granit::integration_imgui` | `IntegrationImGui` |
+  Draw Data 到 Canvas |
 
 启用组件前，父项目应已提供对应目标，或让 `find_package` 能找到 SDL3 3.2+ 与 ImGui。Granit 不会
 默认下载或内置这些依赖。源码树开发时也可以显式启用锁定依赖：
@@ -19,7 +21,7 @@ Granit 提供两个默认关闭的 C++20 可选集成组件：
 cmake -S . -B build/integrations \
   -DGRANIT_BUILD_INTEGRATION_SDL3=ON \
   -DGRANIT_BUILD_INTEGRATION_IMGUI=ON \
-  -DGRANIT_FETCH_INTEGRATION_DEPENDENCIES=ON
+  -DGRANIT_DEPENDENCY_POLICY=auto
 ```
 
 当前锁定 SDL 3.4.10 与 ImGui 1.92.9。下载模式用于源码树编译、测试和示例验证；为避免把下载的

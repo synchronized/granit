@@ -46,7 +46,7 @@ add_custom_command(
 add_test(
   NAME granit.backend.native_boundaries
   COMMAND "${CMAKE_COMMAND}" "-DSOURCE_DIR=${PROJECT_SOURCE_DIR}"
-          -P "${PROJECT_SOURCE_DIR}/cmake/check_backend_native_boundaries.cmake"
+          -P "${PROJECT_SOURCE_DIR}/tests/cmake/check_backend_native_boundaries.cmake"
 )
 
 granit_target_web_page(granit_web_platform_smoke "${CMAKE_CURRENT_SOURCE_DIR}/shell.html")

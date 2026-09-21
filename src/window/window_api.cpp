@@ -38,6 +38,8 @@ extern "C" granit_result granit_window_create(granit_window_system system_handle
 #else
   return GRANIT_ERROR_UNSUPPORTED;
 #endif
+#elif defined(__EMSCRIPTEN__)
+  return create_emscripten_window(system, desc, output);
 #else
   return GRANIT_ERROR_UNSUPPORTED;
 #endif
@@ -68,6 +70,8 @@ extern "C" granit_result granit_window_destroy(granit_window_system system_handl
 #else
   return GRANIT_ERROR_UNSUPPORTED;
 #endif
+#elif defined(__EMSCRIPTEN__)
+  return destroy_emscripten_window(system, window_handle);
 #else
   return GRANIT_ERROR_UNSUPPORTED;
 #endif

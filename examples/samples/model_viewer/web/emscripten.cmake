@@ -20,7 +20,7 @@ target_include_directories(
 )
 target_link_libraries(
   granit_web_model_viewer_platform
-  PUBLIC granit::granit granit_example_model_viewer_support granit_example_web
+  PUBLIC granit::granit granit::window granit_example_model_viewer_support granit_example_web
 )
 granit_target_webgpu(granit_web_model_viewer_platform)
 granit_target_compile_warnings(granit_web_model_viewer_platform)
@@ -29,10 +29,6 @@ target_link_options(
   granit_web_model_viewer_platform INTERFACE
     "-sFETCH=1" "-sASYNCIFY=1"
 )
-
-if(NOT GRANIT_BUILD_EXAMPLES OR NOT GRANIT_BUILD_MODEL_VIEWER_EXAMPLE)
-  return()
-endif()
 
 # 面向使用者的浏览器模型查看器默认加载 Khronos Flight Helmet；`?model=<URL>` 可覆盖资产。
 add_executable(granit_model_viewer_web "${CMAKE_CURRENT_LIST_DIR}/main.cpp")

@@ -3,63 +3,62 @@
 
 # 资源值类型
 
-`granit/renderer/resource_types.h` 定义 Buffer、Texture、Texture View 和 Sampler 共用的后端
-无关值类型。
-这些结构用于 Buffer、Texture、Texture View 和 Sampler 的创建、访问与验证。
+`granit/renderer/resource_types.h` 定义 Buffer、Texture、Texture View、Sampler 与 Pipeline 共用的
+后端无关值类型。本页说明这些值之间的关系；资源创建、能力和限制由对应领域 Reference 定义。
 
 ## 内存位置
 
+`granit_memory_location` 表达 CPU/GPU 访问意图，不对应具体 Heap、Vulkan Memory Type 或 WebGPU
+实现：
+
 - `AUTOMATIC`：由 Granit 根据用途选择，不承诺能够映射。
 - `DEVICE`：用于 GPU 高频访问，公共契约不允许映射。
-- `UPLOAD`：CPU 写、GPU 读，允许映射并在写访问结束时处理 flush。
+- `UPLOAD`：CPU 写、GPU 读，可以映射并在写访问结束时处理 flush。
 - `READBACK`：GPU 写、CPU 读，在 CPU 读取前处理 invalidate。
 
-这些值是访问意图，不对应具体 Heap 或 Vulkan Memory Type。
+Buffer 的映射、上传和回读行为见 [Buffer](buffer.md)；Texture 的写入、读取和传输行为见
+[Texture](texture.md)。
 
-## Buffer
+## 用途与格式
 
-`granit_buffer_desc` 包含字节大小、内存位置和可组合用途。首版用途覆盖 transfer、vertex、
-index、uniform、storage 和 indirect。大小与用途必须非零，未知用途位会被拒绝。
+Buffer usage 是 transfer、vertex、index、uniform、storage 和 indirect 等操作的位集合。Texture
+usage 独立表达 transfer、sampled、storage、color attachment 与 depth/stencil attachment。
+创建资源时用途必须覆盖其后续参与的全部操作。
 
-## Texture 与 View
+`granit_texture_format` 是 Granit 定义的颜色、深度/模板和块压缩格式，不等于 `VkFormat` 或
+WebGPU 枚举。格式块 Footprint 描述紧密 CPU 数据布局；设备能力查询返回当前 Renderer 支持的
+用途、过滤特性和样本数。完整格式、写入和 Mipmap 规则见 [Texture](texture.md)，多格式资产选择
+见 [Texture Asset Manifest](texture-asset.md)。
 
-`granit_texture_desc` 描述存储，包含维度、格式、用途、尺寸、mip、数组层和采样数。
-`granit_texture_view_desc` 描述访问同一存储的子资源范围。View 是独立资源，父 Texture 由未来
-创建函数单独传入。
+## Texture 子资源与 View
 
-View 还可独立映射 RGBA 输出分量，支持保持原分量、常量零/一以及读取任一源分量。例如文字
-图集可将 R8 覆盖率映射为 `(1, 1, 1, R)`，继续复用通用 Canvas Shader，并由顶点颜色提供文字
-颜色。分量映射只改变采样结果，不复制或修改 Texture 存储。
+Texture 描述包含维度、格式、用途、内存位置、尺寸、mip、数组层和样本数。View 通过
+`granit_subresource_range` 选择 aspect、mip 和数组层范围，并可使用 component mapping 改变采样
+结果的 RGBA 来源。
 
-当前支持单 sample 的单层 2D Texture，以及单个六面 Cube Texture。两者均可包含不超过完整链的
-mip；View 可以选择连续 mip 范围，2D View 固定单层，Cube View 固定六层。Cube 的宽高必须相等、
-depth 必须为 1、array layer 必须为 6。Cube Array、1D、3D 和多采样仍返回
-`GRANIT_ERROR_UNSUPPORTED`。
+`GRANIT_REMAINING_MIP_LEVELS` 与 `GRANIT_REMAINING_ARRAY_LAYERS` 表示从起始位置延伸到资源末尾。
+具体维度、样本数、Cube、默认 View、父子生命周期和格式重解释限制见 [Texture](texture.md)。
 
-Cube 存储使用六个数组层，层顺序遵循正 X、负 X、正 Y、负 Y、正 Z、负 Z。调用方可以通过
-Texture 写入接口指定单个面和 mip；创建完整 Cube View 后由 Shader 使用方向向量采样。Granit
-当前不自动生成 mip，也不负责从经纬度环境图卷积为 IBL 资源。
+## 采样状态
 
-销毁 Texture 会先级联销毁其全部 View，并立即使旧 View 句柄失效。验证模式下，如果仍存在
-用户创建的 View，该级联操作会输出生命周期警告，但仍返回成功。
+共享值类型定义 nearest/linear filter、mipmap filter、寻址模式和 compare operation。
+`granit_sampler_desc` 组合这些值以及各向异性、LOD bias 和 LOD 范围。设备限制、比较采样和
+各向异性规则见 [Sampler](sampler.md)。
 
-像素格式数值由 Granit 定义，不等于 `VkFormat`。深度/模板格式不能作为颜色附件，颜色格式也
-不能作为深度模板附件。
+## 跨资源约束
 
-## Sampler
+- Sample count 同时用于 Texture、Render Target 和 Graphics Pipeline，三者必须匹配。
+- Texture aspect 必须与格式一致；颜色格式不能作为深度/模板附件，反之亦然。
+- Texture View 由父 Texture 创建并继承其 Renderer domain；销毁 Texture 会使全部 View 失效。
+- 绑定、复制、渲染和提交入口会继续验证 usage、范围、格式、样本数和资源归属。
 
-`granit_sampler_desc` 描述过滤、寻址、比较、各向异性和 LOD 范围。当前基础范围支持 nearest、
-linear、repeat、mirrored repeat 和 clamp to edge；比较采样和各向异性留待设备能力接入。
-
-## Render Target Attachment
-
-颜色和深度/模板附件定义在 `granit/renderer/render_target.h`，统一接收 Texture View。离屏 View 与
-Swapchain Backbuffer View 不使用两套描述。详见 [Render Target Attachment](render-target.md)。
+Render Target 的 load/store、clear 和 resolve 规则见 [Render Target Attachment](render-target.md)；
+Pipeline 的顶点布局、绑定和状态规则见 [Graphics 与 Compute Pipeline](pipeline.md)。
 
 ## ABI 与扩展
 
-- 创建描述以 `struct_size` 开头，调用者应填写对应的 `*_VERSION_1_SIZE`。
-- 保留字段必须为零。
+- 创建描述以 `struct_size` 开头，调用方应使用对应初始化宏。
+- 保留字段必须为零，未知枚举值和用途位会被拒绝。
 - 后续字段只追加到结构尾部，不改变已有字段含义。
-- C++20 入口提供强类型枚举和位运算，并在调用时转换为 C ABI 描述结构。
+- C++20 入口提供强类型枚举和位运算，并在调用时映射到同一 C ABI 值。
 - 当前稳定等级和结构扩展承诺见[版本与兼容策略](compatibility.md)。

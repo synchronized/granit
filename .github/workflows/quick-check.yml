@@ -4,6 +4,7 @@
 name: Quick Check
 
 on:
+  pull_request:
   workflow_dispatch:
     inputs:
       suite:
@@ -44,7 +45,7 @@ jobs:
           REQUESTED_SUITE: ${{ inputs.suite }}
         run: |
           set -euo pipefail
-          suite="$REQUESTED_SUITE"
+          suite="${REQUESTED_SUITE:-auto}"
           if [[ "$suite" == auto ]]; then
             web_paths='^(tests/web/|examples/common/web/|examples/samples/model_viewer/web/|'
             web_paths+='examples/samples/imgui/(web\.cmake|web_main\.cpp)|'
@@ -61,7 +62,7 @@ jobs:
               '^(docs/|README\.md$|DOCUMENTATION_GUIDE\.md$|CHANGELOG\.md$)'; then
               suite=documentation
             elif printf '%s\n' "${files[@]}" | grep -qE \
-              '^(include/|tests/headers/|cmake/|CMakeLists\.txt$)'; then
+              '^(include/|tests/contracts/headers/|cmake/|CMakeLists\.txt$)'; then
               suite=headers
             else
               suite=core
@@ -82,7 +83,7 @@ jobs:
         run: |
           git fetch --no-tags origin main
           git diff --check "$(git merge-base HEAD origin/main)" HEAD
-          cmake -DGRANIT_SOURCE_DIR="$PWD" -P cmake/check_documentation.cmake
+          cmake -DGRANIT_SOURCE_DIR="$PWD" -P tests/cmake/check_documentation.cmake
 
   native:
     if: needs.classify.outputs.suite != 'documentation' && needs.classify.outputs.suite != 'webgpu'
