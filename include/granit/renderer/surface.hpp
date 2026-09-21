@@ -7,6 +7,7 @@
 #include <utility>
 
 #include <granit/core/result.hpp>
+#include <granit/renderer/renderer.hpp>
 #include <granit/renderer/surface.h>
 
 namespace granit {
@@ -36,6 +37,7 @@ public:
   }
 
   [[nodiscard]] result initialize(granit_renderer renderer, const surface_desc& desc) noexcept;
+  [[nodiscard]] result initialize(renderer& owner, const surface_desc& desc) noexcept;
 
   [[nodiscard]] result reset() noexcept {
     if (!valid()) {

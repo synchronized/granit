@@ -10,6 +10,8 @@
 
 ### 变更
 
+- C++ 资源包装可直接以 `renderer&`、`surface&`、`texture&`、`window_system&` 等父对象初始化，
+  常规使用路径不再要求提取 C ABI 句柄；`native_handle()` 继续用于显式 C API 与第三方互操作。
 - Window C++ 包装不再把 `window_event` 和 `input_event` 直接别名到 C ABI 结构；事件类型、按键动作、
   物理键和逻辑键使用 scoped enum，并由 `window_system::poll` 在 ABI 边界完成转换。C API 与布局
   保持不变。

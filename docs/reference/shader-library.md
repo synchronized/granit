@@ -74,7 +74,7 @@ Core 会在使用前再次校验所选载荷摘要。Library 内按内容 ID 缓
 
 ```cpp
 granit::shader_library library;
-const auto result = library.initialize(renderer.native_handle(), archive);
+const auto result = library.initialize(renderer, archive);
 
 granit::shader_library_info info;
 if (result.ok())

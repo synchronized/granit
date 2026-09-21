@@ -5,6 +5,7 @@
 #define GRANIT_SAMPLER_HPP_
 
 #include <granit/core/result.hpp>
+#include <granit/renderer/renderer.hpp>
 #include <granit/renderer/resource_types.hpp>
 #include <granit/renderer/sampler.h>
 #include <utility>
@@ -68,6 +69,9 @@ public:
     if (value == GRANIT_SUCCESS)
       renderer_ = renderer;
     return from_native(value);
+  }
+  [[nodiscard]] result initialize(renderer& owner, const sampler_desc& desc = {}) noexcept {
+    return initialize(owner.native_handle(), desc);
   }
   [[nodiscard]] result reset() noexcept {
     if (!valid())

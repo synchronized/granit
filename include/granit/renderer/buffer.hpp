@@ -11,6 +11,7 @@
 
 #include <granit/core/result.hpp>
 #include <granit/renderer/buffer.h>
+#include <granit/renderer/renderer.hpp>
 #include <granit/renderer/resource_types.hpp>
 
 namespace granit {
@@ -64,6 +65,10 @@ public:
     return from_native(native_result);
   }
 
+  [[nodiscard]] result initialize(renderer& owner, const buffer_desc& desc) noexcept {
+    return initialize(owner.native_handle(), desc);
+  }
+
   [[nodiscard]] result initialize(granit_renderer renderer, const buffer_desc& desc,
                                   std::span<const std::byte> initial_data) noexcept {
     if (valid()) {
@@ -91,6 +96,11 @@ public:
       renderer_ = renderer;
     }
     return from_native(native_result);
+  }
+
+  [[nodiscard]] result initialize(renderer& owner, const buffer_desc& desc,
+                                  std::span<const std::byte> initial_data) noexcept {
+    return initialize(owner.native_handle(), desc, initial_data);
   }
 
   [[nodiscard]] result write(std::uint64_t offset, std::span<const std::byte> data) noexcept {

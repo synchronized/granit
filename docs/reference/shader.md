@@ -47,7 +47,7 @@ granit_result result = granit_shader_create(renderer, &desc, &shader);
 ```cpp
 granit::shader shader;
 const auto result = shader.initialize(
-    renderer.native_handle(),
+    renderer,
     granit::shader_desc{
         .stage = granit::shader_stage::vertex,
         .code_format = granit::shader_code_format::spirv,

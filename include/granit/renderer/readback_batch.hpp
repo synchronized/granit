@@ -11,6 +11,7 @@
 #include <granit/core/result.hpp>
 #include <granit/renderer/async_operation.hpp>
 #include <granit/renderer/readback_batch.h>
+#include <granit/renderer/renderer.hpp>
 #include <granit/renderer/texture.hpp>
 
 namespace granit {
@@ -82,6 +83,11 @@ public:
     if (value == GRANIT_SUCCESS)
       renderer_ = renderer;
     return from_native(value);
+  }
+
+  [[nodiscard]] result create(renderer& owner,
+                              const readback_batch_options& options = {}) noexcept {
+    return create(owner.native_handle(), options);
   }
 
   [[nodiscard]] result read_buffer(granit_buffer buffer, std::uint64_t offset, std::uint64_t size,

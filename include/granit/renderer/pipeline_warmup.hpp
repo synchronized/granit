@@ -11,6 +11,7 @@
 #include <granit/core/result.hpp>
 #include <granit/renderer/async_operation.hpp>
 #include <granit/renderer/pipeline_warmup.h>
+#include <granit/renderer/renderer.hpp>
 
 namespace granit {
 
@@ -66,6 +67,10 @@ public:
     if (value == GRANIT_SUCCESS)
       renderer_ = renderer;
     return from_native(value);
+  }
+  [[nodiscard]] result create(renderer& owner,
+                              const pipeline_warmup_batch_options& options = {}) noexcept {
+    return create(owner.native_handle(), options);
   }
   [[nodiscard]] result add_graphics(const granit_graphics_pipeline_desc& desc,
                                     std::uint32_t& index) noexcept {

@@ -9,7 +9,9 @@
 
 #include <granit/core/result.hpp>
 #include <granit/renderer/frame_context.h>
+#include <granit/renderer/renderer.hpp>
 #include <granit/renderer/resource_types.hpp>
+#include <granit/renderer/surface.hpp>
 #include <granit/renderer/swapchain.h>
 
 namespace granit {
@@ -111,6 +113,11 @@ public:
       renderer_ = renderer;
     }
     return from_native(native_result);
+  }
+
+  [[nodiscard]] result initialize(renderer& owner, const surface& target,
+                                  const swapchain_desc& desc) noexcept {
+    return initialize(owner.native_handle(), target.native_handle(), desc);
   }
 
   [[nodiscard]] result recreate(const swapchain_desc& desc) noexcept {

@@ -114,7 +114,7 @@ TEST_CASE("Shader Library 句柄校验类型、domain 和 generation", "[shader_
           granit::result::success);
 
   granit::shader_library library;
-  REQUIRE(library.initialize(first.native_handle(), archive) == granit::result::success);
+  REQUIRE(library.initialize(first, archive) == granit::result::success);
   const auto handle = library.native_handle();
   granit::shader_library_info info;
   REQUIRE(library.get_info(info) == granit::result::success);
@@ -128,7 +128,7 @@ TEST_CASE("Shader Library 句柄校验类型、domain 和 generation", "[shader_
         GRANIT_ERROR_INVALID_HANDLE);
 
   granit::shader_library replacement;
-  REQUIRE(replacement.initialize(first.native_handle(), archive) == granit::result::success);
+  REQUIRE(replacement.initialize(first, archive) == granit::result::success);
   CHECK(replacement.native_handle() != handle);
   REQUIRE(first.reset() == granit::result::success);
   CHECK(replacement.get_info(info) == granit::result::invalid_handle);
@@ -147,7 +147,7 @@ TEST_CASE("Shader Library 由 Renderer 选择载荷并共享后端 Shader", "[sh
   granit::shader_library library;
   granit::shader first;
   CHECK(library.create_shader(content_id, first) == granit::result::invalid_handle);
-  REQUIRE(library.initialize(renderer.native_handle(), archive) == granit::result::success);
+  REQUIRE(library.initialize(renderer, archive) == granit::result::success);
   granit::shader second;
   REQUIRE(library.create_shader(content_id, first) == granit::result::success);
   CHECK(library.create_shader(content_id, first) == granit::result::invalid_argument);
@@ -159,7 +159,7 @@ TEST_CASE("Shader Library 由 Renderer 选择载荷并共享后端 Shader", "[sh
   REQUIRE(second.reset() == granit::result::success);
   REQUIRE(library.reset() == granit::result::success);
 
-  REQUIRE(library.initialize(renderer.native_handle(), archive) == granit::result::success);
+  REQUIRE(library.initialize(renderer, archive) == granit::result::success);
   auto missing = content_id;
   missing[0] ^= std::byte{1};
   CHECK(library.create_shader(missing, first) == granit::result::not_ready);

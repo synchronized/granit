@@ -48,7 +48,7 @@ int main() {
 
   auto archive = read_file(GRANIT_TRIANGLE_SHADER_LIBRARY);
   granit::shader_library library;
-  result = library.initialize(renderer.native_handle(), archive);
+  result = library.initialize(renderer, archive);
   if (result.failed())
     return report_failure("创建 Shader Library", result);
 
@@ -63,13 +63,13 @@ int main() {
     return report_failure("创建片段 Shader", result);
 
   granit::pipeline_layout layout;
-  result = layout.initialize(renderer.native_handle());
+  result = layout.initialize(renderer);
   if (result.failed())
     return report_failure("创建 Pipeline Layout", result);
 
   constexpr auto format = granit::texture_format::rgba8_unorm;
   granit::graphics_pipeline pipeline;
-  result = pipeline.initialize(renderer.native_handle(),
+  result = pipeline.initialize(renderer,
                                {.layout = layout.native_handle(),
                                 .vertex_shader = vertex_shader.native_handle(),
                                 .fragment_shader = fragment_shader.native_handle(),
@@ -78,7 +78,7 @@ int main() {
     return report_failure("创建 Graphics Pipeline", result);
 
   granit::texture output;
-  result = output.initialize(renderer.native_handle(),
+  result = output.initialize(renderer,
                              {.format = format,
                               .usage = granit::texture_usage::color_attachment |
                                        granit::texture_usage::transfer_source,
@@ -88,12 +88,12 @@ int main() {
     return report_failure("创建离屏纹理", result);
 
   granit::texture_view output_view;
-  result = output_view.initialize(renderer.native_handle(), output.native_handle());
+  result = output_view.initialize(renderer, output);
   if (result.failed())
     return report_failure("创建离屏纹理视图", result);
 
   granit::command_recorder recorder;
-  result = recorder.initialize(renderer.native_handle());
+  result = recorder.initialize(renderer);
   if (result.failed())
     return report_failure("创建 Command Recorder", result);
   result = recorder.begin();

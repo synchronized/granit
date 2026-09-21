@@ -9,6 +9,7 @@
 
 #include <granit/core/result.hpp>
 #include <granit/renderer/async_operation.hpp>
+#include <granit/renderer/renderer.hpp>
 #include <granit/renderer/timestamp_query.h>
 
 namespace granit {
@@ -48,6 +49,9 @@ public:
     if (value == GRANIT_SUCCESS)
       renderer_ = renderer;
     return from_native(value);
+  }
+  [[nodiscard]] result initialize(renderer& owner, std::uint32_t query_count) noexcept {
+    return initialize(owner.native_handle(), query_count);
   }
   [[nodiscard]] result get_results(std::uint32_t first,
                                    std::span<std::uint64_t> nanoseconds) noexcept {

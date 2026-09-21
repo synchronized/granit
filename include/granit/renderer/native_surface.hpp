@@ -69,6 +69,10 @@ inline result surface::initialize(granit_renderer renderer, const surface_desc& 
   return from_native(value);
 }
 
+inline result surface::initialize(renderer& owner, const surface_desc& desc) noexcept {
+  return initialize(owner.native_handle(), desc);
+}
+
 } // namespace granit
 
 #endif

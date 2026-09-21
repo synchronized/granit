@@ -10,6 +10,7 @@
 
 #include <granit/core/result.hpp>
 #include <granit/renderer/async_operation.hpp>
+#include <granit/renderer/renderer.hpp>
 #include <granit/renderer/texture.hpp>
 #include <granit/renderer/upload_batch.h>
 
@@ -59,6 +60,9 @@ public:
     if (value == GRANIT_SUCCESS)
       renderer_ = renderer;
     return from_native(value);
+  }
+  [[nodiscard]] result initialize(renderer& owner, upload_batch_options options = {}) noexcept {
+    return initialize(owner.native_handle(), options);
   }
   [[nodiscard]] result write_buffer(granit_buffer buffer, std::uint64_t offset,
                                     std::span<const std::byte> data) noexcept {

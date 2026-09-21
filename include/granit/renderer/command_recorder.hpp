@@ -13,6 +13,7 @@
 #include <granit/core/result.hpp>
 #include <granit/renderer/command_recorder.h>
 #include <granit/renderer/render_target.hpp>
+#include <granit/renderer/renderer.hpp>
 #include <granit/renderer/swapchain.hpp>
 #include <granit/renderer/timestamp_query.h>
 
@@ -66,6 +67,9 @@ public:
       owned_ = true;
     }
     return from_native(value);
+  }
+  [[nodiscard]] result initialize(renderer& owner) noexcept {
+    return initialize(owner.native_handle());
   }
   [[nodiscard]] result begin() noexcept {
     return from_native(granit_command_recorder_begin(renderer_, handle_));

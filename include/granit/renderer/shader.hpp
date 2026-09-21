@@ -62,6 +62,10 @@ public:
     return initialize_native(renderer, native);
   }
 
+  [[nodiscard]] result initialize(renderer& owner, const shader_desc& desc) noexcept {
+    return initialize(owner.native_handle(), desc);
+  }
+
   [[nodiscard]] result reset() noexcept {
     if (!valid())
       return result::success;

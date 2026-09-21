@@ -11,6 +11,7 @@
 
 #include <granit/core/result.hpp>
 #include <granit/renderer/pipeline.h>
+#include <granit/renderer/renderer.hpp>
 #include <granit/renderer/resource_types.hpp>
 
 namespace granit {
@@ -65,6 +66,10 @@ public:
   }
   [[nodiscard]] result initialize(granit_renderer renderer,
                                   std::span<const bind_group_layout_entry> entries) noexcept;
+  [[nodiscard]] result initialize(renderer& owner,
+                                  std::span<const bind_group_layout_entry> entries) noexcept {
+    return initialize(owner.native_handle(), entries);
+  }
   [[nodiscard]] result reset() noexcept;
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
   [[nodiscard]] granit_bind_group_layout native_handle() const noexcept { return handle_; }
@@ -101,6 +106,10 @@ public:
   }
   [[nodiscard]] result initialize(granit_renderer renderer, granit_bind_group_layout layout,
                                   std::span<const bind_group_entry> entries) noexcept;
+  [[nodiscard]] result initialize(renderer& owner, const bind_group_layout& layout,
+                                  std::span<const bind_group_entry> entries) noexcept {
+    return initialize(owner.native_handle(), layout.native_handle(), entries);
+  }
   [[nodiscard]] result reset() noexcept;
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
   [[nodiscard]] granit_bind_group native_handle() const noexcept { return handle_; }
@@ -130,6 +139,9 @@ public:
   [[nodiscard]] result
   initialize(granit_renderer renderer,
              std::span<const granit_bind_group_layout> bind_group_layouts = {}) noexcept;
+  [[nodiscard]] result initialize(renderer& owner) noexcept {
+    return initialize(owner.native_handle());
+  }
   [[nodiscard]] result reset() noexcept;
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
   [[nodiscard]] granit_pipeline_layout native_handle() const noexcept { return handle_; }
@@ -297,6 +309,9 @@ public:
   }
   [[nodiscard]] result initialize(granit_renderer renderer,
                                   const graphics_pipeline_desc& desc) noexcept;
+  [[nodiscard]] result initialize(renderer& owner, const graphics_pipeline_desc& desc) noexcept {
+    return initialize(owner.native_handle(), desc);
+  }
   [[nodiscard]] result reset() noexcept;
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
   [[nodiscard]] granit_graphics_pipeline native_handle() const noexcept { return handle_; }
@@ -331,6 +346,9 @@ public:
   }
   [[nodiscard]] result initialize(granit_renderer renderer,
                                   const compute_pipeline_desc& desc) noexcept;
+  [[nodiscard]] result initialize(renderer& owner, const compute_pipeline_desc& desc) noexcept {
+    return initialize(owner.native_handle(), desc);
+  }
   [[nodiscard]] result reset() noexcept;
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
   [[nodiscard]] granit_compute_pipeline native_handle() const noexcept { return handle_; }

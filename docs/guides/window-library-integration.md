@@ -57,7 +57,7 @@ auto result = renderer.initialize({
 granit::surface surface;
 if (result.ok())
   result = surface.initialize(
-      renderer.native_handle(), granit::surface_desc::win32(instance, hwnd));
+      renderer, granit::surface_desc::win32(instance, hwnd));
 ```
 
 ### Wayland
@@ -77,7 +77,7 @@ auto result = renderer.initialize({
 granit::surface surface;
 if (result.ok())
   result = surface.initialize(
-      renderer.native_handle(), granit::surface_desc::wayland(display, wl_surface));
+      renderer, granit::surface_desc::wayland(display, wl_surface));
 ```
 
 SDL3 的 Wayland `xdg_*` 对象可能在隐藏和再次显示窗口时重建。窗口重新显示后必须重新查询属性，
@@ -106,7 +106,7 @@ auto result = renderer.initialize({
 granit::surface surface;
 if (result.ok()) {
   result = surface.initialize(
-      renderer.native_handle(),
+      renderer,
       granit::surface_desc::xcb(connection, static_cast<std::uint32_t>(x11_window)));
 }
 ```
@@ -128,7 +128,7 @@ if (result.ok()) {
 
 HWND hwnd = glfwGetWin32Window(window);
 HINSTANCE instance = reinterpret_cast<HINSTANCE>(GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
-surface.initialize(renderer.native_handle(), granit::surface_desc::win32(instance, hwnd));
+surface.initialize(renderer, granit::surface_desc::win32(instance, hwnd));
 ```
 
 Renderer 创建时启用呈现。
@@ -142,7 +142,7 @@ Renderer 创建时启用呈现。
 wl_display* display = glfwGetWaylandDisplay();
 wl_surface* wl_surface = glfwGetWaylandWindow(window);
 surface.initialize(
-    renderer.native_handle(), granit::surface_desc::wayland(display, wl_surface));
+    renderer, granit::surface_desc::wayland(display, wl_surface));
 ```
 
 Renderer 创建时启用呈现。
@@ -158,7 +158,7 @@ Display* display = glfwGetX11Display();
 const Window x11_window = glfwGetX11Window(window);
 xcb_connection_t* connection = XGetXCBConnection(display);
 surface.initialize(
-    renderer.native_handle(),
+    renderer,
     granit::surface_desc::xcb(connection, static_cast<std::uint32_t>(x11_window)));
 ```
 

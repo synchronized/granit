@@ -26,7 +26,7 @@ granit::window_system window_system;
 check(window_system.initialize());
 
 granit::window window;
-check(window.initialize(window_system.native_handle(), {
+check(window.initialize(window_system, {
     .title = "Granit Tutorial 01",
     .width = 1280,
     .height = 720,
@@ -39,7 +39,7 @@ check(renderer.initialize({
 }));
 
 granit::surface surface;
-check(window.create_surface(renderer.native_handle(), surface));
+check(window.create_surface(renderer, surface));
 ```
 
 Window 拥有平台窗口，Surface 只借用它。不要在 Surface 和 Swapchain 仍存活时销毁 Window。
@@ -48,14 +48,14 @@ Window 拥有平台窗口，Surface 只借用它。不要在 Surface 和 Swapcha
 
 ```cpp
 granit::swapchain swapchain;
-check(swapchain.initialize(renderer.native_handle(), surface.native_handle(), {
+check(swapchain.initialize(renderer, surface, {
     .width = 1280,
     .height = 720,
     .presentation = granit::present_mode::fifo,
 }));
 
 granit::frame_context frames;
-check(frames.initialize(renderer.native_handle()));
+check(frames.initialize(renderer));
 ```
 
 每帧先处理事件并读取 framebuffer 像素尺寸。尺寸为零表示窗口最小化，此时不要获取 Swapchain 图像。

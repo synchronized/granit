@@ -10,6 +10,7 @@
 #include <utility>
 
 #include <granit/core/result.hpp>
+#include <granit/renderer/renderer.hpp>
 #include <granit/renderer/resource_types.hpp>
 #include <granit/renderer/texture.h>
 
@@ -186,6 +187,10 @@ public:
       renderer_ = renderer;
     return from_native(value);
   }
+
+  [[nodiscard]] result initialize(renderer& owner, const texture_desc& desc) noexcept {
+    return initialize(owner.native_handle(), desc);
+  }
   [[nodiscard]] result reset() noexcept {
     if (!valid()) {
       return result::success;
@@ -303,6 +308,11 @@ public:
     if (value == GRANIT_SUCCESS)
       renderer_ = renderer;
     return from_native(value);
+  }
+
+  [[nodiscard]] result initialize(renderer& owner, const texture& source,
+                                  const texture_view_desc& desc = {}) noexcept {
+    return initialize(owner.native_handle(), source.native_handle(), desc);
   }
   [[nodiscard]] result reset() noexcept {
     if (!valid()) {

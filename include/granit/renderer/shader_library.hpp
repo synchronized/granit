@@ -12,6 +12,7 @@
 #include <utility>
 
 #include <granit/core/result.hpp>
+#include <granit/renderer/renderer.hpp>
 #include <granit/renderer/shader.hpp>
 #include <granit/renderer/shader_library.h>
 
@@ -91,6 +92,10 @@ public:
     if (value.ok())
       renderer_ = renderer;
     return value;
+  }
+
+  [[nodiscard]] result initialize(renderer& owner, std::span<const std::byte> archive) noexcept {
+    return initialize(owner.native_handle(), archive);
   }
 
   [[nodiscard]] result get_info(shader_library_info& info) const noexcept {

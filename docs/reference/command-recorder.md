@@ -69,7 +69,7 @@ Viewport 与 Scissor 支持批量设置。Vertex/Index Buffer 在 Dynamic Render
 
 ```cpp
 granit::command_recorder recorder;
-if (recorder.initialize(renderer.native_handle()) == granit::result::success) {
+if (recorder.initialize(renderer) == granit::result::success) {
   recorder.begin();
   recorder.end();
   recorder.submit();

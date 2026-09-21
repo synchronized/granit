@@ -108,7 +108,7 @@ Frame 的获取、呈现和失效规则见 [Swapchain 参考](swapchain.md)。
 
 ```cpp
 granit::frame_context context;
-context.initialize(renderer.native_handle());
+context.initialize(renderer);
 
 granit::frame_recording recording;
 context.begin(frame, recording);

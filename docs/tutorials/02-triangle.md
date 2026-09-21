@@ -32,7 +32,7 @@ AssetTools 在构建期生成 `.grshlib`、索引和 Content ID。运行时只�
 
 ```cpp
 granit::shader_library library;
-check(library.initialize(renderer.native_handle(), archive));
+check(library.initialize(renderer, archive));
 
 granit::shader vertex_shader;
 granit::shader fragment_shader;
@@ -40,7 +40,7 @@ check(library.create_shader(triangle_vertex_id, vertex_shader));
 check(library.create_shader(triangle_fragment_id, fragment_shader));
 
 granit::pipeline_layout layout;
-check(layout.initialize(renderer.native_handle()));
+check(layout.initialize(renderer));
 ```
 
 Graphics Pipeline 的颜色格式必须与 Swapchain 格式一致。窗口重建后若格式变化，也要重建依赖该格式

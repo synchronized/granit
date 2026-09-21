@@ -26,7 +26,7 @@ int main() {
 
   // 创建窗口。
   granit::window window;
-  result = window.initialize(window_system.native_handle(),
+  result = window.initialize(window_system,
                              {.title = application_name, .width = width, .height = height});
   if (result.failed()) {
     return report_failure("window initialize", result);
@@ -42,22 +42,21 @@ int main() {
 
   // 创建表面。
   granit::surface surface;
-  result = window.create_surface(renderer.native_handle(), surface);
+  result = window.create_surface(renderer, surface);
   if (result.failed()) {
     return report_failure("surface initialize", result);
   }
 
   // 创建交换链。
   granit::swapchain swapchain;
-  result = swapchain.initialize(renderer.native_handle(), surface.native_handle(),
-                                {.width = width, .height = height});
+  result = swapchain.initialize(renderer, surface, {.width = width, .height = height});
   if (result.failed()) {
     return report_failure("swapchain initialize", result);
   }
 
   // 创建帧上下文。
   granit::frame_context context;
-  result = context.initialize(renderer.native_handle());
+  result = context.initialize(renderer);
   if (result.failed()) {
     return report_failure("frame context initialize", result);
   }

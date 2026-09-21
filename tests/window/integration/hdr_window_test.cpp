@@ -207,7 +207,7 @@ int main(int argument_count, char** arguments) {
   }
   granit::surface surface;
   if (result.ok())
-    result = window.create_surface(renderer.native_handle(), surface);
+    result = window.create_surface(renderer, surface);
   granit::swapchain swapchain;
   if (result.ok()) {
     result = swapchain.initialize(

@@ -59,7 +59,7 @@ Canvas selector 是“指针 + UTF-8 字节长度”，不要求以空字符结�
 
 granit::surface surface;
 auto result = surface.initialize(
-    renderer.native_handle(),
+    renderer,
     granit::surface_desc::win32(hinstance, hwnd));
 ```
 

@@ -10,6 +10,7 @@
 #include <granit/core/result.hpp>
 #include <granit/renderer/command_recorder.hpp>
 #include <granit/renderer/frame_context.h>
+#include <granit/renderer/renderer.hpp>
 #include <granit/renderer/swapchain.hpp>
 
 namespace granit {
@@ -98,6 +99,10 @@ public:
     if (value == GRANIT_SUCCESS)
       renderer_ = renderer;
     return from_native(value);
+  }
+
+  [[nodiscard]] result initialize(renderer& owner) noexcept {
+    return initialize(owner.native_handle());
   }
 
   [[nodiscard]] result begin(const acquired_frame& frame, frame_recording& recording) noexcept {

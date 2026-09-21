@@ -35,7 +35,7 @@ Buffer 只能由创建它的 Renderer 操作。成功销毁后句柄立即失效
 ```cpp
 granit::buffer buffer;
 const auto result = buffer.initialize(
-    renderer.native_handle(),
+    renderer,
     {.size = 4096,
      .usage = granit::buffer_usage::vertex | granit::buffer_usage::transfer_destination,
      .location = granit::memory_location::device});

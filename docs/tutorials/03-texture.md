@@ -12,7 +12,7 @@ Texture Usage 必须同时覆盖上传目标和 Shader 采样：
 
 ```cpp
 granit::texture texture;
-check(texture.initialize(renderer.native_handle(), {
+check(texture.initialize(renderer, {
     .format = granit::texture_format::rgba8_unorm,
     .usage = granit::texture_usage::sampled |
              granit::texture_usage::transfer_destination,
@@ -21,7 +21,7 @@ check(texture.initialize(renderer.native_handle(), {
 }));
 
 granit::texture_view texture_view;
-check(texture_view.initialize(renderer.native_handle(), texture.native_handle()));
+check(texture_view.initialize(renderer, texture));
 ```
 
 使用 Upload Batch 写入四个 RGBA 像素。Batch 会复制调用方字节，成功提交后局部像素数组可以释放。

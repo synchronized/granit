@@ -15,6 +15,7 @@
 
 namespace granit {
 
+class renderer;
 class surface;
 
 enum class window_backend : std::uint32_t {
@@ -157,6 +158,9 @@ public:
       system_ = system;
     return from_native(value);
   }
+  [[nodiscard]] result initialize(window_system& system, const window_desc& desc) noexcept {
+    return initialize(system.native_handle(), desc);
+  }
   [[nodiscard]] result reset() noexcept {
     if (!valid())
       return result::success;
@@ -167,7 +171,7 @@ public:
     }
     return from_native(value);
   }
-  [[nodiscard]] result create_surface(granit_renderer renderer, surface& output) const noexcept;
+  [[nodiscard]] result create_surface(renderer& owner, surface& output) const noexcept;
   [[nodiscard]] result get_state(window_state& state) const noexcept {
     state = GRANIT_WINDOW_STATE_INIT;
     return from_native(granit_window_get_state(system_, handle_, &state));
