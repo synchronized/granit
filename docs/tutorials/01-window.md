@@ -62,15 +62,20 @@ check(frames.initialize(renderer.native_handle()));
 
 ## 4. 清屏并呈现
 
-帧循环的固定顺序是：处理事件、获取图像、开始 Frame、查询 Backbuffer、录制 Rendering、提交、呈现。
+通用 Frame 生命周期是获取、开始录制、提交和呈现；事件推进发生在 Frame 之外。第一章在“录制
+命令”阶段只做 Backbuffer 清屏：
 
 ```text
-process_events → acquire → frame_context.begin
-  → begin_rendering(clear) → end_rendering → submit → present
+每轮推进：window_system.process_events + renderer.process_events
+呈现帧：  acquire → backbuffer → frame_context.begin → [录制命令] → submit → present
+本章录制：begin_rendering(clear) → end_rendering
 ```
 
 颜色附件使用 Backbuffer View，并设置非黑色 `clear_value`。收到 Close Requested 后退出；收到 Resize、
 `out_of_date` 或 `needs_recreate` 后，等待非零尺寸并重建 Swapchain。
+
+完整调用顺序、取消路径与恢复规则见
+[Frame Context 的完整窗口帧循环](../reference/frame-context.md#完整窗口帧循环)。
 
 ## 5. 验收
 
