@@ -5,6 +5,7 @@
 #define GRANIT_WINDOW_WINDOW_HPP_
 
 #include <cstdint>
+#include <cstring>
 #include <string_view>
 #include <utility>
 
@@ -35,7 +36,22 @@ struct window_desc {
   std::uint32_t flags{GRANIT_WINDOW_VISIBLE_BIT | GRANIT_WINDOW_RESIZABLE_BIT};
 };
 
-using window_event = granit_window_event;
+enum class window_event_type : std::uint32_t {
+  none = 0,
+  close_requested = GRANIT_WINDOW_EVENT_CLOSE_REQUESTED,
+  resized = GRANIT_WINDOW_EVENT_RESIZED,
+  focus_changed = GRANIT_WINDOW_EVENT_FOCUS_CHANGED,
+  scale_changed = GRANIT_WINDOW_EVENT_SCALE_CHANGED,
+  native_handle_changed = GRANIT_WINDOW_EVENT_NATIVE_HANDLE_CHANGED,
+};
+
+struct window_event {
+  window_event_type type{};
+  granit_window window{GRANIT_NULL_HANDLE};
+  std::uint64_t timestamp_ns{};
+  granit_window_event_data data{};
+};
+
 using window_state = granit_window_state;
 
 class window_system {
@@ -63,15 +79,25 @@ public:
     return from_native(granit_window_system_create(&native_desc, &handle_));
   }
   [[nodiscard]] result poll(window_event& event) noexcept {
-    event.struct_size = sizeof(window_event);
-    return from_native(granit_window_poll_event(handle_, &event));
+    granit_window_event native = GRANIT_WINDOW_EVENT_INIT;
+    const auto value = granit_window_poll_event(handle_, &native);
+    if (value == GRANIT_SUCCESS) {
+      event.type = static_cast<window_event_type>(native.type);
+      event.window = native.window;
+      event.timestamp_ns = native.timestamp_ns;
+      std::memcpy(&event.data, &native.data, sizeof(event.data));
+    }
+    return from_native(value);
   }
   [[nodiscard]] result process_events() noexcept {
     return from_native(granit_window_system_process_events(handle_));
   }
   [[nodiscard]] result poll(input_event& event) noexcept {
-    event.struct_size = sizeof(input_event);
-    return from_native(granit_window_poll_input_event(handle_, &event));
+    granit_input_event native = GRANIT_INPUT_EVENT_INIT;
+    const auto value = granit_window_poll_input_event(handle_, &native);
+    if (value == GRANIT_SUCCESS)
+      event = detail::from_native(native);
+    return from_native(value);
   }
   [[nodiscard]] result keyboard(granit_window window, keyboard_state& state) const noexcept {
     state = GRANIT_KEYBOARD_STATE_INIT;

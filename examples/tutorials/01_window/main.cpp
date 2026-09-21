@@ -70,19 +70,25 @@ int main() {
 
     {
       // 处理窗口事件。
-      granit::window_event event = GRANIT_WINDOW_EVENT_INIT;
+      granit::window_event event;
       while (window_system.poll(event).ok()) {
         // 处理关闭、尺寸、焦点与缩放。
-        if (event.type == GRANIT_WINDOW_EVENT_CLOSE_REQUESTED)
+        if (event.type == granit::window_event_type::close_requested)
           running = false;
       }
     }
 
     {
       // 处理输入事件。
-      granit::input_event input_event = GRANIT_INPUT_EVENT_INIT;
-      while (window_system.poll(input_event).ok()) {
+      granit::input_event event;
+      while (window_system.poll(event).ok()) {
         // 处理键盘、文本与指针变化。
+        if (event.type == granit::input_event_type::key) {
+          if (event.data.key.action == granit::key_action::released &&
+              event.data.key.physical == granit::physical_key::escape) {
+            running = false;
+          }
+        }
       }
     }
 

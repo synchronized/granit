@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "support/shader_asset_store.h"
-#include "support/tone_mapping_shader_library.h"
 #include "lighting/tone_mapping_resources.h"
 #include "material/pbr_material_schema.h"
 #include "support/pbr_test_support.h"
+#include "support/shader_asset_store.h"
+#include "support/tone_mapping_shader_library.h"
 
 #include <granit/granit.hpp>
 #include <granit/window.hpp>
@@ -210,9 +210,9 @@ int main(int argument_count, char** arguments) {
     result = window.create_surface(renderer.native_handle(), surface);
   granit::swapchain swapchain;
   if (result.ok()) {
-    result = swapchain.initialize(renderer.native_handle(), surface.native_handle(),
-                                  {.width = window_state.framebuffer_width,
-                                   .height = window_state.framebuffer_height});
+    result = swapchain.initialize(
+        renderer.native_handle(), surface.native_handle(),
+        {.width = window_state.framebuffer_width, .height = window_state.framebuffer_height});
   }
   granit::swapchain_info info;
   if (result.ok())
@@ -296,11 +296,11 @@ int main(int argument_count, char** arguments) {
     while (result.ok() && (result = window_system.poll(event)).ok()) {
       if (event.window != window.native_handle())
         continue;
-      if (event.type == GRANIT_WINDOW_EVENT_CLOSE_REQUESTED)
+      if (event.type == granit::window_event_type::close_requested)
         running = false;
-      if (event.type == GRANIT_WINDOW_EVENT_RESIZED ||
-          event.type == GRANIT_WINDOW_EVENT_SCALE_CHANGED ||
-          event.type == GRANIT_WINDOW_EVENT_NATIVE_HANDLE_CHANGED) {
+      if (event.type == granit::window_event_type::resized ||
+          event.type == granit::window_event_type::scale_changed ||
+          event.type == granit::window_event_type::native_handle_changed) {
         recreate = true;
       }
     }

@@ -6,6 +6,7 @@
 #include <type_traits>
 
 static_assert(std::is_standard_layout_v<granit::window_desc>);
+static_assert(std::is_same_v<decltype(granit::window_event{}.type), granit::window_event_type>);
 static_assert(sizeof(granit::window_event) == sizeof(granit_window_event));
 static_assert(sizeof(granit::window_state) == sizeof(granit_window_state));
 static_assert(std::is_move_constructible_v<granit::window_system>);

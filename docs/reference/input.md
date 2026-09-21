@@ -28,15 +28,26 @@ windows.initialize();
 while (running) {
   windows.process_events();
 
-  granit::window_event window_event = GRANIT_WINDOW_EVENT_INIT;
+  granit::window_event window_event;
   while (windows.poll(window_event) == granit::result::success) {
     // 处理关闭、尺寸、焦点与缩放。
   }
 
-  granit::input_event input_event = GRANIT_INPUT_EVENT_INIT;
+  granit::input_event input_event;
   while (windows.poll(input_event) == granit::result::success) {
     // 处理键盘、文本与指针变化。
   }
+}
+```
+
+C++ `window_event::type`、`input_event::type`、按键动作、物理键和逻辑键均使用对应的 scoped
+`enum class`。`window_system::poll` 在 C ABI 边界完成转换，应用不需要把整数强制转换为 C++ 枚举：
+
+```cpp
+if (input_event.type == granit::input_event_type::key &&
+    input_event.data.key.action == granit::key_action::released &&
+    input_event.data.key.physical == granit::physical_key::escape) {
+  running = false;
 }
 ```
 

@@ -27,6 +27,24 @@ void check_versioned_output(granit_result (*call)(T*), granit_result expected) {
 
 } // namespace
 
+TEST_CASE("C++ Input Event 把 C 事件转换为强类型字段", "[input][cpp]") {
+  granit_input_event native = GRANIT_INPUT_EVENT_INIT;
+  native.type = GRANIT_INPUT_EVENT_KEY;
+  native.window = UINT64_C(42);
+  native.timestamp_ns = UINT64_C(1234);
+  native.data.key.physical_key = GRANIT_PHYSICAL_KEY_ESCAPE;
+  native.data.key.logical_key = GRANIT_LOGICAL_KEY_ESCAPE;
+  native.data.key.action = GRANIT_KEY_ACTION_RELEASED;
+
+  const auto event = granit::detail::from_native(native);
+  CHECK(event.type == granit::input_event_type::key);
+  CHECK(event.window == native.window);
+  CHECK(event.timestamp_ns == native.timestamp_ns);
+  CHECK(event.data.key.physical == granit::physical_key::escape);
+  CHECK(event.data.key.logical == granit::logical_key::escape);
+  CHECK(event.data.key.action == granit::key_action::released);
+}
+
 TEST_CASE("Input 版本化输出不写越调用方容量", "[input][abi]") {
   check_versioned_output<granit_input_event, GRANIT_INPUT_EVENT_VERSION_1_SIZE>(
       [](granit_input_event* output) { return granit_window_poll_input_event(UINT64_MAX, output); },

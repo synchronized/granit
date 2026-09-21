@@ -73,6 +73,9 @@ while (granit_window_poll_event(system, &event) == GRANIT_SUCCESS) {
 队列。`granit_window_poll_event` 只读取窗口事件队列，不隐式处理平台消息；队列为空返回
 `GRANIT_ERROR_NOT_READY`。输入轮询和状态查询见[Window 输入](input.md)。Win32 后端产生：
 
+C++ `window_system::poll` 将 C ABI 事件转换为独立的 `window_event` 值，事件类型使用
+`window_event_type` scoped enum；应用不需要与 `GRANIT_WINDOW_EVENT_*` 整数常量比较。
+
 - `GRANIT_WINDOW_EVENT_CLOSE_REQUESTED`
 - `GRANIT_WINDOW_EVENT_RESIZED`
 - `GRANIT_WINDOW_EVENT_FOCUS_CHANGED`
