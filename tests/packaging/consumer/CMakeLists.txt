@@ -8,23 +8,14 @@ set_property(DIRECTORY APPEND PROPERTY LABELS package)
 
 include(CTest)
 
-# 从根 CMakeLists.txt 读取期望版本，避免与发布版本号不同步。
-file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../../../CMakeLists.txt" granit_root_cmake)
-string(
-  REGEX MATCH
-  "project\\([ \t\r\n]*granit[ \t\r\n]+VERSION[ \t\r\n]+([0-9]+)\\.([0-9]+)\\.([0-9]+)"
-  granit_project_match
-  "${granit_root_cmake}"
+# 读取工程版本的唯一来源，避免独立 Consumer 与发布版本不同步。
+include("${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/granit_version.cmake")
+
+find_package(
+  granit ${GRANIT_PROJECT_COMPAT_VERSION} CONFIG REQUIRED COMPONENTS RenderPipeline Window
 )
-if(NOT granit_project_match)
-  message(FATAL_ERROR "无法从根 CMakeLists.txt 读取 Granit 版本")
-endif()
-set(granit_expected_minor "${CMAKE_MATCH_1}.${CMAKE_MATCH_2}")
-set(granit_expected_version "${CMAKE_MATCH_1}.${CMAKE_MATCH_2}.${CMAKE_MATCH_3}")
 
-find_package(granit ${granit_expected_minor} CONFIG REQUIRED COMPONENTS RenderPipeline Window)
-
-if(NOT granit_VERSION VERSION_EQUAL "${granit_expected_version}")
+if(NOT "${granit_VERSION}" VERSION_EQUAL "${GRANIT_PROJECT_VERSION}")
   message(FATAL_ERROR "Granit 包版本不符合预期: ${granit_VERSION}")
 endif()
 

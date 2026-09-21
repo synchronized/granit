@@ -3,7 +3,7 @@ set -euo pipefail
 
 # 用法: scripts/release.sh <new-version> [--commit]
 #
-# 把根 CMakeLists.txt、README、CHANGELOG 的版本号升级到 <new-version>。
+# 把工程版本文件、README、CHANGELOG 升级到 <new-version>。
 # 默认只修改文件并打印 diff；指定 --commit 时校验改动并创建版本提交。
 # 不创建标签、推送分支或发布 Release。
 #
@@ -38,10 +38,13 @@ if [ -n "$(git status --porcelain)" ]; then
   exit 1
 fi
 
-# 从根 CMakeLists.txt 读取当前版本（行首的 project VERSION）。
-old_version="$(sed -nE 's/^[[:space:]]*VERSION[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' CMakeLists.txt | head -1)"
+# 从唯一版本文件读取当前版本。
+version_file="cmake/granit_version.cmake"
+old_version="$(sed -nE \
+  's/^set\(GRANIT_PROJECT_VERSION "([0-9]+\.[0-9]+\.[0-9]+)"\)$/\1/p' \
+  "$version_file" | head -1)"
 if [ -z "$old_version" ]; then
-  echo "错误: 无法从 CMakeLists.txt 读取当前版本" >&2
+  echo "错误: 无法从 ${version_file} 读取当前版本" >&2
   exit 1
 fi
 if [ "$old_version" = "$new_version" ]; then
@@ -55,8 +58,10 @@ date_today="$(date +%F)"
 echo "从 ${old_version} 升级到 ${new_version}（日期 ${date_today}）"
 echo ""
 
-# 1. 根 CMakeLists.txt：project(VERSION)
-sed -i "s/^\([[:space:]]*VERSION[[:space:]]\+\)[0-9.]*/\1${new_version}/" CMakeLists.txt
+# 1. 唯一工程版本文件
+sed -i \
+  "s/^set(GRANIT_PROJECT_VERSION \"[0-9.]*\")$/set(GRANIT_PROJECT_VERSION \"${new_version}\")/" \
+  "$version_file"
 
 # 2. README.md：最新版本号与 release 链接 tag
 sed -i "s/${old_version_escaped}/${new_version}/g" README.md
@@ -67,13 +72,13 @@ sed -i "s/^## Unreleased$/## Unreleased\n\n## ${new_version} - ${date_today}/" C
 echo "改动如下（确认无误后提交，再触发发布工作流）："
 git diff --stat
 echo ""
-git diff -- CMakeLists.txt README.md CHANGELOG.md
+git diff -- "$version_file" README.md CHANGELOG.md
 echo ""
 if [ "$commit_changes" -eq 1 ]; then
   git diff --check
   cmake -DGRANIT_SOURCE_DIR="$repo_root" -DGRANIT_RELEASE_TAG="v${new_version}" \
     -P tests/packaging/check_release_version.cmake
-  git add -- CMakeLists.txt README.md CHANGELOG.md
+  git add -- "$version_file" README.md CHANGELOG.md
   git commit -m "chore: 发布 ${new_version}"
   echo "已创建版本提交：$(git rev-parse --short HEAD)"
 else

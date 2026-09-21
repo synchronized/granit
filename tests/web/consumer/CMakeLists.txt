@@ -11,7 +11,13 @@ if(NOT EMSCRIPTEN)
 endif()
 
 include(CTest)
-find_package(granit 0.25 CONFIG REQUIRED COMPONENTS RenderPipeline Window)
+include("${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/granit_version.cmake")
+find_package(
+  granit ${GRANIT_PROJECT_COMPAT_VERSION} CONFIG REQUIRED COMPONENTS RenderPipeline Window
+)
+if(NOT "${granit_VERSION}" VERSION_EQUAL "${GRANIT_PROJECT_VERSION}")
+  message(FATAL_ERROR "Granit 包版本不符合预期: ${granit_VERSION}")
+endif()
 get_target_property(core_type granit::granit TYPE)
 if(NOT core_type STREQUAL "STATIC_LIBRARY")
   message(FATAL_ERROR "浏览器安装包必须提供静态核心库")

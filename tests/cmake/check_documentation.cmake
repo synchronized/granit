@@ -57,18 +57,8 @@ foreach(granit_doc IN LISTS granit_docs_files)
 endforeach()
 
 file(READ "${granit_docs_root}/README.md" granit_root_readme)
-file(READ "${granit_docs_root}/CMakeLists.txt" granit_root_cmake)
-string(
-  REGEX MATCH
-  "project\\([ \t\r\n]*granit[ \t\r\n]+VERSION[ \t\r\n]+([0-9]+\\.[0-9]+\\.[0-9]+)"
-  granit_project_match
-  "${granit_root_cmake}"
-)
-if(NOT granit_project_match)
-  list(APPEND granit_docs_errors "CMakeLists.txt: 无法读取 Granit 项目版本")
-else()
-  set(granit_project_version "${CMAKE_MATCH_1}")
-endif()
+include("${granit_docs_root}/cmake/granit_version.cmake")
+set(granit_project_version "${GRANIT_PROJECT_VERSION}")
 
 function(granit_require_document_text relative_path expected_text description)
   file(READ "${granit_docs_root}/${relative_path}" granit_checked_document)

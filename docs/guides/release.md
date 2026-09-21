@@ -8,7 +8,7 @@
 
 ## 1. 确认发布身份
 
-- 在根 `CMakeLists.txt` 设置唯一的 `project(VERSION)`。
+- 在 `cmake/granit_version.cmake` 设置唯一的工程版本。
 - 确认生成头中的 `GRANIT_VERSION_*` 和运行时 `granit_version_*` 一致。
 - 在根 [`CHANGELOG.md`](../../CHANGELOG.md) 把本次内容从 `Unreleased` 移入带日期的版本章节。
 - 预发布版本继续保留 README 的 0.x 警告；稳定发布才按已批准承诺修改措辞。
@@ -81,7 +81,7 @@ ctest --preset <static-release-preset>
 
 `main` 是唯一的集成分支。计划进入某个版本的 Feature 和缺陷修复都应先通过各自的 Pull Request
 合入 `main`，不能直接合入 release 分支。release 分支从最新 `main` 创建，只承载
-`CMakeLists.txt`、`README.md` 和 `CHANGELOG.md` 的版本准备提交：
+`cmake/granit_version.cmake`、`README.md` 和 `CHANGELOG.md` 的版本准备提交：
 
 ```text
 feature/A ──PR──┐
@@ -128,7 +128,8 @@ GitHub Release。Linux/macOS 使用对应的 `release.sh --commit` 和 `publish.
 
 ### 5.1 准备版本提交
 
-`release` 脚本更新 `CMakeLists.txt`、`README.md` 和 `CHANGELOG.md`。默认模式只显示改动，不提交：
+`release` 脚本更新 `cmake/granit_version.cmake`、`README.md` 和 `CHANGELOG.md`。默认模式只显示
+改动，不提交：
 
 ```powershell
 .\scripts\release.ps1 X.Y.Z

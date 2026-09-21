@@ -40,10 +40,10 @@ if [ -n "$(git status --porcelain)" ]; then
 fi
 
 current="$(sed -nE \
-  's/^[[:space:]]*VERSION[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' \
-  CMakeLists.txt | head -1)"
+  's/^set\(GRANIT_PROJECT_VERSION "([0-9]+\.[0-9]+\.[0-9]+)"\)$/\1/p' \
+  cmake/granit_version.cmake | head -1)"
 if [ "$current" != "$version" ]; then
-  echo "错误: CMakeLists.txt 版本（${current}）与目标版本（${version}）不一致" >&2
+  echo "错误: 工程版本（${current}）与目标版本（${version}）不一致" >&2
   exit 1
 fi
 

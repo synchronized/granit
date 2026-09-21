@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  把根 CMakeLists.txt、README、CHANGELOG 的版本号升级到指定版本。
+  把工程版本文件、README、CHANGELOG 升级到指定版本。
 
 .DESCRIPTION
   默认只修改文件并打印 diff；指定 -Commit 时校验改动并创建版本提交。
@@ -42,12 +42,13 @@ if (git status --porcelain) {
   exit 1
 }
 
-# 从根 CMakeLists.txt 读取当前版本（行首的 project VERSION）
-$cmakeContent = Get-Content -Raw -Encoding UTF8 CMakeLists.txt
-if ($cmakeContent -match '(?m)^\s*VERSION\s+(\d+\.\d+\.\d+)') {
+# 从唯一版本文件读取当前版本
+$versionFile = 'cmake/granit_version.cmake'
+$versionContent = Get-Content -Raw -Encoding UTF8 $versionFile
+if ($versionContent -match '(?m)^set\(GRANIT_PROJECT_VERSION "(\d+\.\d+\.\d+)"\)$') {
   $oldVersion = $Matches[1]
 } else {
-  Write-Host "错误: 无法从 CMakeLists.txt 读取当前版本" -ForegroundColor Red
+  Write-Host "错误: 无法从 $versionFile 读取当前版本" -ForegroundColor Red
   exit 1
 }
 if ($oldVersion -eq $NewVersion) {
@@ -59,10 +60,11 @@ $dateToday = Get-Date -Format 'yyyy-MM-dd'
 Write-Host "从 $oldVersion 升级到 $NewVersion（日期 $dateToday）"
 Write-Host ""
 
-# 1. 根 CMakeLists.txt：project(VERSION)
-$replacement = '${1}' + $NewVersion
-$cmakeContent = $cmakeContent -replace '(?m)^(\s*VERSION\s+)[\d.]+', $replacement
-Set-Content -Path CMakeLists.txt -Value $cmakeContent -Encoding UTF8 -NoNewline
+# 1. 唯一工程版本文件
+$versionContent = $versionContent -replace `
+  '(?m)^(set\(GRANIT_PROJECT_VERSION ")[\d.]+("\))$', `
+  "`${1}$NewVersion`${2}"
+Set-Content -Path $versionFile -Value $versionContent -Encoding UTF8 -NoNewline
 
 # 2. README.md：最新版本号与 release 链接 tag
 $readmeContent = Get-Content -Raw -Encoding UTF8 README.md
@@ -77,7 +79,7 @@ Set-Content -Path CHANGELOG.md -Value $changelogContent -Encoding UTF8 -NoNewlin
 Write-Host "改动如下（确认无误后提交，再触发发布工作流）："
 git diff --stat
 Write-Host ""
-git diff -- CMakeLists.txt README.md CHANGELOG.md
+git diff -- $versionFile README.md CHANGELOG.md
 Write-Host ""
 if ($Commit) {
   git diff --check
@@ -89,7 +91,7 @@ if ($Commit) {
   if ($LASTEXITCODE -ne 0) {
     throw '发布版本校验失败'
   }
-  git add -- CMakeLists.txt README.md CHANGELOG.md
+  git add -- $versionFile README.md CHANGELOG.md
   git commit -m "chore: 发布 $NewVersion"
   if ($LASTEXITCODE -ne 0) {
     throw '创建版本提交失败'

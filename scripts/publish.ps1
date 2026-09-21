@@ -35,14 +35,14 @@ if (git status --porcelain) {
   throw '工作区不干净，请先提交或清理改动'
 }
 
-$cmakeContent = Get-Content -Raw -Encoding UTF8 CMakeLists.txt
-if ($cmakeContent -match '(?m)^\s*VERSION\s+(\d+\.\d+\.\d+)') {
+$versionContent = Get-Content -Raw -Encoding UTF8 cmake/granit_version.cmake
+if ($versionContent -match '(?m)^set\(GRANIT_PROJECT_VERSION "(\d+\.\d+\.\d+)"\)$') {
   $currentVersion = $Matches[1]
 } else {
-  throw '无法从 CMakeLists.txt 读取当前版本'
+  throw '无法从 cmake/granit_version.cmake 读取当前版本'
 }
 if ($currentVersion -ne $Version) {
-  throw "CMakeLists.txt 版本（$currentVersion）与目标版本（$Version）不一致"
+  throw "工程版本（$currentVersion）与目标版本（$Version）不一致"
 }
 
 git fetch origin main --quiet

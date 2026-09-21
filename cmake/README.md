@@ -9,6 +9,7 @@
 
 | 文件 | 角色 |
 | --- | --- |
+| `granit_version.cmake` | 工程版本唯一来源，并派生 major、minor、patch 与兼容版本 |
 | `granit_options.cmake` | 构建选项（`BUILD_SHARED_LIBS`、`GRANIT_BUILD_*` 等） |
 | `granit_platform.cmake` | 平台探测（Emscripten / XCB / Wayland 能力） |
 | `granit_features.cmake` | 派生开关（`GRANIT_TESTING_ENABLED`、`GRANIT_NEEDS_*`） |
