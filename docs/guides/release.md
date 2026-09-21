@@ -8,7 +8,7 @@
 
 ## 1. 确认发布身份
 
-- 在根 `CMakeLists.txt` 设置唯一的 `project(VERSION)`。
+- 在 `cmake/granit_version.cmake` 设置唯一的工程版本。
 - 确认生成头中的 `GRANIT_VERSION_*` 和运行时 `granit_version_*` 一致。
 - 在根 [`CHANGELOG.md`](../../CHANGELOG.md) 把本次内容从 `Unreleased` 移入带日期的版本章节。
 - 预发布版本继续保留 README 的 0.x 警告；稳定发布才按已批准承诺修改措辞。
@@ -29,7 +29,7 @@
 
 ## 3. 验证矩阵
 
-发布提交必须通过 GitHub Actions 的完整 Windows/Linux 矩阵。发布候选还应在干净目录执行：
+发布提交必须通过 GitHub Actions 的完整 Windows/Linux 矩阵。发布前还应在干净目录执行：
 
 ```sh
 cmake --preset <shared-release-preset>
@@ -61,34 +61,156 @@ ctest --preset <static-release-preset>
 ## 5. 发布说明与产物
 
 发布说明至少列出版本、日期、稳定 component、实验性接口、已知限制、破坏性变化和迁移步骤。
-发布标签必须指向完整通过验收的提交；产物应来自该标签的干净构建，不使用开发机已有构建目录。
+发布标签必须指向完整通过验收的提交；产物应来自最终标记提交的干净构建，不使用开发机已有构建
+目录。
 
-仓库的 `Release` Actions 采用不可变候选晋级：手动运行负责构建 Windows/Linux 的共享库和静态库
-安装包、运行测试与安装审计，并生成 `SHA256SUMS` 和 `release-manifest.json`；推送 `v*` 标签时只
-下载并校验同一 commit、同一 tag 的成功候选，不再重复构建。
+仓库的 `Release` Actions 采用单次受控发布：手动运行在固定的 `main` 提交上构建 Windows/Linux
+共享库和静态库安装包，运行测试与安装审计，生成 `SHA256SUMS` 和 manifest；全部成功后才为该
+提交创建 tag 和 GitHub Release，最后从公开 Release 重新下载同一批字节复验。
 
-正式发布必须按以下顺序执行：
+发布分为两个阶段：版本准备负责产生可审查的 Git 提交；正式发布只读取已经进入 `main` 的提交，
+不会再修改源码。完整顺序如下：
 
-1. 将发布提交合并到 `main`，确认 `project(VERSION)`、Changelog 和验收记录完整。
-2. 在 Actions 中选择 `main`，对该提交手动运行 `Release`，输入尚未公开的候选标签。
-3. 下载 `release-assets`，检查四套 SDK、`SHA256SUMS` 和 manifest 中的 tag、commit、run ID。
-4. 候选通过后，在完全相同的提交上创建并推送同名标签。
-5. 标签运行重新校验版本和候选身份后，直接发布候选中的同一批 SDK 字节。
+```text
+版本准备脚本 → 版本提交 → 合并并推送 main → 正式发布脚本
+                                              ↓
+                             构建/测试/打包 → tag/Release → 公开复验
+```
 
-候选 Artifact 过期、提交不一致或标签不一致时，正式发布会失败，必须在目标提交上重新生成候选。
-不要重用或移动已经公开的版本标签。
+### 分支职责
+
+`main` 是唯一的集成分支。计划进入某个版本的 Feature 和缺陷修复都应先通过各自的 Pull Request
+合入 `main`，不能直接合入 release 分支。release 分支从最新 `main` 创建，只承载
+`cmake/granit_version.cmake`、`README.md` 和 `CHANGELOG.md` 的版本准备提交：
+
+```text
+feature/A ──PR──┐
+feature/B ──PR──┼──> main ──> release/X.Y.Z ──版本提交 PR──> main ──> 发布
+feature/C ──PR──┘
+```
+
+如果 release PR 创建后又有 Feature 或修复必须进入该版本，仍应先把它合入 `main`，然后更新
+release 分支：
+
+```powershell
+git fetch origin
+git switch release/X.Y.Z
+git rebase origin/main
+git push --force-with-lease
+```
+
+`--force-with-lease` 会在远端分支出现未知提交时拒绝覆盖。多人共同维护 release 分支时，也可以合并
+`origin/main`，避免重写已经共享的分支历史。release PR 合并后删除 release 分支，不把它作为长期
+开发或维护分支。
+
+### 推荐完整流程
+
+以下以 PowerShell 发布 `0.27.0` 为例，可以直接按顺序执行：
+
+```powershell
+git switch main
+git pull --ff-only
+git switch -c release/0.27.0
+
+.\scripts\release.ps1 0.27.0 -Commit
+git push -u origin release/0.27.0
+gh pr create --fill
+
+# PR 合并后执行
+git switch main
+git pull --ff-only
+.\scripts\publish.ps1 0.27.0
+```
+
+其中，`release.ps1 -Commit` 自动修改并提交三个版本文件，但不会推送、创建 tag 或发布；`publish`
+要求本地 `main` 与 `origin/main` 完全一致。远端构建、测试和打包全部通过后，工作流才创建 tag 和
+GitHub Release。Linux/macOS 使用对应的 `release.sh --commit` 和 `publish.sh`，阶段边界相同。
+
+### 5.1 准备版本提交
+
+`release` 脚本更新 `cmake/granit_version.cmake`、`README.md` 和 `CHANGELOG.md`。默认模式只显示
+改动，不提交：
+
+```powershell
+.\scripts\release.ps1 X.Y.Z
+```
+
+```sh
+bash scripts/release.sh X.Y.Z
+```
+
+确认希望由脚本自动创建 `chore: 发布 X.Y.Z` 提交时，直接在干净工作区使用：
+
+```powershell
+.\scripts\release.ps1 X.Y.Z -Commit
+```
+
+```sh
+bash scripts/release.sh X.Y.Z --commit
+```
+
+自动提交前脚本会检查工作区、版本格式、diff 和 tag 与项目版本的一致性。它只暂存三个版本文件，
+不会推送分支、创建 tag 或启动 Release。
+
+推荐完整流程通过发布分支和 Pull Request 合入受保护的 `main`。允许直接推送 `main` 时，也可以在
+本地 `main` 执行自动提交，检查提交后推送：
+
+```powershell
+git switch main
+git pull --ff-only
+.\scripts\release.ps1 X.Y.Z -Commit
+git show --stat
+git push origin main
+```
+
+无论采用哪种方式，正式发布前都要确认版本提交已经位于 `origin/main`。
+
+### 5.2 正式发布
+
+更新本地 `main`，然后执行唯一的正式发布入口：
+
+Linux/macOS 使用：
+
+```sh
+bash scripts/publish.sh X.Y.Z
+```
+
+PowerShell 使用：
+
+```powershell
+.\scripts\publish.ps1 X.Y.Z
+```
+
+`publish` 脚本要求当前分支为 `main`、工作区干净且 `HEAD` 等于 `origin/main`。它还会校验项目版本和
+tag 唯一性，然后触发 `Release` 工作流并默认等待最终结果。传入 `--no-wait` 或 `-NoWait` 可以只触发
+不等待。直接从 Actions 页面运行时必须选择 `main` 并输入 `vX.Y.Z` 格式的 tag。
+
+工作流依次完成四套 SDK 构建、测试、安装审计、校验和与 manifest；全部通过后，`publish` job 才为
+同一 `GITHUB_SHA` 创建 tag 和 Release，随后执行公开下载复验。版本准备失败不会启动远端发布，远端
+构建失败也不会留下 tag。
+
+建议为 `release` Environment 配置 required reviewer，使四套 SDK 全部完成后由维护者批准 `publish`
+job；未配置保护规则时该 job 自动继续。仓库还可以启用 Immutable Releases，在发布后禁止修改 tag
+和资产。这两项均为 GitHub 仓库设置，不由源码隐式修改。
+
+如果构建、测试或 `publish` 前的校验失败，修复后在新的 `main` 提交上重新运行即可，因为工作流尚未
+创建 tag。若 `publish` 已创建 Release 而公开复验失败，应保留失败证据并修复发布基础设施；不得移动
+已经公开的 tag 或静默替换资产。
+
+仓库不再把手工推送 tag 作为发布入口。意外创建但没有对应 Release 的 tag 应先删除，再通过工作流
+发布；已经公开的版本应发布新的修订版本。
 
 ## 6. 发布后验证
 
-Release 创建后，标签工作流会从公开下载地址重新取得产物，不能复用 Actions 工作目录中的文件。
+Release 创建后，同一工作流会从公开下载地址重新取得产物，不能复用 Actions 工作目录中的文件。
 自动验证包括：
 
 1. 使用 `gh release download` 下载全部安装包和 `SHA256SUMS`。
 2. 重新计算每个压缩包的 SHA-256，并逐项与 `SHA256SUMS` 比较。
 3. 检查四个精确命名的安装包都存在，且每个压缩包只有一个顶层目录。
 
-Candidate 阶段已经对同一批字节执行安装导出审计以及全部 C11/C++20 Consumer；正式阶段通过
-SHA-256 证明公开字节与候选一致，因此不重复构建 Consumer。维护者仍应确认 Release 不是草稿、
+打包阶段已经对同一批字节执行安装导出审计以及全部 C11/C++20 Consumer；公开复验通过 SHA-256
+证明下载字节与已验证产物一致，因此不重复构建 Consumer。维护者仍应确认 Release 不是草稿、
 标签指向 manifest 中的提交，且四个安装包与 `SHA256SUMS` 均已公开。
 
 任一步失败都应保留标签和失败证据，修复后发布新的修订版本；不得移动已公开标签或静默替换产物。

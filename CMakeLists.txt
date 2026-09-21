@@ -3,9 +3,11 @@
 
 cmake_minimum_required(VERSION 3.23)
 
+include("${CMAKE_CURRENT_LIST_DIR}/cmake/granit_version.cmake")
+
 project(
   granit
-  VERSION 0.26.0
+  VERSION "${GRANIT_PROJECT_VERSION}"
   DESCRIPTION "Multi-backend C++20 rendering library"
   LANGUAGES C CXX
 )

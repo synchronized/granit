@@ -24,7 +24,7 @@
 使用者只需链接公共 C++ 目标，不需要包含 Vulkan 头文件，也不需要链接 Vulkan SDK：
 
 ```cmake
-find_package(granit 0.25 CONFIG REQUIRED)
+find_package(granit CONFIG REQUIRED)
 
 add_executable(minimal_renderer main.cpp)
 target_compile_features(minimal_renderer PRIVATE cxx_std_20)

@@ -9,33 +9,30 @@ CI 必过矩阵"。
 
 ## 开发到发布的工作流
 
-Granit 采用主干开发（GitHub Flow）：feature 分支通过 PR 合并到 `main`，发布时从 `main`
-打 tag。各 workflow 落在流程的不同验证层级：
+Granit 采用主干开发（GitHub Flow）：feature 分支通过 PR 合并到 `main`，发布工作流在全部验证
+通过后为该提交创建 tag 和 Release。各 workflow 落在流程的不同验证层级：
 
 | 阶段 | 动作 | 相关 workflow / 脚本 |
 |---|---|---|
 | 开发 | feature 分支写代码，按需手动验证对应平台 | `linux` / `windows` / `emscripten`（按需） |
 | PR 门禁 | 开 PR，按 diff 快速检查 | `quick-check`（`suite=auto`） |
 | 合并 | PR 通过后合并到 `main` | — |
-| 发布准备 | 升级版本号、更新 README/CHANGELOG | `scripts/release.sh <version>` |
+| 发布准备 | 升级版本号并创建可审查的版本提交 | `release.ps1 -Commit` / `release.sh --commit` |
 | 完整验证 | 发布前跑全平台矩阵 | `linux` + `windows` + `emscripten` |
-| 打 tag | 创建并推送 `vX.Y.Z` | `git tag vX.Y.Z && git push` |
-| 发布 | tag 触发构建产物与发布 | `release` |
+| 发布 | 构建并验证 SDK，随后创建 tag 和公开 Release | `scripts/publish.* <version>` |
 
 ```text
-feature 分支 ──PR──> quick-check ──合并──> main
-                                          │
-                            scripts/release.sh <version>
-                                          │
-                     linux + windows + emscripten（完整验证）
-                                          │
-                              git tag vX.Y.Z + push
-                                          │
-                              release（自动发布）
+feature 分支 ──PR/CI──> main ──创建 release 分支──> release.* --commit
+                                                     │
+                                              PR/完整验证
+                                                     │
+main <───────────────────────────────────────────────┘
+ │
+ └── publish.*（构建、验证、创建 tag 和 Release）
 ```
 
 三个验证层级：`quick-check` 是 PR 的快速反馈，`linux`/`windows`/`emscripten` 是 PR 的完整
-验证门禁（也是发布前的全平台验证），`release` 是打 tag 后的发布。各 workflow 的配置见下文，
+验证门禁（也是发布前的全平台验证），`release` 是手动触发的正式发布。各 workflow 的配置见下文，
 发布细节见[发布验收](release.md)。
 
 ## 触发机制
@@ -47,7 +44,7 @@ PR 打开或更新时会自动运行 `quick-check`（快速反馈）与 `linux`/
 | --- | --- | --- |
 | `quick-check` | `pull_request` | `workflow_dispatch`（`suite` 参数） |
 | `linux` / `windows` / `emscripten` | `pull_request` | `workflow_dispatch` |
-| `release` | 推送 `v*` tag | `workflow_dispatch`（发布候选） |
+| `release` | — | `workflow_dispatch`（正式发布） |
 | `linux-ci-image` | 向 `main` 推送且改动 Dockerfile | `workflow_dispatch` |
 | `documentation` / `package-shader-toolchain` | — | `workflow_dispatch` |
 
@@ -63,7 +60,7 @@ required check。
 | `linux` | PR + 手动 | Linux 完整验证（构建、测试、安装、Consumer） | clang / gcc × shared / static |
 | `windows` | PR + 手动 | Windows 完整验证 | MSVC × shared / static |
 | `emscripten` | PR + 手动 | 浏览器 WebGPU 构建与行为验证 | Linux + Emscripten |
-| `release` | `v*` tag + 手动 | 发布产物构建、校验与发布 | win / linux × shared / static |
+| `release` | 手动 | 发布产物构建、校验、tag 与 Release | win / linux × shared / static |
 | `package-shader-toolchain` | 手动（`run_windows` / `run_linux`） | 打包锁定 Shader 工具链 | win / linux |
 | `linux-ci-image` | 手动 + `main` 改 Dockerfile | 构建自定义 CI Runner 镜像 | Linux |
 
@@ -99,9 +96,10 @@ required check。
 
 ### `release` —— 发布
 
-`validate`（标签与版本一致）→ `windows-package` / `linux-package`（各 shared/static 打包并
-测试）→ `checksums`（SHA-256）→ `publish`（创建 GitHub Release）→ `verify-public-release`
-（从公开 Release 重新下载校验）。流程细节见[发布](release.md)。
+手动运行一次执行 `validate` → `windows-package` / `linux-package`（各 shared/static 打包并测试）→
+`checksums`（SHA-256）→ `publish`（为同一提交创建 tag 和 GitHub Release）→
+`verify-public-release`（从公开 Release 重新下载校验）。`publish` 可以通过 GitHub 的 `release`
+Environment 增加人工审批。完整命令与失败恢复见[发布验收](release.md)。
 
 ### `package-shader-toolchain` —— 工具链打包（区别于验证）
 
@@ -143,6 +141,7 @@ required check。
 ```sh
 gh workflow run linux.yml
 gh workflow run quick-check.yml -f suite=core
+bash scripts/publish.sh X.Y.Z
 ```
 
-带 `suite` / `tag` 等输入参数的 workflow 在页面或 CLI 中显式指定即可。
+`publish` 脚本会校验本地与远端 `main`、版本和标签，并默认等待工作流完成。

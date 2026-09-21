@@ -4,7 +4,7 @@ set -euo pipefail
 # 用法: scripts/ci.sh <workflow>
 # 用 gh CLI 触发对应 workflow。
 #
-# 可用: linux windows emscripten quick-check documentation release package-shader-toolchain
+# 可用: linux windows emscripten quick-check documentation package-shader-toolchain
 #
 # 示例:
 #   scripts/ci.sh linux
@@ -12,7 +12,7 @@ set -euo pipefail
 
 if [ $# -ne 1 ]; then
   echo "用法: scripts/ci.sh <workflow>" >&2
-  echo "可用: linux windows emscripten quick-check documentation release package-shader-toolchain" >&2
+  echo "可用: linux windows emscripten quick-check documentation package-shader-toolchain" >&2
   exit 1
 fi
 
@@ -22,7 +22,6 @@ case "$1" in
   emscripten) wf="emscripten.yml" ;;
   quick-check) wf="quick-check.yml" ;;
   documentation) wf="documentation.yml" ;;
-  release) wf="release.yml" ;;
   package-shader-toolchain) wf="package-shader-toolchain.yml" ;;
   *)
     echo "错误: 未知 workflow '$1'" >&2

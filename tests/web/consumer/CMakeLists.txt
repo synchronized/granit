@@ -10,15 +10,21 @@ if(NOT EMSCRIPTEN)
   message(FATAL_ERROR "浏览器消费端测试需要 Emscripten 工具链")
 endif()
 
+get_filename_component(repository_dir "${CMAKE_CURRENT_SOURCE_DIR}/../../.." ABSOLUTE)
 include(CTest)
-find_package(granit 0.25 CONFIG REQUIRED COMPONENTS RenderPipeline Window)
+include("${repository_dir}/cmake/granit_version.cmake")
+find_package(
+  granit ${GRANIT_PROJECT_COMPAT_VERSION} CONFIG REQUIRED COMPONENTS RenderPipeline Window
+)
+if(NOT "${granit_VERSION}" VERSION_EQUAL "${GRANIT_PROJECT_VERSION}")
+  message(FATAL_ERROR "Granit 包版本不符合预期: ${granit_VERSION}")
+endif()
 get_target_property(core_type granit::granit TYPE)
 if(NOT core_type STREQUAL "STATIC_LIBRARY")
   message(FATAL_ERROR "浏览器安装包必须提供静态核心库")
 endif()
 
-# 仅复用 Unity；消费端只验证安装目标，不引入源码级内部测试。
-get_filename_component(repository_dir "${CMAKE_CURRENT_SOURCE_DIR}/../../.." ABSOLUTE)
+# 源码仓库只提供测试辅助；Granit 目标必须来自安装包。
 include("${repository_dir}/cmake/granit_utility.cmake")
 include("${repository_dir}/3rd/unity.cmake")
 add_executable(granit_web_pipeline_c_consumer pipeline_c_test.c)

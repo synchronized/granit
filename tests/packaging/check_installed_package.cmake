@@ -10,21 +10,12 @@ if(NOT DEFINED GRANIT_TEST_CONFIGURATION)
   set(GRANIT_TEST_CONFIGURATION Release)
 endif()
 
-# 从根 CMakeLists.txt 读取当前版本，派生当前 minor、精确版本与下一 minor。
-file(READ "${GRANIT_SOURCE_DIR}/CMakeLists.txt" granit_root_cmake)
-string(
-  REGEX MATCH
-  "project\\([ \t\r\n]*granit[ \t\r\n]+VERSION[ \t\r\n]+([0-9]+)\\.([0-9]+)\\.([0-9]+)"
-  granit_project_match
-  "${granit_root_cmake}"
-)
-if(NOT granit_project_match)
-  message(FATAL_ERROR "无法从根 CMakeLists.txt 读取 Granit 版本")
-endif()
-set(granit_current_minor "${CMAKE_MATCH_1}.${CMAKE_MATCH_2}")
-set(granit_current_version "${CMAKE_MATCH_1}.${CMAKE_MATCH_2}.${CMAKE_MATCH_3}")
-math(EXPR granit_next_minor_number "${CMAKE_MATCH_2} + 1")
-set(granit_next_minor "${CMAKE_MATCH_1}.${granit_next_minor_number}")
+# 读取工程版本的唯一来源，派生当前版本与下一 minor。
+include("${GRANIT_SOURCE_DIR}/cmake/granit_version.cmake")
+set(granit_current_minor "${GRANIT_PROJECT_COMPAT_VERSION}")
+set(granit_current_version "${GRANIT_PROJECT_VERSION}")
+math(EXPR granit_next_minor_number "${GRANIT_PROJECT_VERSION_MINOR} + 1")
+set(granit_next_minor "${GRANIT_PROJECT_VERSION_MAJOR}.${granit_next_minor_number}")
 
 function(granit_check_package name expected_success)
   execute_process(

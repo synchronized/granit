@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Granit contributors
+
+# Granit 工程版本的唯一来源。发布脚本只修改此值，其余构建与测试从这里派生。
+set(GRANIT_PROJECT_VERSION "0.26.0")
+
+if(NOT GRANIT_PROJECT_VERSION MATCHES "^([0-9]+)\\.([0-9]+)\\.([0-9]+)$")
+  message(FATAL_ERROR "无效的 Granit 工程版本：${GRANIT_PROJECT_VERSION}")
+endif()
+
+set(GRANIT_PROJECT_VERSION_MAJOR "${CMAKE_MATCH_1}")
+set(GRANIT_PROJECT_VERSION_MINOR "${CMAKE_MATCH_2}")
+set(GRANIT_PROJECT_VERSION_PATCH "${CMAKE_MATCH_3}")
+set(
+  GRANIT_PROJECT_COMPAT_VERSION
+  "${GRANIT_PROJECT_VERSION_MAJOR}.${GRANIT_PROJECT_VERSION_MINOR}"
+)
