@@ -22,7 +22,7 @@ else()
     add_library(Unity::Unity ALIAS unity)
     message(STATUS "Granit C tests use unity from find_package")
   else()
-    set(GRANIT_UNITY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/unity-v2.6.1")
+    set(GRANIT_UNITY_DIR "${CMAKE_CURRENT_LIST_DIR}/unity-v2.6.1")
     add_library(granit_unity STATIC "${GRANIT_UNITY_DIR}/src/unity.c")
     add_library(Unity::Unity ALIAS granit_unity)
     target_include_directories(

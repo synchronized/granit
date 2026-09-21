@@ -17,12 +17,10 @@ if(NOT core_type STREQUAL "STATIC_LIBRARY")
   message(FATAL_ERROR "浏览器安装包必须提供静态核心库")
 endif()
 
-# 复用仓库测试及其依赖，验证安装目标，不将测试框架引入安装导出。
+# 仅复用 Unity；消费端只验证安装目标，不引入源码级内部测试。
 get_filename_component(repository_dir "${CMAKE_CURRENT_SOURCE_DIR}/../../.." ABSOLUTE)
-set(GRANIT_BUILD_TESTING ON)
 include("${repository_dir}/cmake/granit_utility.cmake")
-add_subdirectory("${repository_dir}/3rd" third_party)
-add_subdirectory("${repository_dir}/tests/core" core)
+include("${repository_dir}/3rd/unity.cmake")
 add_executable(granit_web_pipeline_c_consumer pipeline_c_test.c)
 target_compile_features(granit_web_pipeline_c_consumer PRIVATE c_std_11)
 target_link_libraries(
