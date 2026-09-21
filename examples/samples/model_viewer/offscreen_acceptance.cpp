@@ -381,10 +381,13 @@ int main(int argc, char** argv) {
   granit::render_pipeline pipeline;
   if (result.ok()) {
     stage = "创建 Render Pipeline";
-    granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
-    pipeline_desc.sample_count = arguments.sample_count;
-    pipeline_desc.enable_fxaa = arguments.enable_fxaa;
-    pipeline_desc.enable_specular_aa = arguments.enable_specular_aa;
+    const granit::render_pipeline_desc pipeline_desc{
+        .record = {},
+        .user_data = nullptr,
+        .samples = static_cast<granit::sample_count>(arguments.sample_count),
+        .enable_fxaa = arguments.enable_fxaa != 0,
+        .enable_specular_aa = arguments.enable_specular_aa != 0,
+    };
     result = pipeline.initialize(renderer, pipeline_desc);
   }
 

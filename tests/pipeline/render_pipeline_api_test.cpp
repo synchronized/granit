@@ -710,14 +710,23 @@ TEST_CASE("Render Pipeline在没有可见物体时仍清屏并执行覆盖层") 
   granit::scene_snapshot empty_scene;
   REQUIRE(empty_scene.initialize(renderer.native_handle(), scene_desc) == granit::result::success);
 
-  granit_render_pipeline_render_desc render_desc = GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT;
-  render_desc.scene = empty_scene.native_handle();
-  render_desc.output = output_view.native_handle();
-  render_desc.output_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
-  render_desc.width = size;
-  render_desc.height = size;
-  render_desc.clear_color = {0.25F, 0.5F, 1.0F, 1.0F};
-  render_desc.canvas = canvas.native_handle();
+  granit::render_pipeline_render_desc render_desc{
+      .scene = empty_scene.ref(),
+      .output = output_view.ref(),
+      .output_format = granit::texture_format::rgba8_unorm,
+      .width = size,
+      .height = size,
+      .first_view = 0,
+      .view_count = 1,
+      .exposure_ev = 0,
+      .draw_bindings = {},
+      .outputs = {},
+      .frame = nullptr,
+      .canvas = canvas.ref(),
+      .debug_draw = {},
+      .clear_color = {0.25F, 0.5F, 1.0F, 1.0F},
+      .environment = nullptr,
+  };
 
   granit_scene_renderable culled{};
   culled.model = identity();
@@ -731,27 +740,30 @@ TEST_CASE("Render Pipeline在没有可见物体时仍清屏并执行覆盖层") 
   REQUIRE(culled_scene.initialize(renderer.native_handle(), scene_desc) == granit::result::success);
   callback_state callback;
   callback.renderer = renderer.native_handle();
-  granit_render_pipeline_desc callback_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
-  callback_desc.record = record;
-  callback_desc.user_data = &callback;
   granit::render_pipeline callback_pipeline;
-  REQUIRE(callback_pipeline.initialize(renderer.native_handle(), callback_desc) ==
+  REQUIRE(callback_pipeline.initialize(renderer, {.record = record,
+                                                  .user_data = &callback,
+                                                  .samples = granit::sample_count::one,
+                                                  .enable_fxaa = true,
+                                                  .enable_specular_aa = true}) ==
           granit::result::success);
+  CHECK(callback_pipeline.ref().native_handle() == callback_pipeline.native_handle());
   REQUIRE(callback_pipeline.render(render_desc) == granit::result::success);
   CHECK(callback.stages ==
         std::vector<granit_render_pipeline_stage>{GRANIT_RENDER_PIPELINE_STAGE_OPAQUE,
                                                   GRANIT_RENDER_PIPELINE_STAGE_OVERLAY});
   CHECK(callback.payloads.empty());
 
-  for (const auto sample_count : {GRANIT_SAMPLE_COUNT_1, GRANIT_SAMPLE_COUNT_4}) {
-    granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
-    pipeline_desc.sample_count = sample_count;
+  for (const auto samples : {granit::sample_count::one, granit::sample_count::four}) {
     granit::render_pipeline pipeline;
-    REQUIRE(pipeline.initialize(renderer.native_handle(), pipeline_desc) ==
-            granit::result::success);
-    render_desc.scene = empty_scene.native_handle();
+    REQUIRE(pipeline.initialize(renderer, {.record = {},
+                                           .user_data = nullptr,
+                                           .samples = samples,
+                                           .enable_fxaa = true,
+                                           .enable_specular_aa = true}) == granit::result::success);
+    render_desc.scene = empty_scene.ref();
     REQUIRE(pipeline.render(render_desc) == granit::result::success);
-    render_desc.scene = culled_scene.native_handle();
+    render_desc.scene = culled_scene.ref();
     REQUIRE(pipeline.render(render_desc) == granit::result::success);
   }
 
