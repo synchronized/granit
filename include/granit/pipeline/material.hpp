@@ -148,9 +148,6 @@ public:
       renderer_ = renderer;
     return value;
   }
-  [[nodiscard]] result initialize(renderer& owner, const granit_material_desc& desc) noexcept {
-    return initialize(owner.native_handle(), desc);
-  }
   [[nodiscard]] result initialize(renderer& owner, const material_desc& desc) noexcept {
     if (desc.initial_updates.size() > std::numeric_limits<std::uint32_t>::max())
       return result::invalid_argument;

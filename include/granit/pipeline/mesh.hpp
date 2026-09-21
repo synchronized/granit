@@ -89,9 +89,6 @@ public:
       renderer_ = renderer;
     return value;
   }
-  [[nodiscard]] result initialize(renderer& owner, const granit_mesh_desc& desc) noexcept {
-    return initialize(owner.native_handle(), desc);
-  }
   [[nodiscard]] result initialize(renderer& owner, const mesh_desc& desc) noexcept {
     if (desc.vertex_buffers.size() > std::numeric_limits<std::uint32_t>::max())
       return result::invalid_argument;

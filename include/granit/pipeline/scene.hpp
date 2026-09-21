@@ -81,10 +81,6 @@ public:
       renderer_ = renderer;
     return value;
   }
-  [[nodiscard]] result initialize(renderer& owner,
-                                  const granit_scene_snapshot_desc& desc) noexcept {
-    return initialize(owner.native_handle(), desc);
-  }
   [[nodiscard]] result initialize(renderer& owner, const scene_snapshot_desc& desc) noexcept {
     if (desc.views.size() > std::numeric_limits<std::uint32_t>::max() ||
         desc.renderables.size() > std::numeric_limits<std::uint32_t>::max() ||
