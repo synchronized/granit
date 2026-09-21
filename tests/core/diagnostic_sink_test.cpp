@@ -28,15 +28,19 @@ void capture_diagnostic(granit_diagnostic_severity severity, granit_diagnostic_c
   state.received_user_data = user_data;
 }
 
+#if !defined(__EMSCRIPTEN__)
 void throwing_diagnostic(granit_diagnostic_severity, granit_diagnostic_category, const char*,
                          std::uint32_t, void*) {
   throw 1;
 }
+#endif
 
+#if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
 void count_diagnostic(granit_diagnostic_severity, granit_diagnostic_category, const char*,
                       std::uint32_t, void* user_data) {
   static_cast<std::atomic_uint32_t*>(user_data)->fetch_add(1, std::memory_order_relaxed);
 }
+#endif
 
 } // namespace
 
@@ -53,12 +57,15 @@ TEST_CASE("Diagnostic Sink 保留消息边界与用户数据", "[diagnostic]") {
   CHECK(state.received_user_data == &state);
 }
 
+#if !defined(__EMSCRIPTEN__)
 TEST_CASE("Diagnostic Sink 吞掉用户回调异常", "[diagnostic]") {
   const granit::detail::diagnostic_sink sink{throwing_diagnostic, nullptr};
   CHECK_NOTHROW(sink.emit(granit::detail::diagnostic_severity::error,
                           granit::detail::diagnostic_category::validation, "callback failure"));
 }
+#endif
 
+#if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
 TEST_CASE("Diagnostic Sink 允许多个产生线程并发进入回调", "[diagnostic][concurrency]") {
   std::atomic_uint32_t calls{};
   const granit::detail::diagnostic_sink sink{count_diagnostic, &calls};
@@ -78,3 +85,4 @@ TEST_CASE("Diagnostic Sink 允许多个产生线程并发进入回调", "[diagno
     thread.join();
   CHECK(calls.load(std::memory_order_relaxed) == thread_count * messages_per_thread);
 }
+#endif

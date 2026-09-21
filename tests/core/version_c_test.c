@@ -11,7 +11,7 @@ void tearDown(void) {}
 
 static void granit_test_public_types(void) {
   TEST_ASSERT_EQUAL_size_t(sizeof(uint64_t), sizeof(granit_handle));
-  TEST_ASSERT_EQUAL_UINT64(0, GRANIT_NULL_HANDLE);
+  TEST_ASSERT_TRUE(GRANIT_NULL_HANDLE == UINT64_C(0));
   TEST_ASSERT_EQUAL_UINT32(6, GRANIT_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER);
   {
     const granit_bind_groups_desc desc = GRANIT_BIND_GROUPS_DESC_INIT;
