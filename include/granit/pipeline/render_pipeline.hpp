@@ -6,6 +6,7 @@
 
 #include <granit/core/result.hpp>
 #include <granit/pipeline/render_pipeline.h>
+#include <granit/renderer/renderer.hpp>
 
 #include <utility>
 
@@ -38,6 +39,10 @@ public:
     if (value.ok())
       renderer_ = renderer;
     return value;
+  }
+  [[nodiscard]] result initialize(renderer& owner,
+                                  const granit_render_pipeline_desc& desc) noexcept {
+    return initialize(owner.native_handle(), desc);
   }
   [[nodiscard]] result render(const granit_render_pipeline_render_desc& desc) noexcept {
     return from_native(granit_render_pipeline_render(renderer_, handle_, &desc));

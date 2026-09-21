@@ -28,10 +28,10 @@ struct imgui_sample_texture_bindings {
                                                   granit_canvas_draw_state& state,
                                                   void* user_data) noexcept;
 
-[[nodiscard]] result upload_imgui_checker_texture(granit_renderer renderer, texture& output,
+[[nodiscard]] result upload_imgui_checker_texture(renderer& renderer, texture& output,
                                                   texture_view& view);
 
-[[nodiscard]] result upload_imgui_font_atlas(granit_renderer renderer, texture& output,
+[[nodiscard]] result upload_imgui_font_atlas(renderer& renderer, texture& output,
                                              texture_view& view, sampler& output_sampler);
 
 [[nodiscard]] bool imgui_target_needs_srgb_encoding(texture_format format) noexcept;

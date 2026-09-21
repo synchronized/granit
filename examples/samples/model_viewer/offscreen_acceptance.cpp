@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "gltf/loader.h"
 #include "application_core.h"
+#include "gltf/loader.h"
 #include "validation/screenshot_comparison.h"
 
 #include <granit/granit.hpp>
@@ -359,8 +359,7 @@ int main(int argc, char** argv) {
       stage = "读取环境包";
       result = granit::result::invalid_argument;
     } else {
-      result =
-          core.upload(renderer.native_handle(), environment_bytes, arguments.sampler_anisotropy);
+      result = core.upload(renderer, environment_bytes, arguments.sampler_anisotropy);
     }
   }
 
@@ -377,7 +376,7 @@ int main(int argc, char** argv) {
   }
   if (result.ok()) {
     stage = "创建离屏颜色视图";
-    result = output_view.initialize(renderer.native_handle(), output_texture.native_handle());
+    result = output_view.initialize(renderer, output_texture);
   }
   granit::render_pipeline pipeline;
   if (result.ok()) {
@@ -386,7 +385,7 @@ int main(int argc, char** argv) {
     pipeline_desc.sample_count = arguments.sample_count;
     pipeline_desc.enable_fxaa = arguments.enable_fxaa;
     pipeline_desc.enable_specular_aa = arguments.enable_specular_aa;
-    result = pipeline.initialize(renderer.native_handle(), pipeline_desc);
+    result = pipeline.initialize(renderer, pipeline_desc);
   }
 
   granit::example::model_viewer::viewer_change diagnostic_change{};
@@ -418,8 +417,7 @@ int main(int argc, char** argv) {
 
   const granit::texture_write_region region{.width = render_size, .height = render_size};
   granit::readback_batch readback;
-  result = readback.create(renderer.native_handle(),
-                           {.texture_layout = granit::readback_layout::tight});
+  result = readback.create(renderer, {.texture_layout = granit::readback_layout::tight});
   std::uint32_t result_index{};
   if (result.ok())
     result = readback.read_texture(output_texture.native_handle(), region, result_index);

@@ -30,27 +30,25 @@ result resolve_imgui_sample_texture(ImTextureID texture, granit_canvas_draw_stat
   return result::success;
 }
 
-result upload_imgui_checker_texture(granit_renderer renderer, texture& output,
-                                    texture_view& view) {
+result upload_imgui_checker_texture(renderer& renderer, texture& output, texture_view& view) {
   constexpr std::array<std::uint8_t, 16> pixels{238, 194, 255, 255, 35,  31, 52,  255,
                                                 35,  31,  52,  255, 104, 87, 204, 255};
-  auto upload_result =
-      output.initialize(renderer, {.format = texture_format::rgba8_unorm,
-                                   .usage = texture_usage::sampled |
-                                            texture_usage::transfer_destination,
-                                   .width = 2,
-                                   .height = 2});
+  auto upload_result = output.initialize(
+      renderer, {.format = texture_format::rgba8_unorm,
+                 .usage = texture_usage::sampled | texture_usage::transfer_destination,
+                 .width = 2,
+                 .height = 2});
   if (upload_result.ok()) {
-    upload_result = output.write(std::as_bytes(std::span{pixels}),
-                                 {.bytes_per_row = 8, .rows_per_image = 2},
-                                 {.width = 2, .height = 2});
+    upload_result =
+        output.write(std::as_bytes(std::span{pixels}), {.bytes_per_row = 8, .rows_per_image = 2},
+                     {.width = 2, .height = 2});
   }
   if (upload_result.ok())
-    upload_result = view.initialize(renderer, output.native_handle());
+    upload_result = view.initialize(renderer, output);
   return upload_result;
 }
 
-result upload_imgui_font_atlas(granit_renderer renderer, texture& output, texture_view& view,
+result upload_imgui_font_atlas(renderer& renderer, texture& output, texture_view& view,
                                sampler& output_sampler) {
   unsigned char* pixels = nullptr;
   int width = 0;
@@ -70,27 +68,24 @@ result upload_imgui_font_atlas(granit_renderer renderer, texture& output, textur
     premultiplied_pixels[offset + 3] = static_cast<std::byte>(alpha);
   }
 
-  auto upload_result =
-      output.initialize(renderer, {.format = texture_format::rgba8_unorm,
-                                   .usage = texture_usage::sampled |
-                                            texture_usage::transfer_destination,
-                                   .width = static_cast<std::uint32_t>(width),
-                                   .height = static_cast<std::uint32_t>(height)});
+  auto upload_result = output.initialize(
+      renderer, {.format = texture_format::rgba8_unorm,
+                 .usage = texture_usage::sampled | texture_usage::transfer_destination,
+                 .width = static_cast<std::uint32_t>(width),
+                 .height = static_cast<std::uint32_t>(height)});
   if (upload_result.ok()) {
     upload_result = output.write(
         premultiplied_pixels,
         {.bytes_per_row = static_cast<std::uint32_t>(width) * 4,
          .rows_per_image = static_cast<std::uint32_t>(height)},
-        {.width = static_cast<std::uint32_t>(width),
-         .height = static_cast<std::uint32_t>(height)});
+        {.width = static_cast<std::uint32_t>(width), .height = static_cast<std::uint32_t>(height)});
   }
   if (upload_result.ok())
-    upload_result = view.initialize(renderer, output.native_handle());
+    upload_result = view.initialize(renderer, output);
   if (upload_result.ok()) {
-    upload_result = output_sampler.initialize(renderer,
-                                              {.address_u = address_mode::clamp_to_edge,
-                                               .address_v = address_mode::clamp_to_edge,
-                                               .address_w = address_mode::clamp_to_edge});
+    upload_result = output_sampler.initialize(renderer, {.address_u = address_mode::clamp_to_edge,
+                                                         .address_v = address_mode::clamp_to_edge,
+                                                         .address_w = address_mode::clamp_to_edge});
   }
   if (upload_result.ok()) {
     ImGui::GetIO().Fonts->SetTexID(imgui_font_texture_id);

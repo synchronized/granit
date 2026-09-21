@@ -72,8 +72,20 @@ public:
                                       float sampler_anisotropy = 8.0F,
                                       gpu_scene_upload_callback progress = nullptr,
                                       void* progress_user_data = nullptr);
+  [[nodiscard]] granit::result upload(granit::renderer& renderer,
+                                      std::span<const std::byte> environment_bytes = {},
+                                      float sampler_anisotropy = 8.0F,
+                                      gpu_scene_upload_callback progress = nullptr,
+                                      void* progress_user_data = nullptr) {
+    return upload(renderer.native_handle(), environment_bytes, sampler_anisotropy, progress,
+                  progress_user_data);
+  }
   /** 按新采样质量事务式重建 GPU Scene；环境资源与查看器状态保持不变。 */
   [[nodiscard]] granit::result reupload_scene(granit_renderer renderer, float sampler_anisotropy);
+  [[nodiscard]] granit::result reupload_scene(granit::renderer& renderer,
+                                              float sampler_anisotropy) {
+    return reupload_scene(renderer.native_handle(), sampler_anisotropy);
+  }
   [[nodiscard]] granit::result tick(const application_tick_input& input, frame_packet& output);
   void fail(granit::result result, std::string diagnostic);
   void reset() noexcept;

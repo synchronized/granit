@@ -14,10 +14,10 @@
 #include "samples/imgui/resources.h"
 
 #include <granit/granit.hpp>
-#include <granit/renderer/native_surface.hpp>
 #include <granit/integrations/imgui/renderer.hpp>
 #include <granit/integrations/sdl3/surface.hpp>
 #include <granit/pipeline/canvas_draw_list.hpp>
+#include <granit/renderer/native_surface.hpp>
 
 #include <cstdint>
 #include <cstdio>
@@ -82,32 +82,32 @@ granit::result initialize_gpu_resources() {
   auto result = query_canvas_size(width, height);
   if (result.failed())
     return result;
-  result = granit::integration::sdl3::create_surface(state.renderer.native_handle(), state.window, state.surface);
+  result = granit::integration::sdl3::create_surface(state.renderer.native_handle(), state.window,
+                                                     state.surface);
 
   if (result.ok()) {
-    result =
-        state.swapchain.initialize(state.renderer.native_handle(), state.surface.native_handle(),
-                                   {.width = width,
-                                    .height = height,
-                                    .minimum_image_count = 2,
-                                    .presentation = granit::present_mode::fifo});
+    result = state.swapchain.initialize(state.renderer, state.surface,
+                                        {.width = width,
+                                         .height = height,
+                                         .minimum_image_count = 2,
+                                         .presentation = granit::present_mode::fifo});
   }
   if (result.ok())
     result = state.swapchain.query_info(state.swapchain_info);
   if (result.ok())
-    result = state.frame_context.initialize(state.renderer.native_handle());
+    result = state.frame_context.initialize(state.renderer);
   if (result.ok()) {
     granit_canvas_draw_list_desc desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
     desc.frame_slot_count = 2;
-    result = state.canvas.initialize(state.renderer.native_handle(), desc);
+    result = state.canvas.initialize(state.renderer, desc);
   }
   if (result.ok()) {
-    result = granit::example::upload_imgui_font_atlas(
-        state.renderer.native_handle(), state.font_texture, state.font_view, state.sampler);
+    result = granit::example::upload_imgui_font_atlas(state.renderer, state.font_texture,
+                                                      state.font_view, state.sampler);
   }
   if (result.ok()) {
-    result = granit::example::upload_imgui_checker_texture(
-        state.renderer.native_handle(), state.checker_texture, state.checker_view);
+    result = granit::example::upload_imgui_checker_texture(state.renderer, state.checker_texture,
+                                                           state.checker_view);
   }
   if (result.ok()) {
     state.bindings = {

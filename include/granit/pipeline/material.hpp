@@ -6,6 +6,7 @@
 
 #include <granit/core/result.hpp>
 #include <granit/pipeline/material.h>
+#include <granit/renderer/renderer.hpp>
 
 #include <limits>
 #include <span>
@@ -48,15 +49,18 @@ public:
       renderer_ = renderer;
     return value;
   }
+  [[nodiscard]] result initialize(renderer& owner, const granit_material_desc& desc) noexcept {
+    return initialize(owner.native_handle(), desc);
+  }
   [[nodiscard]] result update(std::span<const granit_material_parameter_update> updates) noexcept {
     if (updates.size() > std::numeric_limits<std::uint32_t>::max())
       return result::invalid_argument;
     return from_native(granit_material_update(renderer_, handle_, updates.data(),
                                               static_cast<std::uint32_t>(updates.size())));
   }
-  [[nodiscard]] result add_pipeline_warmup(
-      const granit_material_pipeline_warmup_desc& desc, granit_pipeline_warmup_batch batch,
-      std::uint32_t& result_index) const noexcept {
+  [[nodiscard]] result add_pipeline_warmup(const granit_material_pipeline_warmup_desc& desc,
+                                           granit_pipeline_warmup_batch batch,
+                                           std::uint32_t& result_index) const noexcept {
     return from_native(
         granit_material_add_pipeline_warmup(renderer_, handle_, &desc, batch, &result_index));
   }

@@ -6,6 +6,7 @@
 
 #include <granit/core/result.hpp>
 #include <granit/pipeline/mesh.h>
+#include <granit/renderer/renderer.hpp>
 
 #include <utility>
 
@@ -37,6 +38,9 @@ public:
     if (value.ok())
       renderer_ = renderer;
     return value;
+  }
+  [[nodiscard]] result initialize(renderer& owner, const granit_mesh_desc& desc) noexcept {
+    return initialize(owner.native_handle(), desc);
   }
   [[nodiscard]] result reset() noexcept {
     if (!valid())

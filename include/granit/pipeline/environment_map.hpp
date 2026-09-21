@@ -6,6 +6,7 @@
 
 #include <granit/core/result.hpp>
 #include <granit/pipeline/environment_map.h>
+#include <granit/renderer/renderer.hpp>
 
 #include <cstddef>
 #include <span>
@@ -44,6 +45,9 @@ public:
       renderer_ = renderer;
     return value;
   }
+  [[nodiscard]] result initialize(renderer& owner, std::span<const std::byte> asset) noexcept {
+    return initialize(owner.native_handle(), asset);
+  }
   [[nodiscard]] result initialize_builtin(granit_renderer renderer) noexcept {
     if (valid())
       return result::invalid_argument;
@@ -51,6 +55,9 @@ public:
     if (value.ok())
       renderer_ = renderer;
     return value;
+  }
+  [[nodiscard]] result initialize_builtin(renderer& owner) noexcept {
+    return initialize_builtin(owner.native_handle());
   }
   [[nodiscard]] result get_info(granit_environment_map_info& info) const noexcept {
     info = GRANIT_ENVIRONMENT_MAP_INFO_INIT;

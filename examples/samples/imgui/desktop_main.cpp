@@ -331,7 +331,7 @@ int main(int argc, char** argv) {
   }
   granit::swapchain swapchain;
   if (result.ok()) {
-    result = swapchain.initialize(renderer.native_handle(), surface.native_handle(),
+    result = swapchain.initialize(renderer, surface,
                                   {.width = static_cast<std::uint32_t>(pixel_width),
                                    .height = static_cast<std::uint32_t>(pixel_height),
                                    .presentation = presentation});
@@ -341,17 +341,16 @@ int main(int argc, char** argv) {
     result = swapchain.query_info(swapchain_info);
   granit::frame_context frame_context;
   if (result.ok())
-    result = frame_context.initialize(renderer.native_handle());
+    result = frame_context.initialize(renderer);
   granit::timestamp_query_pool timestamps;
   if (result.ok() && timestamps_enabled) {
-    result = timestamps.initialize(renderer.native_handle(),
-                                   static_cast<std::uint32_t>(frame_slot_count * 2));
+    result = timestamps.initialize(renderer, static_cast<std::uint32_t>(frame_slot_count * 2));
   }
   granit::canvas_draw_list canvas;
   granit_canvas_draw_list_desc canvas_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
   canvas_desc.frame_slot_count = static_cast<std::uint32_t>(frame_slot_count);
   if (result.ok())
-    result = canvas.initialize(renderer.native_handle(), canvas_desc);
+    result = canvas.initialize(renderer, canvas_desc);
 
   granit::texture font_texture;
   granit::texture_view font_view;
@@ -359,12 +358,11 @@ int main(int argc, char** argv) {
   granit::texture_view checker_view;
   granit::sampler font_sampler;
   if (result.ok()) {
-    result = granit::example::upload_imgui_font_atlas(renderer.native_handle(), font_texture,
-                                                      font_view, font_sampler);
+    result =
+        granit::example::upload_imgui_font_atlas(renderer, font_texture, font_view, font_sampler);
   }
   if (result.ok())
-    result = granit::example::upload_imgui_checker_texture(renderer.native_handle(),
-                                                           checker_texture, checker_view);
+    result = granit::example::upload_imgui_checker_texture(renderer, checker_texture, checker_view);
   if (result.failed())
     std::cerr << "SDL3 + ImGui 初始化失败，Granit 结果码：" << static_cast<int>(result) << '\n';
   granit::example::imgui_sample_texture_bindings bindings{

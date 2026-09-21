@@ -6,6 +6,7 @@
 
 #include <granit/core/result.hpp>
 #include <granit/pipeline/text_atlas.h>
+#include <granit/renderer/renderer.hpp>
 
 #include <utility>
 
@@ -35,6 +36,9 @@ public:
     if (value.ok())
       renderer_ = renderer;
     return value;
+  }
+  [[nodiscard]] result initialize(renderer& owner, const granit_text_atlas_desc& desc) noexcept {
+    return initialize(owner.native_handle(), desc);
   }
   [[nodiscard]] result upload_glyph(const granit_text_glyph_bitmap_desc& glyph) noexcept {
     return from_native(granit_text_atlas_upload_glyph(renderer_, handle_, &glyph));

@@ -20,6 +20,7 @@
 
 #include <cstdint>
 #include <span>
+#include <utility>
 #include <vector>
 
 namespace granit::example::model_viewer {
@@ -132,11 +133,25 @@ public:
                                           float sampler_anisotropy = 8.0F,
                                           gpu_scene_upload_callback progress = nullptr,
                                           void* progress_user_data = nullptr);
+  [[nodiscard]] granit::result initialize(granit::renderer& renderer, const gltf::scene& source,
+                                          float sampler_anisotropy = 8.0F,
+                                          gpu_scene_upload_callback progress = nullptr,
+                                          void* progress_user_data = nullptr) {
+    return initialize(renderer.native_handle(), source, sampler_anisotropy, progress,
+                      progress_user_data);
+  }
   /** 使用工作线程预先生成的计划创建资源；plan 在失败时仍会被消费。 */
   [[nodiscard]] granit::result initialize(granit_renderer renderer, const gltf::scene& source,
                                           gpu_scene_plan plan, float sampler_anisotropy = 8.0F,
                                           gpu_scene_upload_callback progress = nullptr,
                                           void* progress_user_data = nullptr);
+  [[nodiscard]] granit::result initialize(granit::renderer& renderer, const gltf::scene& source,
+                                          gpu_scene_plan plan, float sampler_anisotropy = 8.0F,
+                                          gpu_scene_upload_callback progress = nullptr,
+                                          void* progress_user_data = nullptr) {
+    return initialize(renderer.native_handle(), source, std::move(plan), sampler_anisotropy,
+                      progress, progress_user_data);
+  }
   void reset() noexcept;
 
   [[nodiscard]] bool valid() const noexcept { return renderer_ != GRANIT_NULL_HANDLE; }

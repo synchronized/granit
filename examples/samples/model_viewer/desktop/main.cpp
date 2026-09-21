@@ -69,7 +69,7 @@ constexpr std::string_view present_mode_label(granit::present_mode mode) noexcep
   }
 }
 
-granit::result upload_font_atlas(granit_renderer renderer, granit::texture& texture,
+granit::result upload_font_atlas(granit::renderer& renderer, granit::texture& texture,
                                  granit::texture_view& view, granit::sampler& sampler) {
   unsigned char* pixels = nullptr;
   int width = 0;
@@ -102,7 +102,7 @@ granit::result upload_font_atlas(granit_renderer renderer, granit::texture& text
         {.width = static_cast<std::uint32_t>(width), .height = static_cast<std::uint32_t>(height)});
   }
   if (result.ok())
-    result = view.initialize(renderer, texture.native_handle());
+    result = view.initialize(renderer, texture);
   if (result.ok())
     result = sampler.initialize(renderer, {.address_u = granit::address_mode::clamp_to_edge,
                                            .address_v = granit::address_mode::clamp_to_edge,
@@ -709,7 +709,7 @@ int main(int argc, char** argv) {
     result = granit::result::invalid_argument;
   }
   if (result.ok()) {
-    result = swapchain.initialize(renderer.native_handle(), surface.native_handle(),
+    result = swapchain.initialize(renderer, surface,
                                   {.width = static_cast<std::uint32_t>(pixel_width),
                                    .height = static_cast<std::uint32_t>(pixel_height),
                                    .presentation = options.presentation});
@@ -728,9 +728,9 @@ int main(int argc, char** argv) {
 
   granit::frame_context loading_frame_context;
   if (result.ok() && options.show_ui)
-    result = loading_frame_context.initialize(renderer.native_handle());
+    result = loading_frame_context.initialize(renderer);
   if (result.ok() && options.show_ui)
-    result = upload_font_atlas(renderer.native_handle(), font_texture, font_view, font_sampler);
+    result = upload_font_atlas(renderer, font_texture, font_view, font_sampler);
   ImTextureID font_texture_id = ImTextureID_Invalid;
   if (result.ok() && options.show_ui) {
     result = textures.register_texture(font_view.native_handle(), font_sampler.native_handle(),
@@ -740,10 +740,10 @@ int main(int argc, char** argv) {
     ImGui::GetIO().Fonts->SetTexID(font_texture_id);
     ImGui::GetIO().Fonts->TexRef._TexData->SetStatus(ImTextureStatus_OK);
     granit_canvas_draw_list_desc canvas_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
-    result = canvas.initialize(renderer.native_handle(), canvas_desc);
+    result = canvas.initialize(renderer, canvas_desc);
     for (auto& frame_canvas : frame_canvases) {
       if (result.ok())
-        result = frame_canvas.initialize(renderer.native_handle(), canvas_desc);
+        result = frame_canvas.initialize(renderer, canvas_desc);
     }
   }
 
@@ -1059,7 +1059,7 @@ int main(int argc, char** argv) {
           (result = granit::integration::sdl3::create_surface(renderer.native_handle(),
                                                               window.get(), surface))
               .failed() ||
-          (result = swapchain.initialize(renderer.native_handle(), surface.native_handle(),
+          (result = swapchain.initialize(renderer, surface,
                                          {.width = static_cast<std::uint32_t>(pixel_width),
                                           .height = static_cast<std::uint32_t>(pixel_height),
                                           .presentation = options.presentation}))

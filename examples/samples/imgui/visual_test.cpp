@@ -28,25 +28,24 @@ TEST_CASE("ImGui 固定画面在 Vulkan 的字体纹理裁剪与 DPI 验收", "[
   io.DeltaTime = 1.0F / 60.0F;
   granit::renderer renderer;
   REQUIRE(renderer.initialize({.application_name = "ImGui visual"}) == granit::result::success);
-  const auto native = renderer.native_handle();
   granit::texture font, checker, output;
   granit::texture_view font_view, checker_view, output_view;
   granit::sampler sampler;
-  REQUIRE(granit::example::upload_imgui_font_atlas(native, font, font_view, sampler) ==
+  REQUIRE(granit::example::upload_imgui_font_atlas(renderer, font, font_view, sampler) ==
           granit::result::success);
-  REQUIRE(granit::example::upload_imgui_checker_texture(native, checker, checker_view) ==
+  REQUIRE(granit::example::upload_imgui_checker_texture(renderer, checker, checker_view) ==
           granit::result::success);
   const auto width = 320U * scale;
   const auto height = 240U * scale;
-  REQUIRE(output.initialize(native, {.format = granit::texture_format::rgba8_unorm,
-                                     .usage = granit::texture_usage::color_attachment |
-                                              granit::texture_usage::transfer_source,
-                                     .width = width,
-                                     .height = height}) == granit::result::success);
-  REQUIRE(output_view.initialize(native, output.native_handle()) == granit::result::success);
+  REQUIRE(output.initialize(renderer, {.format = granit::texture_format::rgba8_unorm,
+                                       .usage = granit::texture_usage::color_attachment |
+                                                granit::texture_usage::transfer_source,
+                                       .width = width,
+                                       .height = height}) == granit::result::success);
+  REQUIRE(output_view.initialize(renderer, output) == granit::result::success);
   granit::canvas_draw_list canvas;
   granit_canvas_draw_list_desc desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
-  REQUIRE(canvas.initialize(native, desc) == granit::result::success);
+  REQUIRE(canvas.initialize(renderer, desc) == granit::result::success);
   granit::example::imgui_sample_texture_bindings bindings{
       .font = {font_view.native_handle(), sampler.native_handle()},
       .checker = {checker_view.native_handle(), sampler.native_handle()}};
@@ -73,7 +72,7 @@ TEST_CASE("ImGui 固定画面在 Vulkan 的字体纹理裁剪与 DPI 验收", "[
                 ImGui::GetDrawData(), canvas, granit::example::resolve_imgui_sample_texture,
                 &bindings) == granit::result::success);
     granit::command_recorder recorder;
-    REQUIRE(recorder.initialize(native) == granit::result::success);
+    REQUIRE(recorder.initialize(renderer) == granit::result::success);
     REQUIRE(recorder.begin() == granit::result::success);
     const granit::swapchain_info info{
         .width = width, .height = height, .format = granit::texture_format::rgba8_unorm};

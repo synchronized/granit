@@ -6,6 +6,7 @@
 
 #include <granit/core/result.hpp>
 #include <granit/pipeline/canvas_draw_list.h>
+#include <granit/renderer/renderer.hpp>
 
 #include <limits>
 #include <span>
@@ -40,6 +41,10 @@ public:
     if (value.ok())
       renderer_ = renderer;
     return value;
+  }
+  [[nodiscard]] result initialize(renderer& owner,
+                                  const granit_canvas_draw_list_desc& desc) noexcept {
+    return initialize(owner.native_handle(), desc);
   }
   [[nodiscard]] result clear() noexcept {
     return from_native(granit_canvas_draw_list_clear(renderer_, handle_));

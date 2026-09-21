@@ -51,7 +51,7 @@ TEST_CASE("模型查看器 Core 拒绝无效环境包", "[example][model-viewer]
   REQUIRE(core.renderer_ready() == granit::result::success);
   REQUIRE(core.accept_scene(std::move(scene)) == granit::result::success);
   const std::array invalid{std::byte{1}};
-  CHECK(core.upload(renderer.native_handle(), invalid) == granit::result::invalid_argument);
+  CHECK(core.upload(renderer, invalid) == granit::result::invalid_argument);
   CHECK(core.phase() == application_phase::failed);
   CHECK_FALSE(core.diagnostic().empty());
 }
@@ -77,12 +77,12 @@ TEST_CASE("模型查看器 Core 生成后端无关单帧描述", "[example][mode
   REQUIRE(core.begin_renderer() == granit::result::success);
   REQUIRE(core.renderer_ready() == granit::result::success);
   REQUIRE(core.accept_scene(std::move(scene)) == granit::result::success);
-  REQUIRE(core.upload(renderer.native_handle()) == granit::result::success);
+  REQUIRE(core.upload(renderer) == granit::result::success);
   const auto original_mesh = core.scene_gpu().meshes().front().native_handle();
-  REQUIRE(core.reupload_scene(renderer.native_handle(), 1.0F) == granit::result::success);
+  REQUIRE(core.reupload_scene(renderer, 1.0F) == granit::result::success);
   CHECK(core.scene_gpu().meshes().front().native_handle() != original_mesh);
   const auto rebuilt_mesh = core.scene_gpu().meshes().front().native_handle();
-  CHECK(core.reupload_scene(renderer.native_handle(), 0.0F) == granit::result::invalid_argument);
+  CHECK(core.reupload_scene(renderer, 0.0F) == granit::result::invalid_argument);
   CHECK(core.scene_gpu().meshes().front().native_handle() == rebuilt_mesh);
 
   frame_packet output;
