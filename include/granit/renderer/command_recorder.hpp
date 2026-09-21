@@ -16,7 +16,7 @@
 #include <granit/renderer/render_target.hpp>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/swapchain.hpp>
-#include <granit/renderer/timestamp_query.h>
+#include <granit/renderer/timestamp_query.hpp>
 
 namespace granit {
 
@@ -25,7 +25,11 @@ using texture_copy_region = granit_texture_copy_region;
 using texture_mipmap_range = granit_texture_mipmap_range;
 using viewport = granit_viewport;
 using scissor = granit_scissor;
-using vertex_buffer_binding = granit_vertex_buffer_binding;
+
+struct vertex_buffer_binding {
+  buffer_ref buffer{};
+  std::uint64_t offset{};
+};
 
 static_assert(sizeof(granit_bind_groups_desc) == GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE);
 
@@ -117,11 +121,21 @@ public:
         granit_command_recorder_copy_buffer(renderer_, handle_, source, destination, regions.data(),
                                             static_cast<std::uint32_t>(regions.size())));
   }
+  [[nodiscard]] result copy_buffer(buffer_ref source, buffer_ref destination,
+                                   std::span<const buffer_copy_region> regions) noexcept {
+    return copy_buffer(source.native_handle(), destination.native_handle(), regions);
+  }
   [[nodiscard]] result copy_texture_to_buffer(granit_texture source, granit_buffer destination,
                                               const granit_texture_data_layout& layout,
                                               const granit_texture_write_region& region) noexcept {
     return from_native(granit_command_recorder_copy_texture_to_buffer(
         renderer_, handle_, source, destination, &layout, &region));
+  }
+  [[nodiscard]] result copy_texture_to_buffer(texture_ref source, buffer_ref destination,
+                                              const granit_texture_data_layout& layout,
+                                              const granit_texture_write_region& region) noexcept {
+    return copy_texture_to_buffer(source.native_handle(), destination.native_handle(), layout,
+                                  region);
   }
   [[nodiscard]] result copy_buffer_to_texture(granit_buffer source, granit_texture destination,
                                               const granit_texture_data_layout& layout,
@@ -129,20 +143,38 @@ public:
     return from_native(granit_command_recorder_copy_buffer_to_texture(
         renderer_, handle_, source, destination, &layout, &region));
   }
+  [[nodiscard]] result copy_buffer_to_texture(buffer_ref source, texture_ref destination,
+                                              const granit_texture_data_layout& layout,
+                                              const granit_texture_write_region& region) noexcept {
+    return copy_buffer_to_texture(source.native_handle(), destination.native_handle(), layout,
+                                  region);
+  }
   [[nodiscard]] result copy_texture(granit_texture source, granit_texture destination,
                                     const texture_copy_region& region) noexcept {
     return from_native(
         granit_command_recorder_copy_texture(renderer_, handle_, source, destination, &region));
+  }
+  [[nodiscard]] result copy_texture(texture_ref source, texture_ref destination,
+                                    const texture_copy_region& region) noexcept {
+    return copy_texture(source.native_handle(), destination.native_handle(), region);
   }
   [[nodiscard]] result generate_mipmaps(granit_texture texture,
                                         const texture_mipmap_range& range) noexcept {
     return from_native(
         granit_command_recorder_generate_mipmaps(renderer_, handle_, texture, &range));
   }
+  [[nodiscard]] result generate_mipmaps(texture_ref texture,
+                                        const texture_mipmap_range& range) noexcept {
+    return generate_mipmaps(texture.native_handle(), range);
+  }
   [[nodiscard]] result fill_buffer(granit_buffer buffer, std::uint64_t offset, std::uint64_t size,
                                    std::uint32_t value) noexcept {
     return from_native(
         granit_command_recorder_fill_buffer(renderer_, handle_, buffer, offset, size, value));
+  }
+  [[nodiscard]] result fill_buffer(buffer_ref buffer, std::uint64_t offset, std::uint64_t size,
+                                   std::uint32_t value) noexcept {
+    return fill_buffer(buffer.native_handle(), offset, size, value);
   }
   [[nodiscard]] result bind_graphics_pipeline(granit_graphics_pipeline pipeline) noexcept {
     return from_native(
@@ -266,16 +298,35 @@ public:
   }
   [[nodiscard]] result
   bind_vertex_buffers(std::uint32_t first,
-                      std::span<const vertex_buffer_binding> bindings) noexcept {
+                      std::span<const granit_vertex_buffer_binding> bindings) noexcept {
     if (bindings.empty() || bindings.size() > UINT32_MAX)
       return result::invalid_argument;
     return from_native(granit_command_recorder_bind_vertex_buffers(
         renderer_, handle_, first, bindings.data(), static_cast<std::uint32_t>(bindings.size())));
   }
+  [[nodiscard]] result
+  bind_vertex_buffers(std::uint32_t first,
+                      std::span<const vertex_buffer_binding> bindings) noexcept {
+    try {
+      std::vector<granit_vertex_buffer_binding> native;
+      native.reserve(bindings.size());
+      for (const auto& binding : bindings)
+        native.push_back({binding.buffer.native_handle(), binding.offset});
+      return bind_vertex_buffers(first, native);
+    } catch (const std::bad_alloc&) {
+      return result::out_of_memory;
+    } catch (...) {
+      return result::internal;
+    }
+  }
   [[nodiscard]] result bind_index_buffer(granit_buffer buffer, std::uint64_t offset,
                                          index_type type) noexcept {
     return from_native(granit_command_recorder_bind_index_buffer(
         renderer_, handle_, buffer, offset, static_cast<granit_index_type>(type)));
+  }
+  [[nodiscard]] result bind_index_buffer(buffer_ref buffer, std::uint64_t offset,
+                                         index_type type) noexcept {
+    return bind_index_buffer(buffer.native_handle(), offset, type);
   }
   [[nodiscard]] result draw(std::uint32_t vertex_count, std::uint32_t instance_count = 1,
                             std::uint32_t first_vertex = 0,
@@ -324,10 +375,18 @@ public:
     return from_native(
         granit_command_recorder_reset_timestamp_queries(renderer_, handle_, pool, first, count));
   }
+  [[nodiscard]] result reset_timestamp_queries(timestamp_query_pool_ref pool, std::uint32_t first,
+                                               std::uint32_t count) noexcept {
+    return reset_timestamp_queries(pool.native_handle(), first, count);
+  }
   [[nodiscard]] result write_timestamp(granit_timestamp_query_pool pool,
                                        granit_timestamp_stage stage, std::uint32_t index) noexcept {
     return from_native(
         granit_command_recorder_write_timestamp(renderer_, handle_, pool, stage, index));
+  }
+  [[nodiscard]] result write_timestamp(timestamp_query_pool_ref pool, timestamp_stage stage,
+                                       std::uint32_t index) noexcept {
+    return write_timestamp(pool.native_handle(), static_cast<granit_timestamp_stage>(stage), index);
   }
   [[nodiscard]] result destroy() noexcept {
     if (!valid()) {

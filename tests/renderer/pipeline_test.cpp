@@ -548,10 +548,10 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
   const granit::scissor scissor{0, 0, width, height};
   REQUIRE(recorder.set_viewports(0, std::span{&viewport, 1}) == granit::result::success);
   REQUIRE(recorder.set_scissors(0, std::span{&scissor, 1}) == granit::result::success);
-  const granit::vertex_buffer_binding vertex_binding{vertex_buffer.native_handle(), 0};
+  const granit::vertex_buffer_binding vertex_binding{vertex_buffer.ref(), 0};
   REQUIRE(recorder.bind_vertex_buffers(0, std::span{&vertex_binding, 1}) ==
           granit::result::success);
-  REQUIRE(recorder.bind_index_buffer(index_buffer.native_handle(), 0, granit::index_type::uint16) ==
+  REQUIRE(recorder.bind_index_buffer(index_buffer.ref(), 0, granit::index_type::uint16) ==
           granit::result::success);
   const granit_bind_group group_handle = group.native_handle();
   const std::array left_offset{UINT32_C(0)};
@@ -973,9 +973,9 @@ TEST_CASE("Graphics Pipeline 热替换保持已录制对象有效", "[pipeline][
   REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
   REQUIRE(recorder.bind_graphics_pipeline(pipeline) == granit::result::success);
-  REQUIRE(recorder.bind_index_buffer(index_buffer.native_handle(), 0, granit::index_type::uint16) ==
+  REQUIRE(recorder.bind_index_buffer(index_buffer.ref(), 0, granit::index_type::uint16) ==
           granit::result::success);
-  const granit::vertex_buffer_binding vertex_binding{vertex_buffer.native_handle(), 0};
+  const granit::vertex_buffer_binding vertex_binding{vertex_buffer.ref(), 0};
   REQUIRE(recorder.bind_vertex_buffers(0, std::span{&vertex_binding, 1}) ==
           granit::result::success);
   const granit::viewport viewport{0, 0, 16, 16, 0, 1};
@@ -1215,8 +1215,8 @@ TEST_CASE("Compute Dispatch 写入 Storage Buffer 并自动同步 Copy", "[pipel
   REQUIRE(recorder.dispatch(16) == granit::result::success);
   const granit::buffer_copy_region copy{
       .source_offset = 0, .destination_offset = 0, .size = buffer_size};
-  REQUIRE(recorder.copy_buffer(storage.native_handle(), readback.native_handle(),
-                               std::span{&copy, 1}) == granit::result::success);
+  REQUIRE(recorder.copy_buffer(storage.ref(), readback.ref(), std::span{&copy, 1}) ==
+          granit::result::success);
   REQUIRE(recorder.end() == granit::result::success);
   REQUIRE(recorder.submit() == granit::result::success);
   REQUIRE(recorder.reset() == granit::result::success);

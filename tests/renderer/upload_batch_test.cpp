@@ -29,31 +29,29 @@ TEST_CASE("Upload Batch 合并 Buffer 写入并支持复用", "[upload_batch][bu
   REQUIRE(initialized == granit::result::success);
 
   granit::buffer buffer;
-  REQUIRE(buffer.initialize(renderer.native_handle(),
-                            {.size = 256,
-                             .usage = granit::buffer_usage::transfer_destination,
-                             .location = granit::memory_location::device}) ==
+  REQUIRE(buffer.initialize(renderer, {.size = 256,
+                                       .usage = granit::buffer_usage::transfer_destination,
+                                       .location = granit::memory_location::device}) ==
           granit::result::success);
   granit::upload_batch batch;
-  REQUIRE(batch.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(batch.initialize(renderer) == granit::result::success);
   CHECK(batch.submit() == granit::result::invalid_argument);
 
   std::array<std::byte, 16> first{};
   std::array<std::byte, 32> second{};
   std::array<std::byte, 4 * 4 * 4> pixels{};
   granit::texture texture;
-  REQUIRE(texture.initialize(renderer.native_handle(),
-                             {.format = granit::texture_format::rgba8_unorm,
-                              .usage = granit::texture_usage::transfer_destination,
-                              .width = 4,
-                              .height = 4}) == granit::result::success);
-  REQUIRE(batch.write_buffer(buffer.native_handle(), 0, first) == granit::result::success);
-  REQUIRE(batch.write_texture(texture.native_handle(), pixels, {}, {.width = 4, .height = 4}) ==
+  REQUIRE(texture.initialize(renderer, {.format = granit::texture_format::rgba8_unorm,
+                                        .usage = granit::texture_usage::transfer_destination,
+                                        .width = 4,
+                                        .height = 4}) == granit::result::success);
+  REQUIRE(batch.write_buffer(buffer.ref(), 0, first) == granit::result::success);
+  REQUIRE(batch.write_texture(texture.ref(), pixels, {}, {.width = 4, .height = 4}) ==
           granit::result::success);
-  REQUIRE(batch.write_buffer(buffer.native_handle(), 64, second) == granit::result::success);
+  REQUIRE(batch.write_buffer(buffer.ref(), 64, second) == granit::result::success);
   REQUIRE(batch.submit() == granit::result::success);
 
-  REQUIRE(batch.write_buffer(buffer.native_handle(), 128, first) == granit::result::success);
+  REQUIRE(batch.write_buffer(buffer.ref(), 128, first) == granit::result::success);
   REQUIRE(batch.reset() == granit::result::success);
   CHECK(batch.submit() == granit::result::invalid_argument);
 }
@@ -72,16 +70,15 @@ TEST_CASE("Upload Batch支持压缩Texture块数据", "[upload_batch][texture][c
     SKIP("当前设备不支持 BC1 上传");
 
   granit::texture texture;
-  REQUIRE(texture.initialize(renderer.native_handle(),
-                             {.format = granit::texture_format::bc1_rgba_unorm,
-                              .usage = granit::texture_usage::transfer_destination |
-                                       granit::texture_usage::sampled,
-                              .width = 7,
-                              .height = 5}) == granit::result::success);
+  REQUIRE(texture.initialize(renderer, {.format = granit::texture_format::bc1_rgba_unorm,
+                                        .usage = granit::texture_usage::transfer_destination |
+                                                 granit::texture_usage::sampled,
+                                        .width = 7,
+                                        .height = 5}) == granit::result::success);
   granit::upload_batch batch;
-  REQUIRE(batch.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(batch.initialize(renderer) == granit::result::success);
   std::array<std::byte, 32> blocks{};
-  REQUIRE(batch.write_texture(texture.native_handle(), blocks, {}, {.width = 7, .height = 5}) ==
+  REQUIRE(batch.write_texture(texture.ref(), blocks, {}, {.width = 7, .height = 5}) ==
           granit::result::success);
   CHECK(batch.submit() == granit::result::success);
 }
@@ -94,19 +91,17 @@ TEST_CASE("Upload Batch 在复制前执行字节数和操作数背压", "[upload
   REQUIRE(initialized == granit::result::success);
 
   granit::buffer buffer;
-  REQUIRE(buffer.initialize(renderer.native_handle(),
-                            {.size = 64,
-                             .usage = granit::buffer_usage::transfer_destination,
-                             .location = granit::memory_location::device}) ==
+  REQUIRE(buffer.initialize(renderer, {.size = 64,
+                                       .usage = granit::buffer_usage::transfer_destination,
+                                       .location = granit::memory_location::device}) ==
           granit::result::success);
   granit::upload_batch batch;
-  REQUIRE(batch.initialize(renderer.native_handle(),
-                           {.max_staged_bytes = 16, .max_operation_count = 2}) ==
+  REQUIRE(batch.initialize(renderer, {.max_staged_bytes = 16, .max_operation_count = 2}) ==
           granit::result::success);
   std::array<std::byte, 8> bytes{};
-  REQUIRE(batch.write_buffer(buffer.native_handle(), 0, bytes) == granit::result::success);
-  REQUIRE(batch.write_buffer(buffer.native_handle(), 8, bytes) == granit::result::success);
-  CHECK(batch.write_buffer(buffer.native_handle(), 16, bytes) == granit::result::not_ready);
+  REQUIRE(batch.write_buffer(buffer.ref(), 0, bytes) == granit::result::success);
+  REQUIRE(batch.write_buffer(buffer.ref(), 8, bytes) == granit::result::success);
+  CHECK(batch.write_buffer(buffer.ref(), 16, bytes) == granit::result::not_ready);
 
   granit::upload_batch_info info;
   REQUIRE(batch.get_info(info) == granit::result::success);
@@ -121,8 +116,7 @@ TEST_CASE("Upload Batch 在复制前执行字节数和操作数背压", "[upload
   CHECK(info.operation_count == 0);
 
   std::array<std::byte, 20> oversized{};
-  CHECK(batch.write_buffer(buffer.native_handle(), 0, oversized) ==
-        granit::result::invalid_argument);
+  CHECK(batch.write_buffer(buffer.ref(), 0, oversized) == granit::result::invalid_argument);
 }
 
 TEST_CASE("Upload Batch 异步提交公开非阻塞完成状态", "[upload_batch][async]") {
@@ -133,15 +127,14 @@ TEST_CASE("Upload Batch 异步提交公开非阻塞完成状态", "[upload_batch
   REQUIRE(initialized == granit::result::success);
 
   granit::buffer buffer;
-  REQUIRE(buffer.initialize(renderer.native_handle(),
-                            {.size = 64,
-                             .usage = granit::buffer_usage::transfer_destination,
-                             .location = granit::memory_location::device}) ==
+  REQUIRE(buffer.initialize(renderer, {.size = 64,
+                                       .usage = granit::buffer_usage::transfer_destination,
+                                       .location = granit::memory_location::device}) ==
           granit::result::success);
   granit::upload_batch batch;
-  REQUIRE(batch.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(batch.initialize(renderer) == granit::result::success);
   std::array<std::byte, 16> bytes{};
-  REQUIRE(batch.write_buffer(buffer.native_handle(), 0, bytes) == granit::result::success);
+  REQUIRE(batch.write_buffer(buffer.ref(), 0, bytes) == granit::result::success);
 
   granit::async_operation operation;
   REQUIRE(batch.submit_async(operation) == granit::result::success);
@@ -180,15 +173,14 @@ TEST_CASE("销毁运行中上传操作仍保活资源并回收后端槽", "[uplo
 
   for (std::uint32_t index = 0; index < 6; ++index) {
     granit::buffer buffer;
-    REQUIRE(buffer.initialize(renderer.native_handle(),
-                              {.size = 64,
-                               .usage = granit::buffer_usage::transfer_destination,
-                               .location = granit::memory_location::device}) ==
+    REQUIRE(buffer.initialize(renderer, {.size = 64,
+                                         .usage = granit::buffer_usage::transfer_destination,
+                                         .location = granit::memory_location::device}) ==
             granit::result::success);
     granit::upload_batch batch;
-    REQUIRE(batch.initialize(renderer.native_handle()) == granit::result::success);
+    REQUIRE(batch.initialize(renderer) == granit::result::success);
     std::array<std::byte, 16> bytes{};
-    REQUIRE(batch.write_buffer(buffer.native_handle(), 0, bytes) == granit::result::success);
+    REQUIRE(batch.write_buffer(buffer.ref(), 0, bytes) == granit::result::success);
     granit::async_operation operation;
     auto submit_result = batch.submit_async(operation);
     for (std::uint32_t attempt = 0; submit_result == granit::result::not_ready && attempt < 10000;
@@ -212,15 +204,14 @@ TEST_CASE("Upload Batch 在公开 Buffer 句柄销毁后仍保活资源", "[uplo
   REQUIRE(initialized == granit::result::success);
 
   granit::buffer buffer;
-  REQUIRE(buffer.initialize(renderer.native_handle(),
-                            {.size = 64,
-                             .usage = granit::buffer_usage::transfer_destination,
-                             .location = granit::memory_location::device}) ==
+  REQUIRE(buffer.initialize(renderer, {.size = 64,
+                                       .usage = granit::buffer_usage::transfer_destination,
+                                       .location = granit::memory_location::device}) ==
           granit::result::success);
   granit::upload_batch batch;
-  REQUIRE(batch.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(batch.initialize(renderer) == granit::result::success);
   std::array<std::byte, 16> data{};
-  REQUIRE(batch.write_buffer(buffer.native_handle(), 0, data) == granit::result::success);
+  REQUIRE(batch.write_buffer(buffer.ref(), 0, data) == granit::result::success);
   REQUIRE(buffer.reset() == granit::result::success);
   CHECK(batch.submit() == granit::result::success);
 }
@@ -233,15 +224,14 @@ TEST_CASE("Upload Batch 在公开 Texture 句柄销毁后仍保活资源", "[upl
   REQUIRE(initialized == granit::result::success);
 
   granit::texture texture;
-  REQUIRE(texture.initialize(renderer.native_handle(),
-                             {.format = granit::texture_format::rgba8_unorm,
-                              .usage = granit::texture_usage::transfer_destination,
-                              .width = 4,
-                              .height = 4}) == granit::result::success);
+  REQUIRE(texture.initialize(renderer, {.format = granit::texture_format::rgba8_unorm,
+                                        .usage = granit::texture_usage::transfer_destination,
+                                        .width = 4,
+                                        .height = 4}) == granit::result::success);
   granit::upload_batch batch;
-  REQUIRE(batch.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(batch.initialize(renderer) == granit::result::success);
   std::array<std::byte, 4 * 4 * 4> pixels{};
-  REQUIRE(batch.write_texture(texture.native_handle(), pixels, {}, {.width = 4, .height = 4}) ==
+  REQUIRE(batch.write_texture(texture.ref(), pixels, {}, {.width = 4, .height = 4}) ==
           granit::result::success);
   REQUIRE(texture.reset() == granit::result::success);
   CHECK(batch.submit() == granit::result::success);

@@ -23,16 +23,14 @@ int main() {
   granit::buffer readback;
   if (result.ok()) {
     result = storage.initialize(
-        renderer.native_handle(),
-        {.size = buffer_size,
-         .usage = granit::buffer_usage::storage | granit::buffer_usage::transfer_source,
-         .location = granit::memory_location::device});
+        renderer, {.size = buffer_size,
+                   .usage = granit::buffer_usage::storage | granit::buffer_usage::transfer_source,
+                   .location = granit::memory_location::device});
   }
   if (result.ok()) {
-    result = readback.initialize(renderer.native_handle(),
-                                 {.size = buffer_size,
-                                  .usage = granit::buffer_usage::transfer_destination,
-                                  .location = granit::memory_location::readback});
+    result = readback.initialize(renderer, {.size = buffer_size,
+                                            .usage = granit::buffer_usage::transfer_destination,
+                                            .location = granit::memory_location::readback});
   }
 
   const granit::bind_group_layout_entry declaration{.binding = 0,
@@ -41,7 +39,7 @@ int main() {
                                                         granit::shader_stage_flags::compute};
   granit::bind_group_layout group_layout;
   if (result.ok())
-    result = group_layout.initialize(renderer.native_handle(), std::span{&declaration, 1});
+    result = group_layout.initialize(renderer, std::span{&declaration, 1});
   const std::array group_layouts{group_layout.ref()};
   granit::pipeline_layout pipeline_layout;
   if (result.ok())
@@ -66,7 +64,7 @@ int main() {
 
   granit::command_recorder recorder;
   if (result.ok())
-    result = recorder.initialize(renderer.native_handle());
+    result = recorder.initialize(renderer);
   if (result.ok())
     result = recorder.begin();
   if (result.ok())
@@ -78,8 +76,7 @@ int main() {
   const granit::buffer_copy_region copy{
       .source_offset = 0, .destination_offset = 0, .size = buffer_size};
   if (result.ok()) {
-    result = recorder.copy_buffer(storage.native_handle(), readback.native_handle(),
-                                  std::span{&copy, 1});
+    result = recorder.copy_buffer(storage.ref(), readback.ref(), std::span{&copy, 1});
   }
   if (result.ok())
     result = recorder.end();

@@ -12,7 +12,7 @@
 ## 异步回读
 
 1. 创建有界 `granit::readback_batch`，选择紧密或后端原始 Texture 布局。
-2. 记录一个或多个 Buffer/Texture 区域，然后调用 `submit_async()`。
+2. 通过资源的 `ref()` 记录一个或多个 Buffer/Texture 区域，然后调用 `submit_async()`。
 3. 每帧调用 `renderer.process_events()` 并查询操作状态。
 4. 成功后先查询单项元数据，再把结果复制到调用方拥有的内存。
 

@@ -7,3 +7,4 @@
 
 static_assert(!std::is_copy_constructible_v<granit::timestamp_query_pool>);
 static_assert(std::is_move_constructible_v<granit::timestamp_query_pool>);
+static_assert(std::is_copy_constructible_v<granit::timestamp_query_pool_ref>);

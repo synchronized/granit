@@ -269,34 +269,32 @@ granit_result validate_public_transfers(granit_renderer renderer) {
   copy_region.height = 2;
   copy_region.depth = 1;
 
-  result = recorder.copy_buffer(upload.native_handle(), readback.native_handle(),
-                                std::span{&buffer_region, 1});
+  result = recorder.copy_buffer(upload.ref(), readback.ref(), std::span{&buffer_region, 1});
   if (result == granit::result::success)
-    result = recorder.fill_buffer(upload.native_handle(), 0, pixels.size(), UINT32_C(0x40302010));
+    result = recorder.fill_buffer(upload.ref(), 0, pixels.size(), UINT32_C(0x40302010));
   if (result == granit::result::success)
-    result = recorder.copy_buffer_to_texture(upload.native_handle(), source_texture.native_handle(),
-                                             layout, texture_region);
+    result =
+        recorder.copy_buffer_to_texture(upload.ref(), source_texture.ref(), layout, texture_region);
   if (result == granit::result::success) {
     const granit::texture_mipmap_range mipmap_range{
         .base_mip_level = 0, .level_count = 2, .base_array_layer = 0, .array_layer_count = 1};
-    result = recorder.generate_mipmaps(source_texture.native_handle(), mipmap_range);
+    result = recorder.generate_mipmaps(source_texture.ref(), mipmap_range);
   }
   if (result == granit::result::success) {
     const granit::texture_mipmap_range mipmap_range{
         .base_mip_level = 0, .level_count = 3, .base_array_layer = 0, .array_layer_count = 1};
-    result = recorder.generate_mipmaps(non_power_of_two_texture.native_handle(), mipmap_range);
+    result = recorder.generate_mipmaps(non_power_of_two_texture.ref(), mipmap_range);
   }
   if (result == granit::result::success) {
     const granit::texture_mipmap_range mipmap_range{
         .base_mip_level = 0, .level_count = 3, .base_array_layer = 0, .array_layer_count = 6};
-    result = recorder.generate_mipmaps(cube_texture.native_handle(), mipmap_range);
+    result = recorder.generate_mipmaps(cube_texture.ref(), mipmap_range);
   }
   if (result == granit::result::success)
-    result = recorder.copy_texture(source_texture.native_handle(),
-                                   destination_texture.native_handle(), copy_region);
+    result = recorder.copy_texture(source_texture.ref(), destination_texture.ref(), copy_region);
   if (result == granit::result::success)
-    result = recorder.copy_texture_to_buffer(destination_texture.native_handle(),
-                                             readback.native_handle(), layout, texture_region);
+    result = recorder.copy_texture_to_buffer(destination_texture.ref(), readback.ref(), layout,
+                                             texture_region);
   if (result == granit::result::success)
     result = recorder.end();
   if (result == granit::result::success)
@@ -401,7 +399,7 @@ granit_result draw_shared_fixture(granit_renderer renderer, granit_frame frame,
   granit::texture_view base_color_view;
   result = base_color.initialize(renderer, base_desc);
   if (result == granit::result::success)
-    result = base_color_view.initialize(renderer, base_color.native_handle());
+    result = base_color_view.initialize(renderer, base_color);
   if (result == granit::result::success)
     result = base_color.write(
         std::as_bytes(std::span{granit::test::renderer_fixture::base_color_pixels}), {},
@@ -413,7 +411,7 @@ granit_result draw_shared_fixture(granit_renderer renderer, granit_frame frame,
   if (result == granit::result::success)
     result = normal.initialize(renderer, material_desc);
   if (result == granit::result::success)
-    result = normal_view.initialize(renderer, normal.native_handle());
+    result = normal_view.initialize(renderer, normal);
   if (result == granit::result::success)
     result = normal.write(std::as_bytes(std::span{granit::test::renderer_fixture::normal_pixels}),
                           {}, texture_region);
@@ -422,7 +420,7 @@ granit_result draw_shared_fixture(granit_renderer renderer, granit_frame frame,
   if (result == granit::result::success)
     result = metallic_roughness.initialize(renderer, material_desc);
   if (result == granit::result::success)
-    result = metallic_roughness_view.initialize(renderer, metallic_roughness.native_handle());
+    result = metallic_roughness_view.initialize(renderer, metallic_roughness);
   if (result == granit::result::success)
     result = metallic_roughness.write(
         std::as_bytes(std::span{granit::test::renderer_fixture::metallic_roughness_pixels}), {},
@@ -470,7 +468,7 @@ granit_result draw_shared_fixture(granit_renderer renderer, granit_frame frame,
                                            .width = width,
                                            .height = height});
   if (result == granit::result::success)
-    result = depth_view.initialize(renderer, depth_target.native_handle());
+    result = depth_view.initialize(renderer, depth_target);
   if (result != granit::result::success)
     return granit::to_native(result);
 

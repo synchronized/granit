@@ -79,12 +79,17 @@ if (recorder.initialize(renderer) == granit::result::success) {
 std::array<granit::command_recorder, 3> recorders;
 granit::command_recorder::submit_batch(recorders);
 
-const std::array groups{object_group.native_handle()};
 const std::array dynamic_offsets{object_uniform_offset};
-recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0, groups, dynamic_offsets);
+recorder.bind_graphics_group(pipeline_layout, 0, object_group, dynamic_offsets);
+
+const granit::vertex_buffer_binding vertex_binding{vertex_buffer.ref(), 0};
+recorder.bind_vertex_buffers(0, std::span{&vertex_binding, 1});
+recorder.bind_index_buffer(index_buffer.ref(), 0, granit::index_type::uint16);
 ```
 
 包装类型无异常、不可复制且可以移动。`reset()` 重置录制状态，`destroy()` 销毁 Recorder 句柄。
+Buffer、Texture、Pipeline、Bind Group 与 Timestamp Query Pool 通过不可拥有的强类型引用传入命令；
+拥有对象使用 `ref()` 取得引用。裸句柄重载只用于显式 C/C++ 互操作。
 同一个动态 Uniform Bind Group 可以在多次 Draw 前传入不同 Offset，复用每帧 Uniform Arena；
 Offset 的对齐步长由设备决定，上层分配器必须按设备能力生成地址。
 首次 Bind Group 绑定应在 `begin_rendering` 前完成，让 Granit 准备资源状态；进入 Rendering 后可以

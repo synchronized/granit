@@ -14,6 +14,32 @@
 
 namespace granit {
 
+class timestamp_query_pool;
+
+/** 不拥有 Timestamp Query Pool，只在来源查询池的有效期内使用。 */
+class timestamp_query_pool_ref {
+public:
+  timestamp_query_pool_ref() = default;
+
+  [[nodiscard]] constexpr bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr granit_timestamp_query_pool native_handle() const noexcept {
+    return handle_;
+  }
+  [[nodiscard]] static constexpr timestamp_query_pool_ref
+  from_native(granit_timestamp_query_pool handle) noexcept {
+    return timestamp_query_pool_ref{handle};
+  }
+
+private:
+  friend class timestamp_query_pool;
+
+  explicit constexpr timestamp_query_pool_ref(granit_timestamp_query_pool handle) noexcept
+      : handle_(handle) {}
+
+  granit_timestamp_query_pool handle_{GRANIT_NULL_HANDLE};
+};
+
 enum class timestamp_stage : std::uint32_t {
   top = GRANIT_TIMESTAMP_STAGE_TOP,
   draw = GRANIT_TIMESTAMP_STAGE_DRAW,
@@ -64,8 +90,8 @@ public:
     if (operation.valid())
       return result::invalid_argument;
     granit_async_operation handle = GRANIT_NULL_HANDLE;
-    const auto value = granit_timestamp_query_pool_get_results_async(renderer_, handle_, first,
-                                                                      count, &handle);
+    const auto value =
+        granit_timestamp_query_pool_get_results_async(renderer_, handle_, first, count, &handle);
     if (value == GRANIT_SUCCESS)
       operation = async_operation{renderer_, handle};
     return from_native(value);
@@ -84,6 +110,9 @@ public:
     return from_native(granit_timestamp_query_pool_destroy(renderer, handle));
   }
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr timestamp_query_pool_ref ref() const noexcept {
+    return timestamp_query_pool_ref{handle_};
+  }
   [[nodiscard]] granit_timestamp_query_pool native_handle() const noexcept { return handle_; }
 
 private:

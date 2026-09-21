@@ -10,6 +10,7 @@
 
 #include <granit/core/result.hpp>
 #include <granit/renderer/async_operation.hpp>
+#include <granit/renderer/buffer.hpp>
 #include <granit/renderer/readback_batch.h>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/texture.hpp>
@@ -96,21 +97,31 @@ public:
         granit_readback_batch_read_buffer(renderer_, handle_, buffer, offset, size, &result_index));
   }
 
-  [[nodiscard]] result read_texture(granit_texture texture,
-                                    const texture_write_region& region,
+  [[nodiscard]] result read_buffer(buffer_ref buffer, std::uint64_t offset, std::uint64_t size,
+                                   std::uint32_t& result_index) noexcept {
+    return read_buffer(buffer.native_handle(), offset, size, result_index);
+  }
+
+  [[nodiscard]] result read_texture(granit_texture texture, const texture_write_region& region,
                                     std::uint32_t& result_index) noexcept {
     const granit_texture_write_region native{.mip_level = region.mip_level,
                                              .base_array_layer = region.base_array_layer,
                                              .array_layer_count = region.array_layer_count,
-                                             .aspect = static_cast<granit_texture_aspect>(region.aspect),
+                                             .aspect =
+                                                 static_cast<granit_texture_aspect>(region.aspect),
                                              .x = region.x,
                                              .y = region.y,
                                              .z = region.z,
                                              .width = region.width,
                                              .height = region.height,
                                              .depth = region.depth};
-    return from_native(granit_readback_batch_read_texture(renderer_, handle_, texture, &native,
-                                                           &result_index));
+    return from_native(
+        granit_readback_batch_read_texture(renderer_, handle_, texture, &native, &result_index));
+  }
+
+  [[nodiscard]] result read_texture(texture_ref texture, const texture_write_region& region,
+                                    std::uint32_t& result_index) noexcept {
+    return read_texture(texture.native_handle(), region, result_index);
   }
 
   [[nodiscard]] result get_info(readback_batch_info& info) const noexcept {

@@ -10,6 +10,7 @@
 
 #include <granit/core/result.hpp>
 #include <granit/renderer/async_operation.hpp>
+#include <granit/renderer/buffer.hpp>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/texture.hpp>
 #include <granit/renderer/upload_batch.h>
@@ -69,6 +70,10 @@ public:
     return from_native(granit_upload_batch_write_buffer(renderer_, handle_, buffer, offset,
                                                         data.data(), data.size()));
   }
+  [[nodiscard]] result write_buffer(buffer_ref buffer, std::uint64_t offset,
+                                    std::span<const std::byte> data) noexcept {
+    return write_buffer(buffer.native_handle(), offset, data);
+  }
   [[nodiscard]] result write_texture(granit_texture texture, std::span<const std::byte> data,
                                      texture_data_layout layout,
                                      texture_write_region region) noexcept {
@@ -88,6 +93,11 @@ public:
                                                     .depth = region.depth};
     return from_native(granit_upload_batch_write_texture(
         renderer_, handle_, texture, data.data(), data.size(), &native_layout, &native_region));
+  }
+  [[nodiscard]] result write_texture(texture_ref texture, std::span<const std::byte> data,
+                                     texture_data_layout layout,
+                                     texture_write_region region) noexcept {
+    return write_texture(texture.native_handle(), data, layout, region);
   }
   [[nodiscard]] result submit() noexcept {
     return from_native(granit_upload_batch_submit(renderer_, handle_));
