@@ -77,6 +77,29 @@ ctest --preset <static-release-preset>
                              构建/测试/打包 → tag/Release → 公开复验
 ```
 
+### 推荐完整流程
+
+以下以 PowerShell 发布 `0.27.0` 为例，可以直接按顺序执行：
+
+```powershell
+git switch main
+git pull --ff-only
+git switch -c release/0.27.0
+
+.\scripts\release.ps1 0.27.0 -Commit
+git push -u origin release/0.27.0
+gh pr create --fill
+
+# PR 合并后执行
+git switch main
+git pull --ff-only
+.\scripts\publish.ps1 0.27.0
+```
+
+其中，`release.ps1 -Commit` 自动修改并提交三个版本文件，但不会推送、创建 tag 或发布；`publish`
+要求本地 `main` 与 `origin/main` 完全一致。远端构建、测试和打包全部通过后，工作流才创建 tag 和
+GitHub Release。Linux/macOS 使用对应的 `release.sh --commit` 和 `publish.sh`，阶段边界相同。
+
 ### 5.1 准备版本提交
 
 `release` 脚本更新 `CMakeLists.txt`、`README.md` 和 `CHANGELOG.md`。默认模式只显示改动，不提交：
@@ -102,16 +125,8 @@ bash scripts/release.sh X.Y.Z --commit
 自动提交前脚本会检查工作区、版本格式、diff 和 tag 与项目版本的一致性。它只暂存三个版本文件，
 不会推送分支、创建 tag 或启动 Release。
 
-受保护的 `main` 推荐通过发布分支和 Pull Request 合入：
-
-```powershell
-git switch -c release/X.Y.Z
-.\scripts\release.ps1 X.Y.Z -Commit
-git push -u origin release/X.Y.Z
-gh pr create --fill
-```
-
-允许直接推送 `main` 时，可以在本地 `main` 执行自动提交，检查提交后推送：
+推荐完整流程通过发布分支和 Pull Request 合入受保护的 `main`。允许直接推送 `main` 时，也可以在
+本地 `main` 执行自动提交，检查提交后推送：
 
 ```powershell
 git switch main
