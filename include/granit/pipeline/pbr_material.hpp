@@ -5,10 +5,12 @@
 #define GRANIT_PIPELINE_PBR_MATERIAL_HPP_
 
 #include <granit/pipeline/pbr_material.h>
+#include <granit/renderer/pipeline.hpp>
 
 #include <cstdint>
 #include <limits>
 #include <span>
+#include <vector>
 
 namespace granit {
 
@@ -46,6 +48,40 @@ validate_pbr_vertex_layout(std::span<const granit_vertex_buffer_layout> vertex_b
   return static_cast<pbr_vertex_layout_result>(granit_pbr_validate_vertex_layout(
       vertex_buffers.data(), static_cast<std::uint32_t>(vertex_buffers.size()),
       static_cast<std::uint32_t>(textures)));
+}
+
+/** 检查强类型 C++ 顶点布局是否满足指定标准 PBR 纹理变体。 */
+[[nodiscard]] inline pbr_vertex_layout_result
+validate_pbr_vertex_layout(std::span<const vertex_buffer_layout> vertex_buffers,
+                           pbr_texture textures) noexcept {
+  if (vertex_buffers.size() > std::numeric_limits<std::uint32_t>::max())
+    return pbr_vertex_layout_result::invalid_argument;
+  try {
+    std::vector<std::vector<granit_vertex_attribute>> attributes;
+    std::vector<granit_vertex_buffer_layout> native;
+    attributes.reserve(vertex_buffers.size());
+    native.reserve(vertex_buffers.size());
+    for (const auto& layout : vertex_buffers) {
+      if (layout.attributes.size() > std::numeric_limits<std::uint32_t>::max())
+        return pbr_vertex_layout_result::invalid_argument;
+      auto& native_attributes = attributes.emplace_back();
+      native_attributes.reserve(layout.attributes.size());
+      for (const auto& attribute : layout.attributes) {
+        native_attributes.push_back({.location = attribute.location,
+                                     .format = static_cast<granit_vertex_format>(attribute.format),
+                                     .offset = attribute.offset,
+                                     .reserved = attribute.reserved});
+      }
+      native.push_back({.stride = layout.stride,
+                        .step_mode = static_cast<granit_vertex_step_mode>(layout.step_mode),
+                        .attribute_count = static_cast<std::uint32_t>(native_attributes.size()),
+                        .reserved = 0,
+                        .attributes = native_attributes.data()});
+    }
+    return validate_pbr_vertex_layout(native, textures);
+  } catch (...) {
+    return pbr_vertex_layout_result::invalid_argument;
+  }
 }
 
 } // namespace granit
