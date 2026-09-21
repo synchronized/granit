@@ -279,14 +279,13 @@ int main(int argument_count, char** arguments) {
     if (result.failed())
       break;
     recreate = frame.needs_recreate;
-    granit_texture backbuffer = GRANIT_NULL_HANDLE;
-    granit_texture_view backbuffer_view = GRANIT_NULL_HANDLE;
-    result = swapchain.backbuffer(frame.image_index, backbuffer, backbuffer_view);
+    granit::swapchain_backbuffer backbuffer;
+    result = swapchain.backbuffer(frame, backbuffer);
     if (result.ok()) {
       granit_render_pipeline_render_desc desc = GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT;
       const bool empty_frame = smoke_test && rendered_frames == 0;
       desc.scene = empty_frame ? empty_scene : scene;
-      desc.output = backbuffer_view;
+      desc.output = backbuffer.view.native_handle();
       desc.output_format = static_cast<granit_texture_format>(info.format);
       desc.width = info.width;
       desc.height = info.height;

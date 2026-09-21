@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "support/shader_asset_store.h"
-#include "support/tone_mapping_shader_library.h"
+#include "asset_formats/material/material_package.h"
 #include "lighting/shadow_ibl_resources.h"
 #include "lighting/tone_mapping_resources.h"
 #include "material/material_gpu_instance.h"
-#include "asset_formats/material/material_package.h"
 #include "material/material_template_gpu.h"
 #include "material/pbr_default_resources.h"
 #include "material/pbr_material_schema.h"
+#include "support/pbr_test_support.h"
 #include "support/reference/lighting/ibl_reference.h"
 #include "support/reference/lighting/lighting_reference.h"
 #include "support/reference/lighting/tone_mapping_reference.h"
 #include "support/reference/material/pbr_reference.h"
-#include "support/pbr_test_support.h"
+#include "support/shader_asset_store.h"
+#include "support/tone_mapping_shader_library.h"
 
 #include <granit/granit.hpp>
 
@@ -439,13 +439,16 @@ int main(int argc, char** argv) {
   const granit::viewport viewport{0, 0, 256, 256, 0, 1};
   const granit::scissor scissor{0, 0, 256, 256};
   const granit::color_attachment_desc color{
-      .view = hdr_view,
+      .view = granit::texture_view_ref::from_native(hdr_view),
+      .resolve_view = {},
       .clear_value = {.red = 0.03F, .green = 0.03F, .blue = 0.05F, .alpha = 1.0F}};
-  const granit::depth_stencil_attachment_desc depth{.view = depth_view};
+  const granit::depth_stencil_attachment_desc depth{
+      .view = granit::texture_view_ref::from_native(depth_view)};
   const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                          .depth_stencil_attachment = &depth,
                                          .area = {0, 0, 256, 256}};
-  const granit::color_attachment_desc output_color{.view = output_view};
+  const granit::color_attachment_desc output_color{
+      .view = granit::texture_view_ref::from_native(output_view), .resolve_view = {}};
   const granit::rendering_desc output_rendering{.color_attachments = std::span{&output_color, 1},
                                                 .area = {0, 0, 256, 256}};
   const granit_texture_data_layout readback_layout{};
@@ -499,7 +502,7 @@ int main(int argc, char** argv) {
           recorder.write_timestamp(timestamps.native_handle(), GRANIT_TIMESTAMP_STAGE_TOP, 0);
     }
     const granit::depth_stencil_attachment_desc shadow_depth{
-        .view = shadow_view.native_handle(), .clear_value = {.depth = stored_shadow_depth}};
+        .view = shadow_view.ref(), .clear_value = {.depth = stored_shadow_depth}};
     const granit::rendering_desc shadow_rendering{
         .color_attachments = {}, .depth_stencil_attachment = &shadow_depth, .area = {0, 0, 1, 1}};
     if (case_result.ok() && shadows)

@@ -6,7 +6,8 @@
 static_assert(sizeof(granit_rendering_desc) == GRANIT_RENDERING_DESC_VERSION_1_SIZE);
 
 constexpr granit::color_attachment_desc color{
-    .view = UINT64_C(7),
+    .view = granit::texture_view_ref::from_native(UINT64_C(7)),
+    .resolve_view = {},
     .clear_value = {.red = 0.25F, .green = 0.5F, .blue = 0.75F, .alpha = 1.0F},
 };
 constexpr auto native_color = color.native();
@@ -14,7 +15,8 @@ static_assert(native_color.view == UINT64_C(7));
 static_assert(native_color.resolve_view == GRANIT_NULL_HANDLE);
 static_assert(native_color.load_operation == GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR);
 
-constexpr granit::depth_stencil_attachment_desc depth{.view = UINT64_C(9)};
+constexpr granit::depth_stencil_attachment_desc depth{
+    .view = granit::texture_view_ref::from_native(UINT64_C(9))};
 constexpr auto native_depth = depth.native();
 static_assert(native_depth.clear_value.depth == 1.0F);
 static_assert(native_depth.stencil_load_operation == GRANIT_ATTACHMENT_LOAD_OPERATION_DISCARD);

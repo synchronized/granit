@@ -16,6 +16,50 @@
 
 namespace granit {
 
+class swapchain;
+
+/** 不拥有 Texture，只在来源资源的有效期内使用。 */
+class texture_ref {
+public:
+  texture_ref() = default;
+
+  [[nodiscard]] constexpr bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr granit_texture native_handle() const noexcept { return handle_; }
+  [[nodiscard]] static constexpr texture_ref from_native(granit_texture handle) noexcept {
+    return texture_ref{handle};
+  }
+
+private:
+  friend class swapchain;
+  friend class texture;
+
+  explicit constexpr texture_ref(granit_texture handle) noexcept : handle_(handle) {}
+
+  granit_texture handle_{GRANIT_NULL_HANDLE};
+};
+
+/** 不拥有 Texture View，只在来源资源的有效期内使用。 */
+class texture_view_ref {
+public:
+  texture_view_ref() = default;
+
+  [[nodiscard]] constexpr bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr granit_texture_view native_handle() const noexcept { return handle_; }
+  [[nodiscard]] static constexpr texture_view_ref from_native(granit_texture_view handle) noexcept {
+    return texture_view_ref{handle};
+  }
+
+private:
+  friend class swapchain;
+  friend class texture_view;
+
+  explicit constexpr texture_view_ref(granit_texture_view handle) noexcept : handle_(handle) {}
+
+  granit_texture_view handle_{GRANIT_NULL_HANDLE};
+};
+
 struct texture_format_footprint {
   std::uint32_t block_width{};
   std::uint32_t block_height{};
@@ -232,6 +276,7 @@ public:
   }
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
   [[nodiscard]] explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr texture_ref ref() const noexcept { return texture_ref{handle_}; }
   [[nodiscard]] granit_texture native_handle() const noexcept { return handle_; }
 
 private:
@@ -324,6 +369,9 @@ public:
   }
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
   [[nodiscard]] explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr texture_view_ref ref() const noexcept {
+    return texture_view_ref{handle_};
+  }
   [[nodiscard]] granit_texture_view native_handle() const noexcept { return handle_; }
 
 private:

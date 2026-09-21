@@ -15,8 +15,8 @@
 #include <granit/renderer/sampler.hpp>
 #include <granit/renderer/texture.hpp>
 
-#include "lighting/tone_mapping_resources.h"
 #include "asset_formats/material/material_package_archive.h"
+#include "lighting/tone_mapping_resources.h"
 #include "support/shader_asset_store.h"
 #include "support/tone_mapping_shader_library.h"
 
@@ -1045,7 +1045,8 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
           granit::result::success);
   REQUIRE(manual_recorder.set_scissors(0, std::span{&manual_scissor, 1}) ==
           granit::result::success);
-  const granit::color_attachment_desc manual_color{.view = manual_output_view.native_handle()};
+  const granit::color_attachment_desc manual_color{.view = manual_output_view.ref(),
+                                                   .resolve_view = {}};
   const granit::rendering_desc manual_rendering{.color_attachments = std::span{&manual_color, 1},
                                                 .area = {0, 0, size, size}};
   REQUIRE(manual_recorder.begin_rendering(manual_rendering) == granit::result::success);

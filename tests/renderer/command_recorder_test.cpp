@@ -696,32 +696,25 @@ TEST_CASE("Mipmap 支持非零起始级并拒绝无效范围", "[command][mipmap
   granit::command_recorder recorder;
   REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
-  CHECK(recorder.generate_mipmaps(texture.native_handle(),
-                                  {.base_mip_level = 0,
-                                   .level_count = 1,
-                                   .base_array_layer = 0,
-                                   .array_layer_count = 1}) ==
-        granit::result::invalid_argument);
   CHECK(
-      recorder.generate_mipmaps(texture.native_handle(),
-                                {.base_mip_level = 3,
-                                 .level_count = 2,
-                                 .base_array_layer = 0,
-                                 .array_layer_count = 1}) ==
+      recorder.generate_mipmaps(
+          texture.native_handle(),
+          {.base_mip_level = 0, .level_count = 1, .base_array_layer = 0, .array_layer_count = 1}) ==
       granit::result::invalid_argument);
-  CHECK(recorder.generate_mipmaps(
-            texture.native_handle(),
-            {.base_mip_level = 0,
-             .level_count = 2,
-             .base_array_layer = 1,
-             .array_layer_count = 1}) ==
-        granit::result::invalid_argument);
+  CHECK(
+      recorder.generate_mipmaps(
+          texture.native_handle(),
+          {.base_mip_level = 3, .level_count = 2, .base_array_layer = 0, .array_layer_count = 1}) ==
+      granit::result::invalid_argument);
+  CHECK(
+      recorder.generate_mipmaps(
+          texture.native_handle(),
+          {.base_mip_level = 0, .level_count = 2, .base_array_layer = 1, .array_layer_count = 1}) ==
+      granit::result::invalid_argument);
   REQUIRE(
-      recorder.generate_mipmaps(texture.native_handle(),
-                                {.base_mip_level = 1,
-                                 .level_count = 3,
-                                 .base_array_layer = 0,
-                                 .array_layer_count = 1}) ==
+      recorder.generate_mipmaps(
+          texture.native_handle(),
+          {.base_mip_level = 1, .level_count = 3, .base_array_layer = 0, .array_layer_count = 1}) ==
       granit::result::success);
   REQUIRE(recorder.end() == granit::result::success);
   REQUIRE(recorder.submit() == granit::result::success);
@@ -741,12 +734,11 @@ TEST_CASE("Mipmap 支持非零起始级并拒绝无效范围", "[command][mipmap
                                      .height = 2,
                                      .mip_levels = 2}) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
-  CHECK(recorder.generate_mipmaps(missing_source.native_handle(),
-                                  {.base_mip_level = 0,
-                                   .level_count = 2,
-                                   .base_array_layer = 0,
-                                   .array_layer_count = 1}) ==
-        granit::result::unsupported);
+  CHECK(
+      recorder.generate_mipmaps(
+          missing_source.native_handle(),
+          {.base_mip_level = 0, .level_count = 2, .base_array_layer = 0, .array_layer_count = 1}) ==
+      granit::result::unsupported);
   REQUIRE(recorder.end() == granit::result::success);
   REQUIRE(recorder.reset() == granit::result::success);
 
@@ -776,24 +768,21 @@ TEST_CASE("Mipmap 支持非零起始级并拒绝无效范围", "[command][mipmap
                               .height = 2,
                               .mip_levels = 2}) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
-  CHECK(recorder.generate_mipmaps(missing_destination.native_handle(),
-                                  {.base_mip_level = 0,
-                                   .level_count = 2,
-                                   .base_array_layer = 0,
-                                   .array_layer_count = 1}) ==
-        granit::result::unsupported);
-  CHECK(recorder.generate_mipmaps(one_mip.native_handle(),
-                                  {.base_mip_level = 0,
-                                   .level_count = 2,
-                                   .base_array_layer = 0,
-                                   .array_layer_count = 1}) ==
-        granit::result::invalid_argument);
-  CHECK(recorder.generate_mipmaps(foreign.native_handle(),
-                                  {.base_mip_level = 0,
-                                   .level_count = 2,
-                                   .base_array_layer = 0,
-                                   .array_layer_count = 1}) ==
-        granit::result::invalid_handle);
+  CHECK(
+      recorder.generate_mipmaps(
+          missing_destination.native_handle(),
+          {.base_mip_level = 0, .level_count = 2, .base_array_layer = 0, .array_layer_count = 1}) ==
+      granit::result::unsupported);
+  CHECK(
+      recorder.generate_mipmaps(
+          one_mip.native_handle(),
+          {.base_mip_level = 0, .level_count = 2, .base_array_layer = 0, .array_layer_count = 1}) ==
+      granit::result::invalid_argument);
+  CHECK(
+      recorder.generate_mipmaps(
+          foreign.native_handle(),
+          {.base_mip_level = 0, .level_count = 2, .base_array_layer = 0, .array_layer_count = 1}) ==
+      granit::result::invalid_handle);
   REQUIRE(recorder.end() == granit::result::success);
 }
 
@@ -815,7 +804,8 @@ TEST_CASE("Recorder 录制 Dynamic Rendering 作用域", "[command][rendering]")
   granit::command_recorder recorder;
   REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
-  const granit::color_attachment_desc color{.view = view};
+  const granit::color_attachment_desc color{.view = granit::texture_view_ref::from_native(view),
+                                            .resolve_view = {}};
   const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                          .area = {.width = 32, .height = 32}};
   REQUIRE(recorder.begin_rendering(rendering) == granit::result::success);
@@ -854,8 +844,11 @@ TEST_CASE("Texture Layout 按提交顺序解析而非录制顺序", "[command][r
   REQUIRE(load_recorder.initialize(renderer.native_handle()) == granit::result::success);
   REQUIRE(clear_recorder.initialize(renderer.native_handle()) == granit::result::success);
   const granit::color_attachment_desc load_color{
-      .view = view, .load_operation = granit::attachment_load_operation::load};
-  const granit::color_attachment_desc clear_color{.view = view};
+      .view = granit::texture_view_ref::from_native(view),
+      .resolve_view = {},
+      .load_operation = granit::attachment_load_operation::load};
+  const granit::color_attachment_desc clear_color{
+      .view = granit::texture_view_ref::from_native(view), .resolve_view = {}};
   const auto record = [&](granit::command_recorder& recorder,
                           const granit::color_attachment_desc& color) {
     REQUIRE(recorder.begin() == granit::result::success);
@@ -958,7 +951,8 @@ TEST_CASE("独立 Texture 支持并行创建与颜色附件录制", "[command][c
       if (worker_result.ok())
         worker_result = recorders[index].begin();
       const granit::color_attachment_desc color{
-          .view = views[index],
+          .view = granit::texture_view_ref::from_native(views[index]),
+          .resolve_view = {},
           .clear_value = {.red = static_cast<float>(index) / static_cast<float>(worker_count),
                           .green = 0.2F,
                           .blue = 0.4F,

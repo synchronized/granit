@@ -189,8 +189,8 @@ TEST_CASE("两个View执行独立PBR与Tone Mapping") {
                                           std::span{&light_group, 1}) == granit::result::success);
     REQUIRE(recorder.set_viewports(0, std::span{&viewport, 1}) == granit::result::success);
     REQUIRE(recorder.set_scissors(0, std::span{&scissor, 1}) == granit::result::success);
-    const granit::color_attachment_desc color{.view = color_views[index].native_handle()};
-    const granit::depth_stencil_attachment_desc depth{.view = depth_views[index].native_handle(),
+    const granit::color_attachment_desc color{.view = color_views[index].ref(), .resolve_view = {}};
+    const granit::depth_stencil_attachment_desc depth{.view = depth_views[index].ref(),
                                                       .clear_value = {.depth = 1.0F}};
     const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                            .depth_stencil_attachment = &depth,
@@ -203,7 +203,8 @@ TEST_CASE("两个View执行独立PBR与Tone Mapping") {
     const auto tone_group = tone_mapping[index].group();
     REQUIRE(recorder.bind_graphics_groups(tone_mapping[index].pipeline_layout(), 0,
                                           std::span{&tone_group, 1}) == granit::result::success);
-    const granit::color_attachment_desc output{.view = output_views[index].native_handle()};
+    const granit::color_attachment_desc output{.view = output_views[index].ref(),
+                                               .resolve_view = {}};
     const granit::rendering_desc tone_rendering{.color_attachments = std::span{&output, 1},
                                                 .area = {0, 0, 32, 32}};
     REQUIRE(recorder.begin_rendering(tone_rendering) == granit::result::success);

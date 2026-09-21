@@ -186,7 +186,8 @@ TEST_CASE("Tone Mapping GPU输出与CPU参考一致") {
   const granit::scissor scissor{0, 0, 16, 16};
   REQUIRE(recorder.set_viewports(0, std::span{&viewport, 1}) == granit::result::success);
   REQUIRE(recorder.set_scissors(0, std::span{&scissor, 1}) == granit::result::success);
-  const granit::color_attachment_desc color{.view = output_view};
+  const granit::color_attachment_desc color{
+      .view = granit::texture_view_ref::from_native(output_view), .resolve_view = {}};
   const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                          .area = {0, 0, 16, 16}};
   REQUIRE(recorder.begin_rendering(rendering) == granit::result::success);

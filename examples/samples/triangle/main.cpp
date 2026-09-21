@@ -69,21 +69,19 @@ int main() {
 
   constexpr auto format = granit::texture_format::rgba8_unorm;
   granit::graphics_pipeline pipeline;
-  result = pipeline.initialize(renderer,
-                               {.layout = layout.native_handle(),
-                                .vertex_shader = vertex_shader.native_handle(),
-                                .fragment_shader = fragment_shader.native_handle(),
-                                .color_formats = std::span{&format, 1}});
+  result = pipeline.initialize(renderer, {.layout = layout.native_handle(),
+                                          .vertex_shader = vertex_shader.native_handle(),
+                                          .fragment_shader = fragment_shader.native_handle(),
+                                          .color_formats = std::span{&format, 1}});
   if (result.failed())
     return report_failure("创建 Graphics Pipeline", result);
 
   granit::texture output;
-  result = output.initialize(renderer,
-                             {.format = format,
-                              .usage = granit::texture_usage::color_attachment |
-                                       granit::texture_usage::transfer_source,
-                              .width = 64,
-                              .height = 64});
+  result = output.initialize(renderer, {.format = format,
+                                        .usage = granit::texture_usage::color_attachment |
+                                                 granit::texture_usage::transfer_source,
+                                        .width = 64,
+                                        .height = 64});
   if (result.failed())
     return report_failure("创建离屏纹理", result);
 
@@ -102,21 +100,18 @@ int main() {
 
   const granit::viewport viewport{0, 0, 64, 64, 0, 1};
   const granit::scissor scissor{0, 0, 64, 64};
-  const granit::color_attachment_desc color{.view = output_view.native_handle(),
-                                            .clear_value = {.red = 0.05F,
-                                                            .green = 0.05F,
-                                                            .blue = 0.05F,
-                                                            .alpha = 1.0F}};
+  const granit::color_attachment_desc color{
+      .view = output_view.ref(),
+      .resolve_view = {},
+      .clear_value = {.red = 0.05F, .green = 0.05F, .blue = 0.05F, .alpha = 1.0F}};
   const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                          .area = {0, 0, 64, 64}};
   if ((result = recorder.set_viewports(0, std::span{&viewport, 1})).failed() ||
       (result = recorder.set_scissors(0, std::span{&scissor, 1})).failed() ||
       (result = recorder.begin_rendering(rendering)).failed() ||
       (result = recorder.bind_graphics_pipeline(pipeline.native_handle())).failed() ||
-      (result = recorder.draw(3)).failed() ||
-      (result = recorder.end_rendering()).failed() ||
-      (result = recorder.end()).failed() ||
-      (result = recorder.submit()).failed()) {
+      (result = recorder.draw(3)).failed() || (result = recorder.end_rendering()).failed() ||
+      (result = recorder.end()).failed() || (result = recorder.submit()).failed()) {
     return report_failure("录制或提交三角形", result);
   }
 
@@ -131,8 +126,7 @@ int main() {
   if (result.failed())
     return report_failure("读取三角形中心像素", result);
 
-  std::cout << "Triangle rendered, center pixel: "
-            << std::to_integer<unsigned int>(pixel[0]) << ','
+  std::cout << "Triangle rendered, center pixel: " << std::to_integer<unsigned int>(pixel[0]) << ','
             << std::to_integer<unsigned int>(pixel[1]) << ','
             << std::to_integer<unsigned int>(pixel[2]) << '\n';
   return 0;

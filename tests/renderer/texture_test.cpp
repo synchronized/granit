@@ -235,6 +235,12 @@ TEST_CASE("Texture View 校验格式和 Renderer 归属", "[texture][validation]
   granit::texture_view cpp_view;
   REQUIRE(cpp_view.initialize(first.native_handle(), texture.native_handle()) ==
           granit::result::success);
+  const auto texture_reference = texture.ref();
+  const auto view_reference = cpp_view.ref();
+  CHECK(texture_reference.valid());
+  CHECK(view_reference.valid());
+  CHECK(texture_reference.native_handle() == texture.native_handle());
+  CHECK(view_reference.native_handle() == cpp_view.native_handle());
   REQUIRE(cpp_view.reset() == granit::result::success);
 }
 

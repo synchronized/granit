@@ -172,11 +172,10 @@ granit::result render_frame() {
     operation = "acquire";
     result = state.swapchain.acquire(frame);
   }
-  granit_texture backbuffer{};
-  granit_texture_view view{};
+  granit::swapchain_backbuffer backbuffer;
   if (result.ok()) {
     operation = "backbuffer";
-    result = state.swapchain.backbuffer(frame.image_index, backbuffer, view);
+    result = state.swapchain.backbuffer(frame, backbuffer);
   }
   granit::frame_recording recording;
   if (result.ok()) {
@@ -185,8 +184,9 @@ granit::result render_frame() {
   }
   if (result.ok()) {
     operation = "canvas-record";
-    result = granit::example::record_imgui_sample_canvas(
-        recording.recorder(), state.canvas, view, state.swapchain_info, recording.frame_slot());
+    result = granit::example::record_imgui_sample_canvas(recording.recorder(), state.canvas,
+                                                         backbuffer.view, state.swapchain_info,
+                                                         recording.frame_slot());
   }
   if (result.ok()) {
     operation = "submit";

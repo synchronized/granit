@@ -38,8 +38,7 @@ struct imgui_sample_texture_bindings {
 
 /** 将已转换的 ImGui Canvas 录制到当前颜色附件。 */
 [[nodiscard]] result record_imgui_sample_canvas(command_recorder& recorder,
-                                                canvas_draw_list& canvas,
-                                                granit_texture_view target,
+                                                canvas_draw_list& canvas, texture_view_ref target,
                                                 const swapchain_info& info,
                                                 std::uint32_t frame_slot) noexcept;
 

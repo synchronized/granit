@@ -74,9 +74,10 @@ Texture 和 Sampler 销毁继续使用提交序号退役，不会调用 Queue/De
 ```cpp
 granit::acquired_frame frame;
 swapchain.acquire(frame);
-swapchain.backbuffer(frame.image_index, texture, view);
+granit::swapchain_backbuffer backbuffer;
+swapchain.backbuffer(frame, backbuffer);
 recorder.begin();
-// 使用 view 录制 Dynamic Rendering。
+// 使用 backbuffer.view 录制 Dynamic Rendering。
 recorder.end();
 recorder.submit(frame);
 swapchain.present(frame);
@@ -105,6 +106,11 @@ Frame；present、cancel、Swapchain 失效或 Renderer 销毁后，旧 Frame �
 
 ## Backbuffer 资源
 
-`granit_swapchain_get_backbuffer` 可按索引取得 Swapchain 拥有的 Texture 和默认 View。返回句柄是
-借用资源，不能通过 Texture/View 销毁函数单独销毁。Swapchain 重建或失效后，所有旧句柄立即
-失效；调用者应重新查询。当前接口只提供资源身份，实际当前图像由后续 acquire 接口确定。
+C API 的 `granit_swapchain_get_backbuffer` 可按索引取得 Swapchain 拥有的 Texture 和默认 View。
+C++ 主路径使用 `swapchain::backbuffer(frame, output)`，它校验 Frame 是否属于当前 Swapchain，
+并返回由 `texture_ref` 和 `texture_view_ref` 组成的 `swapchain_backbuffer`。
+
+这些结果都是借用资源，不能通过 Texture/View 销毁函数单独销毁，也不延长 Swapchain 或 Frame
+生命周期。C++ Backbuffer 引用只保证使用到对应 Frame 被 present/cancel 为止；Swapchain 重建、
+失效或 Renderer 销毁也会使旧引用失效。下一帧应重新查询，不能缓存引用跨帧使用。按索引输出裸
+句柄的 C++ 重载仅供明确的 C API 互操作和底层契约测试使用。

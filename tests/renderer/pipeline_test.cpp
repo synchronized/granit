@@ -559,8 +559,10 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
   REQUIRE(recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0,
                                         std::span{&group_handle, 1},
                                         left_offset) == granit::result::success);
-  const granit::color_attachment_desc color{.view = target_view};
-  const granit::depth_stencil_attachment_desc depth{.view = depth_view};
+  const granit::color_attachment_desc color{
+      .view = granit::texture_view_ref::from_native(target_view), .resolve_view = {}};
+  const granit::depth_stencil_attachment_desc depth{
+      .view = granit::texture_view_ref::from_native(depth_view)};
   const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                          .depth_stencil_attachment = &depth,
                                          .area = {0, 0, width, height}};
@@ -976,7 +978,8 @@ TEST_CASE("Graphics Pipeline 热替换保持已录制对象有效", "[pipeline][
   const granit::scissor scissor{0, 0, 16, 16};
   REQUIRE(recorder.set_viewports(0, std::span{&viewport, 1}) == granit::result::success);
   REQUIRE(recorder.set_scissors(0, std::span{&scissor, 1}) == granit::result::success);
-  const granit::color_attachment_desc color{.view = view};
+  const granit::color_attachment_desc color{.view = granit::texture_view_ref::from_native(view),
+                                            .resolve_view = {}};
   const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                          .area = {0, 0, 16, 16}};
   REQUIRE(recorder.begin_rendering(rendering) == granit::result::success);
@@ -1057,7 +1060,8 @@ TEST_CASE("Compute Pipeline 校验阶段并持有 Shader 与 Layout", "[pipeline
   granit_texture_view view = GRANIT_NULL_HANDLE;
   REQUIRE(granit_texture_create_with_default_view(renderer.native_handle(), &texture_desc, &texture,
                                                   &view) == GRANIT_SUCCESS);
-  const granit::color_attachment_desc color{.view = view};
+  const granit::color_attachment_desc color{.view = granit::texture_view_ref::from_native(view),
+                                            .resolve_view = {}};
   const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                          .area = {0, 0, 1, 1}};
   REQUIRE(recorder.begin_rendering(rendering) == granit::result::success);
@@ -1339,7 +1343,8 @@ TEST_CASE("Graphics 与 Compute 工作负载支持并行录制", "[pipeline][com
         if (worker_result.ok())
           worker_result = recorders[index].set_scissors(0, std::span{&scissor, 1});
         const granit::color_attachment_desc color{
-            .view = views[index],
+            .view = granit::texture_view_ref::from_native(views[index]),
+            .resolve_view = {},
             .clear_value = {.red = 0.1F, .green = 0.2F, .blue = 0.3F, .alpha = 1.0F}};
         const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                                .area = {.width = 32, .height = 32}};

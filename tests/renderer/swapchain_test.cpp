@@ -4,10 +4,10 @@
 #include <granit/renderer/command_recorder.hpp>
 #include <granit/renderer/frame_context.h>
 #include <granit/renderer/frame_context.hpp>
+#include <granit/renderer/native_surface.hpp>
 #include <granit/renderer/render_target.hpp>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/surface.hpp>
-#include <granit/renderer/native_surface.hpp>
 #include <granit/renderer/swapchain.hpp>
 
 #include <catch2/catch_all.hpp>
@@ -71,9 +71,10 @@ TEST_CASE("Swapchain 支持创建、查询、重建和销毁", "[swapchain][win3
   REQUIRE(window.valid());
 
   granit::renderer renderer;
-  const auto renderer_result = renderer.initialize({.application_name = "granit-swapchain-tests",
-                                                    .enable_validation = true,
-                                                    .presentation = granit::presentation_mode::enabled});
+  const auto renderer_result =
+      renderer.initialize({.application_name = "granit-swapchain-tests",
+                           .enable_validation = true,
+                           .presentation = granit::presentation_mode::enabled});
   if (swapchain_environment_unavailable(renderer_result)) {
     SKIP("当前运行环境不支持 Vulkan Win32 Swapchain");
   }
@@ -210,9 +211,24 @@ TEST_CASE("Swapchain 支持创建、查询、重建和销毁", "[swapchain][win3
   granit::frame_info cpp_frame_info;
   REQUIRE(cpp_frame.query_info(cpp_frame_info) == granit::result::success);
   CHECK(cpp_recording.frame_slot() == cpp_frame_info.frame_slot);
-  REQUIRE(swapchain.backbuffer(cpp_frame.image_index, frame_texture, frame_view) ==
-          granit::result::success);
-  const granit::color_attachment_desc cpp_color{.view = frame_view};
+  granit::swapchain_backbuffer cpp_backbuffer;
+  REQUIRE(swapchain.backbuffer(cpp_frame, cpp_backbuffer) == granit::result::success);
+  REQUIRE(cpp_backbuffer.texture.valid());
+  REQUIRE(cpp_backbuffer.view.valid());
+  const auto old_texture = cpp_backbuffer.texture.native_handle();
+  const auto old_view = cpp_backbuffer.view.native_handle();
+  granit::acquired_frame foreign_frame;
+  foreign_frame.handle = cpp_frame.handle;
+  foreign_frame.renderer = cpp_frame.renderer;
+  foreign_frame.swapchain = cpp_frame.swapchain + 1;
+  granit::swapchain_backbuffer foreign_backbuffer{
+      .texture = granit::texture_ref::from_native(old_texture),
+      .view = granit::texture_view_ref::from_native(old_view)};
+  CHECK(swapchain.backbuffer(foreign_frame, foreign_backbuffer) == granit::result::invalid_handle);
+  CHECK_FALSE(foreign_backbuffer.texture.valid());
+  CHECK_FALSE(foreign_backbuffer.view.valid());
+  foreign_frame.handle = GRANIT_NULL_HANDLE;
+  const granit::color_attachment_desc cpp_color{.view = cpp_backbuffer.view, .resolve_view = {}};
   const granit::rendering_desc cpp_rendering{.color_attachments = std::span{&cpp_color, 1},
                                              .area = {.width = info.width, .height = info.height}};
   REQUIRE(cpp_recording.recorder().begin_rendering(cpp_rendering) == granit::result::success);
@@ -220,6 +236,9 @@ TEST_CASE("Swapchain 支持创建、查询、重建和销毁", "[swapchain][win3
   REQUIRE(cpp_recording.submit() == granit::result::success);
   CHECK_FALSE(cpp_recording.valid());
   REQUIRE(swapchain.present(cpp_frame) == granit::result::success);
+  CHECK(swapchain.backbuffer(cpp_frame, cpp_backbuffer) == granit::result::invalid_argument);
+  CHECK_FALSE(cpp_backbuffer.texture.valid());
+  CHECK_FALSE(cpp_backbuffer.view.valid());
 
   granit::acquired_frame cpp_aborted_frame;
   REQUIRE(swapchain.acquire(cpp_aborted_frame) == granit::result::success);
@@ -230,9 +249,6 @@ TEST_CASE("Swapchain 支持创建、查询、重建和销毁", "[swapchain][win3
   REQUIRE(swapchain.cancel(cpp_aborted_frame) == granit::result::success);
   REQUIRE(cpp_context.reset() == granit::result::success);
 
-  granit_texture old_texture = GRANIT_NULL_HANDLE;
-  granit_texture_view old_view = GRANIT_NULL_HANDLE;
-  REQUIRE(swapchain.backbuffer(0, old_texture, old_view) == granit::result::success);
   REQUIRE(old_texture != GRANIT_NULL_HANDLE);
   REQUIRE(old_view != GRANIT_NULL_HANDLE);
   CHECK(granit_texture_destroy(renderer.native_handle(), old_texture) == GRANIT_ERROR_UNSUPPORTED);

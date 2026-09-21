@@ -99,14 +99,14 @@ bool imgui_target_needs_srgb_encoding(texture_format format) noexcept {
 }
 
 result record_imgui_sample_canvas(command_recorder& recorder, canvas_draw_list& canvas,
-                                  granit_texture_view target, const swapchain_info& info,
+                                  texture_view_ref target, const swapchain_info& info,
                                   std::uint32_t frame_slot) noexcept {
   granit_canvas_draw_list_stats stats = GRANIT_CANVAS_DRAW_LIST_STATS_INIT;
   auto record_result = canvas.get_stats(stats);
   if (record_result.failed())
     return record_result;
   if (stats.item_count == 0) {
-    const color_attachment_desc color{.view = target};
+    const color_attachment_desc color{.view = target, .resolve_view = {}};
     const rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                    .area = {0, 0, info.width, info.height}};
     record_result = recorder.begin_rendering(rendering);
@@ -116,7 +116,7 @@ result record_imgui_sample_canvas(command_recorder& recorder, canvas_draw_list& 
   }
 
   granit_canvas_record_desc record = GRANIT_CANVAS_RECORD_DESC_INIT;
-  record.color = target;
+  record.color = target.native_handle();
   record.color_format = static_cast<granit_texture_format>(info.format);
   record.width = info.width;
   record.height = info.height;

@@ -16,6 +16,11 @@ Texture 格式，并根据颜色、深度或深度模板格式自动选择 aspec
 
 销毁 View 不影响父 Texture；销毁 Texture 会使其全部 View 句柄立即失效。
 
+C++ 包装中的 `texture` 和 `texture_view` 拥有资源；`texture_ref` 和 `texture_view_ref` 只保存强类型
+借用句柄，没有销毁操作。拥有对象通过 `ref()` 生成借用引用，引用不会延长资源生命周期。只有在
+明确接入 C API 或第三方接口时才使用 `from_native()`；普通 C++ 路径应传递包装对象或引用类型。
+Swapchain Backbuffer 的更短有效期见 [Swapchain](swapchain.md#backbuffer-资源)。
+
 ## 格式 Footprint
 
 `granit_texture_format_get_footprint` 返回格式块宽高和每块字节数。结果描述 CPU 内存中的紧密排列，

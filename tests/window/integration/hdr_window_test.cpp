@@ -98,17 +98,16 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
     return result;
   needs_recreate = frame.needs_recreate;
 
-  granit_texture backbuffer = GRANIT_NULL_HANDLE;
-  granit_texture_view backbuffer_view = GRANIT_NULL_HANDLE;
+  granit::swapchain_backbuffer backbuffer;
   if (result.ok())
-    result = swapchain.backbuffer(frame.image_index, backbuffer, backbuffer_view);
+    result = swapchain.backbuffer(frame, backbuffer);
   granit::frame_recording recording;
   if (result.ok())
     result = context.begin(frame, recording);
   auto& recorder = recording.recorder();
 
-  const granit::depth_stencil_attachment_desc shadow_depth{.view = shadow_view,
-                                                           .clear_value = {.depth = 1.0F}};
+  const granit::depth_stencil_attachment_desc shadow_depth{
+      .view = granit::texture_view_ref::from_native(shadow_view), .clear_value = {.depth = 1.0F}};
   const granit::rendering_desc shadow_rendering{
       .color_attachments = {}, .depth_stencil_attachment = &shadow_depth, .area = {0, 0, 1, 1}};
   if (result.ok())
@@ -117,9 +116,10 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
     result = recorder.end_rendering();
 
   const granit::color_attachment_desc hdr_color{
-      .view = resources.view.native_handle(),
+      .view = resources.view.ref(),
+      .resolve_view = {},
       .clear_value = {.red = 0.03F, .green = 0.03F, .blue = 0.05F, .alpha = 1.0F}};
-  const granit::depth_stencil_attachment_desc depth{.view = resources.depth_view.native_handle(),
+  const granit::depth_stencil_attachment_desc depth{.view = resources.depth_view.ref(),
                                                     .clear_value = {.depth = 1.0F}};
   const granit::rendering_desc hdr_rendering{.color_attachments = std::span{&hdr_color, 1},
                                              .depth_stencil_attachment = &depth,
@@ -159,7 +159,7 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
     result = recorder.set_viewports(0, std::span{&viewport, 1});
   if (result.ok())
     result = recorder.set_scissors(0, std::span{&scissor, 1});
-  const granit::color_attachment_desc output_color{.view = backbuffer_view};
+  const granit::color_attachment_desc output_color{.view = backbuffer.view, .resolve_view = {}};
   const granit::rendering_desc output_rendering{.color_attachments = std::span{&output_color, 1},
                                                 .area = {0, 0, width, height}};
   if (result.ok())

@@ -76,8 +76,8 @@ TEST_CASE("ImGui 固定画面在 Vulkan 的字体纹理裁剪与 DPI 验收", "[
     REQUIRE(recorder.begin() == granit::result::success);
     const granit::swapchain_info info{
         .width = width, .height = height, .format = granit::texture_format::rgba8_unorm};
-    REQUIRE(granit::example::record_imgui_sample_canvas(
-                recorder, canvas, output_view.native_handle(), info, 0) == granit::result::success);
+    REQUIRE(granit::example::record_imgui_sample_canvas(recorder, canvas, output_view.ref(), info,
+                                                        0) == granit::result::success);
     REQUIRE(recorder.end() == granit::result::success);
     REQUIRE(recorder.submit() == granit::result::success);
     granit::texture_readback_info read;

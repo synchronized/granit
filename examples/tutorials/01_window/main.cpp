@@ -103,9 +103,8 @@ int main() {
     }
 
     // 获取 Backbuffer。
-    granit_texture backbuffer = GRANIT_NULL_HANDLE;
-    granit_texture_view backbuffer_view = GRANIT_NULL_HANDLE;
-    result = swapchain.backbuffer(frame.image_index, backbuffer, backbuffer_view);
+    granit::swapchain_backbuffer backbuffer;
+    result = swapchain.backbuffer(frame, backbuffer);
     if (result.failed()) {
       return report_failure("swapchain backbuffer acquire frame", result);
     }
@@ -117,7 +116,8 @@ int main() {
     }
 
     const granit::color_attachment_desc color{
-        .view = backbuffer_view,
+        .view = backbuffer.view,
+        .resolve_view = {},
         .clear_value = {.red = 0.04F, .green = 0.03F, .blue = 0.05F, .alpha = 1.0F}};
     const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                            .area = {0, 0, width, height}};

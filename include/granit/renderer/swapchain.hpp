@@ -13,6 +13,7 @@
 #include <granit/renderer/resource_types.hpp>
 #include <granit/renderer/surface.hpp>
 #include <granit/renderer/swapchain.h>
+#include <granit/renderer/texture.hpp>
 
 namespace granit {
 
@@ -40,6 +41,12 @@ struct swapchain_info {
 struct frame_info {
   std::uint32_t frame_slot{};
   std::uint32_t frame_slot_count{};
+};
+
+/** Swapchain 拥有的当前 Backbuffer 借用引用；有效期截止到 Frame present/cancel。 */
+struct swapchain_backbuffer {
+  texture_ref texture;
+  texture_view_ref view;
 };
 
 struct acquired_frame {
@@ -147,6 +154,22 @@ public:
   [[nodiscard]] result backbuffer(std::uint32_t index, granit_texture& texture,
                                   granit_texture_view& view) const noexcept {
     return from_native(granit_swapchain_get_backbuffer(renderer_, handle_, index, &texture, &view));
+  }
+
+  [[nodiscard]] result backbuffer(const acquired_frame& frame,
+                                  swapchain_backbuffer& output) const noexcept {
+    output = {};
+    if (!valid() || !frame.valid())
+      return result::invalid_argument;
+    if (frame.renderer != renderer_ || frame.swapchain != handle_)
+      return result::invalid_handle;
+    granit_texture texture = GRANIT_NULL_HANDLE;
+    granit_texture_view view = GRANIT_NULL_HANDLE;
+    const auto value =
+        granit_swapchain_get_backbuffer(renderer_, handle_, frame.image_index, &texture, &view);
+    if (value == GRANIT_SUCCESS)
+      output = {.texture = texture_ref{texture}, .view = texture_view_ref{view}};
+    return from_native(value);
   }
 
   [[nodiscard]] result acquire(acquired_frame& frame) const noexcept {

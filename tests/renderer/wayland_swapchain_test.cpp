@@ -2,10 +2,10 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <granit/renderer/command_recorder.hpp>
+#include <granit/renderer/native_surface.hpp>
 #include <granit/renderer/render_target.hpp>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/surface.hpp>
-#include <granit/renderer/native_surface.hpp>
 #include <granit/renderer/swapchain.hpp>
 
 #include <catch2/catch_all.hpp>
@@ -135,8 +135,9 @@ TEST_CASE("Wayland Surface 可以完成 Swapchain 清屏和 Present", "[swapchai
     SKIP("当前环境没有可用且支持 xdg-shell 的 Wayland compositor");
 
   granit::renderer renderer;
-  const auto renderer_result = renderer.initialize(
-      {.application_name = "granit-wayland-tests", .presentation = granit::presentation_mode::enabled});
+  const auto renderer_result =
+      renderer.initialize({.application_name = "granit-wayland-tests",
+                           .presentation = granit::presentation_mode::enabled});
   if (environment_unavailable(renderer_result))
     SKIP("当前环境不支持 Vulkan Wayland Swapchain");
   REQUIRE(renderer_result == granit::result::success);
@@ -153,14 +154,15 @@ TEST_CASE("Wayland Surface 可以完成 Swapchain 清屏和 Present", "[swapchai
 
   granit::acquired_frame frame;
   REQUIRE(swapchain.acquire(frame) == granit::result::success);
-  granit_texture texture = GRANIT_NULL_HANDLE;
-  granit_texture_view view = GRANIT_NULL_HANDLE;
-  REQUIRE(swapchain.backbuffer(frame.image_index, texture, view) == granit::result::success);
+  granit::swapchain_backbuffer backbuffer;
+  REQUIRE(swapchain.backbuffer(frame, backbuffer) == granit::result::success);
   granit::command_recorder recorder;
   REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
   const granit::color_attachment_desc color{
-      .view = view, .clear_value = {.red = 0.08F, .green = 0.03F, .blue = 0.16F, .alpha = 1.0F}};
+      .view = backbuffer.view,
+      .resolve_view = {},
+      .clear_value = {.red = 0.08F, .green = 0.03F, .blue = 0.16F, .alpha = 1.0F}};
   const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                          .area = {.width = info.width, .height = info.height}};
   REQUIRE(recorder.begin_rendering(rendering) == granit::result::success);
@@ -175,11 +177,12 @@ TEST_CASE("Wayland Surface 可以完成 Swapchain 清屏和 Present", "[swapchai
   REQUIRE(swapchain.query_info(info) == granit::result::success);
   granit::acquired_frame resized_frame;
   REQUIRE(swapchain.acquire(resized_frame) == granit::result::success);
-  REQUIRE(swapchain.backbuffer(resized_frame.image_index, texture, view) ==
-          granit::result::success);
+  REQUIRE(swapchain.backbuffer(resized_frame, backbuffer) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
   const granit::color_attachment_desc resized_color{
-      .view = view, .clear_value = {.red = 0.16F, .green = 0.06F, .blue = 0.03F, .alpha = 1.0F}};
+      .view = backbuffer.view,
+      .resolve_view = {},
+      .clear_value = {.red = 0.16F, .green = 0.06F, .blue = 0.03F, .alpha = 1.0F}};
   const granit::rendering_desc resized_rendering{
       .color_attachments = std::span{&resized_color, 1},
       .area = {.width = info.width, .height = info.height}};

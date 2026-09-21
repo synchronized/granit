@@ -151,10 +151,9 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
     return result;
   needs_recreate = frame.needs_recreate;
 
-  granit_texture texture = GRANIT_NULL_HANDLE;
-  granit_texture_view view = GRANIT_NULL_HANDLE;
+  granit::swapchain_backbuffer backbuffer;
   operation = "backbuffer";
-  result = swapchain.backbuffer(frame.image_index, texture, view);
+  result = swapchain.backbuffer(frame, backbuffer);
   granit::frame_recording recording;
   if (result.ok()) {
     operation = "frame_context.begin";
@@ -194,7 +193,8 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
   if (result.ok()) {
     operation = "canvas.record";
     const auto canvas_begin = std::chrono::steady_clock::now();
-    result = granit::example::record_imgui_sample_canvas(recorder, canvas, view, info, slot_index);
+    result = granit::example::record_imgui_sample_canvas(recorder, canvas, backbuffer.view, info,
+                                                         slot_index);
     sample.canvas_record_ms =
         std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - canvas_begin)
             .count();

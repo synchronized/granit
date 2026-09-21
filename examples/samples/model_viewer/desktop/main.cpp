@@ -270,16 +270,15 @@ granit::result render_loading_frame_data(granit::swapchain& swapchain,
   granit::acquired_frame frame;
   if (result.ok())
     result = swapchain.acquire(frame);
-  granit_texture backbuffer = GRANIT_NULL_HANDLE;
-  granit_texture_view backbuffer_view = GRANIT_NULL_HANDLE;
+  granit::swapchain_backbuffer backbuffer;
   if (result.ok())
-    result = swapchain.backbuffer(frame.image_index, backbuffer, backbuffer_view);
+    result = swapchain.backbuffer(frame, backbuffer);
   granit::frame_recording recording;
   if (result.ok())
     result = frame_context.begin(frame, recording);
   if (result.ok()) {
     granit_canvas_record_desc record = GRANIT_CANVAS_RECORD_DESC_INIT;
-    record.color = backbuffer_view;
+    record.color = backbuffer.view.native_handle();
     record.color_format = static_cast<granit_texture_format>(swapchain_info.format);
     record.width = swapchain_info.width;
     record.height = swapchain_info.height;
@@ -573,9 +572,8 @@ granit::result execute_desktop_frame(granit::example::model_viewer::frame_packet
     return result;
 
   output.needs_recreate = frame.needs_recreate;
-  granit_texture backbuffer = GRANIT_NULL_HANDLE;
-  granit_texture_view backbuffer_view = GRANIT_NULL_HANDLE;
-  result = context.swapchain->backbuffer(frame.image_index, backbuffer, backbuffer_view);
+  granit::swapchain_backbuffer backbuffer;
+  result = context.swapchain->backbuffer(frame, backbuffer);
   if (result.ok()) {
     granit_canvas_draw_list canvas = GRANIT_NULL_HANDLE;
     if (!packet.canvas.empty()) {
@@ -592,8 +590,8 @@ granit::result execute_desktop_frame(granit::example::model_viewer::frame_packet
       return result;
     }
     const auto render = packet.render_desc(
-        backbuffer_view, static_cast<granit_texture_format>(context.swapchain_info->format),
-        frame.handle, canvas);
+        backbuffer.view.native_handle(),
+        static_cast<granit_texture_format>(context.swapchain_info->format), frame.handle, canvas);
     result = context.pipeline->render(render);
   }
   if (result.failed()) {

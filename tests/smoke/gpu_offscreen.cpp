@@ -155,7 +155,8 @@ int main(int argc, char** argv) {
   if (result.ok())
     result = recorder.set_scissors(0, std::span{&scissor, 1});
   const granit::color_attachment_desc color{
-      .view = view.native_handle(),
+      .view = view.ref(),
+      .resolve_view = {},
       .clear_value = {.red = 0.03F, .green = 0.03F, .blue = 0.05F, .alpha = 1.0F}};
   const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                          .area = {0, 0, k_width, k_height}};

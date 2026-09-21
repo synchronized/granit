@@ -48,14 +48,13 @@ renderer.process_events();
 granit::acquired_frame frame;
 swapchain.acquire(frame);
 
-granit_texture backbuffer = GRANIT_NULL_HANDLE;
-granit_texture_view backbuffer_view = GRANIT_NULL_HANDLE;
-swapchain.backbuffer(frame.image_index, backbuffer, backbuffer_view);
+granit::swapchain_backbuffer backbuffer;
+swapchain.backbuffer(frame, backbuffer);
 
 granit::frame_recording recording;
 context.begin(frame, recording);
 
-// 使用 recording.recorder() 和 backbuffer_view 录制本帧命令。
+// 使用 recording.recorder() 和 backbuffer.view 录制本帧命令。
 
 recording.submit();
 swapchain.present(frame);
