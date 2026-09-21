@@ -96,11 +96,11 @@ granit::result initialize_gpu_resources() {
     result = state.swapchain.query_info(state.swapchain_info);
   if (result.ok())
     result = state.frame_context.initialize(state.renderer);
-  if (result.ok()) {
-    granit_canvas_draw_list_desc desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
-    desc.frame_slot_count = 2;
-    result = state.canvas.initialize(state.renderer, desc);
-  }
+  if (result.ok())
+    result = state.canvas.initialize(state.renderer, {.initial_vertex_capacity = 0,
+                                                      .initial_index_capacity = 0,
+                                                      .initial_item_capacity = 0,
+                                                      .frame_slot_count = 2});
   if (result.ok()) {
     result = granit::example::upload_imgui_font_atlas(state.renderer, state.font_texture,
                                                       state.font_view, state.sampler);
