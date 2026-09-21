@@ -6,6 +6,7 @@
 
 #include <granit/core/result.hpp>
 #include <granit/pipeline/environment_map.h>
+#include <granit/pipeline/render_pipeline.hpp>
 #include <granit/renderer/renderer.hpp>
 
 #include <cstddef>
@@ -13,6 +14,33 @@
 #include <utility>
 
 namespace granit {
+
+struct environment_map_info {
+  render_pipeline_environment environment;
+  float recommended_exposure_ev{};
+};
+
+class environment_map;
+
+/** 不拥有 Environment Map，只在来源资源的有效期内使用。 */
+class environment_map_ref {
+public:
+  environment_map_ref() = default;
+
+  [[nodiscard]] constexpr bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr granit_environment_map native_handle() const noexcept { return handle_; }
+  [[nodiscard]] static constexpr environment_map_ref
+  from_native(granit_environment_map handle) noexcept {
+    return environment_map_ref{handle};
+  }
+
+private:
+  friend class environment_map;
+  explicit constexpr environment_map_ref(granit_environment_map handle) noexcept
+      : handle_(handle) {}
+  granit_environment_map handle_{GRANIT_NULL_HANDLE};
+};
 
 /** 公共 Environment Map C ABI 的轻量 move-only RAII 包装。 */
 class environment_map {
@@ -63,6 +91,23 @@ public:
     info = GRANIT_ENVIRONMENT_MAP_INFO_INIT;
     return from_native(granit_environment_map_get_info(renderer_, handle_, &info));
   }
+  [[nodiscard]] result get_info(environment_map_info& info) const noexcept {
+    granit_environment_map_info native = GRANIT_ENVIRONMENT_MAP_INFO_INIT;
+    const auto value = get_info(native);
+    if (value.ok()) {
+      info = {
+          .environment = {.irradiance =
+                              texture_view_ref::from_native(native.environment.irradiance),
+                          .prefiltered_environment = texture_view_ref::from_native(
+                              native.environment.prefiltered_environment),
+                          .brdf_lut = texture_view_ref::from_native(native.environment.brdf_lut),
+                          .rotation_radians = native.environment.rotation_radians,
+                          .intensity = native.environment.intensity,
+                          .prefiltered_max_mip = native.environment.prefiltered_max_mip},
+          .recommended_exposure_ev = native.recommended_exposure_ev};
+    }
+    return value;
+  }
   [[nodiscard]] result reset() noexcept {
     if (!valid())
       return result::success;
@@ -71,6 +116,9 @@ public:
     return from_native(granit_environment_map_destroy(renderer, handle));
   }
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr environment_map_ref ref() const noexcept {
+    return environment_map_ref{handle_};
+  }
   [[nodiscard]] granit_environment_map native_handle() const noexcept { return handle_; }
 
 private:

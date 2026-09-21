@@ -13,7 +13,9 @@ Prefiltered Environment Cube、BRDF LUT 及对应 Texture View，并通过
 - `granit_environment_map_create_builtin` 创建确定性的低分辨率中性环境，用于缺少外部资产时降级。
 - Environment Map 属于创建它的 Renderer，不得跨 Renderer 查询或销毁。
 - 调用方必须先销毁 Environment Map，再销毁 Renderer；销毁会释放全部子纹理和视图并使旧句柄失效。
-- C++20 的 `granit::environment_map` 是 move-only RAII 包装，不建立第二套运行时状态。
+- C++20 的 `granit::environment_map` 是 move-only RAII 包装，不建立第二套运行时状态；
+  `environment_map_info` 通过 `texture_view_ref` 返回非拥有视图，可直接赋给强类型 Render Pipeline
+  渲染描述。
 
 ## GRENV v3
 
