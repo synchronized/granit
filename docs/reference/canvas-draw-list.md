@@ -9,11 +9,16 @@ Canvas Draw List 是 Render Pipeline component 中面向 UI 后端、Sprite、�
 ## 公共入口
 
 - C：`<granit/pipeline/canvas_draw_list.h>`。
-- C++20：`<granit/pipeline/canvas_draw_list.hpp>`，使用 move-only 的 `granit::canvas_draw_list`。
+- C++20：`<granit/pipeline/canvas_draw_list.hpp>`，使用 move-only 的 `granit::canvas_draw_list`、
+  `granit::canvas_draw_list_desc` 和非拥有的 `granit::canvas_draw_list_ref`。
 - 所属 CMake component：`RenderPipeline`，目标为 `granit::render_pipeline`。
 
 当前公开范围包括 Draw List 构建、复用、统计以及录制到已有 Command Recorder。内部 Canvas
 Material、动态几何上传和 Canvas Pass 均不是兼容承诺，也不应由使用者直接包含。
+
+C++20 入口使用 `canvas_draw_state`、`canvas_draw_range`、`canvas_rect_desc` 和
+`canvas_record_desc`。Texture View 与 Sampler 通过 `ref()` 借用，录制直接接收
+`command_recorder&`；只有显式 C/C++ 互操作才需要访问裸句柄和 C 描述。
 
 ## 坐标与顶点
 

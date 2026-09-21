@@ -737,11 +737,10 @@ int main(int argc, char** argv) {
   if (result.ok() && options.show_ui) {
     ImGui::GetIO().Fonts->SetTexID(font_texture_id);
     ImGui::GetIO().Fonts->TexRef._TexData->SetStatus(ImTextureStatus_OK);
-    granit_canvas_draw_list_desc canvas_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
-    result = canvas.initialize(renderer, canvas_desc);
+    result = canvas.initialize(renderer);
     for (auto& frame_canvas : frame_canvases) {
       if (result.ok())
-        result = frame_canvas.initialize(renderer, canvas_desc);
+        result = frame_canvas.initialize(renderer);
     }
   }
 

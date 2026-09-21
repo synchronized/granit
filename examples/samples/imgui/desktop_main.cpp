@@ -347,10 +347,12 @@ int main(int argc, char** argv) {
     result = timestamps.initialize(renderer, static_cast<std::uint32_t>(frame_slot_count * 2));
   }
   granit::canvas_draw_list canvas;
-  granit_canvas_draw_list_desc canvas_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
-  canvas_desc.frame_slot_count = static_cast<std::uint32_t>(frame_slot_count);
   if (result.ok())
-    result = canvas.initialize(renderer, canvas_desc);
+    result = canvas.initialize(renderer,
+                               {.initial_vertex_capacity = 0,
+                                .initial_index_capacity = 0,
+                                .initial_item_capacity = 0,
+                                .frame_slot_count = static_cast<std::uint32_t>(frame_slot_count)});
 
   granit::texture font_texture;
   granit::texture_view font_view;
