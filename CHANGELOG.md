@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+## 0.26.0 - 2026-09-21
+
 ### 新增
 
 - Window component 新增 Emscripten 后端；浏览器应用可以通过与 Win32、XCB、Wayland 相同的
