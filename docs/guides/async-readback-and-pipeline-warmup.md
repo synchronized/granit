@@ -27,6 +27,8 @@
 3. 提交后在加载循环中轮询；每次推进至多处理一个尚未命中的条目。
 4. 查询每项结果、缓存命中标记和 32 字节稳定键。某项失败不会中止同批其他条目。
 
+把批次交给 Material 等其他 C++ 组件时使用 `batch.ref()`；借用引用不接管批次生命周期。
+
 稳定键由规范化 Pipeline 状态、Shader 内容 ID、入口、后端和设备能力构成，不包含进程内资源
 句柄。Vulkan 会复用原生 Pipeline Cache，并在私有后台任务中执行冷创建；浏览器 WebGPU 使用
 原生异步 Render/Compute Pipeline 回调。两者都声明 `NON_BLOCKING_PIPELINE_WARMUP`，提交和单次

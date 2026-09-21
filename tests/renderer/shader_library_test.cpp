@@ -115,6 +115,7 @@ TEST_CASE("Shader Library 句柄校验类型、domain 和 generation", "[shader_
 
   granit::shader_library library;
   REQUIRE(library.initialize(first, archive) == granit::result::success);
+  CHECK(library.ref().native_handle() == library.native_handle());
   const auto handle = library.native_handle();
   granit::shader_library_info info;
   REQUIRE(library.get_info(info) == granit::result::success);

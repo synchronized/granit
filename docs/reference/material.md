@@ -9,7 +9,8 @@ Render Pipeline component，不取代核心 Renderer 的 Shader、Pipeline 或 B
 ## 公共入口
 
 - C：`<granit/pipeline/material.h>`。
-- C++20：`<granit/pipeline/material.hpp>`，使用 move-only 的 `granit::material_instance`。
+- C++20：`<granit/pipeline/material.hpp>`，使用 move-only 的 `granit::material_instance`、
+  `granit::material_desc` 和 `granit::material_parameter_update`。
 - 所属 CMake component：`RenderPipeline`，目标为 `granit::render_pipeline`。
 
 `granit_material_parameter_id` 根据参数名生成稳定 ID。C++ 用户可以使用
@@ -49,6 +50,11 @@ RenderPipeline 资产根目录下的 `materials/pbr_standard.grmat` 是对应的
 - `initial_updates` 在创建时整体应用；任何一步失败都不会产生 Material 句柄。
 - `granit_material_update` 批量更新参数。整批更新具有事务性：失败时保留原状态。
 - 空更新批次合法，可用于显式刷新或保持统一调用路径。
+
+C++20 描述通过 `std::span` 借用归档和初始更新。数值参数使用
+`material_parameter_update::value()`，Texture View 与 Sampler 分别使用 `texture_binding()` 和
+`sampler_binding()`；资源由对应对象的 `ref()` 提供。Material 预热接收
+`material_pipeline_warmup_desc` 和 `pipeline_warmup_batch::ref()`，无需传递裸句柄。
 
 参数 ID 必须来自同一材质布局，类型和数据尺寸必须与归档元数据一致。Texture View 和 Sampler
 必须属于同一 Renderer，并在 Material 使用期间保持有效。

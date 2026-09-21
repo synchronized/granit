@@ -2,8 +2,8 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <granit/pipeline/material.hpp>
-#include <granit/renderer/renderer.hpp>
 #include <granit/renderer/pipeline_warmup.hpp>
+#include <granit/renderer/renderer.hpp>
 #include <granit/renderer/sampler.hpp>
 #include <granit/renderer/texture.hpp>
 
@@ -78,39 +78,33 @@ TEST_CASE("公共Material批量更新保持事务语义") {
                                           .usage = granit::texture_usage::sampled,
                                           .width = 4,
                                           .height = 4};
-  REQUIRE(texture.initialize(renderer.native_handle(), texture_desc) == granit::result::success);
-  REQUIRE(view.initialize(renderer.native_handle(), texture.native_handle()) ==
-          granit::result::success);
+  REQUIRE(texture.initialize(renderer, texture_desc) == granit::result::success);
+  REQUIRE(view.initialize(renderer, texture) == granit::result::success);
   granit::sampler sampler;
-  REQUIRE(sampler.initialize(renderer.native_handle(), {}) == granit::result::success);
+  REQUIRE(sampler.initialize(renderer, {}) == granit::result::success);
 
   const auto archive = build_archive();
   const auto color = std::bit_cast<std::array<std::byte, 16>>(std::array{1.0F, 0.0F, 0.0F, 1.0F});
-  std::array updates{
-      granit_material_parameter_update{granit::material_parameter_id("color"),
-                                       GRANIT_MATERIAL_PARAMETER_FLOAT4, 0, color.data(),
-                                       color.size(), GRANIT_NULL_HANDLE},
-      granit_material_parameter_update{granit::material_parameter_id("albedo"),
-                                       GRANIT_MATERIAL_PARAMETER_TEXTURE_VIEW, 0, nullptr, 0,
-                                       view.native_handle()},
-      granit_material_parameter_update{granit::material_parameter_id("linear_sampler"),
-                                       GRANIT_MATERIAL_PARAMETER_SAMPLER, 0, nullptr, 0,
-                                       sampler.native_handle()},
+  const std::array updates{
+      granit::material_parameter_update::value(granit::material_parameter_id("color"),
+                                               granit::material_parameter_type::float4, color),
+      granit::material_parameter_update::texture_binding(granit::material_parameter_id("albedo"),
+                                                         view.ref()),
+      granit::material_parameter_update::sampler_binding(
+          granit::material_parameter_id("linear_sampler"), sampler.ref()),
   };
-  granit_material_desc desc = GRANIT_MATERIAL_DESC_INIT;
-  desc.archive_data = archive.data();
-  desc.archive_size = archive.size();
-  desc.initial_updates = updates.data();
-  desc.initial_update_count = static_cast<std::uint32_t>(updates.size());
   granit::material_instance material;
-  REQUIRE(material.initialize(renderer.native_handle(), desc) == granit::result::success);
+  REQUIRE(material.initialize(
+              renderer, {.archive = archive, .initial_updates = updates, .shader_library = {}}) ==
+          granit::result::success);
+  CHECK(material.ref().native_handle() == material.native_handle());
 
-  auto invalid = updates.front();
-  invalid.type = GRANIT_MATERIAL_PARAMETER_FLOAT3;
+  const auto invalid = granit::material_parameter_update::value(
+      granit::material_parameter_id("color"), granit::material_parameter_type::float3, color);
   CHECK(material.update(std::span{&invalid, 1}) == granit::result::invalid_argument);
   const auto blue = std::bit_cast<std::array<std::byte, 16>>(std::array{0.0F, 0.0F, 1.0F, 1.0F});
-  auto valid = updates.front();
-  valid.data = blue.data();
+  const auto valid = granit::material_parameter_update::value(
+      granit::material_parameter_id("color"), granit::material_parameter_type::float4, blue);
   CHECK(material.update(std::span{&valid, 1}) == granit::result::success);
 
   const auto old = material.native_handle();
@@ -168,20 +162,19 @@ TEST_CASE("公共Material预热在Shader Asset缺少解析器时保持事务性"
   REQUIRE(initialized == granit::result::success);
 
   const auto archive = build_archive(false);
-  granit_material_desc material_desc = GRANIT_MATERIAL_DESC_INIT;
-  material_desc.archive_data = archive.data();
-  material_desc.archive_size = archive.size();
   granit::material_instance material;
-  REQUIRE(material.initialize(renderer.native_handle(), material_desc) == granit::result::success);
+  REQUIRE(material.initialize(renderer,
+                              {.archive = archive, .initial_updates = {}, .shader_library = {}}) ==
+          granit::result::success);
 
   granit::pipeline_warmup_batch batch;
-  REQUIRE(batch.create(renderer.native_handle(), {}) == granit::result::success);
-  granit_material_pipeline_warmup_desc warmup_desc =
-      GRANIT_MATERIAL_PIPELINE_WARMUP_DESC_INIT;
-  warmup_desc.pass = granit::material_parameter_id("opaque");
-  warmup_desc.color_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+  REQUIRE(batch.create(renderer, {}) == granit::result::success);
+  const granit::material_pipeline_warmup_desc warmup_desc{
+      .pass = granit::material_parameter_id("opaque"),
+      .color_format = granit::texture_format::rgba8_unorm,
+  };
   std::uint32_t result_index{};
-  CHECK(material.add_pipeline_warmup(warmup_desc, batch.native_handle(), result_index) ==
+  CHECK(material.add_pipeline_warmup(warmup_desc, batch.ref(), result_index) ==
         granit::result::not_ready);
   granit::pipeline_warmup_batch_info info;
   REQUIRE(batch.get_info(info) == granit::result::success);

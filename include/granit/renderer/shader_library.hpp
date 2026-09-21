@@ -18,6 +18,29 @@
 
 namespace granit {
 
+class shader_library;
+
+/** 不拥有 Shader Library，只在来源 Library 的有效期内使用。 */
+class shader_library_ref {
+public:
+  shader_library_ref() = default;
+
+  [[nodiscard]] constexpr bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr granit_shader_library native_handle() const noexcept { return handle_; }
+  [[nodiscard]] static constexpr shader_library_ref
+  from_native(granit_shader_library handle) noexcept {
+    return shader_library_ref{handle};
+  }
+
+private:
+  friend class shader_library;
+
+  explicit constexpr shader_library_ref(granit_shader_library handle) noexcept : handle_(handle) {}
+
+  granit_shader_library handle_{GRANIT_NULL_HANDLE};
+};
+
 struct shader_library_info {
   shader_backend backends{shader_backend::none};
   granit::content_digest content_digest{};
@@ -136,6 +159,9 @@ public:
 
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
   [[nodiscard]] explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr shader_library_ref ref() const noexcept {
+    return shader_library_ref{handle_};
+  }
   [[nodiscard]] granit_shader_library native_handle() const noexcept { return handle_; }
 
 private:
