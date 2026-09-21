@@ -68,13 +68,64 @@ ctest --preset <static-release-preset>
 共享库和静态库安装包，运行测试与安装审计，生成 `SHA256SUMS` 和 manifest；全部成功后才为该
 提交创建 tag 和 GitHub Release，最后从公开 Release 重新下载同一批字节复验。
 
-正式发布必须按以下顺序执行：
+发布分为两个阶段：版本准备负责产生可审查的 Git 提交；正式发布只读取已经进入 `main` 的提交，
+不会再修改源码。完整顺序如下：
 
-1. 将发布提交合并到 `main`，确认 `project(VERSION)`、Changelog 和验收记录完整。
-2. 推送 `main`，确认本地 `main`、`origin/main` 和准备发布的提交完全一致。
-3. 运行 `publish` 脚本并传入版本号。脚本校验版本和 tag 唯一性后触发 `Release`。
-4. 工作流完成四套 SDK、测试、安装审计、校验和与 manifest 后，进入 `publish` job。
-5. `publish` 为已验证的 `GITHUB_SHA` 创建 tag 和 Release，随后执行公开下载复验。
+```text
+版本准备脚本 → 版本提交 → 合并并推送 main → 正式发布脚本
+                                              ↓
+                             构建/测试/打包 → tag/Release → 公开复验
+```
+
+### 5.1 准备版本提交
+
+`release` 脚本更新 `CMakeLists.txt`、`README.md` 和 `CHANGELOG.md`。默认模式只显示改动，不提交：
+
+```powershell
+.\scripts\release.ps1 X.Y.Z
+```
+
+```sh
+bash scripts/release.sh X.Y.Z
+```
+
+确认希望由脚本自动创建 `chore: 发布 X.Y.Z` 提交时，直接在干净工作区使用：
+
+```powershell
+.\scripts\release.ps1 X.Y.Z -Commit
+```
+
+```sh
+bash scripts/release.sh X.Y.Z --commit
+```
+
+自动提交前脚本会检查工作区、版本格式、diff 和 tag 与项目版本的一致性。它只暂存三个版本文件，
+不会推送分支、创建 tag 或启动 Release。
+
+受保护的 `main` 推荐通过发布分支和 Pull Request 合入：
+
+```powershell
+git switch -c release/X.Y.Z
+.\scripts\release.ps1 X.Y.Z -Commit
+git push -u origin release/X.Y.Z
+gh pr create --fill
+```
+
+允许直接推送 `main` 时，可以在本地 `main` 执行自动提交，检查提交后推送：
+
+```powershell
+git switch main
+git pull --ff-only
+.\scripts\release.ps1 X.Y.Z -Commit
+git show --stat
+git push origin main
+```
+
+无论采用哪种方式，正式发布前都要确认版本提交已经位于 `origin/main`。
+
+### 5.2 正式发布
+
+更新本地 `main`，然后执行唯一的正式发布入口：
 
 Linux/macOS 使用：
 
@@ -88,8 +139,13 @@ PowerShell 使用：
 .\scripts\publish.ps1 X.Y.Z
 ```
 
-脚本默认等待工作流并返回其最终状态；传入 `--no-wait` 或 `-NoWait` 可以只触发不等待。直接从
-Actions 页面运行时必须选择 `main` 并输入 `vX.Y.Z` 格式的 tag。
+`publish` 脚本要求当前分支为 `main`、工作区干净且 `HEAD` 等于 `origin/main`。它还会校验项目版本和
+tag 唯一性，然后触发 `Release` 工作流并默认等待最终结果。传入 `--no-wait` 或 `-NoWait` 可以只触发
+不等待。直接从 Actions 页面运行时必须选择 `main` 并输入 `vX.Y.Z` 格式的 tag。
+
+工作流依次完成四套 SDK 构建、测试、安装审计、校验和与 manifest；全部通过后，`publish` job 才为
+同一 `GITHUB_SHA` 创建 tag 和 Release，随后执行公开下载复验。版本准备失败不会启动远端发布，远端
+构建失败也不会留下 tag。
 
 建议为 `release` Environment 配置 required reviewer，使四套 SDK 全部完成后由维护者批准 `publish`
 job；未配置保护规则时该 job 自动继续。仓库还可以启用 Immutable Releases，在发布后禁止修改 tag

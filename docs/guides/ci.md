@@ -17,18 +17,18 @@ Granit 采用主干开发（GitHub Flow）：feature 分支通过 PR 合并到 `
 | 开发 | feature 分支写代码，按需手动验证对应平台 | `linux` / `windows` / `emscripten`（按需） |
 | PR 门禁 | 开 PR，按 diff 快速检查 | `quick-check`（`suite=auto`） |
 | 合并 | PR 通过后合并到 `main` | — |
-| 发布准备 | 升级版本号、更新 README/CHANGELOG | `scripts/release.sh <version>` |
+| 发布准备 | 升级版本号并创建可审查的版本提交 | `release.ps1 -Commit` / `release.sh --commit` |
 | 完整验证 | 发布前跑全平台矩阵 | `linux` + `windows` + `emscripten` |
 | 发布 | 构建并验证 SDK，随后创建 tag 和公开 Release | `scripts/publish.* <version>` |
 
 ```text
-feature 分支 ──PR──> quick-check ──合并──> main
-                                          │
-                            scripts/release.sh <version>
-                                          │
-                     linux + windows + emscripten（完整验证）
-                                          │
-                      scripts/publish.*（单次受控发布）
+feature 分支 ──PR/CI──> main ──创建 release 分支──> release.* --commit
+                                                     │
+                                              PR/完整验证
+                                                     │
+main <───────────────────────────────────────────────┘
+ │
+ └── publish.*（构建、验证、创建 tag 和 Release）
 ```
 
 三个验证层级：`quick-check` 是 PR 的快速反馈，`linux`/`windows`/`emscripten` 是 PR 的完整
