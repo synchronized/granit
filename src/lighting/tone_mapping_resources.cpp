@@ -68,9 +68,9 @@ granit_result tone_mapping_pipeline_resources::initialize(
     result = library.create_shader(fragment_id, fragment_shader_);
   if (result.ok()) {
     result = pipeline_.initialize(
-        renderer, {.layout = pipeline_layout_.native_handle(),
-                   .vertex_shader = vertex_shader_.native_handle(),
-                   .fragment_shader = fragment_shader_.native_handle(),
+        renderer, {.layout = pipeline_layout_.ref(),
+                   .vertex_shader = vertex_shader_.ref(),
+                   .fragment_shader = fragment_shader_.ref(),
                    .color_formats = std::span{&output_format, 1},
                    .depth_stencil_format = granit::texture_format::undefined,
                    .samples = granit::sample_count::one,

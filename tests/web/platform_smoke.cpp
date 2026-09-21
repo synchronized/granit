@@ -364,9 +364,9 @@ granit_result draw_shared_fixture(granit_renderer renderer, granit_frame frame,
       granit::vertex_buffer_layout{.stride = sizeof(float) * 7, .attributes = vertex_attributes}};
   granit::graphics_pipeline pipeline;
   result = pipeline.initialize(
-      renderer, {.layout = pipeline_layout.native_handle(),
-                 .vertex_shader = vertex.native_handle(),
-                 .fragment_shader = fragment.native_handle(),
+      renderer, {.layout = pipeline_layout.ref(),
+                 .vertex_shader = vertex.ref(),
+                 .fragment_shader = fragment.ref(),
                  .color_formats = std::span{&color_format, 1},
                  .depth_stencil_format = granit::texture_format::d32_float,
                  .vertex_buffers = vertex_layouts,

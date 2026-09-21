@@ -13,8 +13,81 @@
 #include <granit/renderer/pipeline.h>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/resource_types.hpp>
+#include <granit/renderer/shader.hpp>
 
 namespace granit {
+
+class pipeline_layout;
+class graphics_pipeline;
+class compute_pipeline;
+
+/** 不拥有 Pipeline Layout，只在来源 Layout 的有效期内使用。 */
+class pipeline_layout_ref {
+public:
+  pipeline_layout_ref() = default;
+
+  [[nodiscard]] constexpr bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr granit_pipeline_layout native_handle() const noexcept { return handle_; }
+  [[nodiscard]] static constexpr pipeline_layout_ref
+  from_native(granit_pipeline_layout handle) noexcept {
+    return pipeline_layout_ref{handle};
+  }
+
+private:
+  friend class pipeline_layout;
+
+  explicit constexpr pipeline_layout_ref(granit_pipeline_layout handle) noexcept
+      : handle_(handle) {}
+
+  granit_pipeline_layout handle_{GRANIT_NULL_HANDLE};
+};
+
+/** 不拥有 Graphics Pipeline，只在来源 Pipeline 的有效期内使用。 */
+class graphics_pipeline_ref {
+public:
+  graphics_pipeline_ref() = default;
+
+  [[nodiscard]] constexpr bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr granit_graphics_pipeline native_handle() const noexcept {
+    return handle_;
+  }
+  [[nodiscard]] static constexpr graphics_pipeline_ref
+  from_native(granit_graphics_pipeline handle) noexcept {
+    return graphics_pipeline_ref{handle};
+  }
+
+private:
+  friend class graphics_pipeline;
+
+  explicit constexpr graphics_pipeline_ref(granit_graphics_pipeline handle) noexcept
+      : handle_(handle) {}
+
+  granit_graphics_pipeline handle_{GRANIT_NULL_HANDLE};
+};
+
+/** 不拥有 Compute Pipeline，只在来源 Pipeline 的有效期内使用。 */
+class compute_pipeline_ref {
+public:
+  compute_pipeline_ref() = default;
+
+  [[nodiscard]] constexpr bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr granit_compute_pipeline native_handle() const noexcept { return handle_; }
+  [[nodiscard]] static constexpr compute_pipeline_ref
+  from_native(granit_compute_pipeline handle) noexcept {
+    return compute_pipeline_ref{handle};
+  }
+
+private:
+  friend class compute_pipeline;
+
+  explicit constexpr compute_pipeline_ref(granit_compute_pipeline handle) noexcept
+      : handle_(handle) {}
+
+  granit_compute_pipeline handle_{GRANIT_NULL_HANDLE};
+};
 
 enum class binding_type : std::uint32_t {
   uniform_buffer = GRANIT_BINDING_TYPE_UNIFORM_BUFFER,
@@ -144,6 +217,9 @@ public:
   }
   [[nodiscard]] result reset() noexcept;
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr pipeline_layout_ref ref() const noexcept {
+    return pipeline_layout_ref{handle_};
+  }
   [[nodiscard]] granit_pipeline_layout native_handle() const noexcept { return handle_; }
 
 private:
@@ -277,9 +353,9 @@ struct color_blend_state {
 };
 
 struct graphics_pipeline_desc {
-  granit_pipeline_layout layout{GRANIT_NULL_HANDLE};
-  granit_shader vertex_shader{GRANIT_NULL_HANDLE};
-  granit_shader fragment_shader{GRANIT_NULL_HANDLE};
+  pipeline_layout_ref layout;
+  shader_ref vertex_shader;
+  shader_ref fragment_shader;
   std::span<const texture_format> color_formats;
   texture_format depth_stencil_format{texture_format::undefined};
   sample_count samples{sample_count::one};
@@ -314,6 +390,9 @@ public:
   }
   [[nodiscard]] result reset() noexcept;
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr graphics_pipeline_ref ref() const noexcept {
+    return graphics_pipeline_ref{handle_};
+  }
   [[nodiscard]] granit_graphics_pipeline native_handle() const noexcept { return handle_; }
 
 private:
@@ -322,8 +401,8 @@ private:
 };
 
 struct compute_pipeline_desc {
-  granit_pipeline_layout layout{GRANIT_NULL_HANDLE};
-  granit_shader compute_shader{GRANIT_NULL_HANDLE};
+  pipeline_layout_ref layout;
+  shader_ref compute_shader;
 };
 
 /** 无异常、move-only 的 Compute Pipeline RAII 包装。 */
@@ -351,6 +430,9 @@ public:
   }
   [[nodiscard]] result reset() noexcept;
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr compute_pipeline_ref ref() const noexcept {
+    return compute_pipeline_ref{handle_};
+  }
   [[nodiscard]] granit_compute_pipeline native_handle() const noexcept { return handle_; }
 
 private:
@@ -499,9 +581,9 @@ inline result graphics_pipeline::initialize(granit_renderer renderer,
   const granit_graphics_pipeline_desc native{
       .struct_size = GRANIT_GRAPHICS_PIPELINE_DESC_SIZE,
       .reserved = 0,
-      .layout = desc.layout,
-      .vertex_shader = desc.vertex_shader,
-      .fragment_shader = desc.fragment_shader,
+      .layout = desc.layout.native_handle(),
+      .vertex_shader = desc.vertex_shader.native_handle(),
+      .fragment_shader = desc.fragment_shader.native_handle(),
       .color_format_count = static_cast<std::uint32_t>(desc.color_formats.size()),
       .color_formats = formats,
       .depth_stencil_format = static_cast<granit_texture_format>(desc.depth_stencil_format),
@@ -542,8 +624,8 @@ inline result compute_pipeline::initialize(granit_renderer renderer,
   const granit_compute_pipeline_desc native{.struct_size =
                                                 GRANIT_COMPUTE_PIPELINE_DESC_VERSION_1_SIZE,
                                             .reserved = 0,
-                                            .layout = desc.layout,
-                                            .compute_shader = desc.compute_shader,
+                                            .layout = desc.layout.native_handle(),
+                                            .compute_shader = desc.compute_shader.native_handle(),
                                             .reserved_2 = 0};
   const auto value = granit_compute_pipeline_create(renderer, &native, &handle_);
   if (value == GRANIT_SUCCESS)

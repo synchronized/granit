@@ -12,6 +12,7 @@
 
 #include <granit/core/result.hpp>
 #include <granit/renderer/command_recorder.h>
+#include <granit/renderer/pipeline.hpp>
 #include <granit/renderer/render_target.hpp>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/swapchain.hpp>
@@ -147,6 +148,12 @@ public:
     return from_native(
         granit_command_recorder_bind_graphics_pipeline(renderer_, handle_, pipeline));
   }
+  [[nodiscard]] result bind_graphics_pipeline(graphics_pipeline_ref pipeline) noexcept {
+    return bind_graphics_pipeline(pipeline.native_handle());
+  }
+  [[nodiscard]] result bind_graphics_pipeline(const graphics_pipeline& pipeline) noexcept {
+    return bind_graphics_pipeline(pipeline.ref());
+  }
   [[nodiscard]] result
   bind_graphics_groups(granit_pipeline_layout layout, std::uint32_t first_group,
                        std::span<const granit_bind_group> bind_groups,
@@ -167,6 +174,12 @@ public:
   }
   [[nodiscard]] result bind_compute_pipeline(granit_compute_pipeline pipeline) noexcept {
     return from_native(granit_command_recorder_bind_compute_pipeline(renderer_, handle_, pipeline));
+  }
+  [[nodiscard]] result bind_compute_pipeline(compute_pipeline_ref pipeline) noexcept {
+    return bind_compute_pipeline(pipeline.native_handle());
+  }
+  [[nodiscard]] result bind_compute_pipeline(const compute_pipeline& pipeline) noexcept {
+    return bind_compute_pipeline(pipeline.ref());
   }
   [[nodiscard]] result
   bind_compute_groups(granit_pipeline_layout layout, std::uint32_t first_group,

@@ -41,6 +41,15 @@ check(library.create_shader(triangle_fragment_id, fragment_shader));
 
 granit::pipeline_layout layout;
 check(layout.initialize(renderer));
+
+const std::array color_formats{swapchain_info.format};
+granit::graphics_pipeline pipeline;
+check(pipeline.initialize(renderer,
+                          {.layout = layout.ref(),
+                           .vertex_shader = vertex_shader.ref(),
+                           .fragment_shader = fragment_shader.ref(),
+                           .color_formats = color_formats,
+                           .vertex_buffers = {}}));
 ```
 
 Graphics Pipeline 的颜色格式必须与 Swapchain 格式一致。窗口重建后若格式变化，也要重建依赖该格式
@@ -53,7 +62,7 @@ Graphics Pipeline 的颜色格式必须与 Swapchain 格式一致。窗口重建
 ```cpp
 check(recorder.set_viewports(0, std::span{&viewport, 1}));
 check(recorder.set_scissors(0, std::span{&scissor, 1}));
-check(recorder.bind_graphics_pipeline(pipeline.native_handle()));
+check(recorder.bind_graphics_pipeline(pipeline));
 check(recorder.draw(3));
 ```
 

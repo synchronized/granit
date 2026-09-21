@@ -69,9 +69,9 @@ int main() {
 
   constexpr auto format = granit::texture_format::rgba8_unorm;
   granit::graphics_pipeline pipeline;
-  result = pipeline.initialize(renderer, {.layout = layout.native_handle(),
-                                          .vertex_shader = vertex_shader.native_handle(),
-                                          .fragment_shader = fragment_shader.native_handle(),
+  result = pipeline.initialize(renderer, {.layout = layout.ref(),
+                                          .vertex_shader = vertex_shader.ref(),
+                                          .fragment_shader = fragment_shader.ref(),
                                           .color_formats = std::span{&format, 1}});
   if (result.failed())
     return report_failure("创建 Graphics Pipeline", result);
@@ -109,7 +109,7 @@ int main() {
   if ((result = recorder.set_viewports(0, std::span{&viewport, 1})).failed() ||
       (result = recorder.set_scissors(0, std::span{&scissor, 1})).failed() ||
       (result = recorder.begin_rendering(rendering)).failed() ||
-      (result = recorder.bind_graphics_pipeline(pipeline.native_handle())).failed() ||
+      (result = recorder.bind_graphics_pipeline(pipeline)).failed() ||
       (result = recorder.draw(3)).failed() || (result = recorder.end_rendering()).failed() ||
       (result = recorder.end()).failed() || (result = recorder.submit()).failed()) {
     return report_failure("录制或提交三角形", result);

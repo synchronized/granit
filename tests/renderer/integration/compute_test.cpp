@@ -62,9 +62,8 @@ int main() {
         shader);
   granit::compute_pipeline pipeline;
   if (result.ok()) {
-    result =
-        pipeline.initialize(renderer.native_handle(), {.layout = pipeline_layout.native_handle(),
-                                                       .compute_shader = shader.native_handle()});
+    result = pipeline.initialize(renderer,
+                                 {.layout = pipeline_layout.ref(), .compute_shader = shader.ref()});
   }
 
   granit::command_recorder recorder;
@@ -73,7 +72,7 @@ int main() {
   if (result.ok())
     result = recorder.begin();
   if (result.ok())
-    result = recorder.bind_compute_pipeline(pipeline.native_handle());
+    result = recorder.bind_compute_pipeline(pipeline);
   const auto group_handle = group.native_handle();
   if (result.ok()) {
     result = recorder.bind_compute_groups(pipeline_layout.native_handle(), 0,

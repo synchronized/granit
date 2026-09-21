@@ -114,9 +114,9 @@ int main(int argc, char** argv) {
   if (result.ok()) {
     result = pipeline.initialize(renderer.native_handle(),
                                  {
-                                     .layout = layout.native_handle(),
-                                     .vertex_shader = vertex.native_handle(),
-                                     .fragment_shader = fragment.native_handle(),
+                                     .layout = layout.ref(),
+                                     .vertex_shader = vertex.ref(),
+                                     .fragment_shader = fragment.ref(),
                                      .color_formats = std::span{&format, 1},
                                      .depth_stencil_format = granit::texture_format::undefined,
                                      .samples = granit::sample_count::one,
@@ -147,7 +147,7 @@ int main(int argc, char** argv) {
   if (result.ok())
     result = recorder.begin();
   if (result.ok())
-    result = recorder.bind_graphics_pipeline(pipeline.native_handle());
+    result = recorder.bind_graphics_pipeline(pipeline);
   constexpr granit::viewport viewport{0, 0, k_width, k_height, 0, 1};
   constexpr granit::scissor scissor{0, 0, k_width, k_height};
   if (result.ok())

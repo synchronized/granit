@@ -418,9 +418,9 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
   granit::graphics_pipeline pipeline;
   REQUIRE(pipeline.initialize(
               renderer.native_handle(),
-              {.layout = pipeline_layout.native_handle(),
-               .vertex_shader = vertex.native_handle(),
-               .fragment_shader = fragment.native_handle(),
+              {.layout = pipeline_layout.ref(),
+               .vertex_shader = vertex.ref(),
+               .fragment_shader = fragment.ref(),
                .color_formats = std::span{&format, 1},
                .depth_stencil_format = granit::texture_format::d32_float,
                .vertex_buffers = vertex_layouts,
@@ -540,7 +540,7 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
   granit::command_recorder recorder;
   REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
-  REQUIRE(recorder.bind_graphics_pipeline(pipeline.native_handle()) == granit::result::success);
+  REQUIRE(recorder.bind_graphics_pipeline(pipeline) == granit::result::success);
   const granit::viewport viewport{0, 0, width, height, 0, 1};
   const granit::scissor scissor{0, 0, width, height};
   REQUIRE(recorder.set_viewports(0, std::span{&viewport, 1}) == granit::result::success);
@@ -873,9 +873,9 @@ TEST_CASE("Graphics Pipeline 接受 Vertex Buffer Layout", "[pipeline][vertex-in
   granit::graphics_pipeline pipeline;
   REQUIRE(pipeline.initialize(
               renderer.native_handle(),
-              {.layout = layout.native_handle(),
-               .vertex_shader = vertex.native_handle(),
-               .fragment_shader = fragment.native_handle(),
+              {.layout = layout.ref(),
+               .vertex_shader = vertex.ref(),
+               .fragment_shader = fragment.ref(),
                .color_formats = std::span{&format, 1},
                .depth_stencil_format = granit::texture_format::d16_unorm,
                .vertex_buffers = vertex_buffers,
@@ -917,16 +917,16 @@ TEST_CASE("Graphics Pipeline 热替换保持已录制对象有效", "[pipeline][
 
   const granit::texture_format format = granit::texture_format::rgba8_unorm;
   granit::graphics_pipeline pipeline;
-  REQUIRE(pipeline.initialize(renderer.native_handle(),
-                              {.layout = layout.native_handle(),
-                               .vertex_shader = vertex.native_handle(),
-                               .fragment_shader = fragment.native_handle(),
-                               .color_formats = std::span{&format, 1},
-                               .vertex_buffers = {},
-                               .primitive = {},
-                               .depth = {},
-                               .color_blends = {},
-                               .depth_bias = std::nullopt}) == granit::result::success);
+  REQUIRE(pipeline.initialize(renderer.native_handle(), {.layout = layout.ref(),
+                                                         .vertex_shader = vertex.ref(),
+                                                         .fragment_shader = fragment.ref(),
+                                                         .color_formats = std::span{&format, 1},
+                                                         .vertex_buffers = {},
+                                                         .primitive = {},
+                                                         .depth = {},
+                                                         .color_blends = {},
+                                                         .depth_bias = std::nullopt}) ==
+          granit::result::success);
   granit::shader replacement_vertex;
   granit::shader replacement_fragment;
   REQUIRE(replacement_vertex.initialize(renderer.native_handle(),
@@ -939,9 +939,9 @@ TEST_CASE("Graphics Pipeline 热替换保持已录制对象有效", "[pipeline][
   REQUIRE(replacement_layout.initialize(renderer.native_handle()) == granit::result::success);
   granit::graphics_pipeline replacement_pipeline;
   REQUIRE(replacement_pipeline.initialize(renderer.native_handle(),
-                                          {.layout = replacement_layout.native_handle(),
-                                           .vertex_shader = replacement_vertex.native_handle(),
-                                           .fragment_shader = replacement_fragment.native_handle(),
+                                          {.layout = replacement_layout.ref(),
+                                           .vertex_shader = replacement_vertex.ref(),
+                                           .fragment_shader = replacement_fragment.ref(),
                                            .color_formats = std::span{&format, 1},
                                            .vertex_buffers = {},
                                            .primitive = {},
@@ -968,7 +968,7 @@ TEST_CASE("Graphics Pipeline 热替换保持已录制对象有效", "[pipeline][
   granit::command_recorder recorder;
   REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
-  REQUIRE(recorder.bind_graphics_pipeline(pipeline.native_handle()) == granit::result::success);
+  REQUIRE(recorder.bind_graphics_pipeline(pipeline) == granit::result::success);
   REQUIRE(recorder.bind_index_buffer(index_buffer.native_handle(), 0, granit::index_type::uint16) ==
           granit::result::success);
   const granit::vertex_buffer_binding vertex_binding{vertex_buffer.native_handle(), 0};
@@ -996,8 +996,7 @@ TEST_CASE("Graphics Pipeline 热替换保持已录制对象有效", "[pipeline][
   REQUIRE(recorder.submit() == granit::result::success);
   REQUIRE(recorder.reset() == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
-  REQUIRE(recorder.bind_graphics_pipeline(replacement_pipeline.native_handle()) ==
-          granit::result::success);
+  REQUIRE(recorder.bind_graphics_pipeline(replacement_pipeline) == granit::result::success);
   REQUIRE(recorder.set_viewports(0, std::span{&viewport, 1}) == granit::result::success);
   REQUIRE(recorder.set_scissors(0, std::span{&scissor, 1}) == granit::result::success);
   REQUIRE(recorder.begin_rendering(rendering) == granit::result::success);
@@ -1036,21 +1035,19 @@ TEST_CASE("Compute Pipeline 校验阶段并持有 Shader 与 Layout", "[pipeline
   REQUIRE(layout.initialize(renderer.native_handle()) == granit::result::success);
 
   granit::compute_pipeline wrong_stage;
-  CHECK(wrong_stage.initialize(
-            renderer.native_handle(),
-            {.layout = layout.native_handle(), .compute_shader = vertex.native_handle()}) ==
+  CHECK(wrong_stage.initialize(renderer.native_handle(),
+                               {.layout = layout.ref(), .compute_shader = vertex.ref()}) ==
         granit::result::invalid_handle);
   granit::compute_pipeline pipeline;
-  REQUIRE(
-      pipeline.initialize(renderer.native_handle(), {.layout = layout.native_handle(),
-                                                     .compute_shader = compute.native_handle()}) ==
-      granit::result::success);
+  REQUIRE(pipeline.initialize(renderer.native_handle(),
+                              {.layout = layout.ref(), .compute_shader = compute.ref()}) ==
+          granit::result::success);
   const auto handle = pipeline.native_handle();
   granit::command_recorder recorder;
   REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
   CHECK(recorder.dispatch(1) == granit::result::invalid_argument);
-  REQUIRE(recorder.bind_compute_pipeline(pipeline.native_handle()) == granit::result::success);
+  REQUIRE(recorder.bind_compute_pipeline(pipeline) == granit::result::success);
   CHECK(recorder.dispatch(0) == granit::result::invalid_argument);
 
   granit_texture_desc texture_desc = GRANIT_TEXTURE_DESC_INIT;
@@ -1200,15 +1197,14 @@ TEST_CASE("Compute Dispatch 写入 Storage Buffer 并自动同步 Copy", "[pipel
   REQUIRE(shader.initialize(renderer.native_handle(), {.stage = granit::shader_stage::compute,
                                                        .code = code}) == granit::result::success);
   granit::compute_pipeline pipeline;
-  REQUIRE(
-      pipeline.initialize(renderer.native_handle(), {.layout = pipeline_layout.native_handle(),
-                                                     .compute_shader = shader.native_handle()}) ==
-      granit::result::success);
+  REQUIRE(pipeline.initialize(renderer.native_handle(),
+                              {.layout = pipeline_layout.ref(), .compute_shader = shader.ref()}) ==
+          granit::result::success);
 
   granit::command_recorder recorder;
   REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
-  REQUIRE(recorder.bind_compute_pipeline(pipeline.native_handle()) == granit::result::success);
+  REQUIRE(recorder.bind_compute_pipeline(pipeline) == granit::result::success);
   const auto group_handle = group.native_handle();
   REQUIRE(recorder.bind_compute_groups(pipeline_layout.native_handle(), 0,
                                        std::span{&group_handle, 1}) == granit::result::success);
@@ -1260,9 +1256,9 @@ TEST_CASE("Graphics 与 Compute 工作负载支持并行录制", "[pipeline][com
   const auto color_format = granit::texture_format::rgba8_unorm;
   granit::graphics_pipeline graphics_pipeline;
   REQUIRE(graphics_pipeline.initialize(renderer.native_handle(),
-                                       {.layout = graphics_layout.native_handle(),
-                                        .vertex_shader = vertex.native_handle(),
-                                        .fragment_shader = fragment.native_handle(),
+                                       {.layout = graphics_layout.ref(),
+                                        .vertex_shader = vertex.ref(),
+                                        .fragment_shader = fragment.ref(),
                                         .color_formats = std::span{&color_format, 1},
                                         .depth_stencil_format = granit::texture_format::undefined,
                                         .samples = granit::sample_count::one,
@@ -1286,10 +1282,10 @@ TEST_CASE("Graphics 与 Compute 工作负载支持并行录制", "[pipeline][com
                                     std::span{&compute_group_layout_handle, 1}) ==
           granit::result::success);
   granit::compute_pipeline compute_pipeline;
-  REQUIRE(compute_pipeline.initialize(renderer.native_handle(),
-                                      {.layout = compute_layout.native_handle(),
-                                       .compute_shader = compute.native_handle()}) ==
-          granit::result::success);
+  REQUIRE(
+      compute_pipeline.initialize(renderer.native_handle(), {.layout = compute_layout.ref(),
+                                                             .compute_shader = compute.ref()}) ==
+      granit::result::success);
 
   constexpr std::size_t graphics_count = 4;
   constexpr std::size_t compute_count = 4;
@@ -1334,8 +1330,7 @@ TEST_CASE("Graphics 与 Compute 工作负载支持并行录制", "[pipeline][com
         worker_result = recorders[index].begin();
       if (index < graphics_count) {
         if (worker_result.ok())
-          worker_result =
-              recorders[index].bind_graphics_pipeline(graphics_pipeline.native_handle());
+          worker_result = recorders[index].bind_graphics_pipeline(graphics_pipeline);
         const granit::viewport viewport{0, 0, 32, 32, 0, 1};
         const granit::scissor scissor{0, 0, 32, 32};
         if (worker_result.ok())
@@ -1357,7 +1352,7 @@ TEST_CASE("Graphics 与 Compute 工作负载支持并行录制", "[pipeline][com
       } else {
         const auto compute_index = index - graphics_count;
         if (worker_result.ok())
-          worker_result = recorders[index].bind_compute_pipeline(compute_pipeline.native_handle());
+          worker_result = recorders[index].bind_compute_pipeline(compute_pipeline);
         const auto group = compute_groups[compute_index].native_handle();
         if (worker_result.ok())
           worker_result = recorders[index].bind_compute_groups(compute_layout.native_handle(), 0,

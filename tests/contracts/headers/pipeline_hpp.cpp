@@ -15,3 +15,8 @@ static_assert(!std::is_copy_constructible_v<granit::graphics_pipeline>);
 static_assert(std::is_move_constructible_v<granit::graphics_pipeline>);
 static_assert(!std::is_copy_constructible_v<granit::compute_pipeline>);
 static_assert(std::is_move_constructible_v<granit::compute_pipeline>);
+static_assert(std::is_trivially_copyable_v<granit::pipeline_layout_ref>);
+static_assert(std::is_trivially_copyable_v<granit::graphics_pipeline_ref>);
+static_assert(std::is_trivially_copyable_v<granit::compute_pipeline_ref>);
+static_assert(!std::is_convertible_v<granit::shader_ref, granit::pipeline_layout_ref>);
+static_assert(granit::pipeline_layout_ref::from_native(UINT64_C(3)).native_handle() == UINT64_C(3));
