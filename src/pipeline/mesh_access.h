@@ -5,6 +5,7 @@
 #define GRANIT_PIPELINE_MESH_ACCESS_H_
 
 #include <granit/pipeline/mesh.h>
+#include <granit/renderer/command_recorder.h>
 
 #include <vector>
 

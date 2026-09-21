@@ -33,11 +33,6 @@ struct vertex_buffer_binding {
 
 static_assert(sizeof(granit_bind_groups_desc) == GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE);
 
-enum class index_type : std::uint32_t {
-  uint16 = GRANIT_INDEX_TYPE_UINT16,
-  uint32 = GRANIT_INDEX_TYPE_UINT32,
-};
-
 /** 无异常、move-only 的 Command Recorder 包装。 */
 class command_recorder {
 public:

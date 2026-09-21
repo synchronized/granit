@@ -27,6 +27,11 @@ enum class buffer_usage : std::uint32_t {
   indirect = GRANIT_BUFFER_USAGE_INDIRECT_BIT,
 };
 
+enum class index_type : std::uint32_t {
+  uint16 = GRANIT_INDEX_TYPE_UINT16,
+  uint32 = GRANIT_INDEX_TYPE_UINT32,
+};
+
 [[nodiscard]] constexpr buffer_usage operator|(buffer_usage left, buffer_usage right) noexcept {
   return static_cast<buffer_usage>(static_cast<std::uint32_t>(left) |
                                    static_cast<std::uint32_t>(right));
