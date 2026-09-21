@@ -137,13 +137,13 @@ granit_result dynamic_uniform_arena::acquire_groups(frame_slot_state& slot,
     candidate.object_layout = material.object_layout;
     const std::array frame_entry{
         granit::bind_group_entry{.binding = 0,
-                                 .resource = slot.buffer.native_handle(),
+                                 .resource = slot.buffer.ref(),
                                  .offset = 0,
                                  .size = sizeof(granit::material::pbr_frame_constants)}};
     auto result = candidate.frame_group.initialize(renderer_, material.frame_layout, frame_entry);
     const std::array object_entry{
         granit::bind_group_entry{.binding = 0,
-                                 .resource = slot.buffer.native_handle(),
+                                 .resource = slot.buffer.ref(),
                                  .offset = 0,
                                  .size = sizeof(granit::material::pbr_object_constants)}};
     if (result.ok())

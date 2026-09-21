@@ -262,8 +262,8 @@ TEST_CASE("动态 Uniform Offset 贯通 Bind Group 与图形计算命令录制",
   REQUIRE(buffer.initialize(renderer.native_handle(),
                             {.size = 512, .usage = granit::buffer_usage::uniform}) ==
           granit::result::success);
-  const std::array entries{granit::bind_group_entry{
-      .binding = 0, .resource = buffer.native_handle(), .offset = 0, .size = 64}};
+  const std::array entries{
+      granit::bind_group_entry{.binding = 0, .resource = buffer.ref(), .offset = 0, .size = 64}};
   granit::bind_group group;
   REQUIRE(group.initialize(renderer.native_handle(), group_layout.native_handle(), entries) ==
           granit::result::success);
@@ -328,11 +328,11 @@ TEST_CASE("动态 Offset 按 Bind Group 顺序跳过普通 Uniform", "[pipeline]
           granit::result::success);
   const std::array first_entries{
       granit::bind_group_entry{
-          .binding = 5, .resource = large_buffer.native_handle(), .offset = 0, .size = 64},
+          .binding = 5, .resource = large_buffer.ref(), .offset = 0, .size = 64},
       granit::bind_group_entry{
-          .binding = 0, .resource = large_buffer.native_handle(), .offset = 0, .size = 64}};
+          .binding = 0, .resource = large_buffer.ref(), .offset = 0, .size = 64}};
   const std::array second_entries{granit::bind_group_entry{
-      .binding = 2, .resource = small_buffer.native_handle(), .offset = 0, .size = 64}};
+      .binding = 2, .resource = small_buffer.ref(), .offset = 0, .size = 64}};
   granit::bind_group first_group;
   granit::bind_group second_group;
   REQUIRE(first_group.initialize(renderer.native_handle(), first_layout.native_handle(),
@@ -484,12 +484,15 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
   granit::sampler base_color_sampler;
   REQUIRE(base_color_sampler.initialize(renderer.native_handle()) == granit::result::success);
   const std::array entries{
+      granit::bind_group_entry{.binding = 0, .resource = uniform.ref(), .offset = 0, .size = 32},
       granit::bind_group_entry{
-          .binding = 0, .resource = uniform.native_handle(), .offset = 0, .size = 32},
-      granit::bind_group_entry{.binding = 1, .resource = base_color_view},
-      granit::bind_group_entry{.binding = 2, .resource = base_color_sampler.native_handle()},
-      granit::bind_group_entry{.binding = 3, .resource = normal_view},
-      granit::bind_group_entry{.binding = 4, .resource = metallic_roughness_view}};
+          .binding = 1, .resource = granit::binding_resource_ref::from_native(base_color_view)},
+      granit::bind_group_entry{.binding = 2, .resource = base_color_sampler.ref()},
+      granit::bind_group_entry{.binding = 3,
+                               .resource = granit::binding_resource_ref::from_native(normal_view)},
+      granit::bind_group_entry{
+          .binding = 4,
+          .resource = granit::binding_resource_ref::from_native(metallic_roughness_view)}};
   granit::bind_group group;
   REQUIRE(group.initialize(renderer.native_handle(), group_layout.native_handle(), entries) ==
           granit::result::success);
@@ -682,9 +685,10 @@ TEST_CASE("不可变 Bind Group 保持 Buffer 与 Sampler 生命周期", "[pipel
   REQUIRE(granit_texture_create_with_default_view(renderer.native_handle(), &texture_desc, &texture,
                                                   &view) == GRANIT_SUCCESS);
   const std::array entries{
-      granit::bind_group_entry{.binding = 0, .resource = buffer.native_handle(), .size = 128},
-      granit::bind_group_entry{.binding = 1, .resource = sampler.native_handle()},
-      granit::bind_group_entry{.binding = 2, .resource = view}};
+      granit::bind_group_entry{.binding = 0, .resource = buffer.ref(), .size = 128},
+      granit::bind_group_entry{.binding = 1, .resource = sampler.ref()},
+      granit::bind_group_entry{.binding = 2,
+                               .resource = granit::binding_resource_ref::from_native(view)}};
   granit::bind_group group;
   REQUIRE(group.initialize(renderer.native_handle(), layout.native_handle(), entries) ==
           granit::result::success);
@@ -1187,7 +1191,7 @@ TEST_CASE("Compute Dispatch 写入 Storage Buffer 并自动同步 Copy", "[pipel
       pipeline_layout.initialize(renderer.native_handle(), std::span{&group_layout_handle, 1}) ==
       granit::result::success);
   const granit::bind_group_entry entry{
-      .binding = 0, .resource = storage.native_handle(), .size = buffer_size};
+      .binding = 0, .resource = storage.ref(), .size = buffer_size};
   granit::bind_group group;
   REQUIRE(group.initialize(renderer.native_handle(), group_layout.native_handle(),
                            std::span{&entry, 1}) == granit::result::success);
@@ -1311,7 +1315,7 @@ TEST_CASE("Graphics 与 Compute 工作负载支持并行录制", "[pipeline][com
                                                .location = granit::memory_location::device}) ==
             granit::result::success);
     const granit::bind_group_entry entry{
-        .binding = 0, .resource = storage_buffers[index].native_handle(), .size = storage_size};
+        .binding = 0, .resource = storage_buffers[index].ref(), .size = storage_size};
     REQUIRE(compute_groups[index].initialize(renderer.native_handle(),
                                              compute_group_layout.native_handle(),
                                              std::span{&entry, 1}) == granit::result::success);

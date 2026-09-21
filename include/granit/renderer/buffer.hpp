@@ -16,6 +16,28 @@
 
 namespace granit {
 
+class buffer;
+
+/** 不拥有 Buffer，只在来源 Buffer 的有效期内使用。 */
+class buffer_ref {
+public:
+  buffer_ref() = default;
+
+  [[nodiscard]] constexpr bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr granit_buffer native_handle() const noexcept { return handle_; }
+  [[nodiscard]] static constexpr buffer_ref from_native(granit_buffer handle) noexcept {
+    return buffer_ref{handle};
+  }
+
+private:
+  friend class buffer;
+
+  explicit constexpr buffer_ref(granit_buffer handle) noexcept : handle_(handle) {}
+
+  granit_buffer handle_{GRANIT_NULL_HANDLE};
+};
+
 struct buffer_desc {
   std::uint64_t size{};
   buffer_usage usage{};
@@ -130,6 +152,7 @@ public:
 
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
   [[nodiscard]] explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr buffer_ref ref() const noexcept { return buffer_ref{handle_}; }
   [[nodiscard]] granit_buffer native_handle() const noexcept { return handle_; }
 
 private:

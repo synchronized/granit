@@ -172,6 +172,29 @@ public:
     return from_native(
         granit_command_recorder_bind_graphics_groups(renderer_, handle_, layout, &desc));
   }
+  [[nodiscard]] result
+  bind_graphics_groups(pipeline_layout_ref layout, std::uint32_t first_group,
+                       std::span<const bind_group_ref> bind_groups,
+                       std::span<const std::uint32_t> dynamic_offsets = {}) noexcept {
+    try {
+      std::vector<granit_bind_group> handles;
+      handles.reserve(bind_groups.size());
+      for (const auto group : bind_groups)
+        handles.push_back(group.native_handle());
+      return bind_graphics_groups(layout.native_handle(), first_group, handles, dynamic_offsets);
+    } catch (const std::bad_alloc&) {
+      return result::out_of_memory;
+    } catch (...) {
+      return result::internal;
+    }
+  }
+  [[nodiscard]] result
+  bind_graphics_group(const pipeline_layout& layout, std::uint32_t group_index,
+                      const bind_group& group,
+                      std::span<const std::uint32_t> dynamic_offsets = {}) noexcept {
+    const std::array groups{group.ref()};
+    return bind_graphics_groups(layout.ref(), group_index, groups, dynamic_offsets);
+  }
   [[nodiscard]] result bind_compute_pipeline(granit_compute_pipeline pipeline) noexcept {
     return from_native(granit_command_recorder_bind_compute_pipeline(renderer_, handle_, pipeline));
   }
@@ -198,6 +221,29 @@ public:
     };
     return from_native(
         granit_command_recorder_bind_compute_groups(renderer_, handle_, layout, &desc));
+  }
+  [[nodiscard]] result
+  bind_compute_groups(pipeline_layout_ref layout, std::uint32_t first_group,
+                      std::span<const bind_group_ref> bind_groups,
+                      std::span<const std::uint32_t> dynamic_offsets = {}) noexcept {
+    try {
+      std::vector<granit_bind_group> handles;
+      handles.reserve(bind_groups.size());
+      for (const auto group : bind_groups)
+        handles.push_back(group.native_handle());
+      return bind_compute_groups(layout.native_handle(), first_group, handles, dynamic_offsets);
+    } catch (const std::bad_alloc&) {
+      return result::out_of_memory;
+    } catch (...) {
+      return result::internal;
+    }
+  }
+  [[nodiscard]] result
+  bind_compute_group(const pipeline_layout& layout, std::uint32_t group_index,
+                     const bind_group& group,
+                     std::span<const std::uint32_t> dynamic_offsets = {}) noexcept {
+    const std::array groups{group.ref()};
+    return bind_compute_groups(layout.ref(), group_index, groups, dynamic_offsets);
   }
   [[nodiscard]] result dispatch(std::uint32_t group_count_x, std::uint32_t group_count_y = 1,
                                 std::uint32_t group_count_z = 1) noexcept {

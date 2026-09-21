@@ -69,12 +69,12 @@ granit_result shadow_resources::initialize(granit_renderer renderer,
 
   const std::array group_entries{
       granit::bind_group_entry{.binding = shadow_binding_constants,
-                               .resource = constants_.native_handle(),
+                               .resource = constants_.ref(),
                                .offset = 0,
                                .size = sizeof(values)},
-      granit::bind_group_entry{.binding = shadow_binding_texture, .resource = shadow_view},
-      granit::bind_group_entry{.binding = shadow_binding_sampler,
-                               .resource = sampler_.native_handle()}};
+      granit::bind_group_entry{.binding = shadow_binding_texture,
+                               .resource = granit::binding_resource_ref::from_native(shadow_view)},
+      granit::bind_group_entry{.binding = shadow_binding_sampler, .resource = sampler_.ref()}};
   result = group_.initialize(renderer, layout_.native_handle(), group_entries);
   if (result.failed()) {
     static_cast<void>(reset());

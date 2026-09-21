@@ -84,16 +84,19 @@ granit_result ibl_resources::initialize(granit_renderer renderer, ibl_texture_vi
 
   const std::array group_entries{
       granit::bind_group_entry{.binding = ibl_binding_constants,
-                               .resource = constants_.native_handle(),
+                               .resource = constants_.ref(),
                                .offset = 0,
                                .size = sizeof(values)},
       granit::bind_group_entry{.binding = ibl_binding_irradiance,
-                               .resource = views.irradiance},
-      granit::bind_group_entry{.binding = ibl_binding_prefiltered_environment,
-                               .resource = views.prefiltered_environment},
-      granit::bind_group_entry{.binding = ibl_binding_brdf_lut, .resource = views.brdf_lut},
-      granit::bind_group_entry{.binding = ibl_binding_sampler,
-                               .resource = sampler_.native_handle()}};
+                               .resource =
+                                   granit::binding_resource_ref::from_native(views.irradiance)},
+      granit::bind_group_entry{
+          .binding = ibl_binding_prefiltered_environment,
+          .resource = granit::binding_resource_ref::from_native(views.prefiltered_environment)},
+      granit::bind_group_entry{.binding = ibl_binding_brdf_lut,
+                               .resource =
+                                   granit::binding_resource_ref::from_native(views.brdf_lut)},
+      granit::bind_group_entry{.binding = ibl_binding_sampler, .resource = sampler_.ref()}};
   result = group_.initialize(renderer, layout_.native_handle(), group_entries);
   if (result.failed()) {
     static_cast<void>(reset());

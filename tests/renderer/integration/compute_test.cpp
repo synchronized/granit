@@ -42,17 +42,15 @@ int main() {
   granit::bind_group_layout group_layout;
   if (result.ok())
     result = group_layout.initialize(renderer.native_handle(), std::span{&declaration, 1});
-  const auto group_layout_handle = group_layout.native_handle();
+  const std::array group_layouts{group_layout.ref()};
   granit::pipeline_layout pipeline_layout;
   if (result.ok())
-    result =
-        pipeline_layout.initialize(renderer.native_handle(), std::span{&group_layout_handle, 1});
+    result = pipeline_layout.initialize(renderer, group_layouts);
   const granit::bind_group_entry entry{
-      .binding = 0, .resource = storage.native_handle(), .size = buffer_size};
+      .binding = 0, .resource = storage.ref(), .size = buffer_size};
   granit::bind_group group;
   if (result.ok()) {
-    result = group.initialize(renderer.native_handle(), group_layout.native_handle(),
-                              std::span{&entry, 1});
+    result = group.initialize(renderer, group_layout, std::span{&entry, 1});
   }
 
   granit::shader shader;
@@ -73,11 +71,8 @@ int main() {
     result = recorder.begin();
   if (result.ok())
     result = recorder.bind_compute_pipeline(pipeline);
-  const auto group_handle = group.native_handle();
-  if (result.ok()) {
-    result = recorder.bind_compute_groups(pipeline_layout.native_handle(), 0,
-                                          std::span{&group_handle, 1});
-  }
+  if (result.ok())
+    result = recorder.bind_compute_group(pipeline_layout, 0, group);
   if (result.ok())
     result = recorder.dispatch(value_count);
   const granit::buffer_copy_region copy{

@@ -435,14 +435,13 @@ granit_result draw_shared_fixture(granit_renderer renderer, granit_frame frame,
   if (result != granit::result::success)
     return granit::to_native(result);
   const std::array entries{
-      granit::bind_group_entry{
-          .binding = 0, .resource = uniform.native_handle(), .offset = 0, .size = 32},
-      granit::bind_group_entry{.binding = 1, .resource = base_color_view.native_handle()},
-      granit::bind_group_entry{.binding = 2, .resource = material_sampler.native_handle()},
-      granit::bind_group_entry{.binding = 3, .resource = normal_view.native_handle()},
-      granit::bind_group_entry{.binding = 4, .resource = metallic_roughness_view.native_handle()}};
+      granit::bind_group_entry{.binding = 0, .resource = uniform.ref(), .offset = 0, .size = 32},
+      granit::bind_group_entry{.binding = 1, .resource = base_color_view.ref()},
+      granit::bind_group_entry{.binding = 2, .resource = material_sampler.ref()},
+      granit::bind_group_entry{.binding = 3, .resource = normal_view.ref()},
+      granit::bind_group_entry{.binding = 4, .resource = metallic_roughness_view.ref()}};
   granit::bind_group group;
-  result = group.initialize(renderer, group_layout.native_handle(), entries);
+  result = group.initialize(renderer, group_layout, entries);
   if (result != granit::result::success)
     return granit::to_native(result);
 

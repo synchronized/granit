@@ -12,6 +12,28 @@
 
 namespace granit {
 
+class sampler;
+
+/** 不拥有 Sampler，只在来源 Sampler 的有效期内使用。 */
+class sampler_ref {
+public:
+  sampler_ref() = default;
+
+  [[nodiscard]] constexpr bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr granit_sampler native_handle() const noexcept { return handle_; }
+  [[nodiscard]] static constexpr sampler_ref from_native(granit_sampler handle) noexcept {
+    return sampler_ref{handle};
+  }
+
+private:
+  friend class sampler;
+
+  explicit constexpr sampler_ref(granit_sampler handle) noexcept : handle_(handle) {}
+
+  granit_sampler handle_{GRANIT_NULL_HANDLE};
+};
+
 struct sampler_desc {
   filter mag_filter{filter::linear};
   filter min_filter{filter::linear};
@@ -82,6 +104,7 @@ public:
   }
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
   [[nodiscard]] explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr sampler_ref ref() const noexcept { return sampler_ref{handle_}; }
   [[nodiscard]] granit_sampler native_handle() const noexcept { return handle_; }
 
 private:

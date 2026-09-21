@@ -18,6 +18,8 @@
   借用 View。
 - C++ Graphics/Compute Pipeline 描述使用强类型 Shader 与 Pipeline Layout 引用；Command Recorder
   可直接绑定拥有型 Pipeline，不再要求普通渲染路径提取其 C ABI 句柄。
+- C++ Bind Group 资源限制为 Buffer、Texture View 和 Sampler 借用引用；Pipeline Layout 与
+  Recorder 的单组绑定支持强类型 Layout/Group，不再要求手工建立裸句柄数组。
 - Window C++ 包装不再把 `window_event` 和 `input_event` 直接别名到 C ABI 结构；事件类型、按键动作、
   物理键和逻辑键使用 scoped enum，并由 `window_system::poll` 在 ABI 边界完成转换。C API 与布局
   保持不变。

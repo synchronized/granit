@@ -32,13 +32,44 @@ check(texture_view.initialize(renderer, texture));
 Texture View 和 Sampler 放入同一资源组。Pipeline Layout 必须引用相同布局；布局、Shader 声明和
 实际资源类型不一致时，Pipeline 或绑定创建应失败。
 
+```cpp
+const std::array layout_entries{
+    granit::bind_group_layout_entry{.binding = 0,
+                                    .type = granit::binding_type::sampled_texture,
+                                    .visibility = granit::shader_stage_flags::fragment},
+    granit::bind_group_layout_entry{.binding = 1,
+                                    .type = granit::binding_type::sampler,
+                                    .visibility = granit::shader_stage_flags::fragment},
+};
+granit::bind_group_layout texture_layout;
+check(texture_layout.initialize(renderer, layout_entries));
+
+const std::array layout_refs{texture_layout.ref()};
+granit::pipeline_layout pipeline_layout;
+check(pipeline_layout.initialize(renderer, layout_refs));
+
+const std::array resources{
+    granit::bind_group_entry{.binding = 0, .resource = texture_view.ref()},
+    granit::bind_group_entry{.binding = 1, .resource = sampler.ref()},
+};
+granit::bind_group texture_group;
+check(texture_group.initialize(renderer, texture_layout, resources));
+```
+
 ## 3. 在 Fragment Shader 中采样
 
 Vertex Shader 输出 UV，Fragment Shader 使用绑定的 Texture 和 Sampler。为避免不同图形 API 的
 坐标约定泄漏到应用，使用 Shader 工具链规定的 portable profile，不在 C++ 中按后端翻转坐标。
 
-录制时，在 `draw()` 前绑定新的 Pipeline 和 Bind Group。Texture、View、Sampler 与 Bind Group 都要
-保持到 GPU 不再使用当前帧。
+录制时，在 `draw()` 前绑定新的 Pipeline 和 Bind Group：
+
+```cpp
+check(recorder.bind_graphics_pipeline(pipeline));
+check(recorder.bind_graphics_group(pipeline_layout, 0, texture_group));
+check(recorder.draw(6));
+```
+
+Texture、View、Sampler 与 Bind Group 都要保持到 GPU 不再使用当前帧。
 
 ## 4. 验收
 

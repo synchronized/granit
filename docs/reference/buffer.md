@@ -6,6 +6,9 @@
 Buffer 是 Renderer 拥有的线性 GPU 资源。C API 使用 64 位整数句柄；C++20 提供 move-only
 `granit::buffer` RAII 包装。
 
+需要把 Buffer 交给 Bind Group 等不接管所有权的 C++ 描述时，使用 `buffer.ref()` 得到
+`buffer_ref`。该引用没有销毁操作，也不延长 Buffer 生命周期。
+
 ## 创建与销毁
 
 `granit_buffer_create` 创建空 Buffer；`granit_buffer_create_with_data` 同步创建并写入覆盖完整

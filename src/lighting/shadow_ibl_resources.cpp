@@ -143,50 +143,53 @@ granit_result shadow_ibl_resources::initialize(
 
   std::vector<granit::bind_group_entry> group_entries;
   if (features.shadows) {
-    group_entries.insert(
-        group_entries.end(),
-        {{.binding = shadow_binding_constants,
-          .resource = shadow_constants_.native_handle(),
-          .offset = 0,
-          .size = sizeof(shadow_values)},
-         {.binding = shadow_binding_texture, .resource = views.shadow},
-         {.binding = shadow_binding_sampler, .resource = shadow_sampler_.native_handle()}});
+    group_entries.insert(group_entries.end(),
+                         {{.binding = shadow_binding_constants,
+                           .resource = shadow_constants_.ref(),
+                           .offset = 0,
+                           .size = sizeof(shadow_values)},
+                          {.binding = shadow_binding_texture,
+                           .resource = granit::binding_resource_ref::from_native(views.shadow)},
+                          {.binding = shadow_binding_sampler, .resource = shadow_sampler_.ref()}});
   }
   if (features.ibl) {
     group_entries.insert(
         group_entries.end(),
         {{.binding = ibl_binding_constants,
-          .resource = ibl_constants_.native_handle(),
+          .resource = ibl_constants_.ref(),
           .offset = 0,
           .size = sizeof(ibl_values)},
-         {.binding = ibl_binding_irradiance, .resource = views.ibl.irradiance},
+         {.binding = ibl_binding_irradiance,
+          .resource = granit::binding_resource_ref::from_native(views.ibl.irradiance)},
          {.binding = ibl_binding_prefiltered_environment,
-          .resource = views.ibl.prefiltered_environment},
-         {.binding = ibl_binding_brdf_lut, .resource = views.ibl.brdf_lut},
-         {.binding = ibl_binding_sampler, .resource = ibl_sampler_.native_handle()}});
+          .resource = granit::binding_resource_ref::from_native(views.ibl.prefiltered_environment)},
+         {.binding = ibl_binding_brdf_lut,
+          .resource = granit::binding_resource_ref::from_native(views.ibl.brdf_lut)},
+         {.binding = ibl_binding_sampler, .resource = ibl_sampler_.ref()}});
   }
   group_entries.insert(
       group_entries.end(),
       {
           granit::bind_group_entry{.binding = light_binding_counts,
-                                   .resource = lights_.counts(),
+                                   .resource =
+                                       granit::binding_resource_ref::from_native(lights_.counts()),
                                    .offset = 0,
                                    .size = sizeof(gpu_light_counts)},
           granit::bind_group_entry{
               .binding = light_binding_directional,
-              .resource = lights_.directional(),
+              .resource = granit::binding_resource_ref::from_native(lights_.directional()),
               .offset = 0,
               .size = light_buffer_size<gpu_directional_light>(light_capacities.directional)},
-          granit::bind_group_entry{.binding = light_binding_point,
-                                   .resource = lights_.point(),
-                                   .offset = 0,
-                                   .size =
-                                       light_buffer_size<gpu_point_light>(light_capacities.point)},
-          granit::bind_group_entry{.binding = light_binding_spot,
-                                   .resource = lights_.spot(),
-                                   .offset = 0,
-                                   .size =
-                                       light_buffer_size<gpu_spot_light>(light_capacities.spot)},
+          granit::bind_group_entry{
+              .binding = light_binding_point,
+              .resource = granit::binding_resource_ref::from_native(lights_.point()),
+              .offset = 0,
+              .size = light_buffer_size<gpu_point_light>(light_capacities.point)},
+          granit::bind_group_entry{
+              .binding = light_binding_spot,
+              .resource = granit::binding_resource_ref::from_native(lights_.spot()),
+              .offset = 0,
+              .size = light_buffer_size<gpu_spot_light>(light_capacities.spot)},
       });
   result = group_.initialize(renderer, layout_handle_, group_entries);
   if (result.failed()) {

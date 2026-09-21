@@ -122,12 +122,13 @@ tone_mapping_binding_resources::initialize(const tone_mapping_pipeline_resources
        .usage = granit::buffer_usage::uniform | granit::buffer_usage::transfer_destination,
        .location = granit::memory_location::automatic},
       bytes(values));
-  const std::array entries{granit::bind_group_entry{.binding = 0,
-                                                    .resource = constants_.native_handle(),
-                                                    .offset = 0,
-                                                    .size = sizeof(values)},
-                           granit::bind_group_entry{.binding = 1, .resource = hdr_view},
-                           granit::bind_group_entry{.binding = 2, .resource = pipeline.sampler()}};
+  const std::array entries{
+      granit::bind_group_entry{
+          .binding = 0, .resource = constants_.ref(), .offset = 0, .size = sizeof(values)},
+      granit::bind_group_entry{.binding = 1,
+                               .resource = granit::binding_resource_ref::from_native(hdr_view)},
+      granit::bind_group_entry{
+          .binding = 2, .resource = granit::binding_resource_ref::from_native(pipeline.sampler())}};
   if (result.ok())
     result = group_.initialize(pipeline.renderer(), pipeline.group_layout(), entries);
   if (result.failed()) {
