@@ -77,6 +77,32 @@ ctest --preset <static-release-preset>
                              构建/测试/打包 → tag/Release → 公开复验
 ```
 
+### 分支职责
+
+`main` 是唯一的集成分支。计划进入某个版本的 Feature 和缺陷修复都应先通过各自的 Pull Request
+合入 `main`，不能直接合入 release 分支。release 分支从最新 `main` 创建，只承载
+`CMakeLists.txt`、`README.md` 和 `CHANGELOG.md` 的版本准备提交：
+
+```text
+feature/A ──PR──┐
+feature/B ──PR──┼──> main ──> release/X.Y.Z ──版本提交 PR──> main ──> 发布
+feature/C ──PR──┘
+```
+
+如果 release PR 创建后又有 Feature 或修复必须进入该版本，仍应先把它合入 `main`，然后更新
+release 分支：
+
+```powershell
+git fetch origin
+git switch release/X.Y.Z
+git rebase origin/main
+git push --force-with-lease
+```
+
+`--force-with-lease` 会在远端分支出现未知提交时拒绝覆盖。多人共同维护 release 分支时，也可以合并
+`origin/main`，避免重写已经共享的分支历史。release PR 合并后删除 release 分支，不把它作为长期
+开发或维护分支。
+
 ### 推荐完整流程
 
 以下以 PowerShell 发布 `0.27.0` 为例，可以直接按顺序执行：
