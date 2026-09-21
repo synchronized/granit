@@ -16,7 +16,6 @@ $workflows = @{
   'emscripten' = 'emscripten.yml'
   'quick-check' = 'quick-check.yml'
   'documentation' = 'documentation.yml'
-  'release' = 'release.yml'
   'package-shader-toolchain' = 'package-shader-toolchain.yml'
 }
 
@@ -28,4 +27,7 @@ if (-not $workflows.ContainsKey($Workflow)) {
 
 $wf = $workflows[$Workflow]
 gh workflow run $wf
+if ($LASTEXITCODE -ne 0) {
+  exit $LASTEXITCODE
+}
 Write-Host "已触发 $wf"

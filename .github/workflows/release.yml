@@ -4,13 +4,10 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - "v*"
   workflow_dispatch:
     inputs:
       tag:
-        description: "要验证的发布标签，例如 v0.2.0"
+        description: "要创建的发布标签，例如 v0.27.0"
         required: true
         type: string
 
@@ -18,8 +15,12 @@ permissions:
   contents: read
   actions: read
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 env:
-  RELEASE_TAG: ${{ github.event_name == 'push' && github.ref_name || inputs.tag }}
+  RELEASE_TAG: ${{ inputs.tag }}
   SCCACHE_GHA_ENABLED: "true"
   CCACHE_DIR: ${{ github.workspace }}/.cache/ccache
   CCACHE_BASEDIR: ${{ github.workspace }}
@@ -31,13 +32,22 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
+      - name: 校验发布来源与标签唯一性
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          remote_tag="$(git ls-remote --tags origin "refs/tags/$RELEASE_TAG")"
+          if [[ -n "$remote_tag" ]]; then
+            echo "标签 $RELEASE_TAG 已存在" >&2
+            exit 1
+          fi
       - name: 校验标签与项目版本
         run: >-
           cmake -DGRANIT_SOURCE_DIR="$PWD" -DGRANIT_RELEASE_TAG="$RELEASE_TAG"
           -P tests/packaging/check_release_version.cmake
 
   windows-package:
-    if: github.event_name == 'workflow_dispatch'
     needs: validate
     runs-on: windows-2022
     strategy:
@@ -95,7 +105,6 @@ jobs:
           if-no-files-found: error
 
   linux-package:
-    if: github.event_name == 'workflow_dispatch'
     needs: validate
     runs-on: ubuntu-24.04
     container:
@@ -178,7 +187,6 @@ jobs:
         run: ccache --show-stats
 
   checksums:
-    if: github.event_name == 'workflow_dispatch'
     needs: [windows-package, linux-package]
     runs-on: ubuntu-24.04
     steps:
@@ -205,43 +213,25 @@ jobs:
           if-no-files-found: error
 
   publish:
-    if: github.event_name == 'push'
-    needs: validate
+    needs: checksums
     runs-on: ubuntu-24.04
+    environment: release
     permissions:
       contents: write
       actions: read
     steps:
-      - name: 获取并校验同提交的发布候选产物
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - uses: actions/download-artifact@v7
+        with:
+          name: release-assets
+          path: dist
+      - name: 校验待发布产物
         shell: bash
         run: |
           set -euo pipefail
-          mapfile -t runs < <(
-            gh run list --repo "$GITHUB_REPOSITORY" --workflow Release \
-              --commit "$GITHUB_SHA" --event workflow_dispatch --status success \
-              --limit 20 --json databaseId --jq '.[].databaseId'
-          )
-          for run_id in "${runs[@]}"; do
-            rm -rf candidate
-            if ! gh run download "$run_id" --repo "$GITHUB_REPOSITORY" \
-              --name release-assets --dir candidate 2>/dev/null; then
-              continue
-            fi
-            if [[ -f candidate/release-manifest.json &&
-                  "$(jq -r .schema_version candidate/release-manifest.json)" == "1" &&
-                  "$(jq -r .tag candidate/release-manifest.json)" == "$RELEASE_TAG" &&
-                  "$(jq -r .commit candidate/release-manifest.json)" == "$GITHUB_SHA" &&
-                  "$(jq -r .workflow_run_id candidate/release-manifest.json)" == "$run_id" ]]; then
-              mv candidate dist
-              break
-            fi
-          done
-          test -f dist/release-manifest.json || {
-            echo "找不到标签和提交均匹配的成功 Release Candidate 产物" >&2
-            exit 1
-          }
+          test "$(jq -r .schema_version dist/release-manifest.json)" = "1"
+          test "$(jq -r .tag dist/release-manifest.json)" = "$RELEASE_TAG"
+          test "$(jq -r .commit dist/release-manifest.json)" = "$GITHUB_SHA"
+          test "$(jq -r .workflow_run_id dist/release-manifest.json)" = "$GITHUB_RUN_ID"
           (cd dist && sha256sum --check SHA256SUMS)
           version="${RELEASE_TAG#v}"
           for name in \
@@ -259,10 +249,9 @@ jobs:
         run: |
           rm dist/release-manifest.json
           gh release create "$RELEASE_TAG" dist/* --repo "$GITHUB_REPOSITORY" \
-            --title "Granit ${RELEASE_TAG#v}" --generate-notes
+            --target "$GITHUB_SHA" --title "Granit ${RELEASE_TAG#v}" --generate-notes
 
   verify-public-release:
-    if: github.event_name == 'push'
     needs: publish
     runs-on: ubuntu-24.04
     permissions:

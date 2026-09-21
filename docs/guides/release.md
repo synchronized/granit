@@ -29,7 +29,7 @@
 
 ## 3. 验证矩阵
 
-发布提交必须通过 GitHub Actions 的完整 Windows/Linux 矩阵。发布候选还应在干净目录执行：
+发布提交必须通过 GitHub Actions 的完整 Windows/Linux 矩阵。发布前还应在干净目录执行：
 
 ```sh
 cmake --preset <shared-release-preset>
@@ -61,34 +61,58 @@ ctest --preset <static-release-preset>
 ## 5. 发布说明与产物
 
 发布说明至少列出版本、日期、稳定 component、实验性接口、已知限制、破坏性变化和迁移步骤。
-发布标签必须指向完整通过验收的提交；产物应来自该标签的干净构建，不使用开发机已有构建目录。
+发布标签必须指向完整通过验收的提交；产物应来自最终标记提交的干净构建，不使用开发机已有构建
+目录。
 
-仓库的 `Release` Actions 采用不可变候选晋级：手动运行负责构建 Windows/Linux 的共享库和静态库
-安装包、运行测试与安装审计，并生成 `SHA256SUMS` 和 `release-manifest.json`；推送 `v*` 标签时只
-下载并校验同一 commit、同一 tag 的成功候选，不再重复构建。
+仓库的 `Release` Actions 采用单次受控发布：手动运行在固定的 `main` 提交上构建 Windows/Linux
+共享库和静态库安装包，运行测试与安装审计，生成 `SHA256SUMS` 和 manifest；全部成功后才为该
+提交创建 tag 和 GitHub Release，最后从公开 Release 重新下载同一批字节复验。
 
 正式发布必须按以下顺序执行：
 
 1. 将发布提交合并到 `main`，确认 `project(VERSION)`、Changelog 和验收记录完整。
-2. 在 Actions 中选择 `main`，对该提交手动运行 `Release`，输入尚未公开的候选标签。
-3. 下载 `release-assets`，检查四套 SDK、`SHA256SUMS` 和 manifest 中的 tag、commit、run ID。
-4. 候选通过后，在完全相同的提交上创建并推送同名标签。
-5. 标签运行重新校验版本和候选身份后，直接发布候选中的同一批 SDK 字节。
+2. 推送 `main`，确认本地 `main`、`origin/main` 和准备发布的提交完全一致。
+3. 运行 `publish` 脚本并传入版本号。脚本校验版本和 tag 唯一性后触发 `Release`。
+4. 工作流完成四套 SDK、测试、安装审计、校验和与 manifest 后，进入 `publish` job。
+5. `publish` 为已验证的 `GITHUB_SHA` 创建 tag 和 Release，随后执行公开下载复验。
 
-候选 Artifact 过期、提交不一致或标签不一致时，正式发布会失败，必须在目标提交上重新生成候选。
-不要重用或移动已经公开的版本标签。
+Linux/macOS 使用：
+
+```sh
+bash scripts/publish.sh X.Y.Z
+```
+
+PowerShell 使用：
+
+```powershell
+.\scripts\publish.ps1 X.Y.Z
+```
+
+脚本默认等待工作流并返回其最终状态；传入 `--no-wait` 或 `-NoWait` 可以只触发不等待。直接从
+Actions 页面运行时必须选择 `main` 并输入 `vX.Y.Z` 格式的 tag。
+
+建议为 `release` Environment 配置 required reviewer，使四套 SDK 全部完成后由维护者批准 `publish`
+job；未配置保护规则时该 job 自动继续。仓库还可以启用 Immutable Releases，在发布后禁止修改 tag
+和资产。这两项均为 GitHub 仓库设置，不由源码隐式修改。
+
+如果构建、测试或 `publish` 前的校验失败，修复后在新的 `main` 提交上重新运行即可，因为工作流尚未
+创建 tag。若 `publish` 已创建 Release 而公开复验失败，应保留失败证据并修复发布基础设施；不得移动
+已经公开的 tag 或静默替换资产。
+
+仓库不再把手工推送 tag 作为发布入口。意外创建但没有对应 Release 的 tag 应先删除，再通过工作流
+发布；已经公开的版本应发布新的修订版本。
 
 ## 6. 发布后验证
 
-Release 创建后，标签工作流会从公开下载地址重新取得产物，不能复用 Actions 工作目录中的文件。
+Release 创建后，同一工作流会从公开下载地址重新取得产物，不能复用 Actions 工作目录中的文件。
 自动验证包括：
 
 1. 使用 `gh release download` 下载全部安装包和 `SHA256SUMS`。
 2. 重新计算每个压缩包的 SHA-256，并逐项与 `SHA256SUMS` 比较。
 3. 检查四个精确命名的安装包都存在，且每个压缩包只有一个顶层目录。
 
-Candidate 阶段已经对同一批字节执行安装导出审计以及全部 C11/C++20 Consumer；正式阶段通过
-SHA-256 证明公开字节与候选一致，因此不重复构建 Consumer。维护者仍应确认 Release 不是草稿、
+打包阶段已经对同一批字节执行安装导出审计以及全部 C11/C++20 Consumer；公开复验通过 SHA-256
+证明下载字节与已验证产物一致，因此不重复构建 Consumer。维护者仍应确认 Release 不是草稿、
 标签指向 manifest 中的提交，且四个安装包与 `SHA256SUMS` 均已公开。
 
 任一步失败都应保留标签和失败证据，修复后发布新的修订版本；不得移动已公开标签或静默替换产物。

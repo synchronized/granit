@@ -72,7 +72,7 @@ $changelogContent = Get-Content -Raw -Encoding UTF8 CHANGELOG.md
 $changelogContent = $changelogContent -replace '(?m)^## Unreleased$', "## Unreleased`n`n## $NewVersion - $dateToday"
 Set-Content -Path CHANGELOG.md -Value $changelogContent -Encoding UTF8 -NoNewline
 
-Write-Host "改动如下（确认无误后再 commit / tag / push）："
+Write-Host "改动如下（确认无误后提交，再触发发布工作流）："
 git diff --stat
 Write-Host ""
 git diff -- CMakeLists.txt README.md CHANGELOG.md
@@ -80,5 +80,6 @@ Write-Host ""
 Write-Host "确认后执行："
 Write-Host "  git add CMakeLists.txt README.md CHANGELOG.md"
 Write-Host "  git commit -m `"chore: 发布 $NewVersion`""
-Write-Host "  git tag v$NewVersion"
-Write-Host "  git push origin main v$NewVersion"
+Write-Host "  git push origin main"
+Write-Host "  .\scripts\publish.ps1 $NewVersion"
+Write-Host "完整流程见 docs/guides/release.md"

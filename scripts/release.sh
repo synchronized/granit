@@ -55,7 +55,7 @@ sed -i "s/${old_version_escaped}/${new_version}/g" README.md
 # 3. CHANGELOG.md：在 Unreleased 下插入带日期的新版本章节
 sed -i "s/^## Unreleased$/## Unreleased\n\n## ${new_version} - ${date_today}/" CHANGELOG.md
 
-echo "改动如下（确认无误后再 commit / tag / push）："
+echo "改动如下（确认无误后提交，再触发发布工作流）："
 git diff --stat
 echo ""
 git diff -- CMakeLists.txt README.md CHANGELOG.md
@@ -63,5 +63,6 @@ echo ""
 echo "确认后执行："
 echo "  git add CMakeLists.txt README.md CHANGELOG.md"
 echo "  git commit -m \"chore: 发布 ${new_version}\""
-echo "  git tag v${new_version}"
-echo "  git push origin main v${new_version}"
+echo "  git push origin main"
+echo "  bash scripts/publish.sh ${new_version}"
+echo "完整流程见 docs/guides/release.md"
