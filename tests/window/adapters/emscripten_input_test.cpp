@@ -86,6 +86,21 @@ TEST_CASE("Emscripten Input 转换物理键、逻辑键、重复与文本", "[in
   CHECK(output.text == committed_text);
 }
 
+TEST_CASE("Emscripten Input 按物理位置转换数字键", "[input][emscripten]") {
+  granit::input::detail::emscripten_input_adapter adapter;
+  capture output;
+  const auto input_sink = sink(output);
+
+  adapter.handle(7, key_event(GRANIT_WINDOW_INPUT_EMSCRIPTEN_KEY_DOWN, "Digit0", "0"),
+                 input_sink);
+  adapter.handle(7, key_event(GRANIT_WINDOW_INPUT_EMSCRIPTEN_KEY_DOWN, "Digit7", "7"),
+                 input_sink);
+
+  REQUIRE(output.events.size() == 2);
+  CHECK(output.events[0].data.key.physical_key == GRANIT_PHYSICAL_KEY_0);
+  CHECK(output.events[1].data.key.physical_key == GRANIT_PHYSICAL_KEY_7);
+}
+
 TEST_CASE("Emscripten Input 转换指针、按钮与连续滚轮", "[input][emscripten]") {
   granit::input::detail::emscripten_input_adapter adapter;
   capture output;

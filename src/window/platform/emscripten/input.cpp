@@ -88,7 +88,7 @@ std::uint32_t physical_from_code(std::string_view code) noexcept {
   if (code.size() == 4 && code.starts_with("Key") && code[3] >= 'A' && code[3] <= 'Z')
     return GRANIT_PHYSICAL_KEY_A + static_cast<std::uint32_t>(code[3] - 'A');
   if (code.size() == 6 && code.starts_with("Digit") && code[5] >= '0' && code[5] <= '9')
-    return code[5] == '0' ? GRANIT_PHYSICAL_KEY_0
+    return code[5] == '0' ? static_cast<std::uint32_t>(GRANIT_PHYSICAL_KEY_0)
                           : GRANIT_PHYSICAL_KEY_1 + static_cast<std::uint32_t>(code[5] - '1');
   for (const auto& entry : physical_names) {
     if (entry.name == code)
