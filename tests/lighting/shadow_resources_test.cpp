@@ -32,7 +32,7 @@ TEST_CASE("阴影Group3资源拥有常量和比较Sampler") {
                                                  granit::texture_usage::sampled,
                                         .width = 64,
                                         .height = 64}) == granit::result::success);
-  REQUIRE(view.initialize(renderer.ref(), texture.native_handle()) == granit::result::success);
+  REQUIRE(view.initialize(renderer.ref(), texture.ref()) == granit::result::success);
 
   granit::lighting::shadow_sampling_constants constants{.light_view_projection =
                                                             granit::math::identity_matrix4,

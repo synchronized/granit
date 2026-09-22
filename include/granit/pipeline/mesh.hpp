@@ -81,16 +81,7 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result initialize(renderer_ref owner, const granit_mesh_desc& desc) noexcept {
-    const auto renderer = owner.native_handle();
-    if (valid())
-      return result::invalid_argument;
-    const auto value = from_native(granit_mesh_create(renderer, &desc, &handle_));
-    if (value.ok())
-      renderer_ = renderer;
-    return value;
-  }
-  [[nodiscard]] result initialize(renderer& owner, const mesh_desc& desc) noexcept {
+  [[nodiscard]] result initialize(renderer_ref owner, const mesh_desc& desc) noexcept {
     if (desc.vertex_buffers.size() > std::numeric_limits<std::uint32_t>::max())
       return result::invalid_argument;
     try {
@@ -137,12 +128,15 @@ public:
           .first_instance = desc.first_instance,
           .reserved = 0,
       };
-      return initialize(owner.ref(), native);
+      return create_native(owner, native);
     } catch (const std::bad_alloc&) {
       return result::out_of_memory;
     } catch (...) {
       return result::internal;
     }
+  }
+  [[nodiscard]] result initialize(renderer& owner, const mesh_desc& desc) noexcept {
+    return initialize(owner.ref(), desc);
   }
   [[nodiscard]] result reset() noexcept {
     if (!valid())
@@ -156,6 +150,16 @@ public:
   [[nodiscard]] granit_mesh native_handle() const noexcept { return handle_; }
 
 private:
+  [[nodiscard]] result create_native(renderer_ref owner, const granit_mesh_desc& desc) noexcept {
+    const auto renderer = owner.native_handle();
+    if (valid())
+      return result::invalid_argument;
+    const auto value = from_native(granit_mesh_create(renderer, &desc, &handle_));
+    if (value.ok())
+      renderer_ = renderer;
+    return value;
+  }
+
   granit_renderer renderer_ = GRANIT_NULL_HANDLE;
   granit_mesh handle_ = GRANIT_NULL_HANDLE;
 };

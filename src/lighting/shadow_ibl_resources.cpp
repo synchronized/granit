@@ -193,7 +193,9 @@ granit_result shadow_ibl_resources::initialize(
               .offset = 0,
               .size = light_buffer_size<gpu_spot_light>(light_capacities.spot)},
       });
-  result = group_.initialize(renderer_view, layout_handle_, group_entries);
+  result = group_.initialize(renderer_view,
+                             granit::bind_group_layout_ref::from_native(layout_handle_),
+                             group_entries);
   if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);

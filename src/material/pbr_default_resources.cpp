@@ -41,7 +41,7 @@ granit_result pbr_default_resources::initialize(granit_renderer renderer) noexce
       static_cast<void>(reset());
       return static_cast<granit_result>(result);
     }
-    result = views_[index].initialize(renderer_view, textures_[index].native_handle());
+    result = views_[index].initialize(renderer_view, textures_[index].ref());
     if (result.failed()) {
       static_cast<void>(reset());
       return static_cast<granit_result>(result);

@@ -120,7 +120,7 @@ granit::result create_default_texture(granit_renderer renderer, granit::upload_b
       result.failed())
     return result;
   if (const auto result =
-          output.view.initialize(renderer_view, output.texture.native_handle(), {.format = format});
+          output.view.initialize(renderer_view, output.texture.ref(), {.format = format});
       result.failed())
     return result;
   return uploads.write_texture(output.texture.ref(), pixel,
@@ -757,7 +757,7 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
         result.failed())
       return result;
     if (const auto result =
-            target.view.initialize(renderer_view, target.texture.native_handle(),
+            target.view.initialize(renderer_view, target.texture.ref(),
                                    {.format = variant.srgb ? granit::texture_format::rgba8_srgb
                                                            : granit::texture_format::rgba8_unorm,
                                     .mip_level_count = mip_levels});
@@ -855,34 +855,30 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
     return result;
 
   constexpr std::array attributes{
-      granit_vertex_attribute{0, GRANIT_VERTEX_FORMAT_FLOAT32X3,
-                              static_cast<std::uint32_t>(offsetof(packed_vertex, position)), 0},
-      granit_vertex_attribute{1, GRANIT_VERTEX_FORMAT_FLOAT32X3,
-                              static_cast<std::uint32_t>(offsetof(packed_vertex, normal)), 0},
-      granit_vertex_attribute{2, GRANIT_VERTEX_FORMAT_FLOAT32X4,
-                              static_cast<std::uint32_t>(offsetof(packed_vertex, tangent)), 0},
-      granit_vertex_attribute{
-          3, GRANIT_VERTEX_FORMAT_FLOAT32X2,
+      granit::vertex_attribute{0, granit::vertex_format::float32x3,
+                               static_cast<std::uint32_t>(offsetof(packed_vertex, position)), 0},
+      granit::vertex_attribute{1, granit::vertex_format::float32x3,
+                               static_cast<std::uint32_t>(offsetof(packed_vertex, normal)), 0},
+      granit::vertex_attribute{2, granit::vertex_format::float32x4,
+                               static_cast<std::uint32_t>(offsetof(packed_vertex, tangent)), 0},
+      granit::vertex_attribute{
+          3, granit::vertex_format::float32x2,
           static_cast<std::uint32_t>(offsetof(packed_vertex, texture_coordinate)), 0},
   };
-  const granit_vertex_buffer_layout layout{sizeof(packed_vertex), GRANIT_VERTEX_STEP_MODE_VERTEX,
-                                           static_cast<std::uint32_t>(attributes.size()), 0,
-                                           attributes.data()};
+  const granit::vertex_buffer_layout layout{.stride = sizeof(packed_vertex),
+                                            .attributes = attributes};
   meshes_.reserve(plan_.primitives.size());
   for (std::size_t primitive_index = 0; primitive_index < plan_.primitives.size();
        ++primitive_index) {
     const auto& primitive = plan_.primitives[primitive_index];
-    const granit_mesh_vertex_buffer binding{vertex_buffer_.native_handle(), primitive.vertex_offset,
-                                            layout};
-    granit_mesh_desc desc = GRANIT_MESH_DESC_INIT;
-    desc.vertex_buffers = &binding;
-    desc.vertex_buffer_count = 1;
-    desc.indexed = 1;
-    desc.index_buffer = index_buffer_.native_handle();
-    desc.index_buffer_offset = primitive.index_offset;
-    desc.index_type = GRANIT_INDEX_TYPE_UINT32;
-    desc.vertex_count = primitive.vertex_count;
-    desc.index_count = primitive.index_count;
+    const granit::mesh_vertex_buffer binding{
+        .buffer = vertex_buffer_.ref(), .offset = primitive.vertex_offset, .layout = layout};
+    const granit::mesh_desc desc{.vertex_buffers = std::span{&binding, 1},
+                                 .index_buffer = index_buffer_.ref(),
+                                 .index_buffer_offset = primitive.index_offset,
+                                 .index_format = granit::index_type::uint32,
+                                 .vertex_count = primitive.vertex_count,
+                                 .index_count = primitive.index_count};
     meshes_.emplace_back();
     if (const auto result = meshes_.back().initialize(renderer_view, desc); result.failed())
       return result;

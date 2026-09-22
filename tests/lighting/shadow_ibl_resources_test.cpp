@@ -53,15 +53,15 @@ TEST_CASE("阴影和IBL共享完整Group3") {
                                  {.format = granit::texture_format::rgba16_float,
                                   .usage = granit::texture_usage::sampled}) ==
           granit::result::success);
-  REQUIRE(shadow_view.initialize(renderer.ref(), shadow_texture.native_handle()) ==
+  REQUIRE(shadow_view.initialize(renderer.ref(), shadow_texture.ref()) ==
           granit::result::success);
   const granit::texture_view_desc cube_view{
       .dimension = granit::texture_dimension::cube, .mip_level_count = 3, .array_layer_count = 6};
-  REQUIRE(irradiance_view.initialize(renderer.ref(), irradiance_texture.native_handle(),
+  REQUIRE(irradiance_view.initialize(renderer.ref(), irradiance_texture.ref(),
                                      cube_view) == granit::result::success);
-  REQUIRE(prefiltered_view.initialize(renderer.ref(), prefiltered_texture.native_handle(),
+  REQUIRE(prefiltered_view.initialize(renderer.ref(), prefiltered_texture.ref(),
                                       cube_view) == granit::result::success);
-  REQUIRE(lut_view.initialize(renderer.ref(), lut_texture.native_handle()) ==
+  REQUIRE(lut_view.initialize(renderer.ref(), lut_texture.ref()) ==
           granit::result::success);
 
   granit::lighting::shadow_ibl_resources resources;

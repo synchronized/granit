@@ -49,14 +49,14 @@ granit_result default_ibl_resources::initialize(granit_renderer renderer) noexce
                                             .array_layer_count = 6};
   if (result.ok()) {
     result =
-        irradiance_view_.initialize(renderer_view, irradiance_texture_.native_handle(), cube_view);
+        irradiance_view_.initialize(renderer_view, irradiance_texture_.ref(), cube_view);
   }
   if (result.ok()) {
-    result = prefiltered_view_.initialize(renderer_view, prefiltered_texture_.native_handle(),
+    result = prefiltered_view_.initialize(renderer_view, prefiltered_texture_.ref(),
                                           cube_view);
   }
   if (result.ok())
-    result = brdf_lut_view_.initialize(renderer_view, brdf_lut_texture_.native_handle());
+    result = brdf_lut_view_.initialize(renderer_view, brdf_lut_texture_.ref());
   if (result.ok()) {
     result = granit::from_native(
         resources_.initialize(renderer,

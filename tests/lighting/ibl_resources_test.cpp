@@ -46,11 +46,11 @@ TEST_CASE("IBL Group3资源绑定两个Cube和BRDF LUT") {
                                             .height = 8}) == granit::result::success);
   const auto cube_view_desc = granit::texture_view_desc{
       .dimension = granit::texture_dimension::cube, .mip_level_count = 4, .array_layer_count = 6};
-  REQUIRE(irradiance_view.initialize(renderer.ref(), irradiance_texture.native_handle(),
+  REQUIRE(irradiance_view.initialize(renderer.ref(), irradiance_texture.ref(),
                                      cube_view_desc) == granit::result::success);
-  REQUIRE(prefiltered_view.initialize(renderer.ref(), prefiltered_texture.native_handle(),
+  REQUIRE(prefiltered_view.initialize(renderer.ref(), prefiltered_texture.ref(),
                                       cube_view_desc) == granit::result::success);
-  REQUIRE(lut_view.initialize(renderer.ref(), lut_texture.native_handle()) ==
+  REQUIRE(lut_view.initialize(renderer.ref(), lut_texture.ref()) ==
           granit::result::success);
 
   granit::lighting::ibl_resources resources;

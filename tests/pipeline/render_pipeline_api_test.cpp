@@ -205,12 +205,13 @@ void initialize_test_mesh(granit_renderer renderer, granit::buffer& vertex_buffe
                                     .usage = granit::buffer_usage::vertex,
                                     .location = granit::memory_location::device}) ==
           granit::result::success);
-  const granit_vertex_attribute attribute{0, GRANIT_VERTEX_FORMAT_FLOAT32X3, 0, 0};
-  const granit_mesh_vertex_buffer vertex{
-      vertex_buffer.native_handle(), 0, {12, GRANIT_VERTEX_STEP_MODE_VERTEX, 1, 0, &attribute}};
-  granit_mesh_desc desc = GRANIT_MESH_DESC_INIT;
-  desc.vertex_buffers = &vertex;
-  desc.vertex_buffer_count = 1;
+  const granit::vertex_attribute attribute{.location = 0,
+                                           .format = granit::vertex_format::float32x3};
+  const granit::mesh_vertex_buffer vertex{
+      .buffer = vertex_buffer.ref(), .offset = 0,
+      .layout = {.stride = 12, .attributes = std::span{&attribute, 1}}};
+  granit::mesh_desc desc{};
+  desc.vertex_buffers = std::span{&vertex, 1};
   desc.vertex_count = 3;
   REQUIRE(mesh.initialize(granit::renderer_ref::from_native(renderer), desc) ==
           granit::result::success);
@@ -354,7 +355,7 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
                                                           granit::texture_usage::transfer_source,
                                                  .width = 16,
                                                  .height = 16}) == granit::result::success);
-  REQUIRE(output_view.initialize(renderer.ref(), output_texture.native_handle()) ==
+  REQUIRE(output_view.initialize(renderer.ref(), output_texture.ref()) ==
           granit::result::success);
 
   REQUIRE(second_output_texture.initialize(renderer.ref(),
@@ -363,7 +364,7 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
                                                      granit::texture_usage::transfer_source,
                                             .width = 16,
                                             .height = 16}) == granit::result::success);
-  REQUIRE(second_output_view.initialize(renderer.ref(), second_output_texture.native_handle()) ==
+  REQUIRE(second_output_view.initialize(renderer.ref(), second_output_texture.ref()) ==
           granit::result::success);
 
   std::array<granit_scene_view, 2> views{};
@@ -490,7 +491,7 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   constexpr std::array<std::uint8_t, 4> canvas_pixel{128, 0, 0, 128};
   REQUIRE(canvas_texture.write(std::as_bytes(std::span{canvas_pixel}), {}, {}) ==
           granit::result::success);
-  REQUIRE(canvas_texture_view.initialize(renderer.ref(), canvas_texture.native_handle()) ==
+  REQUIRE(canvas_texture_view.initialize(renderer.ref(), canvas_texture.ref()) ==
           granit::result::success);
   REQUIRE(canvas_sampler.initialize(renderer, {}) == granit::result::success);
   granit_canvas_draw_list_desc canvas_list_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
@@ -667,7 +668,7 @@ TEST_CASE("Render Pipeline在没有可见物体时仍清屏并执行覆盖层") 
                                                           granit::texture_usage::transfer_source,
                                                  .width = size,
                                                  .height = size}) == granit::result::success);
-  REQUIRE(output_view.initialize(renderer.ref(), output_texture.native_handle()) ==
+  REQUIRE(output_view.initialize(renderer.ref(), output_texture.ref()) ==
           granit::result::success);
 
   granit::texture canvas_texture;
@@ -682,7 +683,7 @@ TEST_CASE("Render Pipeline在没有可见物体时仍清屏并执行覆盖层") 
   constexpr std::array<std::uint8_t, 4> canvas_pixel{0, 255, 0, 255};
   REQUIRE(canvas_texture.write(std::as_bytes(std::span{canvas_pixel}), {}, {}) ==
           granit::result::success);
-  REQUIRE(canvas_texture_view.initialize(renderer.ref(), canvas_texture.native_handle()) ==
+  REQUIRE(canvas_texture_view.initialize(renderer.ref(), canvas_texture.ref()) ==
           granit::result::success);
   REQUIRE(canvas_sampler.initialize(renderer, {}) == granit::result::success);
   granit_canvas_draw_list_desc canvas_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
@@ -1011,7 +1012,7 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   REQUIRE(manual_hdr.write({reinterpret_cast<const std::byte*>(manual_hdr_pixel.data()),
                             sizeof(manual_hdr_pixel)},
                            {.bytes_per_row = 8}, {}) == granit::result::success);
-  REQUIRE(manual_hdr_view.initialize(renderer.ref(), manual_hdr.native_handle()) ==
+  REQUIRE(manual_hdr_view.initialize(renderer.ref(), manual_hdr.ref()) ==
           granit::result::success);
   granit::tests::tone_mapping_shader_library tone_shaders;
   REQUIRE(tone_shaders.initialize(renderer));
@@ -1028,7 +1029,7 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
                                                        granit::texture_usage::transfer_source,
                                               .width = size,
                                               .height = size}) == granit::result::success);
-  REQUIRE(manual_output_view.initialize(renderer.ref(), manual_output.native_handle()) ==
+  REQUIRE(manual_output_view.initialize(renderer.ref(), manual_output.ref()) ==
           granit::result::success);
   granit::buffer manual_readback;
   REQUIRE(manual_readback.initialize(renderer.ref(),

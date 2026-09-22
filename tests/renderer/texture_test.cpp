@@ -23,8 +23,11 @@ TEST_CASE("Texture View创建把空资源句柄归类为无效句柄", "[texture
   CHECK(view == GRANIT_NULL_HANDLE);
 
   granit::texture_view cpp_view;
-  CHECK(cpp_view.initialize(granit::renderer_ref{}, UINT64_C(1)) == granit::result::invalid_handle);
-  CHECK(cpp_view.initialize(granit::renderer_ref::from_native(UINT64_C(1)), GRANIT_NULL_HANDLE) ==
+  CHECK(cpp_view.initialize(granit::renderer_ref{},
+                            granit::texture_ref::from_native(UINT64_C(1))) ==
+        granit::result::invalid_handle);
+  CHECK(cpp_view.initialize(granit::renderer_ref::from_native(UINT64_C(1)),
+                            granit::texture_ref{}) ==
         granit::result::invalid_handle);
 }
 bool unavailable(granit::result value) {
@@ -232,7 +235,7 @@ TEST_CASE("Texture View 校验格式和 Renderer 归属", "[texture][validation]
   CHECK(granit_texture_view_create(second.native_handle(), texture.native_handle(), &view_desc,
                                    &view) == GRANIT_ERROR_INVALID_HANDLE);
   granit::texture_view cpp_view;
-  REQUIRE(cpp_view.initialize(first.ref(), texture.native_handle()) == granit::result::success);
+  REQUIRE(cpp_view.initialize(first.ref(), texture.ref()) == granit::result::success);
   const auto texture_reference = texture.ref();
   const auto view_reference = cpp_view.ref();
   CHECK(texture_reference.valid());
@@ -259,7 +262,7 @@ TEST_CASE("Cube Texture支持六面和Mip链", "[texture][cube][mip]") {
                                      .mip_levels = 4,
                                      .array_layers = 6}) == granit::result::success);
   granit::texture_view view;
-  REQUIRE(view.initialize(renderer.ref(), cube.native_handle(),
+  REQUIRE(view.initialize(renderer.ref(), cube.ref(),
                           {.dimension = granit::texture_dimension::cube,
                            .format = granit::texture_format::rgba16_float,
                            .aspect = granit::texture_aspect::color,

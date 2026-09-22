@@ -88,7 +88,7 @@ result pbr_lighting_resources::initialize(granit_renderer renderer) {
                       .width = 1,
                       .height = 1});
   if (value.ok())
-    value = shadow_view_.initialize(renderer_view, shadow_texture_.native_handle());
+    value = shadow_view_.initialize(renderer_view, shadow_texture_.ref());
   const auto cube_desc =
       texture_desc{.dimension = texture_dimension::cube,
                    .format = texture_format::rgba16_float,
@@ -124,15 +124,15 @@ result pbr_lighting_resources::initialize(granit_renderer renderer) {
   const texture_view_desc cube_view_desc{.dimension = texture_dimension::cube,
                                          .array_layer_count = 6};
   if (value.ok()) {
-    value = irradiance_view_.initialize(renderer_view, irradiance_texture_.native_handle(),
+    value = irradiance_view_.initialize(renderer_view, irradiance_texture_.ref(),
                                         cube_view_desc);
   }
   if (value.ok()) {
-    value = prefiltered_view_.initialize(renderer_view, prefiltered_texture_.native_handle(),
+    value = prefiltered_view_.initialize(renderer_view, prefiltered_texture_.ref(),
                                          cube_view_desc);
   }
   if (value.ok())
-    value = brdf_lut_view_.initialize(renderer_view, brdf_lut_texture_.native_handle());
+    value = brdf_lut_view_.initialize(renderer_view, brdf_lut_texture_.ref());
   if (value.ok()) {
     value = from_native(resources_.initialize(
         renderer,

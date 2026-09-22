@@ -60,14 +60,14 @@ TEST_CASE("Unlit Opaque与Alpha Cutoff产生预期像素") {
                                      granit::texture_usage::transfer_source,
                             .width = size,
                             .height = size}) == granit::result::success);
-  REQUIRE(color_view.initialize(granit::renderer_ref::from_native(native), color.native_handle()) ==
+  REQUIRE(color_view.initialize(granit::renderer_ref::from_native(native), color.ref()) ==
           granit::result::success);
   REQUIRE(depth.initialize(granit::renderer_ref::from_native(native),
                            {.format = granit::texture_format::d32_float,
                             .usage = granit::texture_usage::depth_stencil_attachment,
                             .width = size,
                             .height = size}) == granit::result::success);
-  REQUIRE(depth_view.initialize(granit::renderer_ref::from_native(native), depth.native_handle()) ==
+  REQUIRE(depth_view.initialize(granit::renderer_ref::from_native(native), depth.ref()) ==
           granit::result::success);
 
   constexpr std::array<float, 9> positions{-0.8F, -0.8F, 0.5F, 0.8F, -0.8F, 0.5F, 0.0F, 0.8F, 0.5F};

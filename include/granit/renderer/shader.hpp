@@ -81,7 +81,7 @@ public:
         .entry_point = desc.entry_point.data(),
         .entry_point_length = static_cast<std::uint32_t>(desc.entry_point.size()),
         .reserved_2 = 0};
-    return initialize_native(renderer, native);
+    return create_native(renderer, native);
   }
 
   [[nodiscard]] result initialize(renderer& owner, const shader_desc& desc) noexcept {
@@ -104,8 +104,8 @@ public:
 private:
   friend class shader_library;
 
-  [[nodiscard]] result initialize_native(granit_renderer renderer,
-                                         const granit_shader_desc& native) noexcept {
+  [[nodiscard]] result create_native(granit_renderer renderer,
+                                      const granit_shader_desc& native) noexcept {
     const auto value = granit_shader_create(renderer, &native, &handle_);
     if (value == GRANIT_SUCCESS)
       renderer_ = renderer;

@@ -133,8 +133,9 @@ tone_mapping_binding_resources::initialize(const tone_mapping_pipeline_resources
       granit::bind_group_entry{
           .binding = 2, .resource = granit::binding_resource_ref::from_native(pipeline.sampler())}};
   if (result.ok())
-    result = group_.initialize(granit::renderer_ref::from_native(pipeline.renderer()),
-                               pipeline.group_layout(), entries);
+    result = group_.initialize(
+        granit::renderer_ref::from_native(pipeline.renderer()),
+        granit::bind_group_layout_ref::from_native(pipeline.group_layout()), entries);
   if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);

@@ -28,7 +28,7 @@ TEST_CASE("Canvas Pass按Batch录制顶点色与Scissor") {
                                      granit::texture_usage::transfer_source,
                             .width = size,
                             .height = size}) == granit::result::success);
-  REQUIRE(color_view.initialize(granit::renderer_ref::from_native(native), color.native_handle()) ==
+  REQUIRE(color_view.initialize(granit::renderer_ref::from_native(native), color.ref()) ==
           granit::result::success);
 
   constexpr std::array<std::uint32_t, 3> indices{0, 1, 2};
@@ -57,9 +57,9 @@ TEST_CASE("Canvas Pass按Batch录制顶点色与Scissor") {
   REQUIRE(red_texture.write(std::as_bytes(std::span{red_pixel}), {}, pixel_region) ==
           granit::result::success);
   REQUIRE(blue_view.initialize(granit::renderer_ref::from_native(native),
-                               blue_texture.native_handle()) == granit::result::success);
+                               blue_texture.ref()) == granit::result::success);
   REQUIRE(red_view.initialize(granit::renderer_ref::from_native(native),
-                              red_texture.native_handle()) == granit::result::success);
+                              red_texture.ref()) == granit::result::success);
   granit::sampler sampler;
   REQUIRE(sampler.initialize(granit::renderer_ref::from_native(native),
                              {.mag_filter = granit::filter::nearest,
@@ -151,7 +151,7 @@ TEST_CASE("Canvas Pass按Batch录制顶点色与Scissor") {
     REQUIRE(red_texture.write(std::as_bytes(std::span{green_pixel}), {}, pixel_region) ==
             granit::result::success);
     REQUIRE(red_view.initialize(granit::renderer_ref::from_native(native),
-                                red_texture.native_handle()) == granit::result::success);
+                                red_texture.ref()) == granit::result::success);
     REQUIRE(list.append(red, indices,
                         {.texture = red_view.native_handle(),
                          .sampler = sampler.native_handle(),

@@ -99,7 +99,7 @@ granit_result ibl_resources::initialize(granit_renderer renderer, ibl_texture_vi
                                .resource =
                                    granit::binding_resource_ref::from_native(views.brdf_lut)},
       granit::bind_group_entry{.binding = ibl_binding_sampler, .resource = sampler_.ref()}};
-  result = group_.initialize(renderer_view, layout_.native_handle(), group_entries);
+  result = group_.initialize(renderer_view, layout_.ref(), group_entries);
   if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);

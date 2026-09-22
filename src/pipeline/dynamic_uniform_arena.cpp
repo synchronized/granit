@@ -142,14 +142,18 @@ granit_result dynamic_uniform_arena::acquire_groups(frame_slot_state& slot,
                                  .size = sizeof(granit::material::pbr_frame_constants)}};
     const auto renderer_view = granit::renderer_ref::from_native(renderer_);
     auto result =
-        candidate.frame_group.initialize(renderer_view, material.frame_layout, frame_entry);
+        candidate.frame_group.initialize(
+            renderer_view, granit::bind_group_layout_ref::from_native(material.frame_layout),
+            frame_entry);
     const std::array object_entry{
         granit::bind_group_entry{.binding = 0,
                                  .resource = slot.buffer.ref(),
                                  .offset = 0,
                                  .size = sizeof(granit::material::pbr_object_constants)}};
     if (result.ok())
-      result = candidate.object_group.initialize(renderer_view, material.object_layout, object_entry);
+      result = candidate.object_group.initialize(
+          renderer_view, granit::bind_group_layout_ref::from_native(material.object_layout),
+          object_entry);
     if (result.failed())
       return static_cast<granit_result>(result);
     slot.groups.push_back(std::move(candidate));

@@ -93,7 +93,7 @@ granit_result initialize_state(environment_state& state,
                              package.irradiance_resolution, 0);
   if (result.ok()) {
     result = state.irradiance_view.initialize(
-        renderer_view, state.irradiance_texture.native_handle(),
+        renderer_view, state.irradiance_texture.ref(),
         {.dimension = granit::texture_dimension::cube, .array_layer_count = 6});
   }
   if (result.ok()) {
@@ -114,7 +114,7 @@ granit_result initialize_state(environment_state& state,
   }
   if (result.ok()) {
     result = state.prefiltered_view.initialize(
-        renderer_view, state.prefiltered_texture.native_handle(),
+        renderer_view, state.prefiltered_texture.ref(),
         {.dimension = granit::texture_dimension::cube,
          .mip_level_count = static_cast<std::uint32_t>(package.prefiltered_mips.size()),
          .array_layer_count = 6});
@@ -133,7 +133,7 @@ granit_result initialize_state(environment_state& state,
         {.width = package.brdf_width, .height = package.brdf_height});
   }
   if (result.ok())
-    result = state.brdf_view.initialize(renderer_view, state.brdf_texture.native_handle());
+    result = state.brdf_view.initialize(renderer_view, state.brdf_texture.ref());
   if (result.failed())
     return static_cast<granit_result>(result);
 

@@ -524,7 +524,7 @@ extern "C" granit_result granit_render_pipeline_create(granit_renderer renderer,
     if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
     resource_result =
-        state->shadow_view.initialize(renderer_view, state->shadow_texture.native_handle());
+        state->shadow_view.initialize(renderer_view, state->shadow_texture.ref());
     if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
     resource_result = state->shader_library.create_shader(
@@ -542,7 +542,7 @@ extern "C" granit_result granit_render_pipeline_create(granit_renderer renderer,
     if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
     resource_result = state->shadow_placeholder_view.initialize(
-        renderer_view, state->shadow_placeholder_texture.native_handle());
+        renderer_view, state->shadow_placeholder_texture.ref());
     if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
     std::scoped_lock lock{registry_mutex};

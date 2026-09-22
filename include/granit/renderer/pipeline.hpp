@@ -203,11 +203,11 @@ public:
     }
     return *this;
   }
-  [[nodiscard]] result initialize(renderer_ref owner, granit_bind_group_layout layout,
+  [[nodiscard]] result initialize(renderer_ref owner, bind_group_layout_ref layout,
                                   std::span<const bind_group_entry> entries) noexcept;
   [[nodiscard]] result initialize(renderer& owner, const bind_group_layout& layout,
                                   std::span<const bind_group_entry> entries) noexcept {
-    return initialize(owner.ref(), layout.ref().native_handle(), entries);
+    return initialize(owner.ref(), layout.ref(), entries);
   }
   [[nodiscard]] result reset() noexcept;
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
@@ -503,9 +503,10 @@ inline result bind_group_layout::reset() noexcept {
   return from_native(granit_bind_group_layout_destroy(renderer, handle));
 }
 
-inline result bind_group::initialize(renderer_ref owner, granit_bind_group_layout layout,
+inline result bind_group::initialize(renderer_ref owner, bind_group_layout_ref layout_ref,
                                      std::span<const bind_group_entry> entries) noexcept {
   const auto renderer = owner.native_handle();
+  const auto layout = layout_ref.native_handle();
   if (valid() || entries.size() > UINT32_MAX)
     return result::invalid_argument;
   if (renderer == GRANIT_NULL_HANDLE || layout == GRANIT_NULL_HANDLE)

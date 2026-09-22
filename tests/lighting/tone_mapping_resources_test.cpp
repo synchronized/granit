@@ -33,7 +33,7 @@ TEST_CASE("Tone Mapping GPU资源建立完整全屏Pipeline") {
   REQUIRE(hdr_texture.initialize(renderer.ref(), {.format = granit::texture_format::rgba16_float,
                                                   .usage = granit::texture_usage::sampled}) ==
           granit::result::success);
-  REQUIRE(hdr_view.initialize(renderer.ref(), hdr_texture.native_handle()) ==
+  REQUIRE(hdr_view.initialize(renderer.ref(), hdr_texture.ref()) ==
           granit::result::success);
   granit::tests::tone_mapping_shader_library shaders;
   REQUIRE(shaders.initialize(renderer));
@@ -66,7 +66,7 @@ TEST_CASE("Tone Mapping跨HDR View复用不变Pipeline资源") {
     REQUIRE(textures[index].initialize(renderer, {.format = granit::texture_format::rgba16_float,
                                                   .usage = granit::texture_usage::sampled}) ==
             granit::result::success);
-    REQUIRE(views[index].initialize(renderer.ref(), textures[index].native_handle()) ==
+    REQUIRE(views[index].initialize(renderer.ref(), textures[index].ref()) ==
             granit::result::success);
   }
   granit::tests::tone_mapping_shader_library shaders;
@@ -106,7 +106,7 @@ TEST_CASE("Tone Mapping GPU资源拒绝重复或缺失sRGB编码") {
   REQUIRE(hdr_texture.initialize(renderer.ref(), {.format = granit::texture_format::rgba16_float,
                                                   .usage = granit::texture_usage::sampled}) ==
           granit::result::success);
-  REQUIRE(hdr_view.initialize(renderer.ref(), hdr_texture.native_handle()) ==
+  REQUIRE(hdr_view.initialize(renderer.ref(), hdr_texture.ref()) ==
           granit::result::success);
   granit::tests::tone_mapping_shader_library shaders;
   REQUIRE(shaders.initialize(renderer));
@@ -146,7 +146,7 @@ TEST_CASE("Tone Mapping GPU输出与CPU参考一致") {
   REQUIRE(
       hdr_texture.write({reinterpret_cast<const std::byte*>(hdr_pixel.data()), sizeof(hdr_pixel)},
                         {.bytes_per_row = 8}, {}) == granit::result::success);
-  REQUIRE(hdr_view.initialize(renderer.ref(), hdr_texture.native_handle()) ==
+  REQUIRE(hdr_view.initialize(renderer.ref(), hdr_texture.ref()) ==
           granit::result::success);
   granit::tests::tone_mapping_shader_library shaders;
   REQUIRE(shaders.initialize(renderer));

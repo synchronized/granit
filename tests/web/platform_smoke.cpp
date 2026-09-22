@@ -399,7 +399,7 @@ granit_result draw_shared_fixture(granit_renderer renderer, granit_frame frame,
   granit::texture_view base_color_view;
   result = base_color.initialize(renderer, base_desc);
   if (result == granit::result::success)
-    result = base_color_view.initialize(renderer, base_color.native_handle());
+    result = base_color_view.initialize(renderer, base_color.ref());
   if (result == granit::result::success)
     result = base_color.write(
         std::as_bytes(std::span{granit::test::renderer_fixture::base_color_pixels}), {},
@@ -411,7 +411,7 @@ granit_result draw_shared_fixture(granit_renderer renderer, granit_frame frame,
   if (result == granit::result::success)
     result = normal.initialize(renderer, material_desc);
   if (result == granit::result::success)
-    result = normal_view.initialize(renderer, normal.native_handle());
+    result = normal_view.initialize(renderer, normal.ref());
   if (result == granit::result::success)
     result = normal.write(std::as_bytes(std::span{granit::test::renderer_fixture::normal_pixels}),
                           {}, texture_region);
@@ -420,7 +420,7 @@ granit_result draw_shared_fixture(granit_renderer renderer, granit_frame frame,
   if (result == granit::result::success)
     result = metallic_roughness.initialize(renderer, material_desc);
   if (result == granit::result::success)
-    result = metallic_roughness_view.initialize(renderer, metallic_roughness.native_handle());
+    result = metallic_roughness_view.initialize(renderer, metallic_roughness.ref());
   if (result == granit::result::success)
     result = metallic_roughness.write(
         std::as_bytes(std::span{granit::test::renderer_fixture::metallic_roughness_pixels}), {},
@@ -439,7 +439,7 @@ granit_result draw_shared_fixture(granit_renderer renderer, granit_frame frame,
       granit::bind_group_entry{.binding = 3, .resource = normal_view.ref()},
       granit::bind_group_entry{.binding = 4, .resource = metallic_roughness_view.ref()}};
   granit::bind_group group;
-  result = group.initialize(renderer, group_layout.native_handle(), entries);
+  result = group.initialize(renderer, group_layout.ref(), entries);
   if (result != granit::result::success)
     return granit::to_native(result);
 
@@ -468,7 +468,7 @@ granit_result draw_shared_fixture(granit_renderer renderer, granit_frame frame,
                                            .width = width,
                                            .height = height});
   if (result == granit::result::success)
-    result = depth_view.initialize(renderer, depth_target.native_handle());
+    result = depth_view.initialize(renderer, depth_target.ref());
   if (result != granit::result::success)
     return granit::to_native(result);
 
@@ -611,7 +611,7 @@ granit_result validate_presentation(granit_renderer renderer, granit_swapchain s
                                                       granit::texture_usage::transfer_destination});
   }
   if (wrapper_result.ok())
-    wrapper_result = canvas_texture_view.initialize(renderer, canvas_texture.native_handle());
+    wrapper_result = canvas_texture_view.initialize(renderer, canvas_texture.ref());
   constexpr std::array<std::uint8_t, 4> green_pixel{0, 255, 0, 255};
   if (wrapper_result.ok())
     wrapper_result = canvas_texture.write(std::as_bytes(std::span{green_pixel}), {}, {});

@@ -192,7 +192,7 @@ int main(int argc, char** argv) {
          .height = 1});
   }
   if (result.ok())
-    result = shadow_view.initialize(renderer.ref(), shadow_texture.native_handle());
+    result = shadow_view.initialize(renderer.ref(), shadow_texture.ref());
   const auto cube_desc = granit::texture_desc{.dimension = granit::texture_dimension::cube,
                                               .format = granit::texture_format::rgba16_float,
                                               .usage = granit::texture_usage::sampled |
@@ -229,15 +229,15 @@ int main(int argc, char** argv) {
   const granit::texture_view_desc cube_view_desc{.dimension = granit::texture_dimension::cube,
                                                  .array_layer_count = 6};
   if (result.ok()) {
-    result = irradiance_view.initialize(renderer.ref(), irradiance_texture.native_handle(),
+    result = irradiance_view.initialize(renderer.ref(), irradiance_texture.ref(),
                                         cube_view_desc);
   }
   if (result.ok()) {
-    result = prefiltered_view.initialize(renderer.ref(), prefiltered_texture.native_handle(),
+    result = prefiltered_view.initialize(renderer.ref(), prefiltered_texture.ref(),
                                          cube_view_desc);
   }
   if (result.ok()) {
-    result = brdf_lut_view.initialize(renderer.ref(), brdf_lut_texture.native_handle());
+    result = brdf_lut_view.initialize(renderer.ref(), brdf_lut_texture.ref());
   }
   granit::lighting::shadow_ibl_resources direct_resources;
   granit::lighting::shadow_ibl_resources ibl_resources;

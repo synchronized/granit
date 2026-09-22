@@ -49,7 +49,7 @@ struct window_hdr_resources {
                                            .width = width,
                                            .height = height});
     if (result.ok())
-      result = view.initialize(renderer_view, texture.native_handle());
+      result = view.initialize(renderer_view, texture.ref());
     if (result.ok()) {
       result = depth_texture.initialize(renderer_view,
                                         {.format = granit::texture_format::d32_float,
@@ -58,7 +58,7 @@ struct window_hdr_resources {
                                          .height = height});
     }
     if (result.ok())
-      result = depth_view.initialize(renderer_view, depth_texture.native_handle());
+      result = depth_view.initialize(renderer_view, depth_texture.ref());
     if (result.ok()) {
       result = granit::from_native(tone_mapping.initialize(
           renderer, view.native_handle(), output_format,
