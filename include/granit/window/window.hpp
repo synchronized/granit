@@ -141,11 +141,9 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result initialize(granit_window_system system, const window_desc& desc) noexcept {
+  [[nodiscard]] result initialize(window_system& system, const window_desc& desc) noexcept {
     if (valid() || desc.title.size() > UINT32_MAX)
       return result::invalid_argument;
-    if (system == GRANIT_NULL_HANDLE)
-      return result::invalid_handle;
     granit_window_desc native_desc{};
     native_desc.struct_size = sizeof(granit_window_desc);
     native_desc.title = desc.title.data();
@@ -153,13 +151,10 @@ public:
     native_desc.width = desc.width;
     native_desc.height = desc.height;
     native_desc.flags = desc.flags;
-    const auto value = granit_window_create(system, &native_desc, &handle_);
+    const auto value = granit_window_create(system.native_handle(), &native_desc, &handle_);
     if (value == GRANIT_SUCCESS)
-      system_ = system;
+      system_ = system.native_handle();
     return from_native(value);
-  }
-  [[nodiscard]] result initialize(window_system& system, const window_desc& desc) noexcept {
-    return initialize(system.native_handle(), desc);
   }
   [[nodiscard]] result reset() noexcept {
     if (!valid())

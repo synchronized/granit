@@ -271,7 +271,4 @@ TEST_CASE("Window创建把空Window System归类为无效句柄", "[window][cont
   CHECK(granit_window_create(GRANIT_NULL_HANDLE, &desc, &handle) == GRANIT_ERROR_INVALID_HANDLE);
   CHECK(handle == GRANIT_NULL_HANDLE);
 
-  granit::window window;
-  CHECK(window.initialize(GRANIT_NULL_HANDLE, {.title = "", .width = 1, .height = 1}) ==
-        granit::result::invalid_handle);
 }
