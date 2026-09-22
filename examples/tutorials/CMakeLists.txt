@@ -15,4 +15,11 @@ if(GRANIT_HAS_NATIVE_TOOLS AND GRANIT_SHADER_TOOLCHAIN_ROOT AND GRANIT_DXC_EXECU
   add_subdirectory(05_mesh)
   add_subdirectory(06_material_and_lighting)
   add_subdirectory(07_render_pipeline)
+  if(TARGET granit::integration_imgui)
+    add_subdirectory(08_imgui)
+  endif()
+endif()
+
+if(EMSCRIPTEN AND TARGET granit::integration_imgui)
+  add_subdirectory(08_imgui)
 endif()

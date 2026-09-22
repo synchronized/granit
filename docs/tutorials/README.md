@@ -6,10 +6,9 @@
 本系列从一个空的 CMake C++20 程序开始，每章在上一章基础上增加一种可见能力。读者不需要预先
 了解 Vulkan、WebGPU 或平台原生窗口 API；教程只使用 Granit 公共 C++ 接口和 HLSL-first 资产流程。
 
-> 状态：01 Window 已提供桌面与浏览器自动验证；02 Triangle、03 Texture、04 Depth/Camera 和
-> 05 Mesh、06 Material/Lighting 和 07 Render Pipeline 已提供桌面源码和自动验证。08 的配套源码将按
-> [S-48 计划](../plans/S-48-0.28.0-linear-tutorial-series.md)逐章落地；对应目标加入构建前，这些章节
-> 只作为后续内容预览。
+> 状态：01～08 均已提供配套源码和自动验证。01 与 08 还包含浏览器 WebGPU 验证；中间章节聚焦
+> Vulkan 主路径。后续使用面审计和发布收尾见
+> [S-48 计划](../plans/S-48-0.28.0-linear-tutorial-series.md)。
 
 ## 学习路线
 
