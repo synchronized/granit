@@ -203,11 +203,11 @@ public:
     }
     return *this;
   }
-  [[nodiscard]] result initialize(granit_renderer renderer, granit_bind_group_layout layout,
+  [[nodiscard]] result initialize(renderer_ref owner, granit_bind_group_layout layout,
                                   std::span<const bind_group_entry> entries) noexcept;
   [[nodiscard]] result initialize(renderer& owner, const bind_group_layout& layout,
                                   std::span<const bind_group_entry> entries) noexcept {
-    return initialize(owner.native_handle(), layout.ref().native_handle(), entries);
+    return initialize(owner.ref(), layout.ref().native_handle(), entries);
   }
   [[nodiscard]] result reset() noexcept;
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
@@ -237,10 +237,10 @@ public:
     return *this;
   }
   [[nodiscard]] result
-  initialize(granit_renderer renderer,
+  initialize(renderer_ref owner,
              std::span<const granit_bind_group_layout> bind_group_layouts = {}) noexcept;
   [[nodiscard]] result initialize(renderer& owner) noexcept {
-    return initialize(owner.native_handle());
+    return initialize(owner.ref());
   }
   [[nodiscard]] result
   initialize(renderer& owner, std::span<const bind_group_layout_ref> bind_group_layouts) noexcept {
@@ -249,7 +249,7 @@ public:
       handles.reserve(bind_group_layouts.size());
       for (const auto layout : bind_group_layouts)
         handles.push_back(layout.native_handle());
-      return initialize(owner.native_handle(), handles);
+      return initialize(owner.ref(), handles);
     } catch (const std::bad_alloc&) {
       return result::out_of_memory;
     } catch (...) {
@@ -424,10 +424,10 @@ public:
     }
     return *this;
   }
-  [[nodiscard]] result initialize(granit_renderer renderer,
+  [[nodiscard]] result initialize(renderer_ref owner,
                                   const graphics_pipeline_desc& desc) noexcept;
   [[nodiscard]] result initialize(renderer& owner, const graphics_pipeline_desc& desc) noexcept {
-    return initialize(owner.native_handle(), desc);
+    return initialize(owner.ref(), desc);
   }
   [[nodiscard]] result reset() noexcept;
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
@@ -461,10 +461,10 @@ public:
     }
     return *this;
   }
-  [[nodiscard]] result initialize(granit_renderer renderer,
+  [[nodiscard]] result initialize(renderer_ref owner,
                                   const compute_pipeline_desc& desc) noexcept;
   [[nodiscard]] result initialize(renderer& owner, const compute_pipeline_desc& desc) noexcept {
-    return initialize(owner.native_handle(), desc);
+    return initialize(owner.ref(), desc);
   }
   [[nodiscard]] result reset() noexcept;
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
@@ -503,8 +503,9 @@ inline result bind_group_layout::reset() noexcept {
   return from_native(granit_bind_group_layout_destroy(renderer, handle));
 }
 
-inline result bind_group::initialize(granit_renderer renderer, granit_bind_group_layout layout,
+inline result bind_group::initialize(renderer_ref owner, granit_bind_group_layout layout,
                                      std::span<const bind_group_entry> entries) noexcept {
+  const auto renderer = owner.native_handle();
   if (valid() || entries.size() > UINT32_MAX)
     return result::invalid_argument;
   if (renderer == GRANIT_NULL_HANDLE || layout == GRANIT_NULL_HANDLE)
@@ -544,8 +545,9 @@ inline result bind_group::reset() noexcept {
 }
 
 inline result
-pipeline_layout::initialize(granit_renderer renderer,
+pipeline_layout::initialize(renderer_ref owner,
                             std::span<const granit_bind_group_layout> bind_group_layouts) noexcept {
+  const auto renderer = owner.native_handle();
   if (valid() || bind_group_layouts.size() > UINT32_MAX)
     return result::invalid_argument;
   if (renderer == GRANIT_NULL_HANDLE)
@@ -569,8 +571,9 @@ inline result pipeline_layout::reset() noexcept {
   return from_native(granit_pipeline_layout_destroy(renderer, handle));
 }
 
-inline result graphics_pipeline::initialize(granit_renderer renderer,
+inline result graphics_pipeline::initialize(renderer_ref owner,
                                             const graphics_pipeline_desc& desc) noexcept {
+  const auto renderer = owner.native_handle();
   if (valid() || desc.color_formats.size() > UINT32_MAX ||
       desc.vertex_buffers.size() > UINT32_MAX || desc.color_blends.size() > UINT32_MAX)
     return result::invalid_argument;
@@ -664,8 +667,9 @@ inline result graphics_pipeline::reset() noexcept {
   return from_native(granit_graphics_pipeline_destroy(renderer, handle));
 }
 
-inline result compute_pipeline::initialize(granit_renderer renderer,
+inline result compute_pipeline::initialize(renderer_ref owner,
                                            const compute_pipeline_desc& desc) noexcept {
+  const auto renderer = owner.native_handle();
   if (valid())
     return result::invalid_argument;
   if (renderer == GRANIT_NULL_HANDLE)

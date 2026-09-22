@@ -38,11 +38,11 @@ pbr_draw_bindings::initialize(granit_renderer renderer, const material_draw_stat
   const std::array frame_entry{granit::bind_group_entry{
       .binding = 0, .resource = frame_buffer_.ref(), .offset = 0, .size = sizeof(frame)}};
   if (result.ok())
-    result = frame_group_.initialize(renderer, material.frame_layout, frame_entry);
+    result = frame_group_.initialize(renderer_view, material.frame_layout, frame_entry);
   const std::array object_entry{granit::bind_group_entry{
       .binding = 0, .resource = object_buffer_.ref(), .offset = 0, .size = sizeof(object)}};
   if (result.ok())
-    result = object_group_.initialize(renderer, material.object_layout, object_entry);
+    result = object_group_.initialize(renderer_view, material.object_layout, object_entry);
   if (result.failed())
     static_cast<void>(reset());
   else {

@@ -63,7 +63,7 @@ TEST_CASE("Compute Pipeline 预热提供稳定键和缓存命中", "[pipeline-wa
   REQUIRE(limits.supports_non_blocking_pipeline_warmup());
 
   granit::pipeline_layout layout;
-  REQUIRE(layout.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(layout.initialize(renderer) == granit::result::success);
   const auto spirv = load_binary("minimal.comp.spv");
   REQUIRE_FALSE(spirv.empty());
   granit::shader shader;
@@ -107,7 +107,7 @@ TEST_CASE("Pipeline 预热操作保留已经提交的资源", "[pipeline-warmup]
   REQUIRE(initialized == granit::result::success);
 
   granit::pipeline_layout layout;
-  REQUIRE(layout.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(layout.initialize(renderer) == granit::result::success);
   granit::shader shader;
   REQUIRE(shader.initialize(renderer,
                             {.stage = granit::shader_stage::compute,
@@ -140,7 +140,7 @@ TEST_CASE("Pipeline 预热取消收敛终态并安全释放资源", "[pipeline-w
   REQUIRE(initialized == granit::result::success);
 
   granit::pipeline_layout layout;
-  REQUIRE(layout.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(layout.initialize(renderer) == granit::result::success);
   granit::shader shader;
   REQUIRE(shader.initialize(renderer,
                             {.stage = granit::shader_stage::compute,

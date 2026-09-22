@@ -63,14 +63,14 @@ granit_result tone_mapping_pipeline_resources::initialize(
     result = group_layout_.initialize(renderer_ref, layout_entries);
   const std::array layouts{group_layout_.native_handle()};
   if (result.ok())
-    result = pipeline_layout_.initialize(renderer, layouts);
+    result = pipeline_layout_.initialize(renderer_ref, layouts);
   if (result.ok())
     result = library.create_shader(vertex_id, vertex_shader_);
   if (result.ok())
     result = library.create_shader(fragment_id, fragment_shader_);
   if (result.ok()) {
     result = pipeline_.initialize(
-        renderer, {.layout = pipeline_layout_.ref(),
+        renderer_ref, {.layout = pipeline_layout_.ref(),
                    .vertex_shader = vertex_shader_.ref(),
                    .fragment_shader = fragment_shader_.ref(),
                    .color_formats = std::span{&output_format, 1},
@@ -133,7 +133,8 @@ tone_mapping_binding_resources::initialize(const tone_mapping_pipeline_resources
       granit::bind_group_entry{
           .binding = 2, .resource = granit::binding_resource_ref::from_native(pipeline.sampler())}};
   if (result.ok())
-    result = group_.initialize(pipeline.renderer(), pipeline.group_layout(), entries);
+    result = group_.initialize(granit::renderer_ref::from_native(pipeline.renderer()),
+                               pipeline.group_layout(), entries);
   if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);

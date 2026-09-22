@@ -76,7 +76,7 @@ granit_result shadow_resources::initialize(granit_renderer renderer,
       granit::bind_group_entry{.binding = shadow_binding_texture,
                                .resource = granit::binding_resource_ref::from_native(shadow_view)},
       granit::bind_group_entry{.binding = shadow_binding_sampler, .resource = sampler_.ref()}};
-  result = group_.initialize(renderer, layout_.native_handle(), group_entries);
+  result = group_.initialize(renderer_view, layout_.native_handle(), group_entries);
   if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);
