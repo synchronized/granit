@@ -495,7 +495,7 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   REQUIRE(canvas_sampler.initialize(renderer, {}) == granit::result::success);
   granit_canvas_draw_list_desc canvas_list_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
   granit::canvas_draw_list canvas;
-  REQUIRE(canvas.initialize(renderer.native_handle(), canvas_list_desc) == granit::result::success);
+  REQUIRE(canvas.initialize(renderer.ref(), canvas_list_desc) == granit::result::success);
   granit_canvas_rect_desc canvas_rect = GRANIT_CANVAS_RECT_DESC_INIT;
   canvas_rect.width = 8;
   canvas_rect.height = 8;
@@ -507,7 +507,7 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   text_atlas_desc.page_width = 16;
   text_atlas_desc.page_height = 16;
   granit::text_atlas text_atlas;
-  REQUIRE(text_atlas.initialize(renderer.native_handle(), text_atlas_desc) ==
+  REQUIRE(text_atlas.initialize(renderer.ref(), text_atlas_desc) ==
           granit::result::success);
   constexpr std::array<uint8_t, 64> glyph_coverage = [] {
     std::array<uint8_t, 64> values{};
@@ -525,7 +525,7 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   REQUIRE(text_atlas.upload_glyph(glyph_bitmap) == granit::result::success);
   granit_text_draw_list_desc text_list_desc = GRANIT_TEXT_DRAW_LIST_DESC_INIT;
   granit::text_draw_list text;
-  REQUIRE(text.initialize(renderer.native_handle(), text_list_desc) == granit::result::success);
+  REQUIRE(text.initialize(renderer.ref(), text_list_desc) == granit::result::success);
   const granit_text_glyph_instance glyph{1, 1, UINT32_C(0xff00ff00), 0, 8, {0, 0}};
   REQUIRE(text.append_glyph_run(std::span{&glyph, 1}) == granit::result::success);
   REQUIRE(text.append_to_canvas(text_atlas.native_handle(), canvas.native_handle()) ==
@@ -533,7 +533,7 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
 
   granit_debug_draw_list_desc debug_list_desc = GRANIT_DEBUG_DRAW_LIST_DESC_INIT;
   granit::debug_draw_list debug_draw;
-  REQUIRE(debug_draw.initialize(renderer.native_handle(), debug_list_desc) ==
+  REQUIRE(debug_draw.initialize(renderer.ref(), debug_list_desc) ==
           granit::result::success);
   const std::array debug_triangles{
       granit_debug_draw_triangle{{{-0.8F, -0.8F, 0.5F, UINT32_C(0xff00ff00)},
@@ -687,7 +687,7 @@ TEST_CASE("Render Pipeline在没有可见物体时仍清屏并执行覆盖层") 
   REQUIRE(canvas_sampler.initialize(renderer, {}) == granit::result::success);
   granit_canvas_draw_list_desc canvas_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
   granit::canvas_draw_list canvas;
-  REQUIRE(canvas.initialize(renderer.native_handle(), canvas_desc) == granit::result::success);
+  REQUIRE(canvas.initialize(renderer.ref(), canvas_desc) == granit::result::success);
   granit_canvas_rect_desc rect = GRANIT_CANVAS_RECT_DESC_INIT;
   rect.x = 2;
   rect.y = 2;

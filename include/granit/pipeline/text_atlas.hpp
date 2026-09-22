@@ -55,8 +55,9 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result initialize(granit_renderer renderer,
+  [[nodiscard]] result initialize(renderer_ref owner,
                                   const granit_text_atlas_desc& desc) noexcept {
+    const auto renderer = owner.native_handle();
     if (valid())
       return result::invalid_argument;
     const auto value = from_native(granit_text_atlas_create(renderer, &desc, &handle_));
@@ -73,7 +74,7 @@ public:
         .padding = desc.padding,
         .reserved = {},
     };
-    return initialize(owner.native_handle(), native);
+    return initialize(owner.ref(), native);
   }
   [[nodiscard]] result upload_glyph(const granit_text_glyph_bitmap_desc& glyph) noexcept {
     return from_native(granit_text_atlas_upload_glyph(renderer_, handle_, &glyph));

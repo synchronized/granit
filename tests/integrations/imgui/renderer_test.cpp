@@ -78,7 +78,7 @@ TEST_CASE("ImGui Integration转换偏移、裁剪与多纹理Draw Data") {
 
   granit::canvas_draw_list canvas;
   granit_canvas_draw_list_desc desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
-  REQUIRE(canvas.initialize(renderer.native_handle(), desc) == granit::result::success);
+  REQUIRE(canvas.initialize(renderer.ref(), desc) == granit::result::success);
 
   draw_fixture fixture;
   resolver_context context;
@@ -113,7 +113,7 @@ TEST_CASE("ImGui Integration处理空数据并拒绝不支持的回调") {
 
   granit::canvas_draw_list canvas;
   granit_canvas_draw_list_desc desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
-  REQUIRE(canvas.initialize(renderer.native_handle(), desc) == granit::result::success);
+  REQUIRE(canvas.initialize(renderer.ref(), desc) == granit::result::success);
 
   ImDrawData empty;
   empty.Valid = true;

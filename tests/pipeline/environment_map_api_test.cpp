@@ -39,7 +39,7 @@ TEST_CASE("Environment Map 拥有并释放 IBL 纹理", "[pipeline][environment-
   CHECK(info.environment.intensity > 0.0F);
 
   granit::debug_draw_list debug;
-  REQUIRE(debug.initialize(renderer.native_handle(), GRANIT_DEBUG_DRAW_LIST_DESC_INIT).ok());
+  REQUIRE(debug.initialize(renderer.ref(), GRANIT_DEBUG_DRAW_LIST_DESC_INIT).ok());
   CHECK(environment.native_handle() != debug.native_handle());
   granit_environment_map_info cross_info = GRANIT_ENVIRONMENT_MAP_INFO_INIT;
   granit_debug_draw_list_stats debug_stats = GRANIT_DEBUG_DRAW_LIST_STATS_INIT;

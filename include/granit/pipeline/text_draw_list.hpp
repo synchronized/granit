@@ -55,8 +55,9 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result initialize(granit_renderer renderer,
+  [[nodiscard]] result initialize(renderer_ref owner,
                                   const granit_text_draw_list_desc& desc) noexcept {
+    const auto renderer = owner.native_handle();
     if (valid())
       return result::invalid_argument;
     const auto value = from_native(granit_text_draw_list_create(renderer, &desc, &handle_));
@@ -71,7 +72,7 @@ public:
         .initial_run_capacity = desc.initial_run_capacity,
         .reserved = {},
     };
-    return initialize(owner.native_handle(), native);
+    return initialize(owner.ref(), native);
   }
   [[nodiscard]] result clear() noexcept {
     return from_native(granit_text_draw_list_clear(renderer_, handle_));
