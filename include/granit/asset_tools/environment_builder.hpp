@@ -16,10 +16,11 @@
 
 namespace granit::asset_tools::environment {
 
+struct build_desc;
+
 class result final {
 public:
   result() noexcept = default;
-  explicit result(granit_asset_tools_environment_result handle) noexcept : handle_(handle) {}
   ~result() { reset(); }
   result(const result&) = delete;
   result& operator=(const result&) = delete;
@@ -61,6 +62,11 @@ public:
   }
 
 private:
+  friend std::pair<granit::result, result> build(const build_desc&) noexcept;
+  friend std::pair<granit::result, result> inspect(std::span<const std::byte>) noexcept;
+
+  explicit result(granit_asset_tools_environment_result handle) noexcept : handle_(handle) {}
+
   granit_asset_tools_environment_result handle_{};
 };
 

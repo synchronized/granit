@@ -8,8 +8,8 @@
 
 namespace granit::asset_tools::cli {
 namespace {
-const char* object_backend_name(uint32_t backend) {
-  return backend == GRANIT_SHADER_BACKEND_VULKAN_BIT ? "vulkan" : "webgpu";
+const char* object_backend_name(granit::shader_backend backend) {
+  return backend == granit::shader_backend::vulkan ? "vulkan" : "webgpu";
 }
 
 } // namespace

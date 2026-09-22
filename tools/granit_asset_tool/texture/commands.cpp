@@ -205,10 +205,12 @@ int build_texture(int argc, char** argv) {
   std::vector<granit::asset_tools::texture::variant_desc> variant_descs;
   variant_descs.reserve(sources.size());
   for (const auto& source : sources)
-    variant_descs.push_back({source.format, *usage, source.payload, {}});
+    variant_descs.push_back({static_cast<granit::texture_format>(source.format),
+                             static_cast<granit::texture_usage>(*usage), source.payload, {}});
   auto [status, result] =
-      granit::asset_tools::texture::build({shape.dimension, shape.width, shape.height, shape.depth,
-                                           shape.array_layers, shape.mip_levels, variant_descs});
+      granit::asset_tools::texture::build(
+          {static_cast<granit::texture_dimension>(shape.dimension), shape.width, shape.height,
+           shape.depth, shape.array_layers, shape.mip_levels, variant_descs});
   if (status.failed()) {
     std::cerr << result.diagnostic();
     return 1;

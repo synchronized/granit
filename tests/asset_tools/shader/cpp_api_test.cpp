@@ -28,17 +28,9 @@ int main(int argc, char** argv) {
   const auto [compile_status, compilation] = compiler.compile({});
   if (compile_status != granit::result::invalid_handle || compilation)
     return 17;
-  granit_asset_tools_shader_inspect_desc desc{};
-  constexpr auto expected_size =
-      static_cast<uint32_t>(sizeof(granit_asset_tools_shader_expected_binding));
-  granit_asset_tools_shader_expected_binding expected[]{
-      {expected_size, 0, 0}, {expected_size, 0, 1}, {expected_size, 0, 2}};
-  desc.struct_size = sizeof(desc);
-  desc.input_path = argv[1];
-  desc.input_path_length = std::strlen(argv[1]);
-  desc.validate_binding_set = 1;
-  desc.expected_bindings = expected;
-  desc.expected_binding_count = sizeof(expected) / sizeof(expected[0]);
+  const granit::asset_tools::shader::expected_binding expected[]{{0, 0}, {0, 1}, {0, 2}};
+  granit::asset_tools::shader::inspect_desc desc{
+      .input_path = argv[1], .validate_binding_set = true, .expected_bindings = expected};
   auto [status, result] = granit::asset_tools::shader::inspect_spirv(desc);
   if (status.failed() || !result)
     return 2;
@@ -68,8 +60,7 @@ int main(int argc, char** argv) {
     return 8;
 
   desc.input_path = argv[2];
-  desc.input_path_length = std::strlen(argv[2]);
-  desc.validate_binding_set = 0;
+  desc.validate_binding_set = false;
   auto [vertex_status, vertex_result] = granit::asset_tools::shader::inspect_spirv(desc);
   if (vertex_status.failed() || vertex_result.vertex_input_count() == 0)
     return 9;
@@ -79,14 +70,12 @@ int main(int argc, char** argv) {
     return 10;
 
   desc.input_path = argv[3];
-  desc.input_path_length = std::strlen(argv[3]);
   auto [compute_status, compute_result] = granit::asset_tools::shader::inspect_spirv(desc);
   const auto workgroup = compute_result.compute_workgroup_size();
   if (compute_status.failed() || workgroup.x == 0 || workgroup.y == 0 || workgroup.z == 0)
     return 11;
   if (argc == 5) {
     desc.input_path = argv[4];
-    desc.input_path_length = std::strlen(argv[4]);
     auto [override_status, override_result] = granit::asset_tools::shader::inspect_spirv(desc);
     if (override_status.failed() || override_result.override_count() != 1)
       return 12;
