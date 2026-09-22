@@ -12,6 +12,8 @@
 
 - Window component 新增可选跨平台托管 Loop；Win32、XCB、Wayland 与 Emscripten 可以复用同一个
   应用 Tick 和 Shutdown 生命周期，同时保留已有的手动事件循环入口。
+- 新增从 Renderer、Window、Surface、Swapchain 到清屏呈现的 Tutorial 01，并使用同一份应用 Tick
+  验证 Windows/Linux 桌面与 Emscripten 浏览器流程。
 
 ### 变更
 

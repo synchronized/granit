@@ -43,7 +43,7 @@
 1. [开发规范](guides/development.md)
 2. [项目文档规范](../DOCUMENTATION_GUIDE.md)
 3. [路线图](roadmap.md)
-4. [0.28.0 线性入门教程计划](plans/S-48-0.28.0-linear-tutorial-series.md)
+4. [线性入门教程计划](plans/S-48-0.28.0-linear-tutorial-series.md)
 5. [0.28.0 Window 跨平台 Loop 计划](plans/S-49-0.28.0-window-loop.md)
 6. [开发计划与完成历史](plans/README.md)
 7. [第三方依赖](../3rd/README.md)
@@ -66,8 +66,8 @@
 
 ## 教程
 
-0.28.0 教程从窗口清屏开始，逐章扩展同一个应用；每章只增加一种主要能力。API 细节以对应
-Reference 为准，配套源码和自动验证正按相同编号进入 `examples/tutorials`。
+教程从窗口清屏开始，逐章扩展同一个应用；每章只增加一种主要能力。01 已提供配套源码与自动
+验证，02～08 当前是后续内容预览。API 细节以对应 Reference 为准。
 
 - [教程系列说明](tutorials/README.md)
 - [01：创建窗口并清屏](tutorials/01-window.md)

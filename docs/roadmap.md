@@ -29,13 +29,13 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 
 ## 当前计划
 
-### S-48：0.28.0 线性入门教程与配套示例
+### S-48：线性入门教程与配套示例
 
 **状态：实施中，P1。**
 
 [S-48](plans/S-48-0.28.0-linear-tutorial-series.md) 将现有主题式教程替换为从 Window、Triangle、
-Texture、Camera、Mesh、Material/Lighting、Render Pipeline 到 ImGui 的连续路径。每章对应一份
-可运行源码快照和自动验证；Model Viewer 等综合程序继续保留在 `examples/samples`。
+Texture、Camera、Mesh、Material/Lighting、Render Pipeline 到 ImGui 的连续路径。0.28.0 已完成
+可运行的 Window 章节；其余章节在各自源码和自动验证完成后分阶段交付。
 
 ## 最近完成
 
