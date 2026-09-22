@@ -43,7 +43,7 @@ struct readback_batch_info {
 struct readback_result_info {
   readback_result_type type{readback_result_type::buffer};
   std::uint64_t required_size{};
-  granit_texture_format format{GRANIT_TEXTURE_FORMAT_UNDEFINED};
+  texture_format format{texture_format::undefined};
   std::uint32_t width{};
   std::uint32_t height{};
   std::uint32_t depth{};
@@ -92,18 +92,13 @@ public:
     return create(owner.ref(), options);
   }
 
-  [[nodiscard]] result read_buffer(granit_buffer buffer, std::uint64_t offset, std::uint64_t size,
-                                   std::uint32_t& result_index) noexcept {
-    return from_native(
-        granit_readback_batch_read_buffer(renderer_, handle_, buffer, offset, size, &result_index));
-  }
-
   [[nodiscard]] result read_buffer(buffer_ref buffer, std::uint64_t offset, std::uint64_t size,
                                    std::uint32_t& result_index) noexcept {
-    return read_buffer(buffer.native_handle(), offset, size, result_index);
+    return from_native(granit_readback_batch_read_buffer(
+        renderer_, handle_, buffer.native_handle(), offset, size, &result_index));
   }
 
-  [[nodiscard]] result read_texture(granit_texture texture, const texture_write_region& region,
+  [[nodiscard]] result read_texture(texture_ref texture, const texture_write_region& region,
                                     std::uint32_t& result_index) noexcept {
     const granit_texture_write_region native{.mip_level = region.mip_level,
                                              .base_array_layer = region.base_array_layer,
@@ -117,12 +112,8 @@ public:
                                              .height = region.height,
                                              .depth = region.depth};
     return from_native(
-        granit_readback_batch_read_texture(renderer_, handle_, texture, &native, &result_index));
-  }
-
-  [[nodiscard]] result read_texture(texture_ref texture, const texture_write_region& region,
-                                    std::uint32_t& result_index) noexcept {
-    return read_texture(texture.native_handle(), region, result_index);
+        granit_readback_batch_read_texture(renderer_, handle_, texture.native_handle(), &native,
+                                           &result_index));
   }
 
   [[nodiscard]] result get_info(readback_batch_info& info) const noexcept {
@@ -176,7 +167,7 @@ private:
   if (value == GRANIT_SUCCESS) {
     info = {.type = static_cast<readback_result_type>(native.type),
             .required_size = native.required_size,
-            .format = native.format,
+            .format = static_cast<texture_format>(native.format),
             .width = native.width,
             .height = native.height,
             .depth = native.depth,
