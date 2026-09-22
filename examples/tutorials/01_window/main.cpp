@@ -3,17 +3,94 @@
 
 #include <granit/renderer/frame_context.hpp>
 #include <granit/renderer/renderer.hpp>
+#include <granit/renderer/surface.hpp>
 #include <granit/renderer/swapchain.hpp>
 #include <granit/window.hpp>
 
 #include <chrono>
+#include <cstdint>
 #include <iostream>
+#include <span>
+#include <string_view>
 #include <thread>
+
+namespace {
 
 int report_failure(std::string_view operation, granit::result result) {
   std::cerr << operation << " failed: " << result.message() << "\n";
   return 1;
 }
+
+granit::result poll_window_events(granit::window_system& window_system, bool& running,
+                                  bool& recreate) {
+  granit::window_event event;
+  granit::result result;
+  while ((result = window_system.poll(event)).ok()) {
+    if (event.type == granit::window_event_type::close_requested)
+      running = false;
+    if (event.type == granit::window_event_type::resized ||
+        event.type == granit::window_event_type::scale_changed ||
+        event.type == granit::window_event_type::native_handle_changed) {
+      recreate = true;
+    }
+  }
+  return result == granit::result::not_ready ? granit::result::success : result;
+}
+
+granit::result poll_input_events(granit::window_system& window_system, bool& running) {
+  granit::input_event event;
+  granit::result result;
+  while ((result = window_system.poll(event)).ok()) {
+    if (event.type == granit::input_event_type::key &&
+        event.data.key.action == granit::key_action::released &&
+        event.data.key.physical == granit::physical_key::escape) {
+      running = false;
+    }
+  }
+  return result == granit::result::not_ready ? granit::result::success : result;
+}
+
+granit::result render_clear_frame(granit::swapchain& swapchain, granit::frame_context& context,
+                                  const granit::swapchain_info& info, bool& needs_recreate) {
+  granit::acquired_frame frame;
+  auto result = swapchain.acquire(frame);
+  if (result.failed())
+    return result;
+  needs_recreate = needs_recreate || frame.needs_recreate;
+
+  granit::swapchain_backbuffer backbuffer;
+  result = swapchain.backbuffer(frame, backbuffer);
+
+  granit::frame_recording recording;
+  if (result.ok())
+    result = context.begin(frame, recording);
+
+  const granit::color_attachment_desc color{
+      .view = backbuffer.view,
+      .resolve_view = {},
+      .clear_value = {.red = 0.04F, .green = 0.03F, .blue = 0.05F, .alpha = 1.0F}};
+  const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
+                                         .area = {0, 0, info.width, info.height}};
+  if (result.ok())
+    result = recording.recorder().begin_rendering(rendering);
+  if (result.ok())
+    result = recording.recorder().end_rendering();
+  if (result.ok())
+    result = recording.submit();
+  if (result.ok())
+    result = swapchain.present(frame);
+
+  needs_recreate = needs_recreate || frame.needs_recreate;
+  if (result.failed()) {
+    if (recording.valid())
+      static_cast<void>(recording.abort());
+    if (frame.valid())
+      static_cast<void>(swapchain.cancel(frame));
+  }
+  return result;
+}
+
+} // namespace
 
 int main() {
   // 创建窗口系统。
@@ -84,40 +161,13 @@ int main() {
       return report_failure("window system process events", result);
     }
 
-    {
-      // 处理窗口事件。
-      granit::window_event event;
-      while ((result = window_system.poll(event)).ok()) {
-        // 处理关闭、尺寸、焦点与缩放。
-        if (event.type == granit::window_event_type::close_requested)
-          running = false;
-        if (event.type == granit::window_event_type::resized ||
-            event.type == granit::window_event_type::scale_changed ||
-            event.type == granit::window_event_type::native_handle_changed) {
-          recreate = true;
-        }
-      }
-      if (result != granit::result::not_ready) {
-        return report_failure("window event poll", result);
-      }
-    }
+    result = poll_window_events(window_system, running, recreate);
+    if (result.failed())
+      return report_failure("window event poll", result);
 
-    {
-      // 处理输入事件。
-      granit::input_event event;
-      while ((result = window_system.poll(event)).ok()) {
-        // 处理键盘、文本与指针变化。
-        if (event.type == granit::input_event_type::key) {
-          if (event.data.key.action == granit::key_action::released &&
-              event.data.key.physical == granit::physical_key::escape) {
-            running = false;
-          }
-        }
-      }
-      if (result != granit::result::not_ready) {
-        return report_failure("input event poll", result);
-      }
-    }
+    result = poll_input_events(window_system, running);
+    if (result.failed())
+      return report_failure("input event poll", result);
 
     if (!running)
       break;
@@ -155,59 +205,12 @@ int main() {
       recreate = false;
     }
 
-    // 获取帧。
-    granit::acquired_frame frame;
-    result = swapchain.acquire(frame);
+    result = render_clear_frame(swapchain, context, swapchain_info, recreate);
     if (result == granit::result::out_of_date) {
       recreate = true;
       continue;
     }
-    if (result.failed()) {
-      return report_failure("swapchain acquire frame", result);
-    }
-    recreate = recreate || frame.needs_recreate;
-
-    // 获取 Backbuffer。
-    granit::swapchain_backbuffer backbuffer;
-    result = swapchain.backbuffer(frame, backbuffer);
-    if (result.failed()) {
-      return report_failure("swapchain backbuffer acquire frame", result);
-    }
-
-    granit::frame_recording recording;
-    result = context.begin(frame, recording);
-    if (result.failed()) {
-      return report_failure("frame context begin", result);
-    }
-
-    const granit::color_attachment_desc color{
-        .view = backbuffer.view,
-        .resolve_view = {},
-        .clear_value = {.red = 0.04F, .green = 0.03F, .blue = 0.05F, .alpha = 1.0F}};
-    const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
-                                           .area = {0, 0, swapchain_info.width,
-                                                    swapchain_info.height}};
-    result = recording.recorder().begin_rendering(rendering);
-    if (result.failed()) {
-      return report_failure("recording recorder begin rendering", result);
-    }
-
-    result = recording.recorder().end_rendering();
-    if (result.failed()) {
-      return report_failure("recording recorder end rendering", result);
-    }
-
-    if (result = recording.submit(); result.failed()) {
-      return report_failure("frame recorder submit", result);
-    }
-    result = swapchain.present(frame);
-    recreate = recreate || frame.needs_recreate;
-    if (result == granit::result::out_of_date) {
-      recreate = true;
-      continue;
-    }
-    if (result.failed()) {
-      return report_failure("swapchain present", result);
-    }
+    if (result.failed())
+      return report_failure("render clear frame", result);
   }
 }
