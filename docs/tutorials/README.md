@@ -7,7 +7,7 @@
 了解 Vulkan、WebGPU 或平台原生窗口 API；教程只使用 Granit 公共 C++ 接口和 HLSL-first 资产流程。
 
 > 状态：01 Window 已提供桌面与浏览器自动验证；02 Triangle、03 Texture、04 Depth/Camera 和
-> 05 Mesh 已提供桌面源码和自动验证。06～08 已确定教学主线，配套源码将按
+> 05 Mesh 和 06 Material/Lighting 已提供桌面源码和自动验证。07～08 已确定教学主线，配套源码将按
 > [S-48 计划](../plans/S-48-0.28.0-linear-tutorial-series.md)逐章落地；对应目标加入构建前，这些章节
 > 只作为后续内容预览。
 
@@ -20,7 +20,7 @@
 | [03：Texture](03-texture.md) | Texture、Sampler、Bind Group、上传 | 带棋盘纹理的图形 |
 | [04：Depth and Camera](04-depth-and-camera.md) | 顶点/索引、深度、Uniform、相机 | 可观察的旋转立方体 |
 | [05：Mesh](05-mesh.md) | Mesh 与最小模型加载 | 由模型数据驱动的物体 |
-| [06：Material and Lighting](06-material-and-lighting.md) | `.grmat`、方向光、PBR | 受光照影响的材质球 |
+| [06：Material and Lighting](06-material-and-lighting.md) | `.grmat`、方向光、PBR | 受光照影响的材质立方体 |
 | [07：Render Pipeline](07-render-pipeline.md) | Scene、Draw Binding、Shadow、HDR | 参考管线渲染场景 |
 | [08：ImGui](08-imgui.md) | 输入、Canvas、Texture ID、调试面板 | 可交互的渲染工具界面 |
 
