@@ -122,7 +122,7 @@ granit::result create_default_texture(granit_renderer renderer, granit::upload_b
           output.view.initialize(renderer, output.texture.native_handle(), {.format = format});
       result.failed())
     return result;
-  return uploads.write_texture(output.texture.native_handle(), pixel,
+  return uploads.write_texture(output.texture.ref(), pixel,
                                {.bytes_per_row = 4, .rows_per_image = 1}, {});
 }
 
@@ -544,10 +544,10 @@ void gpu_scene::reset() noexcept {
 }
 
 granit::result gpu_scene::texture_binding(const gltf::texture_reference& reference, bool srgb,
-                                          granit_texture_view& view,
-                                          granit_sampler& sampler) const noexcept {
-  view = GRANIT_NULL_HANDLE;
-  sampler = GRANIT_NULL_HANDLE;
+                                          granit::texture_view_ref& view,
+                                          granit::sampler_ref& sampler) const noexcept {
+  view = {};
+  sampler = {};
   if (!valid())
     return granit::result::invalid_handle;
   const auto* texture = find_texture(textures_, reference.image, srgb);
@@ -562,8 +562,8 @@ granit::result gpu_scene::texture_binding(const gltf::texture_reference& referen
       return granit::result::invalid_argument;
     selected_sampler = &samplers_[mapped];
   }
-  view = texture->view.native_handle();
-  sampler = selected_sampler->native_handle();
+  view = texture->view.ref();
+  sampler = selected_sampler->ref();
   return granit::result::success;
 }
 
@@ -701,7 +701,7 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
              .location = granit::memory_location::device});
         result.failed())
       return result;
-    if (const auto result = uploads.write_buffer(vertex_buffer_.native_handle(), 0,
+    if (const auto result = uploads.write_buffer(vertex_buffer_.ref(), 0,
                                                  std::as_bytes(std::span{plan_.vertices}));
         result.failed())
       return result;
@@ -715,7 +715,7 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
                                                 .location = granit::memory_location::device});
         result.failed())
       return result;
-    if (const auto result = uploads.write_buffer(index_buffer_.native_handle(), 0,
+    if (const auto result = uploads.write_buffer(index_buffer_.ref(), 0,
                                                  std::as_bytes(std::span{plan_.indices}));
         result.failed())
       return result;
@@ -784,7 +784,7 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
         upload_bytes = padded_bytes;
       }
       if (const auto result = uploads.write_texture(
-              target.texture.native_handle(), upload_bytes,
+              target.texture.ref(), upload_bytes,
               {.bytes_per_row = row_pitch, .rows_per_image = mip.height},
               {.mip_level = mip_index, .width = mip.width, .height = mip.height});
           result.failed())

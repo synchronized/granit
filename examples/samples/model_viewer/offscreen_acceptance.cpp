@@ -368,7 +368,7 @@ int main(int argc, char** argv) {
   if (result.ok()) {
     stage = "创建离屏颜色纹理";
     result = output_texture.initialize(
-        renderer.native_handle(),
+        renderer,
         {.format = granit::texture_format::rgba8_unorm,
          .usage = granit::texture_usage::color_attachment | granit::texture_usage::transfer_source,
          .width = render_size,
@@ -423,7 +423,7 @@ int main(int argc, char** argv) {
   result = readback.create(renderer, {.texture_layout = granit::readback_layout::tight});
   std::uint32_t result_index{};
   if (result.ok())
-    result = readback.read_texture(output_texture.native_handle(), region, result_index);
+    result = readback.read_texture(output_texture.ref(), region, result_index);
   granit::async_operation operation;
   if (result.ok())
     result = readback.submit_async(operation);

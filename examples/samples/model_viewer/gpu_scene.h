@@ -178,8 +178,8 @@ public:
 
   /** 查询 Inspector 缩略图使用的实际纹理绑定，不转移资源所有权。 */
   [[nodiscard]] granit::result texture_binding(const gltf::texture_reference& reference, bool srgb,
-                                               granit_texture_view& view,
-                                               granit_sampler& sampler) const noexcept;
+                                               granit::texture_view_ref& view,
+                                               granit::sampler_ref& sampler) const noexcept;
 
   /** 使用当前稳定 Renderable 与调用方逐帧 View/Light 创建不可变场景快照。 */
   [[nodiscard]] granit::result

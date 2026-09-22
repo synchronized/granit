@@ -277,15 +277,16 @@ granit::result render_loading_frame_data(granit::swapchain& swapchain,
   if (result.ok())
     result = frame_context.begin(frame, recording);
   if (result.ok()) {
-    granit_canvas_record_desc record = GRANIT_CANVAS_RECORD_DESC_INIT;
-    record.color = backbuffer.view.native_handle();
-    record.color_format = static_cast<granit_texture_format>(swapchain_info.format);
-    record.width = swapchain_info.width;
-    record.height = swapchain_info.height;
-    record.load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR;
-    record.encode_srgb = loading_needs_srgb_encoding(swapchain_info.format) ? 1U : 0U;
-    record.frame_slot = recording.frame_slot();
-    result = canvas.record(recording.recorder().native_handle(), record);
+    const granit::canvas_record_desc record{
+        .color = backbuffer.view,
+        .color_format = swapchain_info.format,
+        .width = swapchain_info.width,
+        .height = swapchain_info.height,
+        .load_operation = granit::attachment_load_operation::clear,
+        .encode_srgb = loading_needs_srgb_encoding(swapchain_info.format),
+        .frame_slot = recording.frame_slot(),
+    };
+    result = canvas.record(recording.recorder(), record);
   }
   if (result.ok())
     result = recording.submit();
@@ -694,7 +695,7 @@ int main(int argc, char** argv) {
 
   if (result.ok())
     result =
-        granit::integration::sdl3::create_surface(renderer.native_handle(), window.get(), surface);
+        granit::integration::sdl3::create_surface(renderer, window.get(), surface);
   int pixel_width = 0;
   int pixel_height = 0;
   if (result.ok() && !SDL_GetWindowSizeInPixels(window.get(), &pixel_width, &pixel_height)) {
@@ -731,8 +732,7 @@ int main(int argc, char** argv) {
     result = upload_font_atlas(renderer, font_texture, font_view, font_sampler);
   ImTextureID font_texture_id = ImTextureID_Invalid;
   if (result.ok() && options.show_ui) {
-    result = textures.register_texture(font_view.native_handle(), font_sampler.native_handle(),
-                                       font_texture_id);
+    result = textures.register_texture(font_view.ref(), font_sampler.ref(), font_texture_id);
   }
   if (result.ok() && options.show_ui) {
     ImGui::GetIO().Fonts->SetTexID(font_texture_id);
@@ -929,8 +929,8 @@ int main(int argc, char** argv) {
     ImTextureID existing = ImTextureID_Invalid;
     if (find_texture_preview(reference, srgb, previews, existing))
       return granit::result::success;
-    granit_texture_view view = GRANIT_NULL_HANDLE;
-    granit_sampler sampler = GRANIT_NULL_HANDLE;
+    granit::texture_view_ref view;
+    granit::sampler_ref sampler;
     auto preview_result = core.scene_gpu().texture_binding(reference, srgb, view, sampler);
     ImTextureID texture = ImTextureID_Invalid;
     if (preview_result.ok())
@@ -1053,8 +1053,7 @@ int main(int argc, char** argv) {
       if (result.failed())
         break;
       if ((result = swapchain.reset()).failed() || (result = surface.reset()).failed() ||
-          (result = granit::integration::sdl3::create_surface(renderer.native_handle(),
-                                                              window.get(), surface))
+          (result = granit::integration::sdl3::create_surface(renderer, window.get(), surface))
               .failed() ||
           (result = swapchain.initialize(renderer, surface,
                                          {.width = static_cast<std::uint32_t>(pixel_width),
