@@ -63,7 +63,7 @@ int main() {
       granit::material_parameter_id("base_color") == 0)
     return 1;
   granit_render_pipeline_desc desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
-  if (pipeline.initialize(GRANIT_NULL_HANDLE, desc) != granit::result::invalid_handle ||
+  if (pipeline.initialize(granit::renderer_ref{}, desc) != granit::result::invalid_handle ||
       pipeline.valid())
     return 2;
 
@@ -78,7 +78,7 @@ int main() {
   auto native_renderer = renderer.native_handle();
   desc.record = record_stage;
   desc.user_data = &native_renderer;
-  if ((pipeline.initialize(renderer.native_handle(), desc)).failed())
+  if ((pipeline.initialize(renderer.ref(), desc)).failed())
     return 5;
 
   constexpr std::uint32_t size = 4;
@@ -131,7 +131,7 @@ int main() {
   if ((moved.reset()).failed() || (moved.reset()).failed())
     return 12;
   granit::environment_map environment;
-  if (environment.initialize_builtin(renderer.native_handle()).failed())
+  if (environment.initialize_builtin(renderer).failed())
     return 13;
   granit_environment_map_info environment_info = GRANIT_ENVIRONMENT_MAP_INFO_INIT;
   if (environment.get_info(environment_info).failed() ||

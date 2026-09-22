@@ -111,8 +111,9 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result initialize(granit_renderer renderer,
+  [[nodiscard]] result initialize(renderer_ref owner,
                                   const granit_render_pipeline_desc& desc) noexcept {
+    const auto renderer = owner.native_handle();
     if (valid())
       return result::invalid_argument;
     const auto value = from_native(granit_render_pipeline_create(renderer, &desc, &handle_));
@@ -131,7 +132,7 @@ public:
         .enable_specular_aa = desc.enable_specular_aa ? 1U : 0U,
         .reserved_2 = 0,
     };
-    return initialize(owner.native_handle(), native);
+    return initialize(owner.ref(), native);
   }
   [[nodiscard]] result render(const granit_render_pipeline_render_desc& desc) noexcept {
     return from_native(granit_render_pipeline_render(renderer_, handle_, &desc));

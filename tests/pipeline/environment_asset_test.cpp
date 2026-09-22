@@ -98,7 +98,7 @@ TEST_CASE("GRENV环境资源上传为Render Pipeline输入", "[example][model-vi
 
   const auto bytes = valid_package();
   granit::environment_map environment;
-  REQUIRE(environment.initialize(renderer.native_handle(), bytes) == granit::result::success);
+  REQUIRE(environment.initialize(renderer.ref(), bytes) == granit::result::success);
   CHECK(environment.valid());
   granit_environment_map_info info = GRANIT_ENVIRONMENT_MAP_INFO_INIT;
   REQUIRE(environment.get_info(info).ok());

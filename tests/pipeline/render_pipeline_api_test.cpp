@@ -262,7 +262,7 @@ TEST_CASE("RenderPipeline component把空Renderer归类为无效句柄") {
   CHECK(pipeline == GRANIT_NULL_HANDLE);
 
   granit::render_pipeline cpp_pipeline;
-  CHECK(cpp_pipeline.initialize(GRANIT_NULL_HANDLE, desc) == granit::result::invalid_handle);
+  CHECK(cpp_pipeline.initialize(granit::renderer_ref{}, desc) == granit::result::invalid_handle);
   CHECK_FALSE(cpp_pipeline.valid());
 
   const granit_canvas_draw_list_desc canvas_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
@@ -417,7 +417,7 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   pipeline_desc.record = record;
   pipeline_desc.user_data = &callback;
   granit::render_pipeline pipeline;
-  REQUIRE(pipeline.initialize(renderer.native_handle(), pipeline_desc) == granit::result::success);
+  REQUIRE(pipeline.initialize(renderer.ref(), pipeline_desc) == granit::result::success);
   granit_render_pipeline_render_desc render_desc = GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT;
   render_desc.scene = scene.native_handle();
   render_desc.output = output_view.native_handle();

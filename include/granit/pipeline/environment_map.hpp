@@ -41,8 +41,9 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result initialize(granit_renderer renderer,
+  [[nodiscard]] result initialize(renderer_ref owner,
                                   std::span<const std::byte> asset) noexcept {
+    const auto renderer = owner.native_handle();
     if (valid())
       return result::invalid_argument;
     const granit_environment_map_asset_desc desc{sizeof(granit_environment_map_asset_desc), 0,
@@ -54,9 +55,10 @@ public:
     return value;
   }
   [[nodiscard]] result initialize(renderer& owner, std::span<const std::byte> asset) noexcept {
-    return initialize(owner.native_handle(), asset);
+    return initialize(owner.ref(), asset);
   }
-  [[nodiscard]] result initialize_builtin(granit_renderer renderer) noexcept {
+  [[nodiscard]] result initialize_builtin(renderer_ref owner) noexcept {
+    const auto renderer = owner.native_handle();
     if (valid())
       return result::invalid_argument;
     const auto value = from_native(granit_environment_map_create_builtin(renderer, &handle_));
@@ -65,7 +67,7 @@ public:
     return value;
   }
   [[nodiscard]] result initialize_builtin(renderer& owner) noexcept {
-    return initialize_builtin(owner.native_handle());
+    return initialize_builtin(owner.ref());
   }
   [[nodiscard]] result get_info(granit_environment_map_info& info) const noexcept {
     info = GRANIT_ENVIRONMENT_MAP_INFO_INIT;

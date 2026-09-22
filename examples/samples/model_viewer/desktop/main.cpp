@@ -462,7 +462,8 @@ struct pipeline_initialize_context {
 granit::result execute_pipeline_initialize(void* user_data) {
   auto& context = *static_cast<pipeline_initialize_context*>(user_data);
   granit::render_pipeline candidate;
-  auto result = candidate.initialize(context.renderer, context.desc);
+  auto result =
+      candidate.initialize(granit::renderer_ref::from_native(context.renderer), context.desc);
   if (result.failed())
     return result;
   const auto metrics_result = candidate.enable_metrics();
@@ -487,7 +488,8 @@ struct quality_change_context {
 granit::result execute_quality_change(void* user_data) {
   auto& context = *static_cast<quality_change_context*>(user_data);
   granit::render_pipeline replacement;
-  auto result = replacement.initialize(context.renderer, context.desc);
+  auto result =
+      replacement.initialize(granit::renderer_ref::from_native(context.renderer), context.desc);
   if (result.failed())
     return result;
   const auto metrics_result = replacement.enable_metrics();

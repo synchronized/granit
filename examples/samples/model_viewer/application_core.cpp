@@ -134,9 +134,11 @@ granit::result application_core::upload(granit_renderer renderer,
   }
   granit::result environment_result;
   if (environment_bytes.empty()) {
-    environment_result = environment_.initialize_builtin(renderer);
+    environment_result =
+        environment_.initialize_builtin(granit::renderer_ref::from_native(renderer));
   } else {
-    environment_result = environment_.initialize(renderer, environment_bytes);
+    environment_result =
+        environment_.initialize(granit::renderer_ref::from_native(renderer), environment_bytes);
   }
   if (environment_result.ok())
     environment_result = environment_.get_info(environment_info_);
