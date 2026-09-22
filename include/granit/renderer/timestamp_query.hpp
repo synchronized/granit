@@ -67,7 +67,7 @@ public:
     const auto value =
         granit_timestamp_query_pool_get_results_async(renderer_, handle_, first, count, &handle);
     if (value == GRANIT_SUCCESS)
-      operation = async_operation{renderer_, handle};
+      operation = async_operation{renderer_ref::from_native(renderer_), handle};
     return from_native(value);
   }
   [[nodiscard]] result copy_results(const async_operation& operation,

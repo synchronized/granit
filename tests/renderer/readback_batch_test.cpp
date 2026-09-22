@@ -69,7 +69,7 @@ TEST_CASE("Readback Batch 异步返回 Buffer 内容", "[readback_batch][buffer]
 
 TEST_CASE("Readback Batch 拒绝空提交与无效句柄", "[readback_batch][contract]") {
   granit::readback_batch batch;
-  CHECK(batch.create(GRANIT_NULL_HANDLE) == granit::result::invalid_argument);
+  CHECK(batch.create(granit::renderer_ref{}) == granit::result::invalid_argument);
 }
 
 TEST_CASE("Readback Batch 异步返回紧密 Texture 内容", "[readback_batch][texture]") {

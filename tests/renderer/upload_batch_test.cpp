@@ -63,7 +63,7 @@ TEST_CASE("Upload Batch支持压缩Texture块数据", "[upload_batch][texture][c
     SKIP("当前运行环境没有满足要求的 Vulkan 设备");
   REQUIRE(initialized == granit::result::success);
   granit::texture_format_capabilities capabilities{};
-  REQUIRE(granit::get_texture_format_capabilities(renderer.native_handle(),
+  REQUIRE(granit::get_texture_format_capabilities(renderer,
                                                   granit::texture_format::bc1_rgba_unorm,
                                                   capabilities) == granit::result::success);
   if (!capabilities.supports(granit::texture_usage::transfer_destination))

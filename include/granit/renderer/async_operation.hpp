@@ -8,6 +8,7 @@
 
 #include <granit/core/result.hpp>
 #include <granit/renderer/async_operation.h>
+#include <granit/renderer/renderer.hpp>
 
 namespace granit {
 
@@ -33,8 +34,8 @@ struct async_operation_status {
 class async_operation {
 public:
   async_operation() = default;
-  async_operation(granit_renderer renderer, granit_async_operation handle) noexcept
-      : renderer_(renderer), handle_(handle) {}
+  async_operation(renderer_ref owner, granit_async_operation handle) noexcept
+      : renderer_(owner.native_handle()), handle_(handle) {}
   ~async_operation() { static_cast<void>(reset()); }
   async_operation(const async_operation&) = delete;
   async_operation& operator=(const async_operation&) = delete;

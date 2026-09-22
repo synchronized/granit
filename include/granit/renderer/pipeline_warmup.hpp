@@ -60,8 +60,9 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result create(granit_renderer renderer,
+  [[nodiscard]] result create(renderer_ref owner,
                               const pipeline_warmup_batch_options& options = {}) noexcept {
+    const auto renderer = owner.native_handle();
     static_cast<void>(reset_handle());
     const granit_pipeline_warmup_batch_desc desc{
         GRANIT_PIPELINE_WARMUP_BATCH_DESC_VERSION_1_SIZE, 0, options.max_operation_count, 0};
@@ -72,7 +73,7 @@ public:
   }
   [[nodiscard]] result create(renderer& owner,
                               const pipeline_warmup_batch_options& options = {}) noexcept {
-    return create(owner.native_handle(), options);
+    return create(owner.ref(), options);
   }
   [[nodiscard]] result add_graphics(const granit_graphics_pipeline_desc& desc,
                                     std::uint32_t& index) noexcept {
@@ -96,7 +97,7 @@ public:
     granit_async_operation native{};
     const auto value = granit_pipeline_warmup_batch_submit_async(renderer_, handle_, &native);
     if (value == GRANIT_SUCCESS)
-      operation = async_operation{renderer_, native};
+      operation = async_operation{renderer_ref::from_native(renderer_), native};
     return from_native(value);
   }
   [[nodiscard]] result reset() noexcept {

@@ -49,7 +49,7 @@ void await(granit::renderer& renderer, granit::async_operation& operation) {
 
 TEST_CASE("Pipeline 预热批次拒绝空提交和越界", "[pipeline-warmup][contract]") {
   granit::pipeline_warmup_batch batch;
-  CHECK(batch.create(GRANIT_NULL_HANDLE) == granit::result::invalid_argument);
+  CHECK(batch.create(granit::renderer_ref{}) == granit::result::invalid_argument);
 }
 
 TEST_CASE("Compute Pipeline 预热提供稳定键和缓存命中", "[pipeline-warmup][compute]") {
@@ -117,7 +117,7 @@ TEST_CASE("Pipeline 预热操作保留已经提交的资源", "[pipeline-warmup]
   desc.layout = layout.native_handle();
   desc.compute_shader = shader.native_handle();
   granit::pipeline_warmup_batch batch;
-  REQUIRE(batch.create(renderer.native_handle(), {.max_operation_count = 1}) ==
+  REQUIRE(batch.create(renderer, {.max_operation_count = 1}) ==
           granit::result::success);
   std::uint32_t index{};
   REQUIRE(batch.add_compute(desc, index) == granit::result::success);
@@ -150,7 +150,7 @@ TEST_CASE("Pipeline 预热取消收敛终态并安全释放资源", "[pipeline-w
   desc.layout = layout.native_handle();
   desc.compute_shader = shader.native_handle();
   granit::pipeline_warmup_batch batch;
-  REQUIRE(batch.create(renderer.native_handle(), {.max_operation_count = 32}) ==
+  REQUIRE(batch.create(renderer, {.max_operation_count = 32}) ==
           granit::result::success);
   for (std::uint32_t entry = 0; entry < 32; ++entry) {
     std::uint32_t index{};

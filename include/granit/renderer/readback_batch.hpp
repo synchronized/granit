@@ -74,8 +74,9 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result create(granit_renderer renderer,
+  [[nodiscard]] result create(renderer_ref owner,
                               const readback_batch_options& options = {}) noexcept {
+    const auto renderer = owner.native_handle();
     static_cast<void>(reset_handle());
     const granit_readback_batch_desc desc{
         GRANIT_READBACK_BATCH_DESC_VERSION_1_SIZE, 0, options.max_result_bytes,
@@ -88,7 +89,7 @@ public:
 
   [[nodiscard]] result create(renderer& owner,
                               const readback_batch_options& options = {}) noexcept {
-    return create(owner.native_handle(), options);
+    return create(owner.ref(), options);
   }
 
   [[nodiscard]] result read_buffer(granit_buffer buffer, std::uint64_t offset, std::uint64_t size,
@@ -141,7 +142,7 @@ public:
     granit_async_operation native = GRANIT_NULL_HANDLE;
     const auto value = granit_readback_batch_submit_async(renderer_, handle_, &native);
     if (value == GRANIT_SUCCESS)
-      operation = async_operation{renderer_, native};
+      operation = async_operation{renderer_ref::from_native(renderer_), native};
     return from_native(value);
   }
 

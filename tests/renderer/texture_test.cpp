@@ -105,7 +105,7 @@ TEST_CASE("Texture格式能力由当前设备查询", "[texture][format][capabil
   CHECK((native.supported_usage & GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT) != 0);
 
   granit::texture_format_capabilities cpp{};
-  REQUIRE(granit::get_texture_format_capabilities(renderer.native_handle(),
+  REQUIRE(granit::get_texture_format_capabilities(renderer,
                                                   granit::texture_format::bc1_rgba_unorm,
                                                   cpp) == granit::result::success);
   CHECK(cpp.format == granit::texture_format::bc1_rgba_unorm);

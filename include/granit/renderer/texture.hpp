@@ -120,8 +120,9 @@ calculate_texture_data_footprint(texture_format format, std::uint32_t width, std
 }
 
 [[nodiscard]] inline result
-get_texture_format_capabilities(granit_renderer renderer, texture_format format,
-                                texture_format_capabilities& capabilities) noexcept {
+get_texture_format_capabilities(renderer_ref owner, texture_format format,
+                                 texture_format_capabilities& capabilities) noexcept {
+  const auto renderer = owner.native_handle();
   granit_texture_format_capabilities native = GRANIT_TEXTURE_FORMAT_CAPABILITIES_INIT;
   const auto value = granit_renderer_get_texture_format_capabilities(
       renderer, static_cast<std::uint32_t>(format), &native);
@@ -132,6 +133,12 @@ get_texture_format_capabilities(granit_renderer renderer, texture_format format,
                     .sample_counts = static_cast<sample_count>(native.sample_counts)};
   }
   return from_native(value);
+}
+
+[[nodiscard]] inline result
+get_texture_format_capabilities(renderer& owner, texture_format format,
+                                texture_format_capabilities& capabilities) noexcept {
+  return get_texture_format_capabilities(owner.ref(), format, capabilities);
 }
 
 struct texture_desc {
