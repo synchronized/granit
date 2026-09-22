@@ -127,14 +127,17 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
                                              .depth_stencil_attachment = &depth,
                                              .area = {0, 0, width, height}};
   if (result.ok())
-    result = recorder.bind_graphics_pipeline(pbr_pipeline);
+    result = recorder.bind_graphics_pipeline(
+        granit::graphics_pipeline_ref::from_native(pbr_pipeline));
   if (result.ok()) {
-    result = recorder.bind_graphics_groups(pbr_material.pipeline_layout(), 1,
-                                           std::span{&material_group, 1});
+    const std::array groups{granit::bind_group_ref::from_native(material_group)};
+    result = recorder.bind_graphics_groups(
+        granit::pipeline_layout_ref::from_native(pbr_material.pipeline_layout()), 1, groups);
   }
   if (result.ok()) {
-    result = recorder.bind_graphics_groups(pbr_material.pipeline_layout(), 3,
-                                           std::span{&lighting_group, 1});
+    const std::array groups{granit::bind_group_ref::from_native(lighting_group)};
+    result = recorder.bind_graphics_groups(
+        granit::pipeline_layout_ref::from_native(pbr_material.pipeline_layout()), 3, groups);
   }
   const granit::viewport viewport{0, 0, static_cast<float>(width), static_cast<float>(height),
                                   0, 1};
@@ -151,11 +154,14 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
     result = recorder.end_rendering();
 
   if (result.ok())
-    result = recorder.bind_graphics_pipeline(resources.tone_mapping.pipeline());
+    result = recorder.bind_graphics_pipeline(
+        granit::graphics_pipeline_ref::from_native(resources.tone_mapping.pipeline()));
   const auto tone_group = resources.tone_mapping.group();
   if (result.ok()) {
-    result = recorder.bind_graphics_groups(resources.tone_mapping.pipeline_layout(), 0,
-                                           std::span{&tone_group, 1});
+    const std::array groups{granit::bind_group_ref::from_native(tone_group)};
+    result = recorder.bind_graphics_groups(
+        granit::pipeline_layout_ref::from_native(resources.tone_mapping.pipeline_layout()), 0,
+        groups);
   }
   if (result.ok())
     result = recorder.set_viewports(0, std::span{&viewport, 1});

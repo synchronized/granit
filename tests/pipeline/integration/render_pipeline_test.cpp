@@ -597,18 +597,19 @@ int main(int argc, char** argv) {
   }
   if (result.ok()) {
     readback_stage = "录制纹理回读";
-    const granit_texture_data_layout layout{};
-    const granit_texture_write_region region{.mip_level = 0,
+    const granit::texture_data_layout layout{};
+    const granit::texture_write_region region{.mip_level = 0,
                                              .base_array_layer = 0,
                                              .array_layer_count = 1,
-                                             .aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT,
+                                             .aspect = granit::texture_aspect::color,
                                              .x = 0,
                                              .y = 0,
                                              .z = 0,
                                              .width = size,
                                              .height = size,
                                              .depth = 1};
-    result = recorder.copy_texture_to_buffer(output, readback.native_handle(), layout, region);
+    result = recorder.copy_texture_to_buffer(granit::texture_ref::from_native(output),
+                                             readback.ref(), layout, region);
   }
   if (result.ok()) {
     readback_stage = "结束回读命令";

@@ -173,14 +173,20 @@ TEST_CASE("两个View执行独立PBR与Tone Mapping") {
   const granit::viewport viewport{0, 0, 32, 32, 0, 1};
   const granit::scissor scissor{0, 0, 32, 32};
   for (std::size_t index = 0; index < colors.size(); ++index) {
-    REQUIRE(recorder.bind_graphics_pipeline(pipelines[index]) == granit::result::success);
+    REQUIRE(recorder.bind_graphics_pipeline(
+                granit::graphics_pipeline_ref::from_native(pipelines[index])) ==
+            granit::result::success);
     const auto material_group = instances[index].bind_group();
-    REQUIRE(recorder.bind_graphics_groups(materials[index].pipeline_layout(), 1,
-                                          std::span{&material_group, 1}) ==
+    const std::array material_groups{granit::bind_group_ref::from_native(material_group)};
+    REQUIRE(recorder.bind_graphics_groups(
+                granit::pipeline_layout_ref::from_native(materials[index].pipeline_layout()), 1,
+                material_groups) ==
             granit::result::success);
     const auto light_group = lights[index].group();
-    REQUIRE(recorder.bind_graphics_groups(materials[index].pipeline_layout(), 3,
-                                          std::span{&light_group, 1}) == granit::result::success);
+    const std::array light_groups{granit::bind_group_ref::from_native(light_group)};
+    REQUIRE(recorder.bind_graphics_groups(
+                granit::pipeline_layout_ref::from_native(materials[index].pipeline_layout()), 3,
+                light_groups) == granit::result::success);
     REQUIRE(recorder.set_viewports(0, std::span{&viewport, 1}) == granit::result::success);
     REQUIRE(recorder.set_scissors(0, std::span{&scissor, 1}) == granit::result::success);
     const granit::color_attachment_desc color{.view = color_views[index].ref(), .resolve_view = {}};
@@ -192,11 +198,14 @@ TEST_CASE("两个View执行独立PBR与Tone Mapping") {
     REQUIRE(recorder.begin_rendering(rendering) == granit::result::success);
     REQUIRE(recorder.draw(3) == granit::result::success);
     REQUIRE(recorder.end_rendering() == granit::result::success);
-    REQUIRE(recorder.bind_graphics_pipeline(tone_mapping[index].pipeline()) ==
+    REQUIRE(recorder.bind_graphics_pipeline(
+                granit::graphics_pipeline_ref::from_native(tone_mapping[index].pipeline())) ==
             granit::result::success);
     const auto tone_group = tone_mapping[index].group();
-    REQUIRE(recorder.bind_graphics_groups(tone_mapping[index].pipeline_layout(), 0,
-                                          std::span{&tone_group, 1}) == granit::result::success);
+    const std::array tone_groups{granit::bind_group_ref::from_native(tone_group)};
+    REQUIRE(recorder.bind_graphics_groups(
+                granit::pipeline_layout_ref::from_native(tone_mapping[index].pipeline_layout()),
+                0, tone_groups) == granit::result::success);
     const granit::color_attachment_desc output{.view = output_views[index].ref(),
                                                .resolve_view = {}};
     const granit::rendering_desc tone_rendering{.color_attachments = std::span{&output, 1},
@@ -204,17 +213,8 @@ TEST_CASE("两个View执行独立PBR与Tone Mapping") {
     REQUIRE(recorder.begin_rendering(tone_rendering) == granit::result::success);
     REQUIRE(recorder.draw(3) == granit::result::success);
     REQUIRE(recorder.end_rendering() == granit::result::success);
-    const granit_texture_data_layout layout{};
-    const granit_texture_write_region region{.mip_level = 0,
-                                             .base_array_layer = 0,
-                                             .array_layer_count = 1,
-                                             .aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT,
-                                             .x = 0,
-                                             .y = 0,
-                                             .z = 0,
-                                             .width = 32,
-                                             .height = 32,
-                                             .depth = 1};
+    const granit::texture_data_layout layout{};
+    const granit::texture_write_region region{.width = 32, .height = 32};
     REQUIRE(recorder.copy_texture_to_buffer(outputs[index].ref(),
                                             readbacks[index].ref(), layout,
                                             region) == granit::result::success);

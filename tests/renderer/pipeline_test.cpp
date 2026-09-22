@@ -271,20 +271,16 @@ TEST_CASE("动态 Uniform Offset 贯通 Bind Group 与图形计算命令录制",
   granit::command_recorder recorder;
   REQUIRE(recorder.initialize(renderer) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
-  const granit_bind_group group_handle = group.native_handle();
+  const std::array groups{group.ref()};
   const std::array valid_offsets{UINT32_C(256)};
   const std::array out_of_range_offsets{UINT32_C(512)};
-  CHECK(recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0,
-                                      std::span{&group_handle, 1}) ==
+  CHECK(recorder.bind_graphics_groups(pipeline_layout.ref(), 0, groups) ==
         granit::result::invalid_argument);
-  CHECK(recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0,
-                                      std::span{&group_handle, 1},
+  CHECK(recorder.bind_graphics_groups(pipeline_layout.ref(), 0, groups,
                                       out_of_range_offsets) == granit::result::invalid_argument);
-  REQUIRE(recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0,
-                                        std::span{&group_handle, 1},
+  REQUIRE(recorder.bind_graphics_groups(pipeline_layout.ref(), 0, groups,
                                         valid_offsets) == granit::result::success);
-  REQUIRE(recorder.bind_compute_groups(pipeline_layout.native_handle(), 0,
-                                       std::span{&group_handle, 1},
+  REQUIRE(recorder.bind_compute_groups(pipeline_layout.ref(), 0, groups,
                                        valid_offsets) == granit::result::success);
   REQUIRE(recorder.end() == granit::result::success);
 }
@@ -340,12 +336,12 @@ TEST_CASE("动态 Offset 按 Bind Group 顺序跳过普通 Uniform", "[pipeline]
   granit::command_recorder recorder;
   REQUIRE(recorder.initialize(renderer) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
-  const std::array groups{first_group.native_handle(), second_group.native_handle()};
+  const std::array groups{first_group.ref(), second_group.ref()};
   const std::array valid_offsets{UINT32_C(256), UINT32_C(0)};
   const std::array reversed_offsets{UINT32_C(0), UINT32_C(256)};
-  CHECK(recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0, groups,
+  CHECK(recorder.bind_graphics_groups(pipeline_layout.ref(), 0, groups,
                                       reversed_offsets) == granit::result::invalid_argument);
-  REQUIRE(recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0, groups,
+  REQUIRE(recorder.bind_graphics_groups(pipeline_layout.ref(), 0, groups,
                                         valid_offsets) == granit::result::success);
   REQUIRE(recorder.end() == granit::result::success);
 }
@@ -546,14 +542,13 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
           granit::result::success);
   REQUIRE(recorder.bind_index_buffer(index_buffer.ref(), 0, granit::index_type::uint16) ==
           granit::result::success);
-  const granit_bind_group group_handle = group.native_handle();
+  const std::array groups{group.ref()};
   const std::array left_offset{UINT32_C(0)};
   const std::array right_offset{UINT32_C(256)};
   const std::array near_offset{UINT32_C(512)};
   const std::array far_offset{UINT32_C(768)};
   // 首次绑定在 Rendering 外准备资源状态，Rendering 内只切换同一资源的动态 Offset。
-  REQUIRE(recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0,
-                                        std::span{&group_handle, 1},
+  REQUIRE(recorder.bind_graphics_groups(pipeline_layout.ref(), 0, groups,
                                         left_offset) == granit::result::success);
   const granit::color_attachment_desc color{
       .view = granit::texture_view_ref::from_native(target_view), .resolve_view = {}};
@@ -565,35 +560,24 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
   REQUIRE(recorder.begin_rendering(rendering) == granit::result::success);
   REQUIRE(recorder.draw_indexed(static_cast<std::uint32_t>(indices.size())) ==
           granit::result::success);
-  REQUIRE(recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0,
-                                        std::span{&group_handle, 1},
+  REQUIRE(recorder.bind_graphics_groups(pipeline_layout.ref(), 0, groups,
                                         near_offset) == granit::result::success);
   REQUIRE(recorder.draw_indexed(static_cast<std::uint32_t>(indices.size())) ==
           granit::result::success);
-  REQUIRE(recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0,
-                                        std::span{&group_handle, 1},
+  REQUIRE(recorder.bind_graphics_groups(pipeline_layout.ref(), 0, groups,
                                         far_offset) == granit::result::success);
   REQUIRE(recorder.draw_indexed(static_cast<std::uint32_t>(indices.size())) ==
           granit::result::success);
-  REQUIRE(recorder.bind_graphics_groups(pipeline_layout.native_handle(), 0,
-                                        std::span{&group_handle, 1},
+  REQUIRE(recorder.bind_graphics_groups(pipeline_layout.ref(), 0, groups,
                                         right_offset) == granit::result::success);
   REQUIRE(recorder.draw_indexed(static_cast<std::uint32_t>(indices.size())) ==
           granit::result::success);
   REQUIRE(recorder.end_rendering() == granit::result::success);
-  const granit_texture_data_layout copy_layout{};
-  const granit_texture_write_region copy_region{.mip_level = 0,
-                                                .base_array_layer = 0,
-                                                .array_layer_count = 1,
-                                                .aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT,
-                                                .x = 0,
-                                                .y = 0,
-                                                .z = 0,
-                                                .width = width,
-                                                .height = height,
-                                                .depth = 1};
-  REQUIRE(recorder.copy_texture_to_buffer(target, readback.native_handle(), copy_layout,
-                                          copy_region) == granit::result::success);
+  const granit::texture_data_layout copy_layout{};
+  const granit::texture_write_region copy_region{.width = width, .height = height};
+  REQUIRE(recorder.copy_texture_to_buffer(granit::texture_ref::from_native(target), readback.ref(),
+                                          copy_layout, copy_region) ==
+          granit::result::success);
   REQUIRE(recorder.end() == granit::result::success);
   REQUIRE(recorder.submit() == granit::result::success);
   REQUIRE(recorder.reset() == granit::result::success);
@@ -687,7 +671,7 @@ TEST_CASE("不可变 Bind Group 保持 Buffer 与 Sampler 生命周期", "[pipel
   granit::command_recorder recorder;
   REQUIRE(recorder.initialize(renderer) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
-  const granit_bind_group group_handle = group.native_handle();
+  const std::array groups{group.ref()};
   granit::bind_group_layout incompatible_group_layout;
   REQUIRE(incompatible_group_layout.initialize(renderer, declarations) == granit::result::success);
   const auto incompatible_group_layout_handle = incompatible_group_layout.native_handle();
@@ -695,11 +679,10 @@ TEST_CASE("不可变 Bind Group 保持 Buffer 与 Sampler 生命周期", "[pipel
   REQUIRE(incompatible_pipeline_layout.initialize(
               renderer.ref(), std::span{&incompatible_group_layout_handle, 1}) ==
           granit::result::success);
-  CHECK(recorder.bind_graphics_groups(incompatible_pipeline_layout.native_handle(), 0,
-                                      std::span{&group_handle, 1}) ==
+  CHECK(recorder.bind_graphics_groups(incompatible_pipeline_layout.ref(), 0, groups) ==
         granit::result::invalid_argument);
-  REQUIRE(recorder.bind_graphics_groups(binding_pipeline_layout.native_handle(), 0,
-                                        std::span{&group_handle, 1}) == granit::result::success);
+  REQUIRE(recorder.bind_graphics_groups(binding_pipeline_layout.ref(), 0, groups) ==
+          granit::result::success);
   REQUIRE(buffer.reset() == granit::result::success);
   REQUIRE(sampler.reset() == granit::result::success);
   REQUIRE(granit_texture_destroy(renderer.native_handle(), texture) == GRANIT_SUCCESS);
@@ -1187,9 +1170,9 @@ TEST_CASE("Compute Dispatch 写入 Storage Buffer 并自动同步 Copy", "[pipel
   REQUIRE(recorder.initialize(renderer) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
   REQUIRE(recorder.bind_compute_pipeline(pipeline) == granit::result::success);
-  const auto group_handle = group.native_handle();
-  REQUIRE(recorder.bind_compute_groups(pipeline_layout.native_handle(), 0,
-                                       std::span{&group_handle, 1}) == granit::result::success);
+  const std::array groups{group.ref()};
+  REQUIRE(recorder.bind_compute_groups(pipeline_layout.ref(), 0, groups) ==
+          granit::result::success);
   REQUIRE(recorder.dispatch(16) == granit::result::success);
   const granit::buffer_copy_region copy{
       .source_offset = 0, .destination_offset = 0, .size = buffer_size};
@@ -1331,10 +1314,9 @@ TEST_CASE("Graphics 与 Compute 工作负载支持并行录制", "[pipeline][com
         const auto compute_index = index - graphics_count;
         if (worker_result.ok())
           worker_result = recorders[index].bind_compute_pipeline(compute_pipeline);
-        const auto group = compute_groups[compute_index].native_handle();
+        const std::array groups{compute_groups[compute_index].ref()};
         if (worker_result.ok())
-          worker_result = recorders[index].bind_compute_groups(compute_layout.native_handle(), 0,
-                                                               std::span{&group, 1});
+          worker_result = recorders[index].bind_compute_groups(compute_layout.ref(), 0, groups);
         if (worker_result.ok())
           worker_result = recorders[index].dispatch(16);
       }

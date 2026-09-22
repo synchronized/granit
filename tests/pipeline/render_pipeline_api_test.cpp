@@ -575,24 +575,24 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   granit::command_recorder multi_view_recorder;
   REQUIRE(multi_view_recorder.initialize(renderer) == granit::result::success);
   REQUIRE(multi_view_recorder.begin() == granit::result::success);
-  const granit_texture_write_region multi_view_region{.mip_level = 0,
+  const granit::texture_write_region multi_view_region{.mip_level = 0,
                                                       .base_array_layer = 0,
                                                       .array_layer_count = 1,
-                                                      .aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT,
+                                                      .aspect = granit::texture_aspect::color,
                                                       .x = 0,
                                                       .y = 0,
                                                       .z = 0,
                                                       .width = 16,
                                                       .height = 16,
                                                       .depth = 1};
-  const granit_texture_data_layout first_layout{};
-  const granit_texture_data_layout second_layout{
+  const granit::texture_data_layout first_layout{};
+  const granit::texture_data_layout second_layout{
       .offset = 16 * 16 * 4, .bytes_per_row = 0, .rows_per_image = 0};
   REQUIRE(multi_view_recorder.copy_texture_to_buffer(
-              output_texture.native_handle(), multi_view_readback.native_handle(), first_layout,
+              output_texture.ref(), multi_view_readback.ref(), first_layout,
               multi_view_region) == granit::result::success);
   REQUIRE(multi_view_recorder.copy_texture_to_buffer(
-              second_output_texture.native_handle(), multi_view_readback.native_handle(),
+              second_output_texture.ref(), multi_view_readback.ref(),
               second_layout, multi_view_region) == granit::result::success);
   REQUIRE(multi_view_recorder.end() == granit::result::success);
   REQUIRE(multi_view_recorder.submit() == granit::result::success);
@@ -775,18 +775,18 @@ TEST_CASE("Render Pipeline在没有可见物体时仍清屏并执行覆盖层") 
   granit::command_recorder recorder;
   REQUIRE(recorder.initialize(renderer) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
-  const granit_texture_write_region region{.mip_level = 0,
+  const granit::texture_write_region region{.mip_level = 0,
                                            .base_array_layer = 0,
                                            .array_layer_count = 1,
-                                           .aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT,
+                                           .aspect = granit::texture_aspect::color,
                                            .x = 0,
                                            .y = 0,
                                            .z = 0,
                                            .width = size,
                                            .height = size,
                                            .depth = 1};
-  REQUIRE(recorder.copy_texture_to_buffer(output_texture.native_handle(), readback.native_handle(),
-                                          {}, region) == granit::result::success);
+  REQUIRE(recorder.copy_texture_to_buffer(output_texture.ref(), readback.ref(), {}, region) ==
+          granit::result::success);
   REQUIRE(recorder.end() == granit::result::success);
   REQUIRE(recorder.submit() == granit::result::success);
   REQUIRE(recorder.reset() == granit::result::success);
@@ -912,19 +912,20 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   granit::command_recorder recorder;
   REQUIRE(recorder.initialize(renderer) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
-  const granit_texture_data_layout layout{};
-  const granit_texture_write_region region{.mip_level = 0,
+  const granit::texture_data_layout layout{};
+  const granit::texture_write_region region{.mip_level = 0,
                                            .base_array_layer = 0,
                                            .array_layer_count = 1,
-                                           .aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT,
+                                           .aspect = granit::texture_aspect::color,
                                            .x = 0,
                                            .y = 0,
                                            .z = 0,
                                            .width = size,
                                            .height = size,
                                            .depth = 1};
-  REQUIRE(recorder.copy_texture_to_buffer(output_texture, readback.native_handle(), layout,
-                                          region) == granit::result::success);
+  REQUIRE(recorder.copy_texture_to_buffer(granit::texture_ref::from_native(output_texture),
+                                          readback.ref(), layout, region) ==
+          granit::result::success);
   REQUIRE(recorder.end() == granit::result::success);
   REQUIRE(recorder.submit() == granit::result::success);
   REQUIRE(recorder.reset() == granit::result::success);
@@ -991,8 +992,9 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   }
 
   REQUIRE(recorder.begin() == granit::result::success);
-  REQUIRE(recorder.copy_texture_to_buffer(output_texture, readback.native_handle(), layout,
-                                          region) == granit::result::success);
+  REQUIRE(recorder.copy_texture_to_buffer(granit::texture_ref::from_native(output_texture),
+                                          readback.ref(), layout, region) ==
+          granit::result::success);
   REQUIRE(recorder.end() == granit::result::success);
   REQUIRE(recorder.submit() == granit::result::success);
   REQUIRE(recorder.reset() == granit::result::success);
@@ -1040,11 +1042,14 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   granit::command_recorder manual_recorder;
   REQUIRE(manual_recorder.initialize(renderer) == granit::result::success);
   REQUIRE(manual_recorder.begin() == granit::result::success);
-  REQUIRE(manual_recorder.bind_graphics_pipeline(manual_tone_mapping.pipeline()) ==
+  REQUIRE(manual_recorder.bind_graphics_pipeline(
+              granit::graphics_pipeline_ref::from_native(manual_tone_mapping.pipeline())) ==
           granit::result::success);
   const auto manual_group = manual_tone_mapping.group();
-  REQUIRE(manual_recorder.bind_graphics_groups(manual_tone_mapping.pipeline_layout(), 0,
-                                               std::span{&manual_group, 1}) ==
+  const std::array manual_groups{granit::bind_group_ref::from_native(manual_group)};
+  REQUIRE(manual_recorder.bind_graphics_groups(
+              granit::pipeline_layout_ref::from_native(manual_tone_mapping.pipeline_layout()), 0,
+              manual_groups) ==
           granit::result::success);
   const granit::viewport manual_viewport{0, 0, size, size, 0, 1};
   const granit::scissor manual_scissor{0, 0, size, size};
@@ -1059,8 +1064,7 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   REQUIRE(manual_recorder.begin_rendering(manual_rendering) == granit::result::success);
   REQUIRE(manual_recorder.draw(3) == granit::result::success);
   REQUIRE(manual_recorder.end_rendering() == granit::result::success);
-  REQUIRE(manual_recorder.copy_texture_to_buffer(manual_output.native_handle(),
-                                                 manual_readback.native_handle(), layout,
+  REQUIRE(manual_recorder.copy_texture_to_buffer(manual_output.ref(), manual_readback.ref(), layout,
                                                  region) == granit::result::success);
   REQUIRE(manual_recorder.end() == granit::result::success);
   REQUIRE(manual_recorder.submit() == granit::result::success);

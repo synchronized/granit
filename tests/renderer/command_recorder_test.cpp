@@ -277,10 +277,13 @@ TEST_CASE("Recorder 批量复制和填充 Buffer 并保留内部资源", "[comma
   constexpr granit::buffer_copy_region regions[]{
       {.source_offset = 0, .destination_offset = 16, .size = 16},
       {.source_offset = 32, .destination_offset = 48, .size = 16}};
-  CHECK(recorder.copy_buffer(source, destination, regions) == granit::result::invalid_argument);
+  const auto source_ref = granit::buffer_ref::from_native(source);
+  const auto destination_ref = granit::buffer_ref::from_native(destination);
+  CHECK(recorder.copy_buffer(source_ref, destination_ref, regions) ==
+        granit::result::invalid_argument);
   REQUIRE(recorder.begin() == granit::result::success);
-  REQUIRE(recorder.copy_buffer(source, destination, regions) == granit::result::success);
-  REQUIRE(recorder.fill_buffer(destination, 0, 16, UINT32_C(0xff00ff00)) ==
+  REQUIRE(recorder.copy_buffer(source_ref, destination_ref, regions) == granit::result::success);
+  REQUIRE(recorder.fill_buffer(destination_ref, 0, 16, UINT32_C(0xff00ff00)) ==
           granit::result::success);
 
   REQUIRE(recorder.end() == granit::result::success);
@@ -309,17 +312,18 @@ TEST_CASE("Buffer 命令拒绝 usage、范围、对齐和重叠错误", "[comman
   granit_buffer buffer = GRANIT_NULL_HANDLE;
   REQUIRE(granit_buffer_create(renderer.native_handle(), &desc, &buffer) == GRANIT_SUCCESS);
   const granit::buffer_copy_region overlap{.source_offset = 0, .destination_offset = 8, .size = 16};
-  CHECK(recorder.copy_buffer(buffer, buffer, std::span{&overlap, 1}) ==
+  const auto buffer_ref = granit::buffer_ref::from_native(buffer);
+  CHECK(recorder.copy_buffer(buffer_ref, buffer_ref, std::span{&overlap, 1}) ==
         granit::result::invalid_argument);
   const granit::buffer_copy_region out_of_range{
       .source_offset = 60, .destination_offset = 0, .size = 8};
-  CHECK(recorder.copy_buffer(buffer, buffer, std::span{&out_of_range, 1}) ==
+  CHECK(recorder.copy_buffer(buffer_ref, buffer_ref, std::span{&out_of_range, 1}) ==
         granit::result::invalid_argument);
-  CHECK(recorder.fill_buffer(buffer, 2, 16, 0) == granit::result::invalid_argument);
-  CHECK(recorder.fill_buffer(buffer, 0, 6, 0) == granit::result::invalid_argument);
+  CHECK(recorder.fill_buffer(buffer_ref, 2, 16, 0) == granit::result::invalid_argument);
+  CHECK(recorder.fill_buffer(buffer_ref, 0, 6, 0) == granit::result::invalid_argument);
   const granit::buffer_copy_region non_overlapping{
       .source_offset = 0, .destination_offset = 32, .size = 16};
-  CHECK(recorder.copy_buffer(buffer, buffer, std::span{&non_overlapping, 1}) ==
+  CHECK(recorder.copy_buffer(buffer_ref, buffer_ref, std::span{&non_overlapping, 1}) ==
         granit::result::success);
 
   REQUIRE(recorder.end() == granit::result::success);
@@ -364,10 +368,14 @@ TEST_CASE("Recorder 将 Texture 复制到 Readback Buffer", "[command][copy][tex
           granit::result::success);
   granit::command_recorder recorder;
   REQUIRE(recorder.initialize(renderer) == granit::result::success);
-  CHECK(recorder.copy_texture_to_buffer(texture, readback.native_handle(), layout, region) ==
+  const granit::texture_data_layout copy_layout{};
+  const granit::texture_write_region copy_region{.width = 2, .height = 2};
+  CHECK(recorder.copy_texture_to_buffer(granit::texture_ref::from_native(texture), readback.ref(),
+                                        copy_layout, copy_region) ==
         granit::result::invalid_argument);
   REQUIRE(recorder.begin() == granit::result::success);
-  REQUIRE(recorder.copy_texture_to_buffer(texture, readback.native_handle(), layout, region) ==
+  REQUIRE(recorder.copy_texture_to_buffer(granit::texture_ref::from_native(texture),
+                                          readback.ref(), copy_layout, copy_region) ==
           granit::result::success);
   REQUIRE(recorder.end() == granit::result::success);
   REQUIRE(recorder.submit() == granit::result::success);
@@ -453,10 +461,10 @@ TEST_CASE("Recorder 将 Upload Buffer 复制到 Texture", "[command][copy][textu
                                                      granit::texture_usage::transfer_destination,
                                             .width = 2,
                                             .height = 2}) == granit::result::success);
-  const granit_texture_data_layout layout{};
-  granit_texture_write_region region{};
+  const granit::texture_data_layout layout{};
+  granit::texture_write_region region{};
   region.array_layer_count = 1;
-  region.aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT;
+  region.aspect = granit::texture_aspect::color;
   region.width = 2;
   region.height = 2;
   region.depth = 1;
@@ -510,18 +518,18 @@ TEST_CASE("Recorder 独立跟踪同一 Texture 的不同 mip", "[command][state]
   granit::command_recorder recorder;
   REQUIRE(recorder.initialize(renderer) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
-  granit_texture_write_region mip_zero_region{};
+  granit::texture_write_region mip_zero_region{};
   mip_zero_region.array_layer_count = 1;
-  mip_zero_region.aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT;
+  mip_zero_region.aspect = granit::texture_aspect::color;
   mip_zero_region.width = 2;
   mip_zero_region.height = 2;
   mip_zero_region.depth = 1;
-  granit_texture_data_layout mip_one_layout{};
+  granit::texture_data_layout mip_one_layout{};
   mip_one_layout.offset = mip_zero.size();
-  granit_texture_write_region mip_one_region{};
+  granit::texture_write_region mip_one_region{};
   mip_one_region.mip_level = 1;
   mip_one_region.array_layer_count = 1;
-  mip_one_region.aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT;
+  mip_one_region.aspect = granit::texture_aspect::color;
   mip_one_region.width = 1;
   mip_one_region.height = 1;
   mip_one_region.depth = 1;
@@ -626,7 +634,7 @@ TEST_CASE("Mipmap 支持 Cube 数组层范围", "[command][mipmap][array]") {
   REQUIRE(recorder.begin() == granit::result::success);
   REQUIRE(
       recorder.generate_mipmaps(
-          texture.native_handle(),
+          texture.ref(),
           {.base_mip_level = 0, .level_count = 3, .base_array_layer = 1, .array_layer_count = 1}) ==
       granit::result::success);
   REQUIRE(recorder.end() == granit::result::success);
@@ -649,7 +657,7 @@ TEST_CASE("Mipmap 支持 Cube 数组层范围", "[command][mipmap][array]") {
   REQUIRE(recorder.begin() == granit::result::success);
   REQUIRE(
       recorder.generate_mipmaps(
-          texture.native_handle(),
+          texture.ref(),
           {.base_mip_level = 0, .level_count = 3, .base_array_layer = 0, .array_layer_count = 1}) ==
       granit::result::success);
   REQUIRE(recorder.end() == granit::result::success);
@@ -689,22 +697,22 @@ TEST_CASE("Mipmap 支持非零起始级并拒绝无效范围", "[command][mipmap
   REQUIRE(recorder.begin() == granit::result::success);
   CHECK(
       recorder.generate_mipmaps(
-          texture.native_handle(),
+          texture.ref(),
           {.base_mip_level = 0, .level_count = 1, .base_array_layer = 0, .array_layer_count = 1}) ==
       granit::result::invalid_argument);
   CHECK(
       recorder.generate_mipmaps(
-          texture.native_handle(),
+          texture.ref(),
           {.base_mip_level = 3, .level_count = 2, .base_array_layer = 0, .array_layer_count = 1}) ==
       granit::result::invalid_argument);
   CHECK(
       recorder.generate_mipmaps(
-          texture.native_handle(),
+          texture.ref(),
           {.base_mip_level = 0, .level_count = 2, .base_array_layer = 1, .array_layer_count = 1}) ==
       granit::result::invalid_argument);
   REQUIRE(
       recorder.generate_mipmaps(
-          texture.native_handle(),
+          texture.ref(),
           {.base_mip_level = 1, .level_count = 3, .base_array_layer = 0, .array_layer_count = 1}) ==
       granit::result::success);
   REQUIRE(recorder.end() == granit::result::success);
@@ -726,7 +734,7 @@ TEST_CASE("Mipmap 支持非零起始级并拒绝无效范围", "[command][mipmap
   REQUIRE(recorder.begin() == granit::result::success);
   CHECK(
       recorder.generate_mipmaps(
-          missing_source.native_handle(),
+          missing_source.ref(),
           {.base_mip_level = 0, .level_count = 2, .base_array_layer = 0, .array_layer_count = 1}) ==
       granit::result::unsupported);
   REQUIRE(recorder.end() == granit::result::success);
@@ -757,17 +765,17 @@ TEST_CASE("Mipmap 支持非零起始级并拒绝无效范围", "[command][mipmap
   REQUIRE(recorder.begin() == granit::result::success);
   CHECK(
       recorder.generate_mipmaps(
-          missing_destination.native_handle(),
+          missing_destination.ref(),
           {.base_mip_level = 0, .level_count = 2, .base_array_layer = 0, .array_layer_count = 1}) ==
       granit::result::unsupported);
   CHECK(
       recorder.generate_mipmaps(
-          one_mip.native_handle(),
+          one_mip.ref(),
           {.base_mip_level = 0, .level_count = 2, .base_array_layer = 0, .array_layer_count = 1}) ==
       granit::result::invalid_argument);
   CHECK(
       recorder.generate_mipmaps(
-          foreign.native_handle(),
+          foreign.ref(),
           {.base_mip_level = 0, .level_count = 2, .base_array_layer = 0, .array_layer_count = 1}) ==
       granit::result::invalid_handle);
   REQUIRE(recorder.end() == granit::result::success);
@@ -888,7 +896,7 @@ TEST_CASE("独立 Recorder 支持并行资源上传与命令录制", "[command][
       if (worker_result.ok())
         worker_result = recorders[index].begin();
       if (worker_result.ok())
-        worker_result = recorders[index].fill_buffer(buffers[index].native_handle(), 0, buffer_size,
+        worker_result = recorders[index].fill_buffer(buffers[index].ref(), 0, buffer_size,
                                                      static_cast<std::uint32_t>(index));
       if (worker_result.ok())
         worker_result = recorders[index].end();

@@ -152,10 +152,9 @@ TEST_CASE("世界Debug Draw可录制到颜色附件") {
                                .location = granit::memory_location::readback}) ==
           granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
-  const granit_texture_write_region region{0,    0,    1, GRANIT_TEXTURE_ASPECT_COLOR_BIT, 0, 0, 0,
-                                           size, size, 1};
-  REQUIRE(recorder.copy_texture_to_buffer(color.native_handle(), readback.native_handle(), {},
-                                          region) == granit::result::success);
+  const granit::texture_write_region region{.width = size, .height = size};
+  REQUIRE(recorder.copy_texture_to_buffer(color.ref(), readback.ref(), {}, region) ==
+          granit::result::success);
   REQUIRE(recorder.end() == granit::result::success);
   REQUIRE(recorder.submit() == granit::result::success);
   REQUIRE(recorder.reset() == granit::result::success);
@@ -205,8 +204,8 @@ TEST_CASE("世界Debug Draw可录制到颜色附件") {
   REQUIRE(recorder.submit() == granit::result::success);
   REQUIRE(recorder.reset() == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
-  REQUIRE(recorder.copy_texture_to_buffer(color.native_handle(), readback.native_handle(), {},
-                                          region) == granit::result::success);
+  REQUIRE(recorder.copy_texture_to_buffer(color.ref(), readback.ref(), {}, region) ==
+          granit::result::success);
   REQUIRE(recorder.end() == granit::result::success);
   REQUIRE(recorder.submit() == granit::result::success);
   REQUIRE(recorder.reset() == granit::result::success);

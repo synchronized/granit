@@ -98,18 +98,18 @@ TEST_CASE("Canvas Pass按Batch录制顶点色与Scissor") {
                                .location = granit::memory_location::readback}) ==
           granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
-  const granit_texture_write_region region{.mip_level = 0,
+  const granit::texture_write_region region{.mip_level = 0,
                                            .base_array_layer = 0,
                                            .array_layer_count = 1,
-                                           .aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT,
+                                           .aspect = granit::texture_aspect::color,
                                            .x = 0,
                                            .y = 0,
                                            .z = 0,
                                            .width = size,
                                            .height = size,
                                            .depth = 1};
-  REQUIRE(recorder.copy_texture_to_buffer(color.native_handle(), readback.native_handle(), {},
-                                          region) == granit::result::success);
+  REQUIRE(recorder.copy_texture_to_buffer(color.ref(), readback.ref(), {}, region) ==
+          granit::result::success);
   REQUIRE(recorder.end() == granit::result::success);
   REQUIRE(recorder.submit() == granit::result::success);
   REQUIRE(recorder.reset() == granit::result::success);
@@ -132,8 +132,8 @@ TEST_CASE("Canvas Pass按Batch录制顶点色与Scissor") {
   REQUIRE(recorder.submit() == granit::result::success);
   REQUIRE(recorder.reset() == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
-  REQUIRE(recorder.copy_texture_to_buffer(color.native_handle(), readback.native_handle(), {},
-                                          region) == granit::result::success);
+  REQUIRE(recorder.copy_texture_to_buffer(color.ref(), readback.ref(), {}, region) ==
+          granit::result::success);
   REQUIRE(recorder.end() == granit::result::success);
   REQUIRE(recorder.submit() == granit::result::success);
   REQUIRE(recorder.reset() == granit::result::success);

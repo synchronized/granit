@@ -174,9 +174,13 @@ TEST_CASE("Tone Mapping GPU输出与CPU参考一致") {
   granit::command_recorder recorder;
   REQUIRE(recorder.initialize(renderer) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
-  REQUIRE(recorder.bind_graphics_pipeline(resources.pipeline()) == granit::result::success);
+  REQUIRE(recorder.bind_graphics_pipeline(
+              granit::graphics_pipeline_ref::from_native(resources.pipeline())) ==
+          granit::result::success);
   const auto group = resources.group();
-  REQUIRE(recorder.bind_graphics_groups(resources.pipeline_layout(), 0, std::span{&group, 1}) ==
+  const std::array groups{granit::bind_group_ref::from_native(group)};
+  REQUIRE(recorder.bind_graphics_groups(
+              granit::pipeline_layout_ref::from_native(resources.pipeline_layout()), 0, groups) ==
           granit::result::success);
   const granit::viewport viewport{0, 0, 16, 16, 0, 1};
   const granit::scissor scissor{0, 0, 16, 16};
@@ -189,19 +193,11 @@ TEST_CASE("Tone Mapping GPU输出与CPU参考一致") {
   REQUIRE(recorder.begin_rendering(rendering) == granit::result::success);
   REQUIRE(recorder.draw(3) == granit::result::success);
   REQUIRE(recorder.end_rendering() == granit::result::success);
-  const granit_texture_data_layout copy_layout{};
-  const granit_texture_write_region copy_region{.mip_level = 0,
-                                                .base_array_layer = 0,
-                                                .array_layer_count = 1,
-                                                .aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT,
-                                                .x = 0,
-                                                .y = 0,
-                                                .z = 0,
-                                                .width = 16,
-                                                .height = 16,
-                                                .depth = 1};
-  REQUIRE(recorder.copy_texture_to_buffer(output_texture, readback.native_handle(), copy_layout,
-                                          copy_region) == granit::result::success);
+  const granit::texture_data_layout copy_layout{};
+  const granit::texture_write_region copy_region{.width = 16, .height = 16};
+  REQUIRE(recorder.copy_texture_to_buffer(granit::texture_ref::from_native(output_texture),
+                                          readback.ref(), copy_layout, copy_region) ==
+          granit::result::success);
   REQUIRE(recorder.end() == granit::result::success);
   REQUIRE(recorder.submit() == granit::result::success);
   // submit 是异步的；reset 等待该 Recorder 完成后才可安全读取 Readback Buffer。

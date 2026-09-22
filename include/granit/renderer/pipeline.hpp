@@ -28,6 +28,50 @@ class compute_pipeline;
 class bind_group_layout;
 class bind_group;
 
+/** 不拥有 Graphics Pipeline，只在来源 Pipeline 的有效期内使用。 */
+class graphics_pipeline_ref {
+public:
+  graphics_pipeline_ref() = default;
+
+  [[nodiscard]] constexpr bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr granit_graphics_pipeline native_handle() const noexcept {
+    return handle_;
+  }
+  [[nodiscard]] static constexpr graphics_pipeline_ref
+  from_native(granit_graphics_pipeline handle) noexcept {
+    return graphics_pipeline_ref{handle};
+  }
+
+private:
+  friend class graphics_pipeline;
+  explicit constexpr graphics_pipeline_ref(granit_graphics_pipeline handle) noexcept
+      : handle_(handle) {}
+  granit_graphics_pipeline handle_{GRANIT_NULL_HANDLE};
+};
+
+/** 不拥有 Compute Pipeline，只在来源 Pipeline 的有效期内使用。 */
+class compute_pipeline_ref {
+public:
+  compute_pipeline_ref() = default;
+
+  [[nodiscard]] constexpr bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr granit_compute_pipeline native_handle() const noexcept {
+    return handle_;
+  }
+  [[nodiscard]] static constexpr compute_pipeline_ref
+  from_native(granit_compute_pipeline handle) noexcept {
+    return compute_pipeline_ref{handle};
+  }
+
+private:
+  friend class compute_pipeline;
+  explicit constexpr compute_pipeline_ref(granit_compute_pipeline handle) noexcept
+      : handle_(handle) {}
+  granit_compute_pipeline handle_{GRANIT_NULL_HANDLE};
+};
+
 /** 不拥有 Pipeline Layout，只在来源 Layout 的有效期内使用。 */
 class pipeline_layout_ref {
 public:
@@ -431,6 +475,9 @@ public:
   }
   [[nodiscard]] result reset() noexcept;
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr graphics_pipeline_ref ref() const noexcept {
+    return graphics_pipeline_ref{handle_};
+  }
   [[nodiscard]] granit_graphics_pipeline native_handle() const noexcept { return handle_; }
 
 private:
@@ -468,6 +515,9 @@ public:
   }
   [[nodiscard]] result reset() noexcept;
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr compute_pipeline_ref ref() const noexcept {
+    return compute_pipeline_ref{handle_};
+  }
   [[nodiscard]] granit_compute_pipeline native_handle() const noexcept { return handle_; }
 
 private:
