@@ -149,7 +149,7 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
           .count();
   if (result.failed())
     return result;
-  needs_recreate = frame.needs_recreate;
+  needs_recreate = frame.needs_recreate();
 
   granit::swapchain_backbuffer backbuffer;
   operation = "backbuffer";
@@ -224,7 +224,7 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
         std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - present_begin)
             .count();
   }
-  needs_recreate = needs_recreate || frame.needs_recreate;
+  needs_recreate = needs_recreate || frame.needs_recreate();
   if (result.failed()) {
     if (recording.valid())
       static_cast<void>(recording.abort());

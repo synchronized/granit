@@ -98,7 +98,7 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
   auto result = swapchain.acquire(frame);
   if (result.failed())
     return result;
-  needs_recreate = frame.needs_recreate;
+  needs_recreate = frame.needs_recreate();
 
   granit::swapchain_backbuffer backbuffer;
   if (result.ok())
@@ -180,7 +180,7 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
     result = recording.submit();
   if (result.ok())
     result = swapchain.present(frame);
-  needs_recreate = needs_recreate || frame.needs_recreate;
+  needs_recreate = needs_recreate || frame.needs_recreate();
   if (result.failed()) {
     if (recording.valid())
       static_cast<void>(recording.abort());

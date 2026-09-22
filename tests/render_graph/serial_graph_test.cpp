@@ -263,7 +263,7 @@ TEST_CASE("串行 Render Graph 提交 Swapchain Frame", "[render_graph][swapchai
       },
       "窗口清屏"));
 
-  const auto result = graph.execute_frame(renderer.native_handle(), frame.handle);
+  const auto result = graph.execute_frame(renderer.native_handle(), frame.native_handle());
   INFO("result=" << result.result << ", phase=" << static_cast<int>(result.phase)
                  << ", record=" << record_result);
   REQUIRE(result.succeeded());

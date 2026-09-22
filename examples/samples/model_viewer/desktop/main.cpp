@@ -574,7 +574,7 @@ granit::result execute_desktop_frame(granit::example::model_viewer::frame_packet
   if (result.failed())
     return result;
 
-  output.needs_recreate = frame.needs_recreate;
+  output.needs_recreate = frame.needs_recreate();
   granit::swapchain_backbuffer backbuffer;
   result = context.swapchain->backbuffer(frame, backbuffer);
   if (result.ok()) {
@@ -594,7 +594,8 @@ granit::result execute_desktop_frame(granit::example::model_viewer::frame_packet
     }
     const auto render = packet.render_desc(
         backbuffer.view.native_handle(),
-        static_cast<granit_texture_format>(context.swapchain_info->format), frame.handle, canvas);
+        static_cast<granit_texture_format>(context.swapchain_info->format), frame.native_handle(),
+        canvas);
     result = granit::from_native(granit_render_pipeline_render(
         context.pipeline->owner().native_handle(), context.pipeline->native_handle(), &render));
   }
@@ -609,7 +610,7 @@ granit::result execute_desktop_frame(granit::example::model_viewer::frame_packet
   output.present_wait_ms =
       std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() - present_begin)
           .count();
-  output.needs_recreate = output.needs_recreate || frame.needs_recreate;
+  output.needs_recreate = output.needs_recreate || frame.needs_recreate();
   if (context.metrics_enabled) {
     granit::render_pipeline_metrics metrics{};
     const auto metrics_result = context.pipeline->get_metrics(metrics);

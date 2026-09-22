@@ -49,43 +49,51 @@ struct swapchain_backbuffer {
   texture_view_ref view;
 };
 
-struct acquired_frame {
+class acquired_frame {
+public:
   acquired_frame() = default;
   ~acquired_frame() {
     if (valid()) {
       std::uint32_t recreate{};
-      const auto presented = granit_swapchain_present(renderer, swapchain, handle, &recreate);
+      const auto presented =
+          granit_swapchain_present(renderer_, swapchain_, handle_, &recreate);
       if (presented == GRANIT_ERROR_INVALID_ARGUMENT)
-        static_cast<void>(granit_frame_cancel(renderer, swapchain, handle, &recreate));
+        static_cast<void>(granit_frame_cancel(renderer_, swapchain_, handle_, &recreate));
     }
   }
   acquired_frame(const acquired_frame&) = delete;
   acquired_frame& operator=(const acquired_frame&) = delete;
   acquired_frame(acquired_frame&& other) noexcept
-      : handle(std::exchange(other.handle, GRANIT_NULL_HANDLE)), image_index(other.image_index),
-        needs_recreate(other.needs_recreate), renderer(other.renderer), swapchain(other.swapchain) {
-  }
+      : handle_(std::exchange(other.handle_, GRANIT_NULL_HANDLE)),
+        image_index_(other.image_index_), needs_recreate_(other.needs_recreate_),
+        renderer_(other.renderer_), swapchain_(other.swapchain_) {}
   acquired_frame& operator=(acquired_frame&&) = delete;
 
-  granit_frame handle{GRANIT_NULL_HANDLE};
-  std::uint32_t image_index{};
-  bool needs_recreate{};
-  granit_renderer renderer{GRANIT_NULL_HANDLE};
-  granit_swapchain swapchain{GRANIT_NULL_HANDLE};
-
-  [[nodiscard]] bool valid() const noexcept { return handle != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] bool needs_recreate() const noexcept { return needs_recreate_; }
+  [[nodiscard]] granit_frame native_handle() const noexcept { return handle_; }
 
   [[nodiscard]] result query_info(frame_info& info) const noexcept {
     if (!valid())
       return result::invalid_handle;
     granit_frame_info native_info = GRANIT_FRAME_INFO_INIT;
-    const auto value = granit_frame_get_info(renderer, handle, &native_info);
+    const auto value = granit_frame_get_info(renderer_, handle_, &native_info);
     if (value == GRANIT_SUCCESS) {
       info = {.frame_slot = native_info.frame_slot,
               .frame_slot_count = native_info.frame_slot_count};
     }
     return from_native(value);
   }
+
+private:
+  friend class swapchain;
+
+  granit_frame handle_{GRANIT_NULL_HANDLE};
+  std::uint32_t image_index_{};
+  bool needs_recreate_{};
+  granit_renderer renderer_{GRANIT_NULL_HANDLE};
+  granit_swapchain swapchain_{GRANIT_NULL_HANDLE};
 };
 
 class swapchain {
@@ -152,22 +160,17 @@ public:
     return from_native(native_result);
   }
 
-  [[nodiscard]] result backbuffer(std::uint32_t index, granit_texture& texture,
-                                  granit_texture_view& view) const noexcept {
-    return from_native(granit_swapchain_get_backbuffer(renderer_, handle_, index, &texture, &view));
-  }
-
   [[nodiscard]] result backbuffer(const acquired_frame& frame,
                                   swapchain_backbuffer& output) const noexcept {
     output = {};
     if (!valid() || !frame.valid())
       return result::invalid_argument;
-    if (frame.renderer != renderer_ || frame.swapchain != handle_)
+    if (frame.renderer_ != renderer_ || frame.swapchain_ != handle_)
       return result::invalid_handle;
     granit_texture texture = GRANIT_NULL_HANDLE;
     granit_texture_view view = GRANIT_NULL_HANDLE;
     const auto value =
-        granit_swapchain_get_backbuffer(renderer_, handle_, frame.image_index, &texture, &view);
+        granit_swapchain_get_backbuffer(renderer_, handle_, frame.image_index_, &texture, &view);
     if (value == GRANIT_SUCCESS)
       output = {.texture = texture_ref{texture}, .view = texture_view_ref{view}};
     return from_native(value);
@@ -177,12 +180,12 @@ public:
     if (!valid() || frame.valid())
       return result::invalid_argument;
     std::uint32_t recreate{};
-    const auto value =
-        granit_swapchain_acquire(renderer_, handle_, &frame.handle, &frame.image_index, &recreate);
-    frame.needs_recreate = recreate != 0;
+    const auto value = granit_swapchain_acquire(renderer_, handle_, &frame.handle_,
+                                                &frame.image_index_, &recreate);
+    frame.needs_recreate_ = recreate != 0;
     if (value == GRANIT_SUCCESS) {
-      frame.renderer = renderer_;
-      frame.swapchain = handle_;
+      frame.renderer_ = renderer_;
+      frame.swapchain_ = handle_;
     }
     return from_native(value);
   }
@@ -191,10 +194,10 @@ public:
     if (!valid() || !frame.valid())
       return result::invalid_argument;
     std::uint32_t recreate{};
-    const auto value = granit_swapchain_present(renderer_, handle_, frame.handle, &recreate);
+    const auto value = granit_swapchain_present(renderer_, handle_, frame.handle_, &recreate);
     if (value != GRANIT_ERROR_INVALID_ARGUMENT && value != GRANIT_ERROR_INVALID_HANDLE)
-      frame.handle = GRANIT_NULL_HANDLE;
-    frame.needs_recreate = recreate != 0;
+      frame.handle_ = GRANIT_NULL_HANDLE;
+    frame.needs_recreate_ = recreate != 0;
     return from_native(value);
   }
 
@@ -202,10 +205,10 @@ public:
     if (!valid() || !frame.valid())
       return result::invalid_argument;
     std::uint32_t recreate{};
-    const auto value = granit_frame_cancel(renderer_, handle_, frame.handle, &recreate);
+    const auto value = granit_frame_cancel(renderer_, handle_, frame.handle_, &recreate);
     if (value != GRANIT_ERROR_INVALID_ARGUMENT && value != GRANIT_ERROR_INVALID_HANDLE)
-      frame.handle = GRANIT_NULL_HANDLE;
-    frame.needs_recreate = recreate != 0;
+      frame.handle_ = GRANIT_NULL_HANDLE;
+    frame.needs_recreate_ = recreate != 0;
     return from_native(value);
   }
 

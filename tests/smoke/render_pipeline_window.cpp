@@ -277,7 +277,7 @@ int main(int argument_count, char** arguments) {
     }
     if (result.failed())
       break;
-    recreate = frame.needs_recreate;
+    recreate = frame.needs_recreate();
     granit::swapchain_backbuffer backbuffer;
     result = swapchain.backbuffer(frame, backbuffer);
     if (result.ok()) {
@@ -290,14 +290,14 @@ int main(int argument_count, char** arguments) {
       desc.height = info.height;
       desc.draw_binding_count = empty_frame ? 0 : 1;
       desc.draw_bindings = empty_frame ? nullptr : &binding;
-      desc.frame = frame.handle;
+      desc.frame = frame.native_handle();
       desc.canvas = canvas.native_handle();
       result = granit::from_native(
           granit_render_pipeline_render(renderer.native_handle(), pipeline, &desc));
     }
     if (result.ok())
       result = swapchain.present(frame);
-    recreate = recreate || frame.needs_recreate;
+    recreate = recreate || frame.needs_recreate();
     if (result.failed())
       break;
     ++rendered_frames;

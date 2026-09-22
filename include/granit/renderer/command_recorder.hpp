@@ -103,7 +103,8 @@ public:
     }
   }
   [[nodiscard]] result submit(const acquired_frame& frame) noexcept {
-    return from_native(granit_command_recorder_submit_frame(renderer_, handle_, frame.handle));
+    return from_native(
+        granit_command_recorder_submit_frame(renderer_, handle_, frame.native_handle()));
   }
   [[nodiscard]] result reset() noexcept {
     return from_native(granit_command_recorder_reset(renderer_, handle_));

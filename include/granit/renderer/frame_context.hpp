@@ -112,11 +112,12 @@ public:
     granit_command_recorder recorder{};
     std::uint32_t frame_slot{};
     const auto value =
-        granit_frame_context_begin(renderer_, handle_, frame.handle, &recorder, &frame_slot);
+        granit_frame_context_begin(renderer_, handle_, frame.native_handle(), &recorder,
+                                   &frame_slot);
     if (value == GRANIT_SUCCESS) {
       recording.renderer_ = renderer_;
       recording.context_ = handle_;
-      recording.frame_ = frame.handle;
+      recording.frame_ = frame.native_handle();
       recording.recorder_ =
           command_recorder::borrow(renderer_ref::from_native(renderer_), recorder);
       recording.frame_slot_ = frame_slot;

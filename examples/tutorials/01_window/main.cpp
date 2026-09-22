@@ -58,7 +58,7 @@ granit::result render_clear_frame(granit::swapchain& swapchain, granit::frame_co
   auto result = swapchain.acquire(frame);
   if (result.failed())
     return result;
-  needs_recreate = needs_recreate || frame.needs_recreate;
+  needs_recreate = needs_recreate || frame.needs_recreate();
 
   granit::swapchain_backbuffer backbuffer;
   result = swapchain.backbuffer(frame, backbuffer);
@@ -82,7 +82,7 @@ granit::result render_clear_frame(granit::swapchain& swapchain, granit::frame_co
   if (result.ok())
     result = swapchain.present(frame);
 
-  needs_recreate = needs_recreate || frame.needs_recreate;
+  needs_recreate = needs_recreate || frame.needs_recreate();
   if (result.failed()) {
     if (recording.valid())
       static_cast<void>(recording.abort());

@@ -168,7 +168,7 @@ public:
           .draw_bindings = bindings.data(),
           .output_count = static_cast<std::uint32_t>(outputs.size()),
           .outputs = outputs.data(),
-          .frame = desc.frame ? desc.frame->handle : GRANIT_NULL_HANDLE,
+          .frame = desc.frame ? desc.frame->native_handle() : GRANIT_NULL_HANDLE,
           .reserved_tail = 0,
           .canvas = desc.canvas.native_handle(),
           .debug_draw = desc.debug_draw.native_handle(),

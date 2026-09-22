@@ -18,7 +18,7 @@ inline result render_clear_frame(swapchain& chain, frame_context& context, std::
   auto status = chain.acquire(frame);
   if (status.failed())
     return status;
-  needs_recreate = frame.needs_recreate;
+  needs_recreate = frame.needs_recreate();
 
   swapchain_backbuffer backbuffer;
   status = chain.backbuffer(frame, backbuffer);
@@ -39,7 +39,7 @@ inline result render_clear_frame(swapchain& chain, frame_context& context, std::
     status = recording.submit();
   if (status.ok())
     status = chain.present(frame);
-  needs_recreate = needs_recreate || frame.needs_recreate;
+  needs_recreate = needs_recreate || frame.needs_recreate();
   if (status.failed()) {
     if (recording.valid())
       static_cast<void>(recording.abort());
