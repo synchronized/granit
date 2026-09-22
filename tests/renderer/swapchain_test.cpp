@@ -29,9 +29,9 @@ TEST_CASE("Swapchain创建把空父句柄归类为无效句柄", "[swapchain][co
   CHECK(handle == GRANIT_NULL_HANDLE);
 
   granit::swapchain swapchain;
-  CHECK(swapchain.initialize(GRANIT_NULL_HANDLE, UINT64_C(1), {}) ==
-        granit::result::invalid_handle);
-  CHECK(swapchain.initialize(UINT64_C(1), GRANIT_NULL_HANDLE, {}) ==
+  granit::renderer invalid_renderer;
+  granit::surface invalid_surface;
+  CHECK(swapchain.initialize(invalid_renderer, invalid_surface, {}) ==
         granit::result::invalid_handle);
 }
 
@@ -87,7 +87,7 @@ TEST_CASE("Swapchain 支持创建、查询、重建和销毁", "[swapchain][win3
 
   granit::swapchain swapchain;
   REQUIRE(swapchain.initialize(
-              renderer.native_handle(), surface.native_handle(),
+              renderer, surface,
               {.width = 96, .height = 72, .presentation = granit::present_mode::mailbox}) ==
           granit::result::success);
 
@@ -288,8 +288,8 @@ TEST_CASE("Surface 销毁时自动使所属 Swapchain 失效", "[swapchain][life
                              granit::surface_desc::win32(window.instance(), window.window())) ==
           granit::result::success);
   granit::swapchain swapchain;
-  REQUIRE(swapchain.initialize(renderer.native_handle(), surface.native_handle(),
-                               {.width = 96, .height = 72}) == granit::result::success);
+  REQUIRE(swapchain.initialize(renderer, surface, {.width = 96, .height = 72}) ==
+          granit::result::success);
 
   REQUIRE(surface.reset() == granit::result::success);
   granit::swapchain_info info;

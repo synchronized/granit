@@ -107,8 +107,10 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result initialize(granit_renderer renderer, granit_surface surface,
+  [[nodiscard]] result initialize(renderer& owner, const surface& target,
                                   const swapchain_desc& desc) noexcept {
+    const auto renderer = owner.native_handle();
+    const auto surface = target.native_handle();
     if (valid()) {
       return result::invalid_argument;
     }
@@ -120,11 +122,6 @@ public:
       renderer_ = renderer;
     }
     return from_native(native_result);
-  }
-
-  [[nodiscard]] result initialize(renderer& owner, const surface& target,
-                                  const swapchain_desc& desc) noexcept {
-    return initialize(owner.native_handle(), target.native_handle(), desc);
   }
 
   [[nodiscard]] result recreate(const swapchain_desc& desc) noexcept {
