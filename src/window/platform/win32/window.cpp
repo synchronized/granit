@@ -263,10 +263,10 @@ granit_result destroy_win32_window(const std::shared_ptr<window_system_record>& 
              : GRANIT_ERROR_BACKEND_UNAVAILABLE;
 }
 
-granit_result get_win32_window(const std::shared_ptr<window_record>& window, void** instance,
-                               void** native_window) {
-  *instance = window->instance;
-  *native_window = window->window;
+granit_result get_native_win32(const std::shared_ptr<window_record>& window,
+                               granit_window_native_win32& output) {
+  output.instance = window->instance;
+  output.window = window->window;
   return GRANIT_SUCCESS;
 }
 

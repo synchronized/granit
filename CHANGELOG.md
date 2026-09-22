@@ -28,11 +28,15 @@
 - Window C++ 包装不再把 `window_event` 和 `input_event` 直接别名到 C ABI 结构；事件类型、按键动作、
   物理键和逻辑键使用 scoped enum，并由 `window_system::poll` 在 ABI 边界完成转换。C API 与布局
   保持不变。
+- Window 原生互操作改为 Win32、XCB、Wayland 与 Emscripten 各自的版本化快照结构；每次查询返回
+  同一平台的一组关联值，XCB Window 保持整数类型，C++ 重载直接接收 Window RAII 对象。
 
 ### 兼容性与迁移
 
 - C++ 事件循环需使用 `window_event_type`、`input_event_type`、`key_action`、`physical_key` 和
   `logical_key`，不再把 C 宏与 C++ 事件字段混用；使用者重新编译并替换比较表达式即可。
+- 原生窗口调用需把 `granit_window_get_win32/xcb/wayland` 替换为对应的
+  `granit_window_get_native_*`，并从输出快照读取字段；旧接口不再保留。
 
 ## 0.27.0 - 2026-09-21
 

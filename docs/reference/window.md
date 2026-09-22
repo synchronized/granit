@@ -136,19 +136,25 @@ Window System 的顺序销毁。函数校验 Window System、Window 归属和创
 `granit::window::create_surface(renderer, surface)`，输出为 `granit::surface` RAII 对象。
 
 原生互操作仍可显式包含 `<granit/window/native.h>` 或对应 C++ 头，并使用
-`granit_window_get_win32`、`granit_window_get_xcb` 与 `granit_window_get_wayland`；查询值仅在
-Window 存活期间借用。这些查询不进入普通 Window 聚合头。
+`granit_window_get_native_win32`、`granit_window_get_native_xcb`、
+`granit_window_get_native_wayland` 与 `granit_window_get_native_emscripten`。每个平台通过一次查询
+返回版本化快照结构，查询值仅在 Window 存活期间借用。这些查询不进入普通 Window 聚合头。
 
-在 Win32 Window 上查询 XCB 或 Wayland 值返回 `GRANIT_ERROR_UNSUPPORTED`，输出参数清零。
-XCB Window 可通过 `granit_window_get_xcb` 借用 connection 和 `xcb_window_t` 数值。未设置或
-无法连接 `DISPLAY` 时，创建 Window System 返回
+在 Win32 Window 上查询 XCB、Wayland 或 Emscripten 值返回 `GRANIT_ERROR_UNSUPPORTED`，输出结构
+恢复为空值。XCB Window 可通过 `granit_window_get_native_xcb` 借用 connection 和
+`xcb_window_t` 数值。未设置或无法连接 `DISPLAY` 时，创建 Window System 返回
 `GRANIT_ERROR_BACKEND_UNAVAILABLE`。
 
-Wayland Window 可通过 `granit_window_get_wayland` 借用 `wl_display*` 和 `wl_surface*`。
-Window 拥有 xdg-shell 角色及原生 Surface，调用方不得自行销毁。
-自动后端在 `WAYLAND_DISPLAY` 存在时优先选择 Wayland，否则选择 XCB；应用也可在 Window System
-描述中明确指定后端。Emscripten 构建的自动后端固定选择 Emscripten，Surface 来源固定为
-`#canvas`。
+Wayland Window 可通过 `granit_window_get_native_wayland` 借用 `wl_display*` 和 `wl_surface*`。
+Window 拥有 xdg-shell 角色及原生 Surface，调用方不得自行销毁。自动后端在
+`WAYLAND_DISPLAY` 存在时优先选择 Wayland，否则选择 XCB；应用也可在 Window System 描述中明确
+指定后端。Emscripten 构建的自动后端固定选择 Emscripten，Surface 来源固定为 `#canvas`。
+`granit_window_get_native_emscripten` 返回借用的 Canvas selector 字节序列，不把 DOM 对象伪装成
+可跨 ABI 使用的指针。
+
+C++ 使用重载的 `granit::get_native(system, window, output)`，其中 output 为
+`window_native_win32`、`window_native_xcb`、`window_native_wayland` 或
+`window_native_emscripten`。包装直接接收 RAII 对象，不要求调用方提取 C 句柄。
 
 ## 线程约束
 

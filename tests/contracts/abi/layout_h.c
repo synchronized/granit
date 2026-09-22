@@ -7,6 +7,7 @@
 #include <granit/granit.h>
 #include <granit/renderer/native_surface.h>
 #include <granit/window.h>
+#include <granit/window/native.h>
 
 #include "snapshots/0.4.0/core_identity.h"
 
@@ -45,12 +46,25 @@ GRANIT_ABI_ASSERT(granit_abi_d32s8_format, GRANIT_TEXTURE_FORMAT_D32_FLOAT_S8_UI
 /* 当前受支持平台为 64 位；含指针的结构在此建立独立数字基线。 */
 #if UINTPTR_MAX == UINT64_MAX
 GRANIT_ABI_ASSERT(granit_abi_window_loop_desc_size, sizeof(granit_window_loop_desc) == 40);
-GRANIT_ABI_ASSERT(granit_abi_window_loop_desc_tick,
-                  offsetof(granit_window_loop_desc, tick) == 8);
+GRANIT_ABI_ASSERT(granit_abi_window_loop_desc_tick, offsetof(granit_window_loop_desc, tick) == 8);
 GRANIT_ABI_ASSERT(granit_abi_window_loop_desc_user_data,
                   offsetof(granit_window_loop_desc, user_data) == 24);
-GRANIT_ABI_ASSERT(granit_abi_window_loop_desc_v1,
-                  GRANIT_WINDOW_LOOP_DESC_VERSION_1_SIZE == 40);
+GRANIT_ABI_ASSERT(granit_abi_window_loop_desc_v1, GRANIT_WINDOW_LOOP_DESC_VERSION_1_SIZE == 40);
+GRANIT_ABI_ASSERT(granit_abi_window_native_win32_size, sizeof(granit_window_native_win32) == 24);
+GRANIT_ABI_ASSERT(granit_abi_window_native_win32_v1,
+                  GRANIT_WINDOW_NATIVE_WIN32_VERSION_1_SIZE == 24);
+GRANIT_ABI_ASSERT(granit_abi_window_native_xcb_size, sizeof(granit_window_native_xcb) == 16);
+GRANIT_ABI_ASSERT(granit_abi_window_native_xcb_window,
+                  offsetof(granit_window_native_xcb, window) == 4);
+GRANIT_ABI_ASSERT(granit_abi_window_native_xcb_v1, GRANIT_WINDOW_NATIVE_XCB_VERSION_1_SIZE == 16);
+GRANIT_ABI_ASSERT(granit_abi_window_native_wayland_size,
+                  sizeof(granit_window_native_wayland) == 24);
+GRANIT_ABI_ASSERT(granit_abi_window_native_wayland_v1,
+                  GRANIT_WINDOW_NATIVE_WAYLAND_VERSION_1_SIZE == 24);
+GRANIT_ABI_ASSERT(granit_abi_window_native_emscripten_size,
+                  sizeof(granit_window_native_emscripten) == 16);
+GRANIT_ABI_ASSERT(granit_abi_window_native_emscripten_v1,
+                  GRANIT_WINDOW_NATIVE_EMSCRIPTEN_VERSION_1_SIZE == 16);
 GRANIT_ABI_ASSERT(granit_abi_renderer_desc_size, sizeof(granit_renderer_desc) == 64);
 GRANIT_ABI_ASSERT(granit_abi_renderer_desc_application_name,
                   offsetof(granit_renderer_desc, application_name) == 8);

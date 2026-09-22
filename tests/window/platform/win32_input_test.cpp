@@ -21,11 +21,9 @@ TEST_CASE("Win32 Input 转换键盘、文本和指针消息", "[input][win32]") 
   window_desc.flags = 0;
   granit_window window = GRANIT_NULL_HANDLE;
   REQUIRE(granit_window_create(window_system, &window_desc, &window) == GRANIT_SUCCESS);
-  void* instance = nullptr;
-  void* native_window = nullptr;
-  REQUIRE(granit_window_get_win32(window_system, window, &instance, &native_window) ==
-          GRANIT_SUCCESS);
-  const auto hwnd = static_cast<HWND>(native_window);
+  granit_window_native_win32 native = GRANIT_WINDOW_NATIVE_WIN32_INIT;
+  REQUIRE(granit_window_get_native_win32(window_system, window, &native) == GRANIT_SUCCESS);
+  const auto hwnd = static_cast<HWND>(native.window);
 
   SendMessageW(hwnd, WM_KEYDOWN, 'A', LPARAM{0x001e0001});
   SendMessageW(hwnd, WM_KEYDOWN, 'A', LPARAM{0x401e0001});

@@ -364,6 +364,12 @@ granit_result destroy_emscripten_window(const std::shared_ptr<window_system_reco
   return GRANIT_SUCCESS;
 }
 
+granit_result get_native_emscripten(granit_window_native_emscripten& output) {
+  output.canvas_selector = canvas_selector;
+  output.canvas_selector_length = static_cast<std::uint32_t>(sizeof(canvas_selector) - 1);
+  return GRANIT_SUCCESS;
+}
+
 } // namespace granit::window::detail
 
 #endif

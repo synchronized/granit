@@ -136,11 +136,11 @@ granit_result destroy_xcb_window(const std::shared_ptr<window_system_record>& sy
   return xcb_flush(system->connection) > 0 ? GRANIT_SUCCESS : GRANIT_ERROR_BACKEND_UNAVAILABLE;
 }
 
-granit_result get_xcb_window(const std::shared_ptr<window_system_record>& system,
-                             const std::shared_ptr<window_record>& window, void** connection,
-                             std::uint32_t* native_window) {
-  *connection = system->connection;
-  *native_window = window->window;
+granit_result get_native_xcb(const std::shared_ptr<window_system_record>& system,
+                             const std::shared_ptr<window_record>& window,
+                             granit_window_native_xcb& output) {
+  output.connection = system->connection;
+  output.window = window->window;
   return GRANIT_SUCCESS;
 }
 

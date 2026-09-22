@@ -3,6 +3,7 @@
 
 #include <granit/window.h>
 #include <granit/window.hpp>
+#include <granit/window/native.h>
 
 #include <catch2/catch_all.hpp>
 
@@ -110,6 +111,30 @@ TEST_CASE("Window Loop 在接受回调前校验描述", "[window][loop][abi]") {
   granit_window_loop_desc desc = GRANIT_WINDOW_LOOP_DESC_INIT;
   CHECK(granit_window_system_run_loop(UINT64_MAX, nullptr) == GRANIT_ERROR_INVALID_ARGUMENT);
   CHECK(granit_window_system_run_loop(UINT64_MAX, &desc) == GRANIT_ERROR_INVALID_ARGUMENT);
+}
+
+TEST_CASE("Window 原生快照在访问句柄前校验输出容量", "[window][native][abi]") {
+  granit_window_native_win32 win32 = GRANIT_WINDOW_NATIVE_WIN32_INIT;
+  win32.struct_size = GRANIT_WINDOW_NATIVE_WIN32_VERSION_1_SIZE - 1;
+  CHECK(granit_window_get_native_win32(UINT64_MAX, UINT64_MAX, &win32) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(granit_window_get_native_win32(UINT64_MAX, UINT64_MAX, nullptr) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+
+  granit_window_native_xcb xcb = GRANIT_WINDOW_NATIVE_XCB_INIT;
+  xcb.struct_size = GRANIT_WINDOW_NATIVE_XCB_VERSION_1_SIZE - 1;
+  CHECK(granit_window_get_native_xcb(UINT64_MAX, UINT64_MAX, &xcb) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+
+  granit_window_native_wayland wayland = GRANIT_WINDOW_NATIVE_WAYLAND_INIT;
+  wayland.struct_size = GRANIT_WINDOW_NATIVE_WAYLAND_VERSION_1_SIZE - 1;
+  CHECK(granit_window_get_native_wayland(UINT64_MAX, UINT64_MAX, &wayland) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+
+  granit_window_native_emscripten emscripten = GRANIT_WINDOW_NATIVE_EMSCRIPTEN_INIT;
+  emscripten.struct_size = GRANIT_WINDOW_NATIVE_EMSCRIPTEN_VERSION_1_SIZE - 1;
+  CHECK(granit_window_get_native_emscripten(UINT64_MAX, UINT64_MAX, &emscripten) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
 }
 
 TEST_CASE("Window Loop 拒绝未知动作和递归运行", "[window][loop]") {

@@ -3,8 +3,7 @@
 
 #include <granit/window/native.hpp>
 
-#include <type_traits>
+using granit_window_native_win32_function = granit::result (*)(
+    const granit::window_system&, const granit::window&, granit::window_native_win32&) noexcept;
 
-static_assert(
-    std::is_same_v<decltype(granit::native_win32),
-                   granit::result(granit_window_system, granit_window, void*&, void*&) noexcept>);
+static_assert(static_cast<granit_window_native_win32_function>(&granit::get_native) != nullptr);
