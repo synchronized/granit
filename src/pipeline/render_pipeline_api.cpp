@@ -504,9 +504,9 @@ extern "C" granit_result granit_render_pipeline_create(granit_renderer renderer,
     state->sample_count = desc->sample_count;
     state->enable_fxaa = desc->enable_fxaa != 0;
     state->enable_specular_aa = desc->enable_specular_aa != 0;
+    const auto renderer_view = granit::renderer_ref::from_native(renderer);
     auto resource_result = state->shader_library.initialize(
-        granit::renderer_ref::from_native(renderer),
-        granit::pipeline::detail::render_pipeline_shader_library());
+        renderer_view, granit::pipeline::detail::render_pipeline_shader_library());
     if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
     const auto arena_result = state->uniform_arena.initialize(renderer);
@@ -516,7 +516,7 @@ extern "C" granit_result granit_render_pipeline_create(granit_renderer renderer,
     if (ibl_result != GRANIT_SUCCESS)
       return ibl_result;
     resource_result = state->shadow_texture.initialize(
-        renderer,
+        renderer_view,
         {.format = granit::texture_format::d32_float,
          .usage = granit::texture_usage::depth_stencil_attachment | granit::texture_usage::sampled,
          .width = 1024,
@@ -524,7 +524,7 @@ extern "C" granit_result granit_render_pipeline_create(granit_renderer renderer,
     if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
     resource_result =
-        state->shadow_view.initialize(renderer, state->shadow_texture.native_handle());
+        state->shadow_view.initialize(renderer_view, state->shadow_texture.native_handle());
     if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
     resource_result = state->shader_library.create_shader(
@@ -536,13 +536,13 @@ extern "C" granit_result granit_render_pipeline_create(granit_renderer renderer,
     if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
     resource_result = state->shadow_placeholder_texture.initialize(
-        renderer, {.format = granit::texture_format::d32_float,
-                   .usage = granit::texture_usage::sampled |
-                            granit::texture_usage::depth_stencil_attachment});
+        renderer_view, {.format = granit::texture_format::d32_float,
+                        .usage = granit::texture_usage::sampled |
+                                 granit::texture_usage::depth_stencil_attachment});
     if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
     resource_result = state->shadow_placeholder_view.initialize(
-        renderer, state->shadow_placeholder_texture.native_handle());
+        renderer_view, state->shadow_placeholder_texture.native_handle());
     if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
     std::scoped_lock lock{registry_mutex};

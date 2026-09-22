@@ -215,7 +215,7 @@ int main(int argc, char** argv) {
   constexpr std::array<float, 9> positions{-0.65F, -0.65F, 0.5F,  0.65F, -0.65F,
                                            0.5F,   0.0F,   0.65F, 0.5F};
   granit::buffer vertex_buffer;
-  if ((vertex_buffer.initialize(native_renderer,
+  if ((vertex_buffer.initialize(granit::renderer_ref::from_native(native_renderer),
                                 {.size = sizeof(positions),
                                  .usage = granit::buffer_usage::vertex,
                                  .location = granit::memory_location::device},
@@ -249,8 +249,9 @@ int main(int argc, char** argv) {
     const granit::texture_desc texture_desc{.format = granit::texture_format::rgba8_unorm,
                                             .usage = granit::texture_usage::sampled |
                                                      granit::texture_usage::transfer_destination};
-    if ((workload_textures[index].initialize(native_renderer, texture_desc)).failed() ||
-        (workload_texture_views[index].initialize(native_renderer,
+    const auto renderer_view = granit::renderer_ref::from_native(native_renderer);
+    if ((workload_textures[index].initialize(renderer_view, texture_desc)).failed() ||
+        (workload_texture_views[index].initialize(renderer_view,
                                                   workload_textures[index].native_handle()))
             .failed()) {
       std::cerr << "创建纹理组失败\n";
@@ -582,10 +583,10 @@ int main(int argc, char** argv) {
   granit::buffer readback;
   granit::command_recorder recorder;
   const char* readback_stage = "创建 Readback Buffer";
-  auto result =
-      readback.initialize(native_renderer, {.size = size * size * 4,
-                                            .usage = granit::buffer_usage::transfer_destination,
-                                            .location = granit::memory_location::readback});
+  auto result = readback.initialize(granit::renderer_ref::from_native(native_renderer),
+                                    {.size = size * size * 4,
+                                     .usage = granit::buffer_usage::transfer_destination,
+                                     .location = granit::memory_location::readback});
   if (result.ok()) {
     readback_stage = "创建 Command Recorder";
     result = recorder.initialize(native_renderer);

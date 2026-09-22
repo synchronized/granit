@@ -41,22 +41,24 @@ struct window_hdr_resources {
                             const granit::shader_library& shader_library,
                             const granit::shader_content_id& vertex_shader_id,
                             const granit::shader_content_id& fragment_shader_id) {
-    auto result = texture.initialize(renderer, {.format = granit::texture_format::rgba16_float,
-                                                .usage = granit::texture_usage::color_attachment |
-                                                         granit::texture_usage::sampled,
-                                                .width = width,
-                                                .height = height});
+    const auto renderer_view = granit::renderer_ref::from_native(renderer);
+    auto result =
+        texture.initialize(renderer_view, {.format = granit::texture_format::rgba16_float,
+                                           .usage = granit::texture_usage::color_attachment |
+                                                    granit::texture_usage::sampled,
+                                           .width = width,
+                                           .height = height});
     if (result.ok())
-      result = view.initialize(renderer, texture.native_handle());
+      result = view.initialize(renderer_view, texture.native_handle());
     if (result.ok()) {
-      result = depth_texture.initialize(renderer,
+      result = depth_texture.initialize(renderer_view,
                                         {.format = granit::texture_format::d32_float,
                                          .usage = granit::texture_usage::depth_stencil_attachment,
                                          .width = width,
                                          .height = height});
     }
     if (result.ok())
-      result = depth_view.initialize(renderer, depth_texture.native_handle());
+      result = depth_view.initialize(renderer_view, depth_texture.native_handle());
     if (result.ok()) {
       result = granit::from_native(tone_mapping.initialize(
           renderer, view.native_handle(), output_format,
@@ -226,8 +228,7 @@ int main(int argument_count, char** arguments) {
     result = granit::result::initialization_failed;
   std::vector<std::byte> shader_library_bytes;
   granit::shader_library shader_library;
-  if (result.ok() &&
-      !assets.initialize_library(renderer, shader_library_bytes, shader_library))
+  if (result.ok() && !assets.initialize_library(renderer, shader_library_bytes, shader_library))
     result = granit::result::initialization_failed;
   if (result.ok() && !tone_shaders.initialize(renderer))
     result = granit::result::initialization_failed;

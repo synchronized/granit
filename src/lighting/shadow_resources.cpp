@@ -29,8 +29,9 @@ granit_result shadow_resources::initialize(granit_renderer renderer,
       !valid(values))
     return GRANIT_ERROR_INVALID_ARGUMENT;
 
+  const auto renderer_view = granit::renderer_ref::from_native(renderer);
   auto result = constants_.initialize(
-      renderer,
+      renderer_view,
       {.size = sizeof(values),
        .usage = granit::buffer_usage::uniform | granit::buffer_usage::transfer_destination,
        .location = granit::memory_location::automatic},
@@ -38,11 +39,10 @@ granit_result shadow_resources::initialize(granit_renderer renderer,
   if (result.failed())
     return static_cast<granit_result>(result);
 
-  result = sampler_.initialize(granit::renderer_ref::from_native(renderer),
-                               {.address_u = granit::address_mode::clamp_to_edge,
-                                .address_v = granit::address_mode::clamp_to_edge,
-                                .address_w = granit::address_mode::clamp_to_edge,
-                                .compare = granit::compare_operation::less_equal});
+  result = sampler_.initialize(renderer_view, {.address_u = granit::address_mode::clamp_to_edge,
+                                               .address_v = granit::address_mode::clamp_to_edge,
+                                               .address_w = granit::address_mode::clamp_to_edge,
+                                               .compare = granit::compare_operation::less_equal});
   if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);
@@ -62,8 +62,7 @@ granit_result shadow_resources::initialize(granit_renderer renderer,
                                       .type = granit::binding_type::comparison_sampler,
                                       .array_count = 1,
                                       .visibility = granit::shader_stage_flags::fragment}};
-  auto renderer_ref = granit::renderer_ref::from_native(renderer);
-  result = layout_.initialize(renderer_ref, layout_entries);
+  result = layout_.initialize(renderer_view, layout_entries);
   if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);

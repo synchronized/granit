@@ -23,9 +23,10 @@ pbr_draw_bindings::initialize(granit_renderer renderer, const material_draw_stat
       material.frame_layout == GRANIT_NULL_HANDLE || material.object_layout == GRANIT_NULL_HANDLE) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
+  const auto renderer_view = granit::renderer_ref::from_native(renderer);
   const auto make_buffer = [&](granit::buffer& buffer, const auto& value) {
     return buffer.initialize(
-        renderer,
+        renderer_view,
         {.size = sizeof(value),
          .usage = granit::buffer_usage::uniform | granit::buffer_usage::transfer_destination,
          .location = granit::memory_location::upload},

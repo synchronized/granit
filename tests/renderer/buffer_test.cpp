@@ -105,7 +105,7 @@ TEST_CASE("C++ Buffer 提供 move-only RAII 并由 Renderer 级联失效", "[buf
 
   granit::buffer buffer;
   REQUIRE(
-      buffer.initialize(renderer.native_handle(), {.size = 128,
+      buffer.initialize(renderer, {.size = 128,
                                                    .usage = granit::buffer_usage::transfer_source,
                                                    .location = granit::memory_location::upload}) ==
       granit::result::success);
@@ -129,7 +129,7 @@ TEST_CASE("初始数据和同步写入支持 UPLOAD 与 DEVICE Buffer", "[buffer
   std::array<std::byte, 256> data{};
   data[0] = std::byte{42};
   granit::buffer device_buffer;
-  REQUIRE(device_buffer.initialize(renderer.native_handle(),
+  REQUIRE(device_buffer.initialize(renderer,
                                    {.size = data.size(),
                                     .usage = granit::buffer_usage::vertex,
                                     .location = granit::memory_location::device},
@@ -139,7 +139,7 @@ TEST_CASE("初始数据和同步写入支持 UPLOAD 与 DEVICE Buffer", "[buffer
           granit::result::success);
 
   granit::buffer upload_buffer;
-  REQUIRE(upload_buffer.initialize(renderer.native_handle(),
+  REQUIRE(upload_buffer.initialize(renderer,
                                    {.size = data.size(),
                                     .usage = granit::buffer_usage::uniform,
                                     .location = granit::memory_location::upload},

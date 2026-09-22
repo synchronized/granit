@@ -251,8 +251,7 @@ TEST_CASE("动态 Uniform Offset 贯通 Bind Group 与图形计算命令录制",
       .type = granit::binding_type::dynamic_uniform_buffer,
       .visibility = granit::shader_stage_flags::vertex | granit::shader_stage_flags::compute}};
   granit::bind_group_layout group_layout;
-  REQUIRE(group_layout.initialize(renderer, declarations) ==
-          granit::result::success);
+  REQUIRE(group_layout.initialize(renderer, declarations) == granit::result::success);
   const auto group_layout_handle = group_layout.native_handle();
   granit::pipeline_layout pipeline_layout;
   REQUIRE(
@@ -260,8 +259,7 @@ TEST_CASE("动态 Uniform Offset 贯通 Bind Group 与图形计算命令录制",
       granit::result::success);
 
   granit::buffer buffer;
-  REQUIRE(buffer.initialize(renderer.native_handle(),
-                            {.size = 512, .usage = granit::buffer_usage::uniform}) ==
+  REQUIRE(buffer.initialize(renderer, {.size = 512, .usage = granit::buffer_usage::uniform}) ==
           granit::result::success);
   const std::array entries{
       granit::bind_group_entry{.binding = 0, .resource = buffer.ref(), .offset = 0, .size = 64}};
@@ -310,10 +308,8 @@ TEST_CASE("动态 Offset 按 Bind Group 顺序跳过普通 Uniform", "[pipeline]
                                       .visibility = granit::shader_stage_flags::vertex}};
   granit::bind_group_layout first_layout;
   granit::bind_group_layout second_layout;
-  REQUIRE(first_layout.initialize(renderer, first_declarations) ==
-          granit::result::success);
-  REQUIRE(second_layout.initialize(renderer, second_declarations) ==
-          granit::result::success);
+  REQUIRE(first_layout.initialize(renderer, first_declarations) == granit::result::success);
+  REQUIRE(second_layout.initialize(renderer, second_declarations) == granit::result::success);
   const std::array layout_handles{first_layout.native_handle(), second_layout.native_handle()};
   granit::pipeline_layout pipeline_layout;
   REQUIRE(pipeline_layout.initialize(renderer.native_handle(), layout_handles) ==
@@ -321,11 +317,10 @@ TEST_CASE("动态 Offset 按 Bind Group 顺序跳过普通 Uniform", "[pipeline]
 
   granit::buffer large_buffer;
   granit::buffer small_buffer;
-  REQUIRE(large_buffer.initialize(renderer.native_handle(),
-                                  {.size = 512, .usage = granit::buffer_usage::uniform}) ==
-          granit::result::success);
-  REQUIRE(small_buffer.initialize(renderer.native_handle(),
-                                  {.size = 64, .usage = granit::buffer_usage::uniform}) ==
+  REQUIRE(
+      large_buffer.initialize(renderer, {.size = 512, .usage = granit::buffer_usage::uniform}) ==
+      granit::result::success);
+  REQUIRE(small_buffer.initialize(renderer, {.size = 64, .usage = granit::buffer_usage::uniform}) ==
           granit::result::success);
   const std::array first_entries{
       granit::bind_group_entry{
@@ -376,12 +371,10 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
   REQUIRE_FALSE(fragment_code.empty());
   granit::shader vertex;
   granit::shader fragment;
-  REQUIRE(vertex.initialize(renderer.native_handle(),
-                            {.stage = granit::shader_stage::vertex, .code = vertex_code}) ==
-          granit::result::success);
-  REQUIRE(fragment.initialize(renderer.native_handle(),
-                              {.stage = granit::shader_stage::fragment, .code = fragment_code}) ==
-          granit::result::success);
+  REQUIRE(vertex.initialize(renderer, {.stage = granit::shader_stage::vertex,
+                                       .code = vertex_code}) == granit::result::success);
+  REQUIRE(fragment.initialize(renderer, {.stage = granit::shader_stage::fragment,
+                                         .code = fragment_code}) == granit::result::success);
 
   const std::array declarations{
       granit::bind_group_layout_entry{.binding = 0,
@@ -400,8 +393,7 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
                                       .type = granit::binding_type::sampled_texture,
                                       .visibility = granit::shader_stage_flags::fragment}};
   granit::bind_group_layout group_layout;
-  REQUIRE(group_layout.initialize(renderer, declarations) ==
-          granit::result::success);
+  REQUIRE(group_layout.initialize(renderer, declarations) == granit::result::success);
   const auto group_layout_handle = group_layout.native_handle();
   granit::pipeline_layout pipeline_layout;
   REQUIRE(
@@ -433,7 +425,7 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
   const auto uniform_data = granit::test::renderer_fixture::make_uniform_data();
   granit::buffer uniform;
   REQUIRE(uniform.initialize(
-              renderer.native_handle(),
+              renderer,
               {.size = uniform_data.size(),
                .usage = granit::buffer_usage::uniform | granit::buffer_usage::transfer_destination},
               uniform_data) == granit::result::success);
@@ -502,13 +494,13 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
   constexpr auto& indices = granit::test::renderer_fixture::indices;
   granit::buffer vertex_buffer;
   REQUIRE(vertex_buffer.initialize(
-              renderer.native_handle(),
+              renderer,
               {.size = sizeof(vertices),
                .usage = granit::buffer_usage::vertex | granit::buffer_usage::transfer_destination},
               std::as_bytes(std::span{vertices})) == granit::result::success);
   granit::buffer index_buffer;
   REQUIRE(index_buffer.initialize(
-              renderer.native_handle(),
+              renderer,
               {.size = sizeof(indices),
                .usage = granit::buffer_usage::index | granit::buffer_usage::transfer_destination},
               std::as_bytes(std::span{indices})) == granit::result::success);
@@ -535,10 +527,9 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
   REQUIRE(granit_texture_create_with_default_view(renderer.native_handle(), &depth_desc,
                                                   &depth_target, &depth_view) == GRANIT_SUCCESS);
   granit::buffer readback;
-  REQUIRE(readback.initialize(renderer.native_handle(),
-                              {.size = width * height * 4,
-                               .usage = granit::buffer_usage::transfer_destination,
-                               .location = granit::memory_location::readback}) ==
+  REQUIRE(readback.initialize(renderer, {.size = width * height * 4,
+                                         .usage = granit::buffer_usage::transfer_destination,
+                                         .location = granit::memory_location::readback}) ==
           granit::result::success);
 
   granit::command_recorder recorder;
@@ -673,8 +664,7 @@ TEST_CASE("不可变 Bind Group 保持 Buffer 与 Sampler 生命周期", "[pipel
   REQUIRE(binding_pipeline_layout.initialize(
               renderer.native_handle(), std::span{&layout_handle, 1}) == granit::result::success);
   granit::buffer buffer;
-  REQUIRE(buffer.initialize(renderer.native_handle(),
-                            {.size = 256, .usage = granit::buffer_usage::uniform}) ==
+  REQUIRE(buffer.initialize(renderer, {.size = 256, .usage = granit::buffer_usage::uniform}) ==
           granit::result::success);
   granit::sampler sampler;
   REQUIRE(sampler.initialize(renderer, {}) == granit::result::success);
@@ -698,8 +688,7 @@ TEST_CASE("不可变 Bind Group 保持 Buffer 与 Sampler 生命周期", "[pipel
   REQUIRE(recorder.begin() == granit::result::success);
   const granit_bind_group group_handle = group.native_handle();
   granit::bind_group_layout incompatible_group_layout;
-  REQUIRE(incompatible_group_layout.initialize(renderer, declarations) ==
-          granit::result::success);
+  REQUIRE(incompatible_group_layout.initialize(renderer, declarations) == granit::result::success);
   const auto incompatible_group_layout_handle = incompatible_group_layout.native_handle();
   granit::pipeline_layout incompatible_pipeline_layout;
   REQUIRE(incompatible_pipeline_layout.initialize(
@@ -844,12 +833,10 @@ TEST_CASE("Graphics Pipeline 接受 Vertex Buffer Layout", "[pipeline][vertex-in
   const auto fragment_code = load_shader("vertex_input.frag.spv");
   granit::shader vertex;
   granit::shader fragment;
-  REQUIRE(vertex.initialize(renderer.native_handle(),
-                            {.stage = granit::shader_stage::vertex, .code = vertex_code}) ==
-          granit::result::success);
-  REQUIRE(fragment.initialize(renderer.native_handle(),
-                              {.stage = granit::shader_stage::fragment, .code = fragment_code}) ==
-          granit::result::success);
+  REQUIRE(vertex.initialize(renderer, {.stage = granit::shader_stage::vertex,
+                                       .code = vertex_code}) == granit::result::success);
+  REQUIRE(fragment.initialize(renderer, {.stage = granit::shader_stage::fragment,
+                                         .code = fragment_code}) == granit::result::success);
   granit::pipeline_layout layout;
   REQUIRE(layout.initialize(renderer.native_handle()) == granit::result::success);
   const std::array attributes{
@@ -911,12 +898,10 @@ TEST_CASE("Graphics Pipeline 热替换保持已录制对象有效", "[pipeline][
   REQUIRE_FALSE(fragment_code.empty());
   granit::shader vertex;
   granit::shader fragment;
-  REQUIRE(vertex.initialize(renderer.native_handle(),
-                            {.stage = granit::shader_stage::vertex, .code = vertex_code}) ==
-          granit::result::success);
-  REQUIRE(fragment.initialize(renderer.native_handle(),
-                              {.stage = granit::shader_stage::fragment, .code = fragment_code}) ==
-          granit::result::success);
+  REQUIRE(vertex.initialize(renderer, {.stage = granit::shader_stage::vertex,
+                                       .code = vertex_code}) == granit::result::success);
+  REQUIRE(fragment.initialize(renderer, {.stage = granit::shader_stage::fragment,
+                                         .code = fragment_code}) == granit::result::success);
   granit::pipeline_layout layout;
   REQUIRE(layout.initialize(renderer.native_handle()) == granit::result::success);
 
@@ -934,12 +919,12 @@ TEST_CASE("Graphics Pipeline 热替换保持已录制对象有效", "[pipeline][
           granit::result::success);
   granit::shader replacement_vertex;
   granit::shader replacement_fragment;
-  REQUIRE(replacement_vertex.initialize(renderer.native_handle(),
-                                        {.stage = granit::shader_stage::vertex,
-                                         .code = vertex_code}) == granit::result::success);
-  REQUIRE(replacement_fragment.initialize(renderer.native_handle(),
-                                          {.stage = granit::shader_stage::fragment,
-                                           .code = fragment_code}) == granit::result::success);
+  REQUIRE(replacement_vertex.initialize(
+              renderer, {.stage = granit::shader_stage::vertex, .code = vertex_code}) ==
+          granit::result::success);
+  REQUIRE(replacement_fragment.initialize(
+              renderer, {.stage = granit::shader_stage::fragment, .code = fragment_code}) ==
+          granit::result::success);
   granit::pipeline_layout replacement_layout;
   REQUIRE(replacement_layout.initialize(renderer.native_handle()) == granit::result::success);
   granit::graphics_pipeline replacement_pipeline;
@@ -963,12 +948,10 @@ TEST_CASE("Graphics Pipeline 热替换保持已录制对象有效", "[pipeline][
   REQUIRE(granit_texture_create_with_default_view(renderer.native_handle(), &texture_desc, &texture,
                                                   &view) == GRANIT_SUCCESS);
   granit::buffer index_buffer;
-  REQUIRE(index_buffer.initialize(renderer.native_handle(),
-                                  {.size = 16, .usage = granit::buffer_usage::index}) ==
+  REQUIRE(index_buffer.initialize(renderer, {.size = 16, .usage = granit::buffer_usage::index}) ==
           granit::result::success);
   granit::buffer vertex_buffer;
-  REQUIRE(vertex_buffer.initialize(renderer.native_handle(),
-                                   {.size = 16, .usage = granit::buffer_usage::vertex}) ==
+  REQUIRE(vertex_buffer.initialize(renderer, {.size = 16, .usage = granit::buffer_usage::vertex}) ==
           granit::result::success);
   granit::command_recorder recorder;
   REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
@@ -1030,12 +1013,10 @@ TEST_CASE("Compute Pipeline 校验阶段并持有 Shader 与 Layout", "[pipeline
   REQUIRE_FALSE(compute_code.empty());
   granit::shader compute;
   granit::shader vertex;
-  REQUIRE(compute.initialize(renderer.native_handle(),
-                             {.stage = granit::shader_stage::compute, .code = compute_code}) ==
-          granit::result::success);
-  REQUIRE(vertex.initialize(renderer.native_handle(),
-                            {.stage = granit::shader_stage::vertex, .code = vertex_code}) ==
-          granit::result::success);
+  REQUIRE(compute.initialize(renderer, {.stage = granit::shader_stage::compute,
+                                        .code = compute_code}) == granit::result::success);
+  REQUIRE(vertex.initialize(renderer, {.stage = granit::shader_stage::vertex,
+                                       .code = vertex_code}) == granit::result::success);
   granit::pipeline_layout layout;
   REQUIRE(layout.initialize(renderer.native_handle()) == granit::result::success);
 
@@ -1100,15 +1081,12 @@ TEST_CASE("Graphics 与 Compute Pipeline 支持多线程并发创建", "[pipelin
   granit::shader vertex;
   granit::shader fragment;
   granit::shader compute;
-  REQUIRE(vertex.initialize(renderer.native_handle(),
-                            {.stage = granit::shader_stage::vertex, .code = vertex_code}) ==
-          granit::result::success);
-  REQUIRE(fragment.initialize(renderer.native_handle(),
-                              {.stage = granit::shader_stage::fragment, .code = fragment_code}) ==
-          granit::result::success);
-  REQUIRE(compute.initialize(renderer.native_handle(),
-                             {.stage = granit::shader_stage::compute, .code = compute_code}) ==
-          granit::result::success);
+  REQUIRE(vertex.initialize(renderer, {.stage = granit::shader_stage::vertex,
+                                       .code = vertex_code}) == granit::result::success);
+  REQUIRE(fragment.initialize(renderer, {.stage = granit::shader_stage::fragment,
+                                         .code = fragment_code}) == granit::result::success);
+  REQUIRE(compute.initialize(renderer, {.stage = granit::shader_stage::compute,
+                                        .code = compute_code}) == granit::result::success);
   granit::pipeline_layout layout;
   REQUIRE(layout.initialize(renderer.native_handle()) == granit::result::success);
 
@@ -1167,16 +1145,15 @@ TEST_CASE("Compute Dispatch 写入 Storage Buffer 并自动同步 Copy", "[pipel
 
   constexpr std::uint64_t buffer_size = 16 * sizeof(std::uint32_t);
   granit::buffer storage;
-  REQUIRE(storage.initialize(
-              renderer.native_handle(),
-              {.size = buffer_size,
-               .usage = granit::buffer_usage::storage | granit::buffer_usage::transfer_source,
-               .location = granit::memory_location::device}) == granit::result::success);
+  REQUIRE(storage.initialize(renderer, {.size = buffer_size,
+                                        .usage = granit::buffer_usage::storage |
+                                                 granit::buffer_usage::transfer_source,
+                                        .location = granit::memory_location::device}) ==
+          granit::result::success);
   granit::buffer readback;
-  REQUIRE(readback.initialize(renderer.native_handle(),
-                              {.size = buffer_size,
-                               .usage = granit::buffer_usage::transfer_destination,
-                               .location = granit::memory_location::readback}) ==
+  REQUIRE(readback.initialize(renderer, {.size = buffer_size,
+                                         .usage = granit::buffer_usage::transfer_destination,
+                                         .location = granit::memory_location::readback}) ==
           granit::result::success);
 
   const granit::bind_group_layout_entry declaration{.binding = 0,
@@ -1184,8 +1161,7 @@ TEST_CASE("Compute Dispatch 写入 Storage Buffer 并自动同步 Copy", "[pipel
                                                     .visibility =
                                                         granit::shader_stage_flags::compute};
   granit::bind_group_layout group_layout;
-  REQUIRE(group_layout.initialize(renderer, std::span{&declaration, 1}) ==
-          granit::result::success);
+  REQUIRE(group_layout.initialize(renderer, std::span{&declaration, 1}) == granit::result::success);
   const auto group_layout_handle = group_layout.native_handle();
   granit::pipeline_layout pipeline_layout;
   REQUIRE(
@@ -1199,8 +1175,8 @@ TEST_CASE("Compute Dispatch 写入 Storage Buffer 并自动同步 Copy", "[pipel
 
   const auto code = load_shader("storage_buffer.comp.spv");
   granit::shader shader;
-  REQUIRE(shader.initialize(renderer.native_handle(), {.stage = granit::shader_stage::compute,
-                                                       .code = code}) == granit::result::success);
+  REQUIRE(shader.initialize(renderer, {.stage = granit::shader_stage::compute, .code = code}) ==
+          granit::result::success);
   granit::compute_pipeline pipeline;
   REQUIRE(pipeline.initialize(renderer.native_handle(),
                               {.layout = pipeline_layout.ref(), .compute_shader = shader.ref()}) ==
@@ -1246,15 +1222,12 @@ TEST_CASE("Graphics 与 Compute 工作负载支持并行录制", "[pipeline][com
   granit::shader vertex;
   granit::shader fragment;
   granit::shader compute;
-  REQUIRE(vertex.initialize(renderer.native_handle(),
-                            {.stage = granit::shader_stage::vertex, .code = vertex_code}) ==
-          granit::result::success);
-  REQUIRE(fragment.initialize(renderer.native_handle(),
-                              {.stage = granit::shader_stage::fragment, .code = fragment_code}) ==
-          granit::result::success);
-  REQUIRE(compute.initialize(renderer.native_handle(),
-                             {.stage = granit::shader_stage::compute, .code = compute_code}) ==
-          granit::result::success);
+  REQUIRE(vertex.initialize(renderer, {.stage = granit::shader_stage::vertex,
+                                       .code = vertex_code}) == granit::result::success);
+  REQUIRE(fragment.initialize(renderer, {.stage = granit::shader_stage::fragment,
+                                         .code = fragment_code}) == granit::result::success);
+  REQUIRE(compute.initialize(renderer, {.stage = granit::shader_stage::compute,
+                                        .code = compute_code}) == granit::result::success);
 
   granit::pipeline_layout graphics_layout;
   REQUIRE(graphics_layout.initialize(renderer.native_handle()) == granit::result::success);
@@ -1310,7 +1283,7 @@ TEST_CASE("Graphics 与 Compute 工作负载支持并行录制", "[pipeline][com
   std::array<granit::buffer, compute_count> storage_buffers;
   std::array<granit::bind_group, compute_count> compute_groups;
   for (std::size_t index = 0; index < compute_count; ++index) {
-    REQUIRE(storage_buffers[index].initialize(renderer.native_handle(),
+    REQUIRE(storage_buffers[index].initialize(renderer,
                                               {.size = storage_size,
                                                .usage = granit::buffer_usage::storage,
                                                .location = granit::memory_location::device}) ==

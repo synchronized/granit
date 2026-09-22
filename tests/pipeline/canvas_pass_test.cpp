@@ -22,12 +22,14 @@ TEST_CASE("Canvas Pass按Batch录制顶点色与Scissor") {
   constexpr std::uint32_t size = 32;
   granit::texture color;
   granit::texture_view color_view;
-  REQUIRE(color.initialize(native, {.format = granit::texture_format::rgba8_unorm,
-                                    .usage = granit::texture_usage::color_attachment |
-                                             granit::texture_usage::transfer_source,
-                                    .width = size,
-                                    .height = size}) == granit::result::success);
-  REQUIRE(color_view.initialize(native, color.native_handle()) == granit::result::success);
+  REQUIRE(color.initialize(granit::renderer_ref::from_native(native),
+                           {.format = granit::texture_format::rgba8_unorm,
+                            .usage = granit::texture_usage::color_attachment |
+                                     granit::texture_usage::transfer_source,
+                            .width = size,
+                            .height = size}) == granit::result::success);
+  REQUIRE(color_view.initialize(granit::renderer_ref::from_native(native), color.native_handle()) ==
+          granit::result::success);
 
   constexpr std::array<std::uint32_t, 3> indices{0, 1, 2};
   constexpr std::array blue{granit_canvas_vertex{3, 29, 0, 0, UINT32_MAX},
@@ -43,8 +45,10 @@ TEST_CASE("Canvas Pass按Batch录制顶点色与Scissor") {
                                                    granit::texture_usage::transfer_destination,
                                           .width = 1,
                                           .height = 1};
-  REQUIRE(blue_texture.initialize(native, sampled_desc) == granit::result::success);
-  REQUIRE(red_texture.initialize(native, sampled_desc) == granit::result::success);
+  REQUIRE(blue_texture.initialize(granit::renderer_ref::from_native(native), sampled_desc) ==
+          granit::result::success);
+  REQUIRE(red_texture.initialize(granit::renderer_ref::from_native(native), sampled_desc) ==
+          granit::result::success);
   constexpr std::array<std::uint8_t, 4> blue_pixel{0, 0, 128, 128};
   constexpr std::array<std::uint8_t, 4> red_pixel{128, 0, 0, 128};
   const granit::texture_write_region pixel_region{};
@@ -52,8 +56,10 @@ TEST_CASE("Canvas Pass按Batch录制顶点色与Scissor") {
           granit::result::success);
   REQUIRE(red_texture.write(std::as_bytes(std::span{red_pixel}), {}, pixel_region) ==
           granit::result::success);
-  REQUIRE(blue_view.initialize(native, blue_texture.native_handle()) == granit::result::success);
-  REQUIRE(red_view.initialize(native, red_texture.native_handle()) == granit::result::success);
+  REQUIRE(blue_view.initialize(granit::renderer_ref::from_native(native),
+                               blue_texture.native_handle()) == granit::result::success);
+  REQUIRE(red_view.initialize(granit::renderer_ref::from_native(native),
+                              red_texture.native_handle()) == granit::result::success);
   granit::sampler sampler;
   REQUIRE(sampler.initialize(granit::renderer_ref::from_native(native),
                              {.mag_filter = granit::filter::nearest,
@@ -85,9 +91,10 @@ TEST_CASE("Canvas Pass按Batch录制顶点色与Scissor") {
   REQUIRE(recorder.reset() == granit::result::success);
 
   granit::buffer readback;
-  REQUIRE(readback.initialize(native, {.size = size * size * 4,
-                                       .usage = granit::buffer_usage::transfer_destination,
-                                       .location = granit::memory_location::readback}) ==
+  REQUIRE(readback.initialize(granit::renderer_ref::from_native(native),
+                              {.size = size * size * 4,
+                               .usage = granit::buffer_usage::transfer_destination,
+                               .location = granit::memory_location::readback}) ==
           granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
   const granit_texture_write_region region{.mip_level = 0,
@@ -137,11 +144,13 @@ TEST_CASE("Canvas Pass按Batch录制顶点色与Scissor") {
     REQUIRE(list.clear() == granit::result::success);
     REQUIRE(red_view.reset() == granit::result::success);
     REQUIRE(red_texture.reset() == granit::result::success);
-    REQUIRE(red_texture.initialize(native, sampled_desc) == granit::result::success);
+    REQUIRE(red_texture.initialize(granit::renderer_ref::from_native(native), sampled_desc) ==
+            granit::result::success);
     constexpr std::array<std::uint8_t, 4> green_pixel{0, 128, 0, 128};
     REQUIRE(red_texture.write(std::as_bytes(std::span{green_pixel}), {}, pixel_region) ==
             granit::result::success);
-    REQUIRE(red_view.initialize(native, red_texture.native_handle()) == granit::result::success);
+    REQUIRE(red_view.initialize(granit::renderer_ref::from_native(native),
+                                red_texture.native_handle()) == granit::result::success);
     REQUIRE(list.append(red, indices,
                         {.texture = red_view.native_handle(),
                          .sampler = sampler.native_handle(),

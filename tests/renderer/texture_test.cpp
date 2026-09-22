@@ -23,8 +23,9 @@ TEST_CASE("Texture View创建把空资源句柄归类为无效句柄", "[texture
   CHECK(view == GRANIT_NULL_HANDLE);
 
   granit::texture_view cpp_view;
-  CHECK(cpp_view.initialize(GRANIT_NULL_HANDLE, UINT64_C(1)) == granit::result::invalid_handle);
-  CHECK(cpp_view.initialize(UINT64_C(1), GRANIT_NULL_HANDLE) == granit::result::invalid_handle);
+  CHECK(cpp_view.initialize(granit::renderer_ref{}, UINT64_C(1)) == granit::result::invalid_handle);
+  CHECK(cpp_view.initialize(granit::renderer_ref::from_native(UINT64_C(1)), GRANIT_NULL_HANDLE) ==
+        granit::result::invalid_handle);
 }
 bool unavailable(granit::result value) {
   return value == granit::result::backend_unavailable ||
@@ -130,12 +131,11 @@ TEST_CASE("压缩Texture写入遵守块对齐并允许边缘块", "[texture][wri
     SKIP("当前设备不支持 BC1 上传");
 
   granit::texture texture;
-  REQUIRE(texture.initialize(renderer.native_handle(),
-                             {.format = granit::texture_format::bc1_rgba_unorm,
-                              .usage = granit::texture_usage::transfer_destination |
-                                       granit::texture_usage::sampled,
-                              .width = 7,
-                              .height = 5}) == granit::result::success);
+  REQUIRE(texture.initialize(renderer, {.format = granit::texture_format::bc1_rgba_unorm,
+                                        .usage = granit::texture_usage::transfer_destination |
+                                                 granit::texture_usage::sampled,
+                                        .width = 7,
+                                        .height = 5}) == granit::result::success);
   std::array<std::byte, 32> blocks{};
   CHECK(texture.write(blocks, {}, {.width = 7, .height = 5}) == granit::result::success);
   CHECK(texture.write(blocks, {}, {.x = 1, .width = 4, .height = 4}) ==
@@ -154,12 +154,11 @@ TEST_CASE("Texture同步读取先查询容量再返回紧密原始像素", "[tex
     SKIP("当前运行环境没有满足要求的 Vulkan 设备");
   REQUIRE(initialized == granit::result::success);
   granit::texture texture;
-  REQUIRE(texture.initialize(renderer.native_handle(),
-                             {.format = granit::texture_format::rgba8_unorm,
-                              .usage = granit::texture_usage::transfer_source |
-                                       granit::texture_usage::transfer_destination,
-                              .width = 2,
-                              .height = 2}) == granit::result::success);
+  REQUIRE(texture.initialize(renderer, {.format = granit::texture_format::rgba8_unorm,
+                                        .usage = granit::texture_usage::transfer_source |
+                                                 granit::texture_usage::transfer_destination,
+                                        .width = 2,
+                                        .height = 2}) == granit::result::success);
   constexpr std::array<uint8_t, 16> expected{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
   REQUIRE(texture.write(std::as_bytes(std::span{expected}), {}, {.width = 2, .height = 2}) ==
           granit::result::success);
@@ -220,10 +219,10 @@ TEST_CASE("Texture View 校验格式和 Renderer 归属", "[texture][validation]
   REQUIRE(second.initialize({.application_name = "granit-texture-second"}) ==
           granit::result::success);
   granit::texture texture;
-  REQUIRE(texture.initialize(first.native_handle(), {.format = granit::texture_format::rgba8_unorm,
-                                                     .usage = granit::texture_usage::sampled,
-                                                     .width = 16,
-                                                     .height = 16}) == granit::result::success);
+  REQUIRE(texture.initialize(first, {.format = granit::texture_format::rgba8_unorm,
+                                     .usage = granit::texture_usage::sampled,
+                                     .width = 16,
+                                     .height = 16}) == granit::result::success);
   granit_texture_view_desc view_desc = GRANIT_TEXTURE_VIEW_DESC_INIT;
   view_desc.format = GRANIT_TEXTURE_FORMAT_BGRA8_UNORM;
   granit_texture_view view = GRANIT_NULL_HANDLE;
@@ -233,8 +232,7 @@ TEST_CASE("Texture View 校验格式和 Renderer 归属", "[texture][validation]
   CHECK(granit_texture_view_create(second.native_handle(), texture.native_handle(), &view_desc,
                                    &view) == GRANIT_ERROR_INVALID_HANDLE);
   granit::texture_view cpp_view;
-  REQUIRE(cpp_view.initialize(first.native_handle(), texture.native_handle()) ==
-          granit::result::success);
+  REQUIRE(cpp_view.initialize(first.ref(), texture.native_handle()) == granit::result::success);
   const auto texture_reference = texture.ref();
   const auto view_reference = cpp_view.ref();
   CHECK(texture_reference.valid());
@@ -252,17 +250,16 @@ TEST_CASE("Cube Texture支持六面和Mip链", "[texture][cube][mip]") {
   REQUIRE(result == granit::result::success);
 
   granit::texture cube;
-  REQUIRE(cube.initialize(renderer.native_handle(),
-                          {.dimension = granit::texture_dimension::cube,
-                           .format = granit::texture_format::rgba16_float,
-                           .usage = granit::texture_usage::sampled |
-                                    granit::texture_usage::transfer_destination,
-                           .width = 8,
-                           .height = 8,
-                           .mip_levels = 4,
-                           .array_layers = 6}) == granit::result::success);
+  REQUIRE(cube.initialize(renderer, {.dimension = granit::texture_dimension::cube,
+                                     .format = granit::texture_format::rgba16_float,
+                                     .usage = granit::texture_usage::sampled |
+                                              granit::texture_usage::transfer_destination,
+                                     .width = 8,
+                                     .height = 8,
+                                     .mip_levels = 4,
+                                     .array_layers = 6}) == granit::result::success);
   granit::texture_view view;
-  REQUIRE(view.initialize(renderer.native_handle(), cube.native_handle(),
+  REQUIRE(view.initialize(renderer.ref(), cube.native_handle(),
                           {.dimension = granit::texture_dimension::cube,
                            .format = granit::texture_format::rgba16_float,
                            .aspect = granit::texture_aspect::color,
@@ -309,11 +306,10 @@ TEST_CASE("Texture 写入校验用途、布局和区域", "[texture][write][vali
   REQUIRE(result == granit::result::success);
 
   granit::texture texture;
-  REQUIRE(texture.initialize(renderer.native_handle(),
-                             {.format = granit::texture_format::rgba8_unorm,
-                              .usage = granit::texture_usage::transfer_destination,
-                              .width = 4,
-                              .height = 4}) == granit::result::success);
+  REQUIRE(texture.initialize(renderer, {.format = granit::texture_format::rgba8_unorm,
+                                        .usage = granit::texture_usage::transfer_destination,
+                                        .width = 4,
+                                        .height = 4}) == granit::result::success);
   std::array<std::byte, 64> pixels{};
   CHECK(texture.write(pixels, {}, {.width = 4, .height = 4}) == granit::result::success);
   CHECK(texture.write(pixels, {.bytes_per_row = 15}, {.width = 4, .height = 4}) ==
@@ -322,11 +318,10 @@ TEST_CASE("Texture 写入校验用途、布局和区域", "[texture][write][vali
         granit::result::invalid_argument);
 
   granit::texture sampled;
-  REQUIRE(
-      sampled.initialize(renderer.native_handle(), {.format = granit::texture_format::rgba8_unorm,
-                                                    .usage = granit::texture_usage::sampled,
-                                                    .width = 4,
-                                                    .height = 4}) == granit::result::success);
+  REQUIRE(sampled.initialize(renderer, {.format = granit::texture_format::rgba8_unorm,
+                                        .usage = granit::texture_usage::sampled,
+                                        .width = 4,
+                                        .height = 4}) == granit::result::success);
   CHECK(sampled.write(pixels, {}, {.width = 4, .height = 4}) == granit::result::unsupported);
 }
 
@@ -340,11 +335,10 @@ TEST_CASE("不同 Texture 可以并发写入", "[texture][write][concurrency]") 
   constexpr std::size_t count = 8;
   std::array<granit::texture, count> textures;
   for (auto& texture : textures) {
-    REQUIRE(texture.initialize(renderer.native_handle(),
-                               {.format = granit::texture_format::rgba8_unorm,
-                                .usage = granit::texture_usage::transfer_destination,
-                                .width = 16,
-                                .height = 16}) == granit::result::success);
+    REQUIRE(texture.initialize(renderer, {.format = granit::texture_format::rgba8_unorm,
+                                          .usage = granit::texture_usage::transfer_destination,
+                                          .width = 16,
+                                          .height = 16}) == granit::result::success);
   }
   std::array<std::byte, 16 * 16 * 4> pixels{};
   std::vector<std::future<granit::result>> workers;

@@ -30,11 +30,10 @@ TEST_CASE("Tone Mapping GPU资源建立完整全屏Pipeline") {
 
   granit::texture hdr_texture;
   granit::texture_view hdr_view;
-  REQUIRE(hdr_texture.initialize(renderer.native_handle(),
-                                 {.format = granit::texture_format::rgba16_float,
-                                  .usage = granit::texture_usage::sampled}) ==
+  REQUIRE(hdr_texture.initialize(renderer.ref(), {.format = granit::texture_format::rgba16_float,
+                                                  .usage = granit::texture_usage::sampled}) ==
           granit::result::success);
-  REQUIRE(hdr_view.initialize(renderer.native_handle(), hdr_texture.native_handle()) ==
+  REQUIRE(hdr_view.initialize(renderer.ref(), hdr_texture.native_handle()) ==
           granit::result::success);
   granit::tests::tone_mapping_shader_library shaders;
   REQUIRE(shaders.initialize(renderer));
@@ -64,11 +63,10 @@ TEST_CASE("Tone Mapping跨HDR View复用不变Pipeline资源") {
   std::array<granit::texture, 2> textures;
   std::array<granit::texture_view, 2> views;
   for (std::size_t index = 0; index < views.size(); ++index) {
-    REQUIRE(textures[index].initialize(renderer.native_handle(),
-                                       {.format = granit::texture_format::rgba16_float,
-                                        .usage = granit::texture_usage::sampled}) ==
+    REQUIRE(textures[index].initialize(renderer, {.format = granit::texture_format::rgba16_float,
+                                                  .usage = granit::texture_usage::sampled}) ==
             granit::result::success);
-    REQUIRE(views[index].initialize(renderer.native_handle(), textures[index].native_handle()) ==
+    REQUIRE(views[index].initialize(renderer.ref(), textures[index].native_handle()) ==
             granit::result::success);
   }
   granit::tests::tone_mapping_shader_library shaders;
@@ -105,11 +103,10 @@ TEST_CASE("Tone Mapping GPU资源拒绝重复或缺失sRGB编码") {
   REQUIRE(initialized == granit::result::success);
   granit::texture hdr_texture;
   granit::texture_view hdr_view;
-  REQUIRE(hdr_texture.initialize(renderer.native_handle(),
-                                 {.format = granit::texture_format::rgba16_float,
-                                  .usage = granit::texture_usage::sampled}) ==
+  REQUIRE(hdr_texture.initialize(renderer.ref(), {.format = granit::texture_format::rgba16_float,
+                                                  .usage = granit::texture_usage::sampled}) ==
           granit::result::success);
-  REQUIRE(hdr_view.initialize(renderer.native_handle(), hdr_texture.native_handle()) ==
+  REQUIRE(hdr_view.initialize(renderer.ref(), hdr_texture.native_handle()) ==
           granit::result::success);
   granit::tests::tone_mapping_shader_library shaders;
   REQUIRE(shaders.initialize(renderer));
@@ -140,7 +137,7 @@ TEST_CASE("Tone Mapping GPU输出与CPU参考一致") {
 
   granit::texture hdr_texture;
   granit::texture_view hdr_view;
-  REQUIRE(hdr_texture.initialize(renderer.native_handle(),
+  REQUIRE(hdr_texture.initialize(renderer.ref(),
                                  {.format = granit::texture_format::rgba16_float,
                                   .usage = granit::texture_usage::sampled |
                                            granit::texture_usage::transfer_destination}) ==
@@ -149,7 +146,7 @@ TEST_CASE("Tone Mapping GPU输出与CPU参考一致") {
   REQUIRE(
       hdr_texture.write({reinterpret_cast<const std::byte*>(hdr_pixel.data()), sizeof(hdr_pixel)},
                         {.bytes_per_row = 8}, {}) == granit::result::success);
-  REQUIRE(hdr_view.initialize(renderer.native_handle(), hdr_texture.native_handle()) ==
+  REQUIRE(hdr_view.initialize(renderer.ref(), hdr_texture.native_handle()) ==
           granit::result::success);
   granit::tests::tone_mapping_shader_library shaders;
   REQUIRE(shaders.initialize(renderer));
@@ -170,10 +167,9 @@ TEST_CASE("Tone Mapping GPU输出与CPU参考一致") {
   REQUIRE(granit_texture_create_with_default_view(renderer.native_handle(), &output_desc,
                                                   &output_texture, &output_view) == GRANIT_SUCCESS);
   granit::buffer readback;
-  REQUIRE(readback.initialize(renderer.native_handle(),
-                              {.size = 16 * 16 * 4,
-                               .usage = granit::buffer_usage::transfer_destination,
-                               .location = granit::memory_location::readback}) ==
+  REQUIRE(readback.initialize(renderer, {.size = 16 * 16 * 4,
+                                         .usage = granit::buffer_usage::transfer_destination,
+                                         .location = granit::memory_location::readback}) ==
           granit::result::success);
   granit::command_recorder recorder;
   REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);

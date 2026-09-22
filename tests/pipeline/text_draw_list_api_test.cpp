@@ -116,11 +116,12 @@ TEST_CASE("Text Atlas覆盖率进入像素且跨页保持Draw顺序") {
   constexpr uint32_t size = 32;
   granit::texture color;
   granit::texture_view color_view;
-  REQUIRE(color.initialize(native, {.format = granit::texture_format::rgba8_unorm,
-                                    .usage = granit::texture_usage::color_attachment |
-                                             granit::texture_usage::transfer_source,
-                                    .width = size,
-                                    .height = size}) == granit::result::success);
+  REQUIRE(color.initialize(granit::renderer_ref::from_native(native),
+                           {.format = granit::texture_format::rgba8_unorm,
+                            .usage = granit::texture_usage::color_attachment |
+                                     granit::texture_usage::transfer_source,
+                            .width = size,
+                            .height = size}) == granit::result::success);
   REQUIRE(color_view.initialize(renderer, color) == granit::result::success);
   granit::command_recorder recorder;
   REQUIRE(recorder.initialize(renderer) == granit::result::success);
@@ -140,9 +141,10 @@ TEST_CASE("Text Atlas覆盖率进入像素且跨页保持Draw顺序") {
   REQUIRE(recorder.reset() == granit::result::success);
 
   granit::buffer readback;
-  REQUIRE(readback.initialize(native, {.size = size * size * 4,
-                                       .usage = granit::buffer_usage::transfer_destination,
-                                       .location = granit::memory_location::readback}) ==
+  REQUIRE(readback.initialize(granit::renderer_ref::from_native(native),
+                              {.size = size * size * 4,
+                               .usage = granit::buffer_usage::transfer_destination,
+                               .location = granit::memory_location::readback}) ==
           granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
   const granit_texture_write_region readback_region{.mip_level = 0,

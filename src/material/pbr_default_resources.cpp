@@ -26,9 +26,10 @@ constexpr std::array<std::array<std::byte, 4>, 5> pixels{
 granit_result pbr_default_resources::initialize(granit_renderer renderer) noexcept {
   if (renderer == GRANIT_NULL_HANDLE || initialized())
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto renderer_view = granit::renderer_ref::from_native(renderer);
   for (std::size_t index = 0; index < textures_.size(); ++index) {
     auto result = textures_[index].initialize(
-        renderer,
+        renderer_view,
         {.format = formats[index],
          .usage = granit::texture_usage::sampled | granit::texture_usage::transfer_destination});
     if (result.failed()) {
@@ -40,13 +41,13 @@ granit_result pbr_default_resources::initialize(granit_renderer renderer) noexce
       static_cast<void>(reset());
       return static_cast<granit_result>(result);
     }
-    result = views_[index].initialize(renderer, textures_[index].native_handle());
+    result = views_[index].initialize(renderer_view, textures_[index].native_handle());
     if (result.failed()) {
       static_cast<void>(reset());
       return static_cast<granit_result>(result);
     }
   }
-  const auto result = sampler_.initialize(granit::renderer_ref::from_native(renderer));
+  const auto result = sampler_.initialize(renderer_view);
   if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);

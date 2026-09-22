@@ -34,28 +34,30 @@ granit_result light_buffers::initialize(granit_renderer renderer, const light_li
   if (renderer == GRANIT_NULL_HANDLE || initialized() || !valid(capacities))
     return GRANIT_ERROR_INVALID_ARGUMENT;
 
+  const auto renderer_view = granit::renderer_ref::from_native(renderer);
   constexpr auto usage = granit::buffer_usage::storage | granit::buffer_usage::transfer_destination;
   const gpu_light_counts zero_counts{};
   auto result = counts_.initialize(
-      renderer,
+      renderer_view,
       {.size = sizeof(zero_counts),
        .usage = granit::buffer_usage::uniform | granit::buffer_usage::transfer_destination,
        .location = memory_location},
       bytes(zero_counts));
   if (result.ok()) {
     result = directional_.initialize(
-        renderer, {.size = allocation_size<gpu_directional_light>(capacities.directional),
-                   .usage = usage,
-                   .location = memory_location});
+        renderer_view, {.size = allocation_size<gpu_directional_light>(capacities.directional),
+                        .usage = usage,
+                        .location = memory_location});
+  }
+  if (result.ok()) {
+    result = point_.initialize(renderer_view,
+                               {.size = allocation_size<gpu_point_light>(capacities.point),
+                                .usage = usage,
+                                .location = memory_location});
   }
   if (result.ok()) {
     result =
-        point_.initialize(renderer, {.size = allocation_size<gpu_point_light>(capacities.point),
-                                     .usage = usage,
-                                     .location = memory_location});
-  }
-  if (result.ok()) {
-    result = spot_.initialize(renderer, {.size = allocation_size<gpu_spot_light>(capacities.spot),
+        spot_.initialize(renderer_view, {.size = allocation_size<gpu_spot_light>(capacities.spot),
                                          .usage = usage,
                                          .location = memory_location});
   }

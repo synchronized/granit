@@ -32,8 +32,9 @@ granit_result ibl_resources::initialize(granit_renderer renderer, ibl_texture_vi
   if (renderer == GRANIT_NULL_HANDLE || initialized() || !complete(views) || !valid(values))
     return GRANIT_ERROR_INVALID_ARGUMENT;
 
+  const auto renderer_view = granit::renderer_ref::from_native(renderer);
   auto result = constants_.initialize(
-      renderer,
+      renderer_view,
       {.size = sizeof(values),
        .usage = granit::buffer_usage::uniform | granit::buffer_usage::transfer_destination,
        .location = granit::memory_location::automatic},
@@ -41,15 +42,15 @@ granit_result ibl_resources::initialize(granit_renderer renderer, ibl_texture_vi
   if (result.failed())
     return static_cast<granit_result>(result);
 
-  result = sampler_.initialize(granit::renderer_ref::from_native(renderer),
-                               {.mag_filter = granit::filter::linear,
-                                .min_filter = granit::filter::linear,
-                                .mip_filter = granit::mipmap_filter::linear,
-                                .address_u = granit::address_mode::clamp_to_edge,
-                                .address_v = granit::address_mode::clamp_to_edge,
-                                .address_w = granit::address_mode::clamp_to_edge,
-                                // Shader 通过动态常量选择 mip，Sampler 不额外收紧该范围。
-                                .max_lod = 1000.0F});
+  result =
+      sampler_.initialize(renderer_view, {.mag_filter = granit::filter::linear,
+                                          .min_filter = granit::filter::linear,
+                                          .mip_filter = granit::mipmap_filter::linear,
+                                          .address_u = granit::address_mode::clamp_to_edge,
+                                          .address_v = granit::address_mode::clamp_to_edge,
+                                          .address_w = granit::address_mode::clamp_to_edge,
+                                          // Shader 通过动态常量选择 mip，Sampler 不额外收紧该范围。
+                                          .max_lod = 1000.0F});
   if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);
@@ -77,8 +78,7 @@ granit_result ibl_resources::initialize(granit_renderer renderer, ibl_texture_vi
                                       .type = granit::binding_type::sampler,
                                       .array_count = 1,
                                       .visibility = fragment}};
-  auto renderer_ref = granit::renderer_ref::from_native(renderer);
-  result = layout_.initialize(renderer_ref, layout_entries);
+  result = layout_.initialize(renderer_view, layout_entries);
   if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);

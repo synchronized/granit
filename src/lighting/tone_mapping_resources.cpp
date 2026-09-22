@@ -118,8 +118,9 @@ tone_mapping_binding_resources::initialize(const tone_mapping_pipeline_resources
       !valid(values) || !compatible_output(pipeline.output_format(), values)) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
+  const auto renderer_view = granit::renderer_ref::from_native(pipeline.renderer());
   auto result = constants_.initialize(
-      pipeline.renderer(),
+      renderer_view,
       {.size = sizeof(values),
        .usage = granit::buffer_usage::uniform | granit::buffer_usage::transfer_destination,
        .location = granit::memory_location::automatic},

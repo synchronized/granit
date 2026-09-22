@@ -29,7 +29,7 @@ TEST_CASE("Core资源创建把空Renderer归类为无效句柄", "[renderer][con
         GRANIT_ERROR_INVALID_HANDLE);
   CHECK(buffer == GRANIT_NULL_HANDLE);
   granit::buffer cpp_buffer;
-  CHECK(cpp_buffer.initialize(GRANIT_NULL_HANDLE, {}) == granit::result::invalid_handle);
+  CHECK(cpp_buffer.initialize(granit::renderer_ref{}, {}) == granit::result::invalid_handle);
 
   const granit_command_recorder_desc recorder_desc = GRANIT_COMMAND_RECORDER_DESC_INIT;
   granit_command_recorder recorder = UINT64_C(1);
@@ -64,7 +64,7 @@ TEST_CASE("Core资源创建把空Renderer归类为无效句柄", "[renderer][con
         GRANIT_ERROR_INVALID_HANDLE);
   CHECK(texture == GRANIT_NULL_HANDLE);
   granit::texture cpp_texture;
-  CHECK(cpp_texture.initialize(GRANIT_NULL_HANDLE, {}) == granit::result::invalid_handle);
+  CHECK(cpp_texture.initialize(granit::renderer_ref{}, {}) == granit::result::invalid_handle);
 
   const granit_timestamp_query_pool_desc query_desc{GRANIT_TIMESTAMP_QUERY_POOL_DESC_VERSION_1_SIZE,
                                                     2, 0};
@@ -358,10 +358,9 @@ TEST_CASE("Recorder 将 Texture 复制到 Readback Buffer", "[command][copy][tex
                                &layout, &region) == GRANIT_SUCCESS);
 
   granit::buffer readback;
-  REQUIRE(readback.initialize(renderer.native_handle(),
-                              {.size = pixels.size(),
-                               .usage = granit::buffer_usage::transfer_destination,
-                               .location = granit::memory_location::readback}) ==
+  REQUIRE(readback.initialize(renderer, {.size = pixels.size(),
+                                         .usage = granit::buffer_usage::transfer_destination,
+                                         .location = granit::memory_location::readback}) ==
           granit::result::success);
   granit::command_recorder recorder;
   REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
@@ -400,9 +399,8 @@ TEST_CASE("Recorder 在 Texture 之间复制区域", "[command][copy][texture]")
                                                        granit::texture_usage::transfer_destination,
                                               .width = 2,
                                               .height = 2};
-  REQUIRE(source.initialize(renderer.native_handle(), source_desc) == granit::result::success);
-  REQUIRE(destination.initialize(renderer.native_handle(), destination_desc) ==
-          granit::result::success);
+  REQUIRE(source.initialize(renderer, source_desc) == granit::result::success);
+  REQUIRE(destination.initialize(renderer, destination_desc) == granit::result::success);
   constexpr std::array<std::uint8_t, 16> pixels{1, 2,  3,  4,  5,  6,  7,  8,
                                                 9, 10, 11, 12, 13, 14, 15, 16};
   const granit::texture_data_layout layout{};
@@ -444,18 +442,17 @@ TEST_CASE("Recorder 将 Upload Buffer 复制到 Texture", "[command][copy][textu
   constexpr std::array<std::uint8_t, 16> pixels{21, 22, 23, 24, 25, 26, 27, 28,
                                                 29, 30, 31, 32, 33, 34, 35, 36};
   granit::buffer upload;
-  REQUIRE(upload.initialize(renderer.native_handle(),
+  REQUIRE(upload.initialize(renderer,
                             {.size = pixels.size(),
                              .usage = granit::buffer_usage::transfer_source,
                              .location = granit::memory_location::upload},
                             std::as_bytes(std::span{pixels})) == granit::result::success);
   granit::texture destination;
-  REQUIRE(destination.initialize(renderer.native_handle(),
-                                 {.format = granit::texture_format::rgba8_unorm,
-                                  .usage = granit::texture_usage::transfer_source |
-                                           granit::texture_usage::transfer_destination,
-                                  .width = 2,
-                                  .height = 2}) == granit::result::success);
+  REQUIRE(destination.initialize(renderer, {.format = granit::texture_format::rgba8_unorm,
+                                            .usage = granit::texture_usage::transfer_source |
+                                                     granit::texture_usage::transfer_destination,
+                                            .width = 2,
+                                            .height = 2}) == granit::result::success);
   const granit_texture_data_layout layout{};
   granit_texture_write_region region{};
   region.array_layer_count = 1;
@@ -492,13 +489,12 @@ TEST_CASE("Recorder 独立跟踪同一 Texture 的不同 mip", "[command][state]
   REQUIRE(result == granit::result::success);
 
   granit::texture texture;
-  REQUIRE(texture.initialize(renderer.native_handle(),
-                             {.format = granit::texture_format::rgba8_unorm,
-                              .usage = granit::texture_usage::transfer_source |
-                                       granit::texture_usage::transfer_destination,
-                              .width = 2,
-                              .height = 2,
-                              .mip_levels = 2}) == granit::result::success);
+  REQUIRE(texture.initialize(renderer, {.format = granit::texture_format::rgba8_unorm,
+                                        .usage = granit::texture_usage::transfer_source |
+                                                 granit::texture_usage::transfer_destination,
+                                        .width = 2,
+                                        .height = 2,
+                                        .mip_levels = 2}) == granit::result::success);
   constexpr std::array<std::uint8_t, 16> mip_zero{1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4};
   constexpr std::array<std::uint8_t, 4> mip_one{9, 10, 11, 12};
   REQUIRE(texture.write(std::as_bytes(std::span{mip_zero}), {}, {.width = 2, .height = 2}) ==
@@ -507,10 +503,9 @@ TEST_CASE("Recorder 独立跟踪同一 Texture 的不同 mip", "[command][state]
                         {.mip_level = 1, .width = 1, .height = 1}) == granit::result::success);
 
   granit::buffer readback;
-  REQUIRE(readback.initialize(renderer.native_handle(),
-                              {.size = mip_zero.size() + mip_one.size(),
-                               .usage = granit::buffer_usage::transfer_destination,
-                               .location = granit::memory_location::readback}) ==
+  REQUIRE(readback.initialize(renderer, {.size = mip_zero.size() + mip_one.size(),
+                                         .usage = granit::buffer_usage::transfer_destination,
+                                         .location = granit::memory_location::readback}) ==
           granit::result::success);
   granit::command_recorder recorder;
   REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
@@ -555,13 +550,12 @@ TEST_CASE("Recorder 使用线性 Blit 生成 Mipmap", "[command][mipmap][texture
   REQUIRE(result == granit::result::success);
 
   granit::texture texture;
-  REQUIRE(texture.initialize(renderer.native_handle(),
-                             {.format = granit::texture_format::rgba8_unorm,
-                              .usage = granit::texture_usage::transfer_source |
-                                       granit::texture_usage::transfer_destination,
-                              .width = 7,
-                              .height = 5,
-                              .mip_levels = 3}) == granit::result::success);
+  REQUIRE(texture.initialize(renderer, {.format = granit::texture_format::rgba8_unorm,
+                                        .usage = granit::texture_usage::transfer_source |
+                                                 granit::texture_usage::transfer_destination,
+                                        .width = 7,
+                                        .height = 5,
+                                        .mip_levels = 3}) == granit::result::success);
   std::array<std::uint8_t, 140> pixels{};
   for (std::size_t index = 0; index < pixels.size(); index += 4) {
     pixels[index] = 40;
@@ -604,15 +598,14 @@ TEST_CASE("Mipmap 支持 Cube 数组层范围", "[command][mipmap][array]") {
   REQUIRE(result == granit::result::success);
 
   granit::texture texture;
-  REQUIRE(texture.initialize(renderer.native_handle(),
-                             {.dimension = granit::texture_dimension::cube,
-                              .format = granit::texture_format::rgba8_unorm,
-                              .usage = granit::texture_usage::transfer_source |
-                                       granit::texture_usage::transfer_destination,
-                              .width = 4,
-                              .height = 4,
-                              .mip_levels = 3,
-                              .array_layers = 6}) == granit::result::success);
+  REQUIRE(texture.initialize(renderer, {.dimension = granit::texture_dimension::cube,
+                                        .format = granit::texture_format::rgba8_unorm,
+                                        .usage = granit::texture_usage::transfer_source |
+                                                 granit::texture_usage::transfer_destination,
+                                        .width = 4,
+                                        .height = 4,
+                                        .mip_levels = 3,
+                                        .array_layers = 6}) == granit::result::success);
   std::array<std::uint8_t, 64> red{};
   std::array<std::uint8_t, 64> green{};
   for (std::size_t index = 0; index < red.size(); index += 4) {
@@ -678,13 +671,12 @@ TEST_CASE("Mipmap 支持非零起始级并拒绝无效范围", "[command][mipmap
     SKIP("当前运行环境没有满足要求的 Vulkan 设备");
   REQUIRE(result == granit::result::success);
   granit::texture texture;
-  REQUIRE(texture.initialize(renderer.native_handle(),
-                             {.format = granit::texture_format::rgba8_unorm,
-                              .usage = granit::texture_usage::transfer_source |
-                                       granit::texture_usage::transfer_destination,
-                              .width = 8,
-                              .height = 8,
-                              .mip_levels = 4}) == granit::result::success);
+  REQUIRE(texture.initialize(renderer, {.format = granit::texture_format::rgba8_unorm,
+                                        .usage = granit::texture_usage::transfer_source |
+                                                 granit::texture_usage::transfer_destination,
+                                        .width = 8,
+                                        .height = 8,
+                                        .mip_levels = 4}) == granit::result::success);
   std::array<std::uint8_t, 64> blue{};
   for (std::size_t index = 0; index < blue.size(); index += 4) {
     blue[index + 2] = 255;
@@ -726,12 +718,11 @@ TEST_CASE("Mipmap 支持非零起始级并拒绝无效范围", "[command][mipmap
   CHECK(std::to_integer<std::uint8_t>(copied[2]) == 255);
 
   granit::texture missing_source;
-  REQUIRE(missing_source.initialize(renderer.native_handle(),
-                                    {.format = granit::texture_format::rgba8_unorm,
-                                     .usage = granit::texture_usage::transfer_destination,
-                                     .width = 2,
-                                     .height = 2,
-                                     .mip_levels = 2}) == granit::result::success);
+  REQUIRE(missing_source.initialize(renderer, {.format = granit::texture_format::rgba8_unorm,
+                                               .usage = granit::texture_usage::transfer_destination,
+                                               .width = 2,
+                                               .height = 2,
+                                               .mip_levels = 2}) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
   CHECK(
       recorder.generate_mipmaps(
@@ -742,30 +733,27 @@ TEST_CASE("Mipmap 支持非零起始级并拒绝无效范围", "[command][mipmap
   REQUIRE(recorder.reset() == granit::result::success);
 
   granit::texture missing_destination;
-  REQUIRE(missing_destination.initialize(renderer.native_handle(),
-                                         {.format = granit::texture_format::rgba8_unorm,
-                                          .usage = granit::texture_usage::transfer_source,
-                                          .width = 2,
-                                          .height = 2,
-                                          .mip_levels = 2}) == granit::result::success);
+  REQUIRE(missing_destination.initialize(renderer, {.format = granit::texture_format::rgba8_unorm,
+                                                    .usage = granit::texture_usage::transfer_source,
+                                                    .width = 2,
+                                                    .height = 2,
+                                                    .mip_levels = 2}) == granit::result::success);
   granit::texture one_mip;
-  REQUIRE(one_mip.initialize(renderer.native_handle(),
-                             {.format = granit::texture_format::rgba8_unorm,
-                              .usage = granit::texture_usage::transfer_source |
-                                       granit::texture_usage::transfer_destination,
-                              .width = 2,
-                              .height = 2}) == granit::result::success);
+  REQUIRE(one_mip.initialize(renderer, {.format = granit::texture_format::rgba8_unorm,
+                                        .usage = granit::texture_usage::transfer_source |
+                                                 granit::texture_usage::transfer_destination,
+                                        .width = 2,
+                                        .height = 2}) == granit::result::success);
   granit::renderer other_renderer;
   REQUIRE(other_renderer.initialize({.application_name = "granit-mipmap-other-renderer"}) ==
           granit::result::success);
   granit::texture foreign;
-  REQUIRE(foreign.initialize(other_renderer.native_handle(),
-                             {.format = granit::texture_format::rgba8_unorm,
-                              .usage = granit::texture_usage::transfer_source |
-                                       granit::texture_usage::transfer_destination,
-                              .width = 2,
-                              .height = 2,
-                              .mip_levels = 2}) == granit::result::success);
+  REQUIRE(foreign.initialize(other_renderer, {.format = granit::texture_format::rgba8_unorm,
+                                              .usage = granit::texture_usage::transfer_source |
+                                                       granit::texture_usage::transfer_destination,
+                                              .width = 2,
+                                              .height = 2,
+                                              .mip_levels = 2}) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
   CHECK(
       recorder.generate_mipmaps(
@@ -889,7 +877,7 @@ TEST_CASE("独立 Recorder 支持并行资源上传与命令录制", "[command][
     workers.emplace_back([&, index] {
       start.arrive_and_wait();
       auto worker_result =
-          buffers[index].initialize(renderer.native_handle(),
+          buffers[index].initialize(renderer,
                                     {.size = buffer_size,
                                      .usage = granit::buffer_usage::transfer_source |
                                               granit::buffer_usage::transfer_destination,

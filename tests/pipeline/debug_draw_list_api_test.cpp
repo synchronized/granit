@@ -109,11 +109,12 @@ TEST_CASE("世界Debug Draw可录制到颜色附件") {
   constexpr uint32_t size = 16;
   granit::texture color;
   granit::texture_view color_view;
-  REQUIRE(color.initialize(native, {.format = granit::texture_format::rgba8_unorm,
-                                    .usage = granit::texture_usage::color_attachment |
-                                             granit::texture_usage::transfer_source,
-                                    .width = size,
-                                    .height = size}) == granit::result::success);
+  REQUIRE(color.initialize(granit::renderer_ref::from_native(native),
+                           {.format = granit::texture_format::rgba8_unorm,
+                            .usage = granit::texture_usage::color_attachment |
+                                     granit::texture_usage::transfer_source,
+                            .width = size,
+                            .height = size}) == granit::result::success);
   REQUIRE(color_view.initialize(renderer, color) == granit::result::success);
   granit::debug_draw_list list;
   REQUIRE(list.initialize(renderer) == granit::result::success);
@@ -145,9 +146,10 @@ TEST_CASE("世界Debug Draw可录制到颜色附件") {
   REQUIRE(recorder.reset() == granit::result::success);
 
   granit::buffer readback;
-  REQUIRE(readback.initialize(native, {.size = size * size * 4,
-                                       .usage = granit::buffer_usage::transfer_destination,
-                                       .location = granit::memory_location::readback}) ==
+  REQUIRE(readback.initialize(granit::renderer_ref::from_native(native),
+                              {.size = size * size * 4,
+                               .usage = granit::buffer_usage::transfer_destination,
+                               .location = granit::memory_location::readback}) ==
           granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
   const granit_texture_write_region region{0,    0,    1, GRANIT_TEXTURE_ASPECT_COLOR_BIT, 0, 0, 0,
@@ -175,10 +177,11 @@ TEST_CASE("世界Debug Draw可录制到颜色附件") {
 
   granit::texture depth;
   granit::texture_view depth_view;
-  REQUIRE(depth.initialize(native, {.format = granit::texture_format::d32_float,
-                                    .usage = granit::texture_usage::depth_stencil_attachment,
-                                    .width = size,
-                                    .height = size}) == granit::result::success);
+  REQUIRE(depth.initialize(granit::renderer_ref::from_native(native),
+                           {.format = granit::texture_format::d32_float,
+                            .usage = granit::texture_usage::depth_stencil_attachment,
+                            .width = size,
+                            .height = size}) == granit::result::success);
   REQUIRE(depth_view.initialize(renderer, depth) == granit::result::success);
   granit_depth_stencil_attachment_desc depth_attachment = GRANIT_DEPTH_STENCIL_ATTACHMENT_DESC_INIT;
   depth_attachment.view = depth_view.native_handle();

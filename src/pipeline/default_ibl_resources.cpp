@@ -11,6 +11,7 @@ namespace granit::pipeline::detail {
 granit_result default_ibl_resources::initialize(granit_renderer renderer) noexcept {
   if (renderer == GRANIT_NULL_HANDLE || initialized())
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto renderer_view = granit::renderer_ref::from_native(renderer);
   const granit::texture_desc cube_desc{.dimension = granit::texture_dimension::cube,
                                        .format = granit::texture_format::rgba16_float,
                                        .usage = granit::texture_usage::sampled |
@@ -18,12 +19,12 @@ granit_result default_ibl_resources::initialize(granit_renderer renderer) noexce
                                        .width = 1,
                                        .height = 1,
                                        .array_layers = 6};
-  auto result = irradiance_texture_.initialize(renderer, cube_desc);
+  auto result = irradiance_texture_.initialize(renderer_view, cube_desc);
   if (result.ok())
-    result = prefiltered_texture_.initialize(renderer, cube_desc);
+    result = prefiltered_texture_.initialize(renderer_view, cube_desc);
   if (result.ok()) {
     result = brdf_lut_texture_.initialize(
-        renderer,
+        renderer_view,
         {.format = granit::texture_format::rgba16_float,
          .usage = granit::texture_usage::sampled | granit::texture_usage::transfer_destination});
   }
@@ -47,14 +48,15 @@ granit_result default_ibl_resources::initialize(granit_renderer renderer) noexce
   const granit::texture_view_desc cube_view{.dimension = granit::texture_dimension::cube,
                                             .array_layer_count = 6};
   if (result.ok()) {
-    result = irradiance_view_.initialize(renderer, irradiance_texture_.native_handle(), cube_view);
+    result =
+        irradiance_view_.initialize(renderer_view, irradiance_texture_.native_handle(), cube_view);
   }
   if (result.ok()) {
-    result =
-        prefiltered_view_.initialize(renderer, prefiltered_texture_.native_handle(), cube_view);
+    result = prefiltered_view_.initialize(renderer_view, prefiltered_texture_.native_handle(),
+                                          cube_view);
   }
   if (result.ok())
-    result = brdf_lut_view_.initialize(renderer, brdf_lut_texture_.native_handle());
+    result = brdf_lut_view_.initialize(renderer_view, brdf_lut_texture_.native_handle());
   if (result.ok()) {
     result = granit::from_native(
         resources_.initialize(renderer,

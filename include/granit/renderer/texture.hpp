@@ -209,7 +209,8 @@ public:
     }
     return *this;
   }
-  [[nodiscard]] result initialize(granit_renderer renderer, const texture_desc& desc) noexcept {
+  [[nodiscard]] result initialize(renderer_ref owner, const texture_desc& desc) noexcept {
+    const auto renderer = owner.native_handle();
     if (valid())
       return result::invalid_argument;
     if (renderer == GRANIT_NULL_HANDLE)
@@ -233,7 +234,7 @@ public:
   }
 
   [[nodiscard]] result initialize(renderer& owner, const texture_desc& desc) noexcept {
-    return initialize(owner.native_handle(), desc);
+    return initialize(owner.ref(), desc);
   }
   [[nodiscard]] result reset() noexcept {
     if (!valid()) {
@@ -329,8 +330,9 @@ public:
     }
     return *this;
   }
-  [[nodiscard]] result initialize(granit_renderer renderer, granit_texture texture,
+  [[nodiscard]] result initialize(renderer_ref owner, granit_texture texture,
                                   const texture_view_desc& desc = {}) noexcept {
+    const auto renderer = owner.native_handle();
     if (valid())
       return result::invalid_argument;
     if (renderer == GRANIT_NULL_HANDLE || texture == GRANIT_NULL_HANDLE)
@@ -357,7 +359,7 @@ public:
 
   [[nodiscard]] result initialize(renderer& owner, const texture& source,
                                   const texture_view_desc& desc = {}) noexcept {
-    return initialize(owner.native_handle(), source.native_handle(), desc);
+    return initialize(owner.ref(), source.native_handle(), desc);
   }
   [[nodiscard]] result reset() noexcept {
     if (!valid()) {

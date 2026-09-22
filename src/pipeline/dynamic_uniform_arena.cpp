@@ -107,11 +107,11 @@ granit_result dynamic_uniform_arena::ensure_buffer(frame_slot_state& slot) noexc
   if (slot.buffer.valid() && slot.buffer_capacity >= required_capacity)
     return GRANIT_SUCCESS;
   granit::buffer replacement;
-  const auto result =
-      replacement.initialize(renderer_, {.size = required_capacity,
-                                         .usage = granit::buffer_usage::uniform |
-                                                  granit::buffer_usage::transfer_destination,
-                                         .location = granit::memory_location::upload});
+  const auto result = replacement.initialize(
+      granit::renderer_ref::from_native(renderer_),
+      {.size = required_capacity,
+       .usage = granit::buffer_usage::uniform | granit::buffer_usage::transfer_destination,
+       .location = granit::memory_location::upload});
   if (result.failed())
     return static_cast<granit_result>(result);
   slot.groups.clear();

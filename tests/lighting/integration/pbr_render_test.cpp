@@ -185,14 +185,14 @@ int main(int argc, char** argv) {
   granit::texture_view brdf_lut_view;
   if (result.ok()) {
     result = shadow_texture.initialize(
-        renderer.native_handle(),
+        renderer.ref(),
         {.format = granit::texture_format::d32_float,
          .usage = granit::texture_usage::depth_stencil_attachment | granit::texture_usage::sampled,
          .width = 1,
          .height = 1});
   }
   if (result.ok())
-    result = shadow_view.initialize(renderer.native_handle(), shadow_texture.native_handle());
+    result = shadow_view.initialize(renderer.ref(), shadow_texture.native_handle());
   const auto cube_desc = granit::texture_desc{.dimension = granit::texture_dimension::cube,
                                               .format = granit::texture_format::rgba16_float,
                                               .usage = granit::texture_usage::sampled |
@@ -201,12 +201,12 @@ int main(int argc, char** argv) {
                                               .height = 1,
                                               .array_layers = 6};
   if (result.ok())
-    result = irradiance_texture.initialize(renderer.native_handle(), cube_desc);
+    result = irradiance_texture.initialize(renderer, cube_desc);
   if (result.ok())
-    result = prefiltered_texture.initialize(renderer.native_handle(), cube_desc);
+    result = prefiltered_texture.initialize(renderer, cube_desc);
   if (result.ok()) {
     result = brdf_lut_texture.initialize(
-        renderer.native_handle(),
+        renderer.ref(),
         {.format = granit::texture_format::rgba16_float,
          .usage = granit::texture_usage::sampled | granit::texture_usage::transfer_destination});
   }
@@ -229,15 +229,15 @@ int main(int argc, char** argv) {
   const granit::texture_view_desc cube_view_desc{.dimension = granit::texture_dimension::cube,
                                                  .array_layer_count = 6};
   if (result.ok()) {
-    result = irradiance_view.initialize(renderer.native_handle(),
-                                        irradiance_texture.native_handle(), cube_view_desc);
+    result = irradiance_view.initialize(renderer.ref(), irradiance_texture.native_handle(),
+                                        cube_view_desc);
   }
   if (result.ok()) {
-    result = prefiltered_view.initialize(renderer.native_handle(),
-                                         prefiltered_texture.native_handle(), cube_view_desc);
+    result = prefiltered_view.initialize(renderer.ref(), prefiltered_texture.native_handle(),
+                                         cube_view_desc);
   }
   if (result.ok()) {
-    result = brdf_lut_view.initialize(renderer.native_handle(), brdf_lut_texture.native_handle());
+    result = brdf_lut_view.initialize(renderer.ref(), brdf_lut_texture.native_handle());
   }
   granit::lighting::shadow_ibl_resources direct_resources;
   granit::lighting::shadow_ibl_resources ibl_resources;
@@ -417,10 +417,9 @@ int main(int argc, char** argv) {
   constexpr std::uint64_t readback_size = render_size * render_size * 4;
   granit::buffer readback;
   if (result.ok()) {
-    result = readback.initialize(renderer.native_handle(),
-                                 {.size = readback_size,
-                                  .usage = granit::buffer_usage::transfer_destination,
-                                  .location = granit::memory_location::readback});
+    result = readback.initialize(renderer, {.size = readback_size,
+                                            .usage = granit::buffer_usage::transfer_destination,
+                                            .location = granit::memory_location::readback});
   }
   if (result.ok())
     result = recorder.initialize(renderer.native_handle());

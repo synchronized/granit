@@ -66,7 +66,8 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result initialize(granit_renderer renderer, const buffer_desc& desc) noexcept {
+  [[nodiscard]] result initialize(renderer_ref owner, const buffer_desc& desc) noexcept {
+    const auto renderer = owner.native_handle();
     if (valid()) {
       return result::invalid_argument;
     }
@@ -88,11 +89,12 @@ public:
   }
 
   [[nodiscard]] result initialize(renderer& owner, const buffer_desc& desc) noexcept {
-    return initialize(owner.native_handle(), desc);
+    return initialize(owner.ref(), desc);
   }
 
-  [[nodiscard]] result initialize(granit_renderer renderer, const buffer_desc& desc,
+  [[nodiscard]] result initialize(renderer_ref owner, const buffer_desc& desc,
                                   std::span<const std::byte> initial_data) noexcept {
+    const auto renderer = owner.native_handle();
     if (valid()) {
       return result::invalid_argument;
     }
@@ -122,7 +124,7 @@ public:
 
   [[nodiscard]] result initialize(renderer& owner, const buffer_desc& desc,
                                   std::span<const std::byte> initial_data) noexcept {
-    return initialize(owner.native_handle(), desc, initial_data);
+    return initialize(owner.ref(), desc, initial_data);
   }
 
   [[nodiscard]] result write(std::uint64_t offset, std::span<const std::byte> data) noexcept {

@@ -72,11 +72,10 @@ TEST_CASE("公共Mesh拒绝跨Renderer Buffer与重复Attribute位置") {
   REQUIRE(second_result == granit::result::success);
 
   granit::buffer vertices;
-  REQUIRE(
-      vertices.initialize(first.native_handle(), {.size = 64,
-                                                  .usage = granit::buffer_usage::vertex,
-                                                  .location = granit::memory_location::upload}) ==
-      granit::result::success);
+  REQUIRE(vertices.initialize(first, {.size = 64,
+                                      .usage = granit::buffer_usage::vertex,
+                                      .location = granit::memory_location::upload}) ==
+          granit::result::success);
   const std::array attributes{granit_vertex_attribute{0, GRANIT_VERTEX_FORMAT_FLOAT32X2, 0, 0},
                               granit_vertex_attribute{0, GRANIT_VERTEX_FORMAT_FLOAT32X2, 8, 0}};
   granit_mesh_vertex_buffer vertex{
