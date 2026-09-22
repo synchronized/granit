@@ -37,6 +37,14 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 Texture、Camera、Mesh、Material/Lighting、Render Pipeline 到 ImGui 的连续路径。每章对应一份
 可运行源码快照和自动验证；Model Viewer 等综合程序继续保留在 `examples/samples`。
 
+### S-49：0.28.0 Window 跨平台可选主循环
+
+**状态：实施中，P1。**
+
+[S-49](plans/S-49-0.28.0-window-loop.md)在现有非阻塞 Window 事件泵之上增加可选托管 Loop，让桌面
+和 Emscripten 复用同一个应用 Tick。Window 只负责平台调度和窗口事件，不接管 Renderer、资源或
+引擎任务系统。
+
 ## 最近完成
 
 ### S-47：Window 跨平台入口收敛

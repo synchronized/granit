@@ -44,8 +44,9 @@
 2. [项目文档规范](../DOCUMENTATION_GUIDE.md)
 3. [路线图](roadmap.md)
 4. [0.28.0 线性入门教程计划](plans/S-48-0.28.0-linear-tutorial-series.md)
-5. [开发计划与完成历史](plans/README.md)
-6. [第三方依赖](../3rd/README.md)
+5. [0.28.0 Window 跨平台 Loop 计划](plans/S-49-0.28.0-window-loop.md)
+6. [开发计划与完成历史](plans/README.md)
+7. [第三方依赖](../3rd/README.md)
 
 ## 操作指南
 
