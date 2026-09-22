@@ -50,52 +50,6 @@ private:
   granit_pipeline_layout handle_{GRANIT_NULL_HANDLE};
 };
 
-/** 不拥有 Graphics Pipeline，只在来源 Pipeline 的有效期内使用。 */
-class graphics_pipeline_ref {
-public:
-  graphics_pipeline_ref() = default;
-
-  [[nodiscard]] constexpr bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
-  [[nodiscard]] constexpr explicit operator bool() const noexcept { return valid(); }
-  [[nodiscard]] constexpr granit_graphics_pipeline native_handle() const noexcept {
-    return handle_;
-  }
-  [[nodiscard]] static constexpr graphics_pipeline_ref
-  from_native(granit_graphics_pipeline handle) noexcept {
-    return graphics_pipeline_ref{handle};
-  }
-
-private:
-  friend class graphics_pipeline;
-
-  explicit constexpr graphics_pipeline_ref(granit_graphics_pipeline handle) noexcept
-      : handle_(handle) {}
-
-  granit_graphics_pipeline handle_{GRANIT_NULL_HANDLE};
-};
-
-/** 不拥有 Compute Pipeline，只在来源 Pipeline 的有效期内使用。 */
-class compute_pipeline_ref {
-public:
-  compute_pipeline_ref() = default;
-
-  [[nodiscard]] constexpr bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
-  [[nodiscard]] constexpr explicit operator bool() const noexcept { return valid(); }
-  [[nodiscard]] constexpr granit_compute_pipeline native_handle() const noexcept { return handle_; }
-  [[nodiscard]] static constexpr compute_pipeline_ref
-  from_native(granit_compute_pipeline handle) noexcept {
-    return compute_pipeline_ref{handle};
-  }
-
-private:
-  friend class compute_pipeline;
-
-  explicit constexpr compute_pipeline_ref(granit_compute_pipeline handle) noexcept
-      : handle_(handle) {}
-
-  granit_compute_pipeline handle_{GRANIT_NULL_HANDLE};
-};
-
 /** Bind Group 可接受的 Buffer、Texture View 或 Sampler 借用引用。 */
 class binding_resource_ref {
 public:
@@ -206,11 +160,11 @@ public:
     }
     return *this;
   }
-  [[nodiscard]] result initialize(granit_renderer renderer,
+  [[nodiscard]] result initialize(renderer_ref ref,
                                   std::span<const bind_group_layout_entry> entries) noexcept;
   [[nodiscard]] result initialize(renderer& owner,
                                   std::span<const bind_group_layout_entry> entries) noexcept {
-    return initialize(owner.native_handle(), entries);
+    return initialize(owner.ref(), entries);
   }
   [[nodiscard]] result reset() noexcept;
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
@@ -477,9 +431,6 @@ public:
   }
   [[nodiscard]] result reset() noexcept;
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
-  [[nodiscard]] constexpr graphics_pipeline_ref ref() const noexcept {
-    return graphics_pipeline_ref{handle_};
-  }
   [[nodiscard]] granit_graphics_pipeline native_handle() const noexcept { return handle_; }
 
 private:
@@ -517,9 +468,6 @@ public:
   }
   [[nodiscard]] result reset() noexcept;
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
-  [[nodiscard]] constexpr compute_pipeline_ref ref() const noexcept {
-    return compute_pipeline_ref{handle_};
-  }
   [[nodiscard]] granit_compute_pipeline native_handle() const noexcept { return handle_; }
 
 private:
@@ -528,8 +476,9 @@ private:
 };
 
 inline result
-bind_group_layout::initialize(granit_renderer renderer,
+bind_group_layout::initialize(granit::renderer_ref ref,
                               std::span<const bind_group_layout_entry> entries) noexcept {
+  auto renderer = ref.native_handle();
   if (valid() || entries.size() > UINT32_MAX)
     return result::invalid_argument;
   if (renderer == GRANIT_NULL_HANDLE)

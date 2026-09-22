@@ -177,6 +177,10 @@ Buffer、Texture、Shader、Pipeline、Surface、Swapchain 和 Frame Context 等
 ABI 边界提取句柄，不保存 C++ 对象指针，也不建立第二套状态；父对象仍须比子资源存活得更久。
 普通 C++ 代码无需调用 `native_handle()`。
 
+`renderer::ref()` 返回不拥有 Renderer 的 `renderer_ref`。它主要用于把已有 C ABI Renderer 句柄
+接入复合资源的 C++ 实现；`renderer_ref` 不延长 Renderer 生命周期，也不负责销毁。普通应用代码
+仍应优先传递 `renderer&`，只有 C/C++ 互操作边界才使用 `renderer_ref::from_native()`。
+
 C++ 调用方通过 `renderer::get_limits(renderer_limits&)` 查询相同限制快照，并通过
 `renderer::get_resource_stats(renderer_resource_stats&)` 查询资源统计，通过
 `renderer::get_status(renderer_status&)` 和 `renderer::process_events()` 使用相同的非阻塞生命周期

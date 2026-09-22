@@ -19,8 +19,7 @@ TEST_CASE("Sampler 支持基础状态、比较和独立生命周期", "[sampler]
     SKIP("当前运行环境没有满足要求的 Vulkan 设备");
   REQUIRE(result == granit::result::success);
   granit::sampler sampler;
-  REQUIRE(sampler.initialize(renderer.native_handle(),
-                             {.compare = granit::compare_operation::less_equal}) ==
+  REQUIRE(sampler.initialize(renderer, {.compare = granit::compare_operation::less_equal}) ==
           granit::result::success);
   const auto handle = sampler.native_handle();
   REQUIRE(sampler.reset() == granit::result::success);

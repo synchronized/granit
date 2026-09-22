@@ -203,7 +203,7 @@ public:
         granit_material_add_pipeline_warmup(renderer_, handle_, &desc, batch, &result_index));
   }
   [[nodiscard]] result add_pipeline_warmup(const material_pipeline_warmup_desc& desc,
-                                           pipeline_warmup_batch_ref batch,
+                                           const pipeline_warmup_batch& batch,
                                            std::uint32_t& result_index) const noexcept {
     const granit_material_pipeline_warmup_desc native{
         .struct_size = sizeof(granit_material_pipeline_warmup_desc),

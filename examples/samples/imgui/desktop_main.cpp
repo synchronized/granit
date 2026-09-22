@@ -183,11 +183,11 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
   const auto first_query = slot_index * 2;
   if (result.ok() && timestamps_enabled) {
     operation = "timestamps.reset";
-    result = recorder.reset_timestamp_queries(timestamps.ref(), first_query, 2);
+    result = recorder.reset_timestamp_queries(timestamps, first_query, 2);
   }
   if (result.ok() && timestamps_enabled) {
     operation = "timestamps.begin";
-    result = recorder.write_timestamp(timestamps.ref(), granit::timestamp_stage::top, first_query);
+    result = recorder.write_timestamp(timestamps, granit::timestamp_stage::top, first_query);
   }
   if (result.ok()) {
     operation = "canvas.record";
@@ -201,7 +201,7 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
   if (result.ok() && timestamps_enabled) {
     operation = "timestamps.end";
     result =
-        recorder.write_timestamp(timestamps.ref(), granit::timestamp_stage::bottom, first_query + 1);
+        recorder.write_timestamp(timestamps, granit::timestamp_stage::bottom, first_query + 1);
   }
   if (result.ok()) {
     operation = "frame_context.submit";

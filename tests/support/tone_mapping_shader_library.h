@@ -15,7 +15,7 @@ namespace granit::tests {
 /** 从测试构建目录的中间资产组装 Tone Mapping Library，并持有其借用字节。 */
 class tone_mapping_shader_library {
 public:
-  [[nodiscard]] bool initialize(granit_renderer renderer) {
+  [[nodiscard]] bool initialize(granit::renderer& renderer) {
     const auto vertex_path =
         std::string{GRANIT_PIPELINE_SHADER_DIR} + "/tone_mapping.vert.grshaderobj";
     const auto fragment_path =

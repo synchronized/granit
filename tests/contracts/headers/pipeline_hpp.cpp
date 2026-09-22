@@ -16,8 +16,6 @@ static_assert(std::is_move_constructible_v<granit::graphics_pipeline>);
 static_assert(!std::is_copy_constructible_v<granit::compute_pipeline>);
 static_assert(std::is_move_constructible_v<granit::compute_pipeline>);
 static_assert(std::is_trivially_copyable_v<granit::pipeline_layout_ref>);
-static_assert(std::is_trivially_copyable_v<granit::graphics_pipeline_ref>);
-static_assert(std::is_trivially_copyable_v<granit::compute_pipeline_ref>);
 static_assert(std::is_trivially_copyable_v<granit::binding_resource_ref>);
 static_assert(std::is_constructible_v<granit::binding_resource_ref, granit::buffer_ref>);
 static_assert(std::is_constructible_v<granit::binding_resource_ref, granit::texture_view_ref>);

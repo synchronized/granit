@@ -7,6 +7,8 @@
 
 static_assert(std::is_move_constructible_v<granit::renderer>);
 static_assert(!std::is_copy_constructible_v<granit::renderer>);
+static_assert(std::is_trivially_copyable_v<granit::renderer_ref>);
+static_assert(std::is_default_constructible_v<granit::renderer_ref>);
 static_assert(sizeof(granit_renderer_desc) >= GRANIT_RENDERER_DESC_SIZE);
 static_assert(sizeof(granit_renderer_limits) == GRANIT_RENDERER_LIMITS_VERSION_1_SIZE);
 static_assert(sizeof(granit_renderer_resource_stats) ==

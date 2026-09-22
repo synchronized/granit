@@ -55,9 +55,9 @@ TEST_CASE("Canvas Pass按Batch录制顶点色与Scissor") {
   REQUIRE(blue_view.initialize(native, blue_texture.native_handle()) == granit::result::success);
   REQUIRE(red_view.initialize(native, red_texture.native_handle()) == granit::result::success);
   granit::sampler sampler;
-  REQUIRE(sampler.initialize(native, {.mag_filter = granit::filter::nearest,
-                                      .min_filter = granit::filter::nearest}) ==
-          granit::result::success);
+  REQUIRE(sampler.initialize(granit::renderer_ref::from_native(native),
+                             {.mag_filter = granit::filter::nearest,
+                              .min_filter = granit::filter::nearest}) == granit::result::success);
   granit_canvas_draw_list_desc list_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
   granit::canvas_draw_list list;
   REQUIRE(list.initialize(native, list_desc) == granit::result::success);

@@ -37,7 +37,7 @@ TEST_CASE("Tone Mapping GPU资源建立完整全屏Pipeline") {
   REQUIRE(hdr_view.initialize(renderer.native_handle(), hdr_texture.native_handle()) ==
           granit::result::success);
   granit::tests::tone_mapping_shader_library shaders;
-  REQUIRE(shaders.initialize(renderer.native_handle()));
+  REQUIRE(shaders.initialize(renderer));
 
   granit::lighting::tone_mapping_resources resources;
   REQUIRE(resources.initialize(renderer.native_handle(), hdr_view.native_handle(),
@@ -72,7 +72,7 @@ TEST_CASE("Tone Mapping跨HDR View复用不变Pipeline资源") {
             granit::result::success);
   }
   granit::tests::tone_mapping_shader_library shaders;
-  REQUIRE(shaders.initialize(renderer.native_handle()));
+  REQUIRE(shaders.initialize(renderer));
   granit::lighting::tone_mapping_pipeline_resources pipeline;
   REQUIRE(pipeline.initialize(renderer.native_handle(), granit::texture_format::rgba8_unorm,
                               shaders.library(), shaders.vertex_id(),
@@ -112,7 +112,7 @@ TEST_CASE("Tone Mapping GPU资源拒绝重复或缺失sRGB编码") {
   REQUIRE(hdr_view.initialize(renderer.native_handle(), hdr_texture.native_handle()) ==
           granit::result::success);
   granit::tests::tone_mapping_shader_library shaders;
-  REQUIRE(shaders.initialize(renderer.native_handle()));
+  REQUIRE(shaders.initialize(renderer));
 
   granit::lighting::tone_mapping_resources missing_encoding;
   CHECK(missing_encoding.initialize(
@@ -152,7 +152,7 @@ TEST_CASE("Tone Mapping GPU输出与CPU参考一致") {
   REQUIRE(hdr_view.initialize(renderer.native_handle(), hdr_texture.native_handle()) ==
           granit::result::success);
   granit::tests::tone_mapping_shader_library shaders;
-  REQUIRE(shaders.initialize(renderer.native_handle()));
+  REQUIRE(shaders.initialize(renderer));
 
   granit::lighting::tone_mapping_resources resources;
   REQUIRE(resources.initialize(renderer.native_handle(), hdr_view.native_handle(),
@@ -240,7 +240,7 @@ TEST_CASE("Tone Mapping资源拒绝未知内容ID且失败后可重新初始化"
     SKIP("当前运行环境没有满足要求的 Vulkan 设备");
   REQUIRE(initialized.ok());
   granit::tests::tone_mapping_shader_library shaders;
-  REQUIRE(shaders.initialize(renderer.native_handle()));
+  REQUIRE(shaders.initialize(renderer));
   granit::shader_content_id missing_id{};
   granit::lighting::tone_mapping_pipeline_resources pipeline;
   CHECK(pipeline.initialize(renderer.native_handle(), granit::texture_format::rgba8_unorm,

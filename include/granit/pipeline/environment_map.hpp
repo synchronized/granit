@@ -22,26 +22,6 @@ struct environment_map_info {
 
 class environment_map;
 
-/** 不拥有 Environment Map，只在来源资源的有效期内使用。 */
-class environment_map_ref {
-public:
-  environment_map_ref() = default;
-
-  [[nodiscard]] constexpr bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
-  [[nodiscard]] constexpr explicit operator bool() const noexcept { return valid(); }
-  [[nodiscard]] constexpr granit_environment_map native_handle() const noexcept { return handle_; }
-  [[nodiscard]] static constexpr environment_map_ref
-  from_native(granit_environment_map handle) noexcept {
-    return environment_map_ref{handle};
-  }
-
-private:
-  friend class environment_map;
-  explicit constexpr environment_map_ref(granit_environment_map handle) noexcept
-      : handle_(handle) {}
-  granit_environment_map handle_{GRANIT_NULL_HANDLE};
-};
-
 /** 公共 Environment Map C ABI 的轻量 move-only RAII 包装。 */
 class environment_map {
 public:
@@ -116,9 +96,6 @@ public:
     return from_native(granit_environment_map_destroy(renderer, handle));
   }
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
-  [[nodiscard]] constexpr environment_map_ref ref() const noexcept {
-    return environment_map_ref{handle_};
-  }
   [[nodiscard]] granit_environment_map native_handle() const noexcept { return handle_; }
 
 private:

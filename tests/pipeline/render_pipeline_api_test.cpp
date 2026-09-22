@@ -397,7 +397,7 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   std::vector<std::byte> shader_library_bytes;
   REQUIRE(shader_assets().build_library(shader_library_bytes));
   granit::shader_library shader_library;
-  REQUIRE(shader_library.initialize(renderer.native_handle(), shader_library_bytes) ==
+  REQUIRE(shader_library.initialize(renderer, shader_library_bytes) ==
           granit::result::success);
   granit_material_desc material_desc = GRANIT_MATERIAL_DESC_INIT;
   material_desc.archive_data = archive.data();
@@ -492,7 +492,7 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
           granit::result::success);
   REQUIRE(canvas_texture_view.initialize(
               renderer.native_handle(), canvas_texture.native_handle()) == granit::result::success);
-  REQUIRE(canvas_sampler.initialize(renderer.native_handle(), {}) == granit::result::success);
+  REQUIRE(canvas_sampler.initialize(renderer, {}) == granit::result::success);
   granit_canvas_draw_list_desc canvas_list_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
   granit::canvas_draw_list canvas;
   REQUIRE(canvas.initialize(renderer.native_handle(), canvas_list_desc) == granit::result::success);
@@ -684,7 +684,7 @@ TEST_CASE("Render Pipeline在没有可见物体时仍清屏并执行覆盖层") 
           granit::result::success);
   REQUIRE(canvas_texture_view.initialize(
               renderer.native_handle(), canvas_texture.native_handle()) == granit::result::success);
-  REQUIRE(canvas_sampler.initialize(renderer.native_handle(), {}) == granit::result::success);
+  REQUIRE(canvas_sampler.initialize(renderer, {}) == granit::result::success);
   granit_canvas_draw_list_desc canvas_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
   granit::canvas_draw_list canvas;
   REQUIRE(canvas.initialize(renderer.native_handle(), canvas_desc) == granit::result::success);
@@ -747,7 +747,6 @@ TEST_CASE("Render Pipeline在没有可见物体时仍清屏并执行覆盖层") 
                                                   .enable_fxaa = true,
                                                   .enable_specular_aa = true}) ==
           granit::result::success);
-  CHECK(callback_pipeline.ref().native_handle() == callback_pipeline.native_handle());
   REQUIRE(callback_pipeline.render(render_desc) == granit::result::success);
   CHECK(callback.stages ==
         std::vector<granit_render_pipeline_stage>{GRANIT_RENDER_PIPELINE_STAGE_OPAQUE,
@@ -855,7 +854,7 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   std::vector<std::byte> shader_library_bytes;
   REQUIRE(shader_assets().build_library(shader_library_bytes));
   granit::shader_library shader_library;
-  REQUIRE(shader_library.initialize(renderer.native_handle(), shader_library_bytes) ==
+  REQUIRE(shader_library.initialize(renderer, shader_library_bytes) ==
           granit::result::success);
   granit_material_desc material_desc = GRANIT_MATERIAL_DESC_INIT;
   material_desc.archive_data = archive.data();
@@ -1019,7 +1018,7 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   REQUIRE(manual_hdr_view.initialize(renderer.native_handle(), manual_hdr.native_handle()) ==
           granit::result::success);
   granit::tests::tone_mapping_shader_library tone_shaders;
-  REQUIRE(tone_shaders.initialize(renderer.native_handle()));
+  REQUIRE(tone_shaders.initialize(renderer));
   granit::lighting::tone_mapping_resources manual_tone_mapping;
   REQUIRE(manual_tone_mapping.initialize(renderer.native_handle(), manual_hdr_view.native_handle(),
                                          granit::texture_format::rgba8_unorm,

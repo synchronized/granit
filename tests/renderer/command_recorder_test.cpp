@@ -56,7 +56,7 @@ TEST_CASE("Core资源创建把空Renderer归类为无效句柄", "[renderer][con
         GRANIT_ERROR_INVALID_HANDLE);
   CHECK(sampler == GRANIT_NULL_HANDLE);
   granit::sampler cpp_sampler;
-  CHECK(cpp_sampler.initialize(GRANIT_NULL_HANDLE) == granit::result::invalid_handle);
+  CHECK(cpp_sampler.initialize(granit::renderer_ref{}) == granit::result::invalid_handle);
 
   const granit_texture_desc texture_desc = GRANIT_TEXTURE_DESC_INIT;
   granit_texture texture = UINT64_C(1);
@@ -73,7 +73,8 @@ TEST_CASE("Core资源创建把空Renderer归类为无效句柄", "[renderer][con
         GRANIT_ERROR_INVALID_HANDLE);
   CHECK(query_pool == GRANIT_NULL_HANDLE);
   granit::timestamp_query_pool cpp_query_pool;
-  CHECK(cpp_query_pool.initialize(GRANIT_NULL_HANDLE, 2) == granit::result::invalid_handle);
+  granit::renderer renderer;
+  CHECK(cpp_query_pool.initialize(renderer, 2) == granit::result::invalid_handle);
 }
 
 TEST_CASE("Frame Context 支持一到四个在途帧槽", "[renderer][frame-context]") {
@@ -989,13 +990,13 @@ TEST_CASE("Command Recorder 写入并读取GPU纳秒时间戳", "[command][times
 
   granit::timestamp_query_pool queries;
   granit::command_recorder recorder;
-  REQUIRE(queries.initialize(renderer.native_handle(), 2) == granit::result::success);
+  REQUIRE(queries.initialize(renderer, 2) == granit::result::success);
   REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
-  REQUIRE(recorder.reset_timestamp_queries(queries.ref(), 0, 2) == granit::result::success);
-  REQUIRE(recorder.write_timestamp(queries.ref(), granit::timestamp_stage::top, 0) ==
+  REQUIRE(recorder.reset_timestamp_queries(queries, 0, 2) == granit::result::success);
+  REQUIRE(recorder.write_timestamp(queries, granit::timestamp_stage::top, 0) ==
           granit::result::success);
-  REQUIRE(recorder.write_timestamp(queries.ref(), granit::timestamp_stage::bottom, 1) ==
+  REQUIRE(recorder.write_timestamp(queries, granit::timestamp_stage::bottom, 1) ==
           granit::result::success);
   REQUIRE(recorder.end() == granit::result::success);
   REQUIRE(recorder.submit() == granit::result::success);

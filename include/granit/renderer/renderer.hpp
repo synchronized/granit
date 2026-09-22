@@ -134,6 +134,28 @@ struct renderer_status {
   result failure_result{result::success};
 };
 
+class renderer;
+
+/** 不拥有 Renderer，只在来源 Renderer 的有效期内使用。 */
+class renderer_ref {
+public:
+  renderer_ref() = default;
+
+  [[nodiscard]] constexpr bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr granit_renderer native_handle() const noexcept { return handle_; }
+  [[nodiscard]] static constexpr renderer_ref from_native(granit_renderer handle) noexcept {
+    return renderer_ref{handle};
+  }
+
+private:
+  friend class renderer;
+
+  explicit constexpr renderer_ref(granit_renderer handle) noexcept : handle_(handle) {}
+
+  granit_renderer handle_{GRANIT_NULL_HANDLE};
+};
+
 /** 无异常、move-only 的 renderer RAII 包装。 */
 class renderer {
 public:
@@ -326,6 +348,7 @@ public:
 
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
   [[nodiscard]] explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr renderer_ref ref() const noexcept { return renderer_ref{handle_}; }
   [[nodiscard]] granit_renderer native_handle() const noexcept { return handle_; }
 
 private:

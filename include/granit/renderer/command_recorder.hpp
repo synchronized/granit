@@ -175,11 +175,8 @@ public:
     return from_native(
         granit_command_recorder_bind_graphics_pipeline(renderer_, handle_, pipeline));
   }
-  [[nodiscard]] result bind_graphics_pipeline(graphics_pipeline_ref pipeline) noexcept {
-    return bind_graphics_pipeline(pipeline.native_handle());
-  }
   [[nodiscard]] result bind_graphics_pipeline(const graphics_pipeline& pipeline) noexcept {
-    return bind_graphics_pipeline(pipeline.ref());
+    return bind_graphics_pipeline(pipeline.native_handle());
   }
   [[nodiscard]] result
   bind_graphics_groups(granit_pipeline_layout layout, std::uint32_t first_group,
@@ -225,11 +222,8 @@ public:
   [[nodiscard]] result bind_compute_pipeline(granit_compute_pipeline pipeline) noexcept {
     return from_native(granit_command_recorder_bind_compute_pipeline(renderer_, handle_, pipeline));
   }
-  [[nodiscard]] result bind_compute_pipeline(compute_pipeline_ref pipeline) noexcept {
-    return bind_compute_pipeline(pipeline.native_handle());
-  }
   [[nodiscard]] result bind_compute_pipeline(const compute_pipeline& pipeline) noexcept {
-    return bind_compute_pipeline(pipeline.ref());
+    return bind_compute_pipeline(pipeline.native_handle());
   }
   [[nodiscard]] result
   bind_compute_groups(granit_pipeline_layout layout, std::uint32_t first_group,
@@ -370,7 +364,7 @@ public:
     return from_native(
         granit_command_recorder_reset_timestamp_queries(renderer_, handle_, pool, first, count));
   }
-  [[nodiscard]] result reset_timestamp_queries(timestamp_query_pool_ref pool, std::uint32_t first,
+  [[nodiscard]] result reset_timestamp_queries(timestamp_query_pool& pool, std::uint32_t first,
                                                std::uint32_t count) noexcept {
     return reset_timestamp_queries(pool.native_handle(), first, count);
   }
@@ -379,7 +373,7 @@ public:
     return from_native(
         granit_command_recorder_write_timestamp(renderer_, handle_, pool, stage, index));
   }
-  [[nodiscard]] result write_timestamp(timestamp_query_pool_ref pool, timestamp_stage stage,
+  [[nodiscard]] result write_timestamp(timestamp_query_pool& pool, timestamp_stage stage,
                                        std::uint32_t index) noexcept {
     return write_timestamp(pool.native_handle(), static_cast<granit_timestamp_stage>(stage), index);
   }

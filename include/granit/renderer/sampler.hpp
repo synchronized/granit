@@ -66,8 +66,8 @@ public:
     }
     return *this;
   }
-  [[nodiscard]] result initialize(granit_renderer renderer,
-                                  const sampler_desc& desc = {}) noexcept {
+  [[nodiscard]] result initialize(renderer_ref owner, const sampler_desc& desc = {}) noexcept {
+    const auto renderer = owner.native_handle();
     if (valid())
       return result::invalid_argument;
     if (renderer == GRANIT_NULL_HANDLE)
@@ -93,7 +93,7 @@ public:
     return from_native(value);
   }
   [[nodiscard]] result initialize(renderer& owner, const sampler_desc& desc = {}) noexcept {
-    return initialize(owner.native_handle(), desc);
+    return initialize(owner.ref(), desc);
   }
   [[nodiscard]] result reset() noexcept {
     if (!valid())

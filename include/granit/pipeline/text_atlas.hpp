@@ -39,24 +39,6 @@ struct text_atlas_stats {
 
 class text_atlas;
 
-/** 不拥有 Text Atlas，只在来源 Atlas 的有效期内使用。 */
-class text_atlas_ref {
-public:
-  text_atlas_ref() = default;
-
-  [[nodiscard]] constexpr bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
-  [[nodiscard]] constexpr explicit operator bool() const noexcept { return valid(); }
-  [[nodiscard]] constexpr granit_text_atlas native_handle() const noexcept { return handle_; }
-  [[nodiscard]] static constexpr text_atlas_ref from_native(granit_text_atlas handle) noexcept {
-    return text_atlas_ref{handle};
-  }
-
-private:
-  friend class text_atlas;
-  explicit constexpr text_atlas_ref(granit_text_atlas handle) noexcept : handle_(handle) {}
-  granit_text_atlas handle_{GRANIT_NULL_HANDLE};
-};
-
 /** 公共 Text Atlas C ABI 的轻量 move-only RAII 包装。 */
 class text_atlas {
 public:
@@ -130,7 +112,6 @@ public:
     return from_native(granit_text_atlas_destroy(renderer, handle));
   }
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
-  [[nodiscard]] constexpr text_atlas_ref ref() const noexcept { return text_atlas_ref{handle_}; }
   [[nodiscard]] granit_text_atlas native_handle() const noexcept { return handle_; }
 
 private:

@@ -78,7 +78,6 @@ TEST_CASE("Compute Pipeline 预热提供稳定键和缓存命中", "[pipeline-wa
   for (int pass = 0; pass < 2; ++pass) {
     granit::pipeline_warmup_batch batch;
     REQUIRE(batch.create(renderer, {.max_operation_count = 1}) == granit::result::success);
-    CHECK(batch.ref().native_handle() == batch.native_handle());
     std::uint32_t index{};
     REQUIRE(batch.add_compute(desc, index) == granit::result::success);
     REQUIRE(index == 0);

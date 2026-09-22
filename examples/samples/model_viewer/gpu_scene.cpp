@@ -820,13 +820,13 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
                                         use_anisotropy && sampler_anisotropy > 1.0F,
                                     .max_anisotropy = use_anisotropy ? sampler_anisotropy : 1.0F,
                                     .max_lod = 1000.0F};
-    auto result = samplers_.back().initialize(renderer, desc);
+    auto result = samplers_.back().initialize(granit::renderer_ref::from_native(renderer), desc);
     // 各向异性是画质增强项；设备限制较低时保留三线性采样，不阻止场景加载。
     if (result == granit::result::unsupported && use_anisotropy) {
       auto fallback = desc;
       fallback.anisotropy_enabled = false;
       fallback.max_anisotropy = 1.0F;
-      result = samplers_.back().initialize(renderer, fallback);
+      result = samplers_.back().initialize(granit::renderer_ref::from_native(renderer), fallback);
     }
     if (result.failed())
       return result;
@@ -836,7 +836,8 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
   if (plan_.samplers.empty() && !report(gpu_scene_upload_stage::samplers, 0, 0))
     return granit::result::cancelled;
 
-  if (const auto result = default_sampler_.initialize(renderer, {.max_lod = 1000.0F});
+  if (const auto result = default_sampler_.initialize(granit::renderer_ref::from_native(renderer),
+                                                      {.max_lod = 1000.0F});
       result.failed())
     return result;
   if (const auto result = create_default_texture(renderer, uploads, true, white_pixel,
@@ -891,7 +892,8 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
     return granit::result::cancelled;
   if (const auto result = submit_uploads(); result.failed())
     return result;
-  if (const auto result = shader_library_.initialize(renderer, model_viewer_shader_library());
+  auto renderer_ref = granit::renderer_ref::from_native(renderer);
+  if (const auto result = shader_library_.initialize(renderer_ref, model_viewer_shader_library());
       result.failed())
     return result;
   materials_.reserve(source.materials.size() + 1);

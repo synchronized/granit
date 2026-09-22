@@ -38,10 +38,11 @@ granit_result shadow_resources::initialize(granit_renderer renderer,
   if (result.failed())
     return static_cast<granit_result>(result);
 
-  result = sampler_.initialize(renderer, {.address_u = granit::address_mode::clamp_to_edge,
-                                          .address_v = granit::address_mode::clamp_to_edge,
-                                          .address_w = granit::address_mode::clamp_to_edge,
-                                          .compare = granit::compare_operation::less_equal});
+  result = sampler_.initialize(granit::renderer_ref::from_native(renderer),
+                               {.address_u = granit::address_mode::clamp_to_edge,
+                                .address_v = granit::address_mode::clamp_to_edge,
+                                .address_w = granit::address_mode::clamp_to_edge,
+                                .compare = granit::compare_operation::less_equal});
   if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);
@@ -61,7 +62,8 @@ granit_result shadow_resources::initialize(granit_renderer renderer,
                                       .type = granit::binding_type::comparison_sampler,
                                       .array_count = 1,
                                       .visibility = granit::shader_stage_flags::fragment}};
-  result = layout_.initialize(renderer, layout_entries);
+  auto renderer_ref = granit::renderer_ref::from_native(renderer);
+  result = layout_.initialize(renderer_ref, layout_entries);
   if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);

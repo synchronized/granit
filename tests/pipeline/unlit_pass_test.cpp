@@ -47,7 +47,7 @@ TEST_CASE("Unlit Opaque与Alpha Cutoff产生预期像素") {
   std::vector<std::byte> shader_library_bytes;
   REQUIRE(shader_assets().build_library(shader_library_bytes));
   granit::shader_library shader_library;
-  REQUIRE(shader_library.initialize(renderer.native_handle(), shader_library_bytes) ==
+  REQUIRE(shader_library.initialize(renderer, shader_library_bytes) ==
           granit::result::success);
   const auto native = renderer.native_handle();
   constexpr uint32_t size = 32;

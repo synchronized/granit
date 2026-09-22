@@ -14,5 +14,4 @@ static_assert(requires(granit::text_atlas& atlas, granit::renderer& renderer,
   atlas.initialize(renderer, desc);
   atlas.upload_glyph(glyph);
   atlas.get_stats(stats);
-  atlas.ref();
 });

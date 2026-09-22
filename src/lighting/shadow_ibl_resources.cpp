@@ -73,20 +73,21 @@ granit_result shadow_ibl_resources::initialize(
   if (result.ok() && features.ibl)
     result = make_constants(ibl_constants_, ibl_values);
   if (result.ok() && features.shadows) {
-    result =
-        shadow_sampler_.initialize(renderer, {.address_u = granit::address_mode::clamp_to_edge,
-                                              .address_v = granit::address_mode::clamp_to_edge,
-                                              .address_w = granit::address_mode::clamp_to_edge,
-                                              .compare = granit::compare_operation::less_equal});
+    result = shadow_sampler_.initialize(granit::renderer_ref::from_native(renderer),
+                                        {.address_u = granit::address_mode::clamp_to_edge,
+                                         .address_v = granit::address_mode::clamp_to_edge,
+                                         .address_w = granit::address_mode::clamp_to_edge,
+                                         .compare = granit::compare_operation::less_equal});
   }
   if (result.ok() && features.ibl) {
-    result = ibl_sampler_.initialize(renderer, {.mag_filter = granit::filter::linear,
-                                                .min_filter = granit::filter::linear,
-                                                .mip_filter = granit::mipmap_filter::linear,
-                                                .address_u = granit::address_mode::clamp_to_edge,
-                                                .address_v = granit::address_mode::clamp_to_edge,
-                                                .address_w = granit::address_mode::clamp_to_edge,
-                                                .max_lod = 1000.0F});
+    result = ibl_sampler_.initialize(granit::renderer_ref::from_native(renderer),
+                                     {.mag_filter = granit::filter::linear,
+                                      .min_filter = granit::filter::linear,
+                                      .mip_filter = granit::mipmap_filter::linear,
+                                      .address_u = granit::address_mode::clamp_to_edge,
+                                      .address_v = granit::address_mode::clamp_to_edge,
+                                      .address_w = granit::address_mode::clamp_to_edge,
+                                      .max_lod = 1000.0F});
   }
   if (result.ok())
     result = granit::from_native(lights_.initialize(renderer, light_capacities, memory_location));
@@ -130,8 +131,9 @@ granit_result shadow_ibl_resources::initialize(
     layout_entries.push_back(
         {light_binding_spot, granit::binding_type::storage_buffer, 1, fragment});
   }
+  auto renderer_ref = granit::renderer_ref::from_native(renderer);
   if (external_layout == GRANIT_NULL_HANDLE) {
-    result = layout_.initialize(renderer, layout_entries);
+    result = layout_.initialize(renderer_ref, layout_entries);
     if (result.failed()) {
       static_cast<void>(reset());
       return static_cast<granit_result>(result);

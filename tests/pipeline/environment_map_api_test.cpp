@@ -30,7 +30,6 @@ TEST_CASE("Environment Map 拥有并释放 IBL 纹理", "[pipeline][environment-
   granit::environment_map environment;
   REQUIRE(environment.initialize_builtin(renderer).ok());
   CHECK(environment.valid());
-  CHECK(environment.ref().native_handle() == environment.native_handle());
 
   granit::environment_map_info info;
   REQUIRE(environment.get_info(info).ok());

@@ -14,5 +14,4 @@ static_assert(requires(granit::render_pipeline& pipeline, granit::renderer& rend
   pipeline.initialize(renderer, desc);
   pipeline.render(render);
   pipeline.get_metrics(metrics);
-  pipeline.ref();
 });

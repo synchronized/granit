@@ -158,7 +158,7 @@ TEST_CASE("材质资产热替换保留解析上下文并在解析失败时回退
   std::vector<std::byte> library_bytes;
   REQUIRE(assets.build_library(library_bytes));
   granit::shader_library library;
-  REQUIRE(library.initialize(renderer.native_handle(), library_bytes) == granit::result::success);
+  REQUIRE(library.initialize(renderer, library_bytes) == granit::result::success);
   const auto package = [&] {
     using namespace granit::material;
     material_package_desc desc;

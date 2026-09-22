@@ -39,25 +39,6 @@ struct text_draw_list_stats {
 
 class text_draw_list;
 
-/** 不拥有 Text Draw List，只在来源列表的有效期内使用。 */
-class text_draw_list_ref {
-public:
-  text_draw_list_ref() = default;
-
-  [[nodiscard]] constexpr bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
-  [[nodiscard]] constexpr explicit operator bool() const noexcept { return valid(); }
-  [[nodiscard]] constexpr granit_text_draw_list native_handle() const noexcept { return handle_; }
-  [[nodiscard]] static constexpr text_draw_list_ref
-  from_native(granit_text_draw_list handle) noexcept {
-    return text_draw_list_ref{handle};
-  }
-
-private:
-  friend class text_draw_list;
-  explicit constexpr text_draw_list_ref(granit_text_draw_list handle) noexcept : handle_(handle) {}
-  granit_text_draw_list handle_{GRANIT_NULL_HANDLE};
-};
-
 /** 公共 Text Draw List C ABI 的轻量 move-only RAII 包装。 */
 class text_draw_list {
 public:
@@ -141,7 +122,7 @@ public:
                                         granit_canvas_draw_list canvas) const noexcept {
     return from_native(granit_text_draw_list_append_to_canvas(renderer_, handle_, atlas, canvas));
   }
-  [[nodiscard]] result append_to_canvas(text_atlas_ref atlas,
+  [[nodiscard]] result append_to_canvas(const text_atlas& atlas,
                                         canvas_draw_list_ref canvas) const noexcept {
     return append_to_canvas(atlas.native_handle(), canvas.native_handle());
   }
@@ -153,9 +134,6 @@ public:
     return from_native(granit_text_draw_list_destroy(renderer, handle));
   }
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
-  [[nodiscard]] constexpr text_draw_list_ref ref() const noexcept {
-    return text_draw_list_ref{handle_};
-  }
   [[nodiscard]] granit_text_draw_list native_handle() const noexcept { return handle_; }
 
 private:

@@ -94,7 +94,7 @@ check(pipeline.initialize(renderer,
 check(recorder.bind_graphics_pipeline(pipeline));
 ```
 
-`shader_ref`、`pipeline_layout_ref`、`graphics_pipeline_ref` 和 `compute_pipeline_ref` 都不拥有资源，
+`shader_ref`、`pipeline_layout_ref` 都不拥有资源，
 也没有销毁操作。`from_native()` 只用于明确的 C API 或第三方互操作边界。
 
 `bind_group_entry::resource` 使用 `binding_resource_ref`，只接受 `buffer_ref`、`texture_view_ref` 或

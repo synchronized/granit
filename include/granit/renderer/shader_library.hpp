@@ -101,8 +101,11 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result initialize(granit_renderer renderer,
-                                  std::span<const std::byte> archive) noexcept {
+  [[nodiscard]] result initialize(renderer& owner, std::span<const std::byte> archive) noexcept {
+    return initialize(owner.ref(), archive);
+  }
+  [[nodiscard]] result initialize(renderer_ref owner, std::span<const std::byte> archive) noexcept {
+    auto renderer = owner.native_handle();
     if (valid() || archive.empty())
       return result::invalid_argument;
     if (renderer == GRANIT_NULL_HANDLE)
@@ -115,10 +118,6 @@ public:
     if (value.ok())
       renderer_ = renderer;
     return value;
-  }
-
-  [[nodiscard]] result initialize(renderer& owner, std::span<const std::byte> archive) noexcept {
-    return initialize(owner.native_handle(), archive);
   }
 
   [[nodiscard]] result get_info(shader_library_info& info) const noexcept {

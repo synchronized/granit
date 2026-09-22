@@ -46,7 +46,7 @@ granit_result pbr_default_resources::initialize(granit_renderer renderer) noexce
       return static_cast<granit_result>(result);
     }
   }
-  const auto result = sampler_.initialize(renderer);
+  const auto result = sampler_.initialize(granit::renderer_ref::from_native(renderer));
   if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);

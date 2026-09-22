@@ -92,26 +92,6 @@ struct render_pipeline_metrics {
 
 class render_pipeline;
 
-/** 不拥有 Render Pipeline，只在来源 Pipeline 的有效期内使用。 */
-class render_pipeline_ref {
-public:
-  render_pipeline_ref() = default;
-
-  [[nodiscard]] constexpr bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
-  [[nodiscard]] constexpr explicit operator bool() const noexcept { return valid(); }
-  [[nodiscard]] constexpr granit_render_pipeline native_handle() const noexcept { return handle_; }
-  [[nodiscard]] static constexpr render_pipeline_ref
-  from_native(granit_render_pipeline handle) noexcept {
-    return render_pipeline_ref{handle};
-  }
-
-private:
-  friend class render_pipeline;
-  explicit constexpr render_pipeline_ref(granit_render_pipeline handle) noexcept
-      : handle_(handle) {}
-  granit_render_pipeline handle_{GRANIT_NULL_HANDLE};
-};
-
 /** 统一参考渲染管线 C ABI 的轻量 move-only RAII 包装。 */
 class render_pipeline {
 public:
@@ -237,9 +217,6 @@ public:
     return from_native(granit_render_pipeline_destroy(renderer, handle));
   }
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
-  [[nodiscard]] constexpr render_pipeline_ref ref() const noexcept {
-    return render_pipeline_ref{handle_};
-  }
   [[nodiscard]] granit_render_pipeline native_handle() const noexcept { return handle_; }
 
 private:

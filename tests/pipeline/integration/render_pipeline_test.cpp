@@ -192,7 +192,7 @@ int main(int argc, char** argv) {
   auto native_renderer = renderer.native_handle();
   std::vector<std::byte> shader_library_bytes;
   granit::shader_library shader_library;
-  if (!shader_assets().initialize_library(native_renderer, shader_library_bytes, shader_library)) {
+  if (!shader_assets().initialize_library(renderer, shader_library_bytes, shader_library)) {
     std::cerr << "创建 Shader Library 失败\n";
     return 1;
   }
@@ -266,7 +266,7 @@ int main(int argc, char** argv) {
     }
   }
   granit::sampler workload_sampler;
-  if ((workload_sampler.initialize(native_renderer)).failed()) {
+  if ((workload_sampler.initialize(granit::renderer_ref::from_native(native_renderer))).failed()) {
     std::cerr << "创建纹理组采样器失败\n";
     return 1;
   }

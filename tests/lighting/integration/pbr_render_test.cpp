@@ -170,7 +170,7 @@ int main(int argc, char** argv) {
   }
   std::vector<std::byte> shader_library_bytes;
   granit::shader_library shader_library;
-  if (!assets.initialize_library(renderer.native_handle(), shader_library_bytes, shader_library)) {
+  if (!assets.initialize_library(renderer, shader_library_bytes, shader_library)) {
     std::cerr << "无法创建 Shader Library\n";
     return 1;
   }
@@ -311,7 +311,7 @@ int main(int argc, char** argv) {
   }
   granit::bind_group_layout object_layout;
   if (result.ok())
-    result = object_layout.initialize(renderer.native_handle(), {});
+    result = object_layout.initialize(renderer, {});
 
   granit::material::material_template_gpu direct_material;
   granit::material::material_template_gpu ibl_material;
@@ -425,9 +425,9 @@ int main(int argc, char** argv) {
   if (result.ok())
     result = recorder.initialize(renderer.native_handle());
   if (result.ok())
-    result = timestamps.initialize(renderer.native_handle(), 4);
+    result = timestamps.initialize(renderer, 4);
   granit::tests::tone_mapping_shader_library tone_shaders;
-  if (result.ok() && !tone_shaders.initialize(renderer.native_handle()))
+  if (result.ok() && !tone_shaders.initialize(renderer))
     result = granit::result::initialization_failed;
   granit::lighting::tone_mapping_resources tone_mapping;
   if (result.ok()) {

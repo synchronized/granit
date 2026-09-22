@@ -38,11 +38,12 @@ granit_result tone_mapping_pipeline_resources::initialize(
       output_format == granit::texture_format::undefined || !library.valid()) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  auto result = sampler_.initialize(renderer, {.mag_filter = granit::filter::linear,
-                                               .min_filter = granit::filter::linear,
-                                               .address_u = granit::address_mode::clamp_to_edge,
-                                               .address_v = granit::address_mode::clamp_to_edge,
-                                               .address_w = granit::address_mode::clamp_to_edge});
+  auto result = sampler_.initialize(granit::renderer_ref::from_native(renderer),
+                                    {.mag_filter = granit::filter::linear,
+                                     .min_filter = granit::filter::linear,
+                                     .address_u = granit::address_mode::clamp_to_edge,
+                                     .address_v = granit::address_mode::clamp_to_edge,
+                                     .address_w = granit::address_mode::clamp_to_edge});
   constexpr auto fragment = granit::shader_stage_flags::fragment;
   const std::array layout_entries{
       granit::bind_group_layout_entry{.binding = 0,
@@ -57,8 +58,9 @@ granit_result tone_mapping_pipeline_resources::initialize(
                                       .type = granit::binding_type::sampler,
                                       .array_count = 1,
                                       .visibility = fragment}};
+  auto renderer_ref = granit::renderer_ref::from_native(renderer);
   if (result.ok())
-    result = group_layout_.initialize(renderer, layout_entries);
+    result = group_layout_.initialize(renderer_ref, layout_entries);
   const std::array layouts{group_layout_.native_handle()};
   if (result.ok())
     result = pipeline_layout_.initialize(renderer, layouts);

@@ -505,7 +505,8 @@ extern "C" granit_result granit_render_pipeline_create(granit_renderer renderer,
     state->enable_fxaa = desc->enable_fxaa != 0;
     state->enable_specular_aa = desc->enable_specular_aa != 0;
     auto resource_result = state->shader_library.initialize(
-        renderer, granit::pipeline::detail::render_pipeline_shader_library());
+        granit::renderer_ref::from_native(renderer),
+        granit::pipeline::detail::render_pipeline_shader_library());
     if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
     const auto arena_result = state->uniform_arena.initialize(renderer);

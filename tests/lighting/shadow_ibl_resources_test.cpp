@@ -86,7 +86,7 @@ TEST_CASE("阴影和IBL共享完整Group3") {
   SECTION("可复用外部Group3 Layout对象") {
     granit::bind_group_layout external_layout;
     REQUIRE(external_layout.initialize(
-                renderer.native_handle(), granit::lighting::standard_lighting_layout_entries) ==
+                renderer, granit::lighting::standard_lighting_layout_entries) ==
             granit::result::success);
     granit::lighting::shadow_ibl_resources external_resources;
     REQUIRE(external_resources.initialize(

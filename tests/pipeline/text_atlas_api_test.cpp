@@ -36,7 +36,6 @@ TEST_CASE("Text Atlas缓存R8字形并按需分页") {
   REQUIRE(atlas.initialize(renderer,
                            {.page_width = 8, .page_height = 8, .max_pages = 2, .padding = 1}) ==
           granit::result::success);
-  CHECK(atlas.ref().native_handle() == atlas.native_handle());
   constexpr std::array<uint8_t, 8> bitmap{0, 32, 64, 96, 128, 160, 192, 255};
   auto first = glyph_desc(1, 10, bitmap);
   auto second = glyph_desc(1, 11, bitmap);

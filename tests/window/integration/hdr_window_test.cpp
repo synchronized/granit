@@ -229,7 +229,7 @@ int main(int argument_count, char** arguments) {
   if (result.ok() &&
       !assets.initialize_library(renderer, shader_library_bytes, shader_library))
     result = granit::result::initialization_failed;
-  if (result.ok() && !tone_shaders.initialize(renderer.native_handle()))
+  if (result.ok() && !tone_shaders.initialize(renderer))
     result = granit::result::initialization_failed;
 
   granit::material::material_package pbr_package;
@@ -246,7 +246,7 @@ int main(int argument_count, char** arguments) {
     result = pbr_lighting.initialize(renderer.native_handle());
   granit::bind_group_layout object_layout;
   if (result.ok())
-    result = object_layout.initialize(renderer.native_handle(), {});
+    result = object_layout.initialize(renderer, {});
   granit::material::material_template_gpu pbr_material;
   if (result.ok()) {
     const std::array additional_layouts{object_layout.native_handle(), pbr_lighting.layout()};

@@ -51,7 +51,7 @@ TEST_CASE("Text Draw List通过R8 Atlas批量生成Canvas四边形") {
 
   granit::canvas_draw_list canvas;
   REQUIRE(canvas.initialize(renderer) == granit::result::success);
-  REQUIRE(text.append_to_canvas(atlas.ref(), canvas.ref()) == granit::result::success);
+  REQUIRE(text.append_to_canvas(atlas, canvas.ref()) == granit::result::success);
   granit::canvas_draw_list_stats stats;
   REQUIRE(canvas.get_stats(stats) == granit::result::success);
   CHECK(stats.vertex_count == 8);
@@ -63,7 +63,7 @@ TEST_CASE("Text Draw List通过R8 Atlas批量生成Canvas四边形") {
   const granit::text_glyph_instance missing{
       .font_key = 7, .glyph_id = 99, .color = UINT32_MAX, .x = 0, .y = 0};
   REQUIRE(text.append_glyph_run(std::span{&missing, 1}) == granit::result::success);
-  CHECK(text.append_to_canvas(atlas.ref(), canvas.ref()) == granit::result::not_ready);
+  CHECK(text.append_to_canvas(atlas, canvas.ref()) == granit::result::not_ready);
 }
 
 TEST_CASE("Text Atlas覆盖率进入像素且跨页保持Draw顺序") {
@@ -107,7 +107,7 @@ TEST_CASE("Text Atlas覆盖率进入像素且跨页保持Draw顺序") {
   REQUIRE(text.append_glyph_run(glyphs, {0, 0, 32, 32}) == granit::result::success);
   granit::canvas_draw_list canvas;
   REQUIRE(canvas.initialize(renderer) == granit::result::success);
-  REQUIRE(text.append_to_canvas(atlas.ref(), canvas.ref()) == granit::result::success);
+  REQUIRE(text.append_to_canvas(atlas, canvas.ref()) == granit::result::success);
   granit::canvas_draw_list_stats canvas_stats;
   REQUIRE(canvas.get_stats(canvas_stats) == granit::result::success);
   CHECK(canvas_stats.item_count == 3);
@@ -186,7 +186,6 @@ TEST_CASE("公共Text Draw List保存已整形字形并校验句柄") {
   granit::text_draw_list list;
   REQUIRE(list.initialize(renderer, {.initial_glyph_capacity = 8, .initial_run_capacity = 2}) ==
           granit::result::success);
-  CHECK(list.ref().native_handle() == list.native_handle());
   const std::array glyphs{
       granit::text_glyph_instance{
           .font_key = 1, .glyph_id = 42, .color = UINT32_C(0xffffffff), .x = 10, .y = 20},

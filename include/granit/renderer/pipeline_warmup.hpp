@@ -17,30 +17,6 @@ namespace granit {
 
 class pipeline_warmup_batch;
 
-/** 不拥有 Pipeline Warmup Batch，只在来源 Batch 的有效期内使用。 */
-class pipeline_warmup_batch_ref {
-public:
-  pipeline_warmup_batch_ref() = default;
-
-  [[nodiscard]] constexpr bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
-  [[nodiscard]] constexpr explicit operator bool() const noexcept { return valid(); }
-  [[nodiscard]] constexpr granit_pipeline_warmup_batch native_handle() const noexcept {
-    return handle_;
-  }
-  [[nodiscard]] static constexpr pipeline_warmup_batch_ref
-  from_native(granit_pipeline_warmup_batch handle) noexcept {
-    return pipeline_warmup_batch_ref{handle};
-  }
-
-private:
-  friend class pipeline_warmup_batch;
-
-  explicit constexpr pipeline_warmup_batch_ref(granit_pipeline_warmup_batch handle) noexcept
-      : handle_(handle) {}
-
-  granit_pipeline_warmup_batch handle_{GRANIT_NULL_HANDLE};
-};
-
 enum class pipeline_warmup_type : std::uint32_t {
   graphics = GRANIT_PIPELINE_WARMUP_TYPE_GRAPHICS,
   compute = GRANIT_PIPELINE_WARMUP_TYPE_COMPUTE,
@@ -134,9 +110,6 @@ public:
     renderer_ = GRANIT_NULL_HANDLE;
     handle_ = GRANIT_NULL_HANDLE;
     return from_native(granit_pipeline_warmup_batch_destroy(renderer, handle));
-  }
-  [[nodiscard]] constexpr pipeline_warmup_batch_ref ref() const noexcept {
-    return pipeline_warmup_batch_ref{handle_};
   }
   [[nodiscard]] granit_pipeline_warmup_batch native_handle() const noexcept { return handle_; }
 

@@ -102,7 +102,8 @@ TEST_CASE("Shader Library 检查返回稳定摘要", "[shader_library][inspect]"
 TEST_CASE("Shader Library 句柄校验类型、domain 和 generation", "[shader_library][lifecycle]") {
   const auto archive = make_library();
   granit::shader_library invalid;
-  CHECK(invalid.initialize(GRANIT_NULL_HANDLE, archive) == granit::result::invalid_handle);
+  granit::renderer invalid_renderer;
+  CHECK(invalid.initialize(invalid_renderer, archive) == granit::result::invalid_handle);
 
   granit::renderer first;
   const auto result = first.initialize({.application_name = "granit-shader-library-first"});
