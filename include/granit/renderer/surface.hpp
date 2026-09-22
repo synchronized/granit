@@ -13,6 +13,26 @@
 namespace granit {
 
 class surface_desc;
+class surface;
+
+/** 不拥有 Surface，只在来源 Surface 及其 Renderer 的有效期内使用。 */
+class surface_ref {
+public:
+  surface_ref() = default;
+
+  [[nodiscard]] constexpr bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr granit_surface native_handle() const noexcept { return handle_; }
+  [[nodiscard]] static constexpr surface_ref from_native(granit_surface handle) noexcept {
+    return surface_ref{handle};
+  }
+
+private:
+  friend class surface;
+  explicit constexpr surface_ref(granit_surface handle) noexcept : handle_(handle) {}
+
+  granit_surface handle_{GRANIT_NULL_HANDLE};
+};
 
 /** 无异常、move-only 的 Surface RAII 包装。 */
 class surface {
@@ -36,7 +56,10 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result initialize(renderer& owner, const surface_desc& desc) noexcept;
+  [[nodiscard]] result initialize(renderer_ref owner, const surface_desc& desc) noexcept;
+  [[nodiscard]] result initialize(renderer& owner, const surface_desc& desc) noexcept {
+    return initialize(owner.ref(), desc);
+  }
 
   [[nodiscard]] result reset() noexcept {
     if (!valid()) {
@@ -52,8 +75,9 @@ public:
 
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
   [[nodiscard]] explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr surface_ref ref() const noexcept { return surface_ref{handle_}; }
   [[nodiscard]] granit_surface native_handle() const noexcept { return handle_; }
-  [[nodiscard]] granit_renderer renderer_handle() const noexcept { return renderer_; }
+  [[nodiscard]] renderer_ref owner() const noexcept { return renderer_ref::from_native(renderer_); }
 
 private:
   friend class window;

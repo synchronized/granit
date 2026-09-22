@@ -11,7 +11,7 @@
 
 namespace granit {
 
-inline result window::create_surface(renderer& owner, surface& output) const noexcept {
+inline result window::create_surface(renderer_ref owner, surface& output) const noexcept {
   if (output.valid())
     return result::invalid_argument;
   const auto renderer = owner.native_handle();
@@ -20,6 +20,10 @@ inline result window::create_surface(renderer& owner, surface& output) const noe
   if (value == GRANIT_SUCCESS)
     output.adopt(renderer, handle);
   return from_native(value);
+}
+
+inline result window::create_surface(renderer& owner, surface& output) const noexcept {
+  return create_surface(owner.ref(), output);
 }
 
 } // namespace granit

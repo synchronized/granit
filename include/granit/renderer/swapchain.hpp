@@ -107,7 +107,7 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result initialize(renderer& owner, const surface& target,
+  [[nodiscard]] result initialize(renderer_ref owner, surface_ref target,
                                   const swapchain_desc& desc) noexcept {
     const auto renderer = owner.native_handle();
     const auto surface = target.native_handle();
@@ -122,6 +122,10 @@ public:
       renderer_ = renderer;
     }
     return from_native(native_result);
+  }
+  [[nodiscard]] result initialize(renderer& owner, const surface& target,
+                                  const swapchain_desc& desc) noexcept {
+    return initialize(owner.ref(), target.ref(), desc);
   }
 
   [[nodiscard]] result recreate(const swapchain_desc& desc) noexcept {

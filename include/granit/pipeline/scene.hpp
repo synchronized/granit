@@ -23,11 +23,11 @@ using scene_point_light = ::granit_scene_point_light;
 using scene_spot_light = ::granit_scene_spot_light;
 
 struct scene_snapshot_desc {
-  std::span<const scene_view> views;
-  std::span<const scene_renderable> renderables;
-  std::span<const scene_directional_light> directional_lights;
-  std::span<const scene_point_light> point_lights;
-  std::span<const scene_spot_light> spot_lights;
+  std::span<const scene_view> views{};
+  std::span<const scene_renderable> renderables{};
+  std::span<const scene_directional_light> directional_lights{};
+  std::span<const scene_point_light> point_lights{};
+  std::span<const scene_spot_light> spot_lights{};
 };
 
 class scene_snapshot;
@@ -72,17 +72,7 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result initialize(renderer_ref owner,
-                                  const granit_scene_snapshot_desc& desc) noexcept {
-    const auto renderer = owner.native_handle();
-    if (valid())
-      return result::invalid_argument;
-    const auto value = from_native(granit_scene_snapshot_create(renderer, &desc, &handle_));
-    if (value.ok())
-      renderer_ = renderer;
-    return value;
-  }
-  [[nodiscard]] result initialize(renderer& owner, const scene_snapshot_desc& desc) noexcept {
+  [[nodiscard]] result initialize(renderer_ref owner, const scene_snapshot_desc& desc) noexcept {
     if (desc.views.size() > std::numeric_limits<std::uint32_t>::max() ||
         desc.renderables.size() > std::numeric_limits<std::uint32_t>::max() ||
         desc.directional_lights.size() > std::numeric_limits<std::uint32_t>::max() ||
@@ -104,7 +94,10 @@ public:
         .spot_lights = desc.spot_lights.data(),
         .spot_light_count = static_cast<std::uint32_t>(desc.spot_lights.size()),
     };
-    return initialize(owner.ref(), native);
+    return create_native(owner, native);
+  }
+  [[nodiscard]] result initialize(renderer& owner, const scene_snapshot_desc& desc) noexcept {
+    return initialize(owner.ref(), desc);
   }
   [[nodiscard]] result reset() noexcept {
     if (!valid())
@@ -120,6 +113,17 @@ public:
   [[nodiscard]] granit_scene_snapshot native_handle() const noexcept { return handle_; }
 
 private:
+  [[nodiscard]] result create_native(renderer_ref owner,
+                                     const granit_scene_snapshot_desc& desc) noexcept {
+    const auto renderer = owner.native_handle();
+    if (valid())
+      return result::invalid_argument;
+    const auto value = from_native(granit_scene_snapshot_create(renderer, &desc, &handle_));
+    if (value.ok())
+      renderer_ = renderer;
+    return value;
+  }
+
   granit_renderer renderer_ = GRANIT_NULL_HANDLE;
   granit_scene_snapshot handle_ = GRANIT_NULL_HANDLE;
 };

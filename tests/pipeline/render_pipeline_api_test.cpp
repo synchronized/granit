@@ -385,13 +385,11 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   directional_lights[0].direction_to_light = {0.0F, 0.0F, 1.0F};
   directional_lights[0].radiance = {1.0F, 1.0F, 1.0F};
   directional_lights[0].layer_mask = UINT64_MAX;
-  granit_scene_snapshot_desc scene_desc = GRANIT_SCENE_SNAPSHOT_DESC_INIT;
-  scene_desc.views = views.data();
-  scene_desc.view_count = static_cast<std::uint32_t>(views.size());
-  scene_desc.renderables = renderables.data();
-  scene_desc.renderable_count = static_cast<std::uint32_t>(renderables.size());
-  scene_desc.directional_lights = directional_lights.data();
-  scene_desc.directional_light_count = static_cast<std::uint32_t>(directional_lights.size());
+  const granit::scene_snapshot_desc scene_desc{
+      .views = views,
+      .renderables = renderables,
+      .directional_lights = directional_lights,
+  };
   granit::scene_snapshot scene;
   REQUIRE(scene.initialize(renderer.ref(), scene_desc) == granit::result::success);
 
@@ -400,10 +398,10 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   REQUIRE(shader_assets().build_library(shader_library_bytes));
   granit::shader_library shader_library;
   REQUIRE(shader_library.initialize(renderer, shader_library_bytes) == granit::result::success);
-  granit_material_desc material_desc = GRANIT_MATERIAL_DESC_INIT;
-  material_desc.archive_data = archive.data();
-  material_desc.archive_size = archive.size();
-  material_desc.shader_library = shader_library.native_handle();
+  const granit::material_desc material_desc{
+      .archive = archive,
+      .shader_library = shader_library.ref(),
+  };
   granit::material_instance material;
   REQUIRE(material.initialize(renderer.ref(), material_desc) == granit::result::success);
   CHECK(shader_library.reset() == granit::result::resource_in_use);
@@ -704,9 +702,7 @@ TEST_CASE("Render Pipeline在没有可见物体时仍清屏并执行覆盖层") 
   view.viewport_width = size;
   view.viewport_height = size;
   view.layer_mask = UINT64_C(2);
-  granit_scene_snapshot_desc scene_desc = GRANIT_SCENE_SNAPSHOT_DESC_INIT;
-  scene_desc.views = &view;
-  scene_desc.view_count = 1;
+  granit::scene_snapshot_desc scene_desc{.views = std::span{&view, 1}};
   granit::scene_snapshot empty_scene;
   REQUIRE(empty_scene.initialize(renderer.ref(), scene_desc) == granit::result::success);
 
@@ -734,8 +730,7 @@ TEST_CASE("Render Pipeline在没有可见物体时仍清屏并执行覆盖层") 
   culled.bounds_radius = 0.25F;
   culled.layer_mask = UINT64_C(1);
   culled.payload = 99;
-  scene_desc.renderables = &culled;
-  scene_desc.renderable_count = 1;
+  scene_desc.renderables = std::span{&culled, 1};
   granit::scene_snapshot culled_scene;
   REQUIRE(culled_scene.initialize(renderer.ref(), scene_desc) == granit::result::success);
   callback_state callback;

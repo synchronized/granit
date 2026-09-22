@@ -84,9 +84,9 @@ private:
 };
 
 struct material_desc {
-  std::span<const std::byte> archive;
-  std::span<const material_parameter_update> initial_updates;
-  shader_library_ref shader_library;
+  std::span<const std::byte> archive{};
+  std::span<const material_parameter_update> initial_updates{};
+  shader_library_ref shader_library{};
 };
 
 struct material_pipeline_warmup_desc {
@@ -139,17 +139,7 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result initialize(renderer_ref owner,
-                                  const granit_material_desc& desc) noexcept {
-    const auto renderer = owner.native_handle();
-    if (valid())
-      return result::invalid_argument;
-    const auto value = from_native(granit_material_create(renderer, &desc, &handle_));
-    if (value.ok())
-      renderer_ = renderer;
-    return value;
-  }
-  [[nodiscard]] result initialize(renderer& owner, const material_desc& desc) noexcept {
+  [[nodiscard]] result initialize(renderer_ref owner, const material_desc& desc) noexcept {
     if (desc.initial_updates.size() > std::numeric_limits<std::uint32_t>::max())
       return result::invalid_argument;
     try {
@@ -168,12 +158,15 @@ public:
           .shader_library = desc.shader_library.native_handle(),
           .reserved_2 = 0,
       };
-      return initialize(owner.ref(), native);
+      return create_native(owner, native);
     } catch (const std::bad_alloc&) {
       return result::out_of_memory;
     } catch (...) {
       return result::internal;
     }
+  }
+  [[nodiscard]] result initialize(renderer& owner, const material_desc& desc) noexcept {
+    return initialize(owner.ref(), desc);
   }
   [[nodiscard]] result update(std::span<const material_parameter_update> updates) noexcept {
     if (updates.size() > std::numeric_limits<std::uint32_t>::max())
@@ -221,6 +214,17 @@ public:
   [[nodiscard]] granit_material native_handle() const noexcept { return handle_; }
 
 private:
+  [[nodiscard]] result create_native(renderer_ref owner,
+                                     const granit_material_desc& desc) noexcept {
+    const auto renderer = owner.native_handle();
+    if (valid())
+      return result::invalid_argument;
+    const auto value = from_native(granit_material_create(renderer, &desc, &handle_));
+    if (value.ok())
+      renderer_ = renderer;
+    return value;
+  }
+
   granit_renderer renderer_ = GRANIT_NULL_HANDLE;
   granit_material handle_ = GRANIT_NULL_HANDLE;
 };

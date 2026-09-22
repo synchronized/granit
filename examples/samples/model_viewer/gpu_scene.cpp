@@ -195,49 +195,51 @@ granit::result create_material(granit_renderer renderer, const gltf::material& s
       result.failed())
     return result;
   const std::array updates{
-      granit_material_parameter_update{granit::material_parameter_id("base_color"),
-                                       GRANIT_MATERIAL_PARAMETER_FLOAT4, 0, &source.base_color,
-                                       sizeof(source.base_color), 0},
-      granit_material_parameter_update{granit::material_parameter_id("metallic"),
-                                       GRANIT_MATERIAL_PARAMETER_FLOAT32, 0, &source.metallic,
-                                       sizeof(source.metallic), 0},
-      granit_material_parameter_update{granit::material_parameter_id("perceptual_roughness"),
-                                       GRANIT_MATERIAL_PARAMETER_FLOAT32, 0, &source.roughness,
-                                       sizeof(source.roughness), 0},
-      granit_material_parameter_update{granit::material_parameter_id("normal_scale"),
-                                       GRANIT_MATERIAL_PARAMETER_FLOAT32, 0, &source.normal_scale,
-                                       sizeof(source.normal_scale), 0},
-      granit_material_parameter_update{
-          granit::material_parameter_id("occlusion_strength"), GRANIT_MATERIAL_PARAMETER_FLOAT32, 0,
-          &source.occlusion_strength, sizeof(source.occlusion_strength), 0},
-      granit_material_parameter_update{granit::material_parameter_id("emissive"),
-                                       GRANIT_MATERIAL_PARAMETER_FLOAT3, 0, &source.emissive,
-                                       sizeof(source.emissive), 0},
-      granit_material_parameter_update{granit::material_parameter_id("base_color_texture"),
-                                       GRANIT_MATERIAL_PARAMETER_TEXTURE_VIEW, 0, nullptr, 0,
-                                       base_color},
-      granit_material_parameter_update{granit::material_parameter_id("metallic_roughness_texture"),
-                                       GRANIT_MATERIAL_PARAMETER_TEXTURE_VIEW, 0, nullptr, 0,
-                                       metallic_roughness},
-      granit_material_parameter_update{granit::material_parameter_id("normal_texture"),
-                                       GRANIT_MATERIAL_PARAMETER_TEXTURE_VIEW, 0, nullptr, 0,
-                                       normal},
-      granit_material_parameter_update{granit::material_parameter_id("occlusion_texture"),
-                                       GRANIT_MATERIAL_PARAMETER_TEXTURE_VIEW, 0, nullptr, 0,
-                                       occlusion},
-      granit_material_parameter_update{granit::material_parameter_id("emissive_texture"),
-                                       GRANIT_MATERIAL_PARAMETER_TEXTURE_VIEW, 0, nullptr, 0,
-                                       emissive},
-      granit_material_parameter_update{granit::material_parameter_id("pbr_sampler"),
-                                       GRANIT_MATERIAL_PARAMETER_SAMPLER, 0, nullptr, 0, sampler},
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("base_color"), granit::material_parameter_type::float4,
+          std::as_bytes(std::span{&source.base_color, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("metallic"), granit::material_parameter_type::float32,
+          std::as_bytes(std::span{&source.metallic, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("perceptual_roughness"),
+          granit::material_parameter_type::float32,
+          std::as_bytes(std::span{&source.roughness, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("normal_scale"), granit::material_parameter_type::float32,
+          std::as_bytes(std::span{&source.normal_scale, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("occlusion_strength"),
+          granit::material_parameter_type::float32,
+          std::as_bytes(std::span{&source.occlusion_strength, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("emissive"), granit::material_parameter_type::float3,
+          std::as_bytes(std::span{&source.emissive, 1})),
+      granit::material_parameter_update::texture_binding(
+          granit::material_parameter_id("base_color_texture"),
+          granit::texture_view_ref::from_native(base_color)),
+      granit::material_parameter_update::texture_binding(
+          granit::material_parameter_id("metallic_roughness_texture"),
+          granit::texture_view_ref::from_native(metallic_roughness)),
+      granit::material_parameter_update::texture_binding(
+          granit::material_parameter_id("normal_texture"),
+          granit::texture_view_ref::from_native(normal)),
+      granit::material_parameter_update::texture_binding(
+          granit::material_parameter_id("occlusion_texture"),
+          granit::texture_view_ref::from_native(occlusion)),
+      granit::material_parameter_update::texture_binding(
+          granit::material_parameter_id("emissive_texture"),
+          granit::texture_view_ref::from_native(emissive)),
+      granit::material_parameter_update::sampler_binding(
+          granit::material_parameter_id("pbr_sampler"),
+          granit::sampler_ref::from_native(sampler)),
   };
   const auto archive = model_viewer_material_archive();
-  granit_material_desc desc = GRANIT_MATERIAL_DESC_INIT;
-  desc.archive_data = archive.data();
-  desc.archive_size = archive.size();
-  desc.initial_updates = updates.data();
-  desc.initial_update_count = static_cast<std::uint32_t>(updates.size());
-  desc.shader_library = shader_library;
+  const granit::material_desc desc{
+      .archive = archive,
+      .initial_updates = updates,
+      .shader_library = granit::shader_library_ref::from_native(shader_library),
+  };
   return output.initialize(granit::renderer_ref::from_native(renderer), desc);
 }
 
@@ -583,17 +585,13 @@ gpu_scene::create_snapshot(std::span<const granit_scene_view> views,
       point_lights.size() > std::numeric_limits<std::uint32_t>::max() ||
       spot_lights.size() > std::numeric_limits<std::uint32_t>::max())
     return granit::result::invalid_argument;
-  granit_scene_snapshot_desc desc = GRANIT_SCENE_SNAPSHOT_DESC_INIT;
-  desc.views = views.data();
-  desc.view_count = static_cast<std::uint32_t>(views.size());
-  desc.renderables = plan_.renderables.data();
-  desc.renderable_count = static_cast<std::uint32_t>(plan_.renderables.size());
-  desc.directional_lights = directional_lights.data();
-  desc.directional_light_count = static_cast<std::uint32_t>(directional_lights.size());
-  desc.point_lights = point_lights.data();
-  desc.point_light_count = static_cast<std::uint32_t>(point_lights.size());
-  desc.spot_lights = spot_lights.data();
-  desc.spot_light_count = static_cast<std::uint32_t>(spot_lights.size());
+  const granit::scene_snapshot_desc desc{
+      .views = views,
+      .renderables = plan_.renderables,
+      .directional_lights = directional_lights,
+      .point_lights = point_lights,
+      .spot_lights = spot_lights,
+  };
   return output.initialize(granit::renderer_ref::from_native(renderer_), desc);
 }
 

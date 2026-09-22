@@ -42,7 +42,8 @@ TEST_CASE("公共Scene Snapshot把空Renderer归类为无效句柄") {
   CHECK(snapshot == GRANIT_NULL_HANDLE);
 
   granit::scene_snapshot cpp_snapshot;
-  CHECK(cpp_snapshot.initialize(granit::renderer_ref{}, desc) == granit::result::invalid_handle);
+  CHECK(cpp_snapshot.initialize(granit::renderer_ref{}, {.views = views}) ==
+        granit::result::invalid_handle);
   CHECK_FALSE(cpp_snapshot.valid());
 }
 
