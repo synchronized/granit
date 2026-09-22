@@ -3,8 +3,9 @@
 
 # 05：把几何组织为 Mesh
 
-本章把上一章散落的 Buffer、Vertex Layout 和 Draw Range 收敛为 Mesh，并用仓库内可再分发的最小
-模型替换手写立方体。完成后，渲染代码不再直接依赖某个模型的顶点数量和布局细节。
+本章把上一章散落的 Buffer、Vertex Layout 和 Draw Range 收敛为 Mesh，并把仓库内的最小模型数据
+与应用逻辑分离。完成后，渲染循环不再直接依赖某个模型的顶点数量和布局细节。通用 glTF 导入属于
+综合 Model Viewer，不在本章引入第三方解析依赖。
 
 ## 1. 分离 CPU 数据与 GPU 资源
 
@@ -23,17 +24,52 @@ Mesh 描述包含：
 保持 Shader location 与 Mesh attribute 一致。模型缺少法线或 UV 时，应在导入阶段给出明确诊断，
 而不是让 Shader 读取未定义数据。
 
+```cpp
+const granit::mesh_vertex_buffer binding{
+    .buffer = vertex_buffer.ref(),
+    .layout = {.stride = sizeof(model::vertex), .attributes = attributes},
+};
+granit::mesh mesh;
+check(mesh.initialize(renderer, {
+    .vertex_buffers = std::span{&binding, 1},
+    .index_buffer = index_buffer.ref(),
+    .index_format = granit::index_type::uint16,
+    .index_count = static_cast<std::uint32_t>(model::indices.size()),
+}));
+```
+
 ## 3. 替换手工 Draw
 
-帧循环继续负责附件和 Pipeline；几何绑定改为从 Mesh 取得所需 Buffer 与 Draw Range。相机、深度和
-纹理绑定保持不变，这也是资源对象化的价值：场景内容改变时不需要重写帧生命周期。
+帧循环继续负责附件和 Pipeline；在 Rendering 前调用 `mesh.bind(recorder)` 绑定并准备 Buffer，进入
+Rendering 后调用 `mesh.draw(recorder)` 录制 Mesh 保存的 Draw Range。相机、深度和纹理绑定保持
+不变，这也是资源对象化的价值：场景内容改变时不需要重写帧生命周期。
 
-## 4. 验收
+## 4. 构建并运行
 
-- 使用模型文件后画面与手写几何具有相同的相机和深度行为。
+完整源码位于 [`examples/tutorials/05_mesh`](../../examples/tutorials/05_mesh)，最小模型数据单独保存
+在 [`model_data.hpp`](../../examples/tutorials/05_mesh/model_data.hpp)：
+
+```powershell
+cmake --preset windows-clang-debug -DGRANIT_SHADER_TOOLCHAIN_MODE=auto
+cmake --build --preset windows-clang-debug --target granit_tutorial_05_mesh
+.\build\windows-clang-debug\bin\granit_tutorial_05_mesh.exe
+```
+
+自动验证命令：
+
+```powershell
+ctest --preset windows-clang-debug -R granit.tutorial.05_mesh --output-on-failure
+```
+
+## 5. 验收
+
+- 使用独立模型数据后画面与上一章具有相同的相机和深度行为。
 - 销毁 CPU 模型数据不会影响已经完成上传的 Mesh。
 - 先销毁 Mesh，再销毁它借用的 GPU Buffer。
 - 非法 attribute 或越界 draw range 在创建阶段被拒绝。
+
+本章开始链接 `granit::render_pipeline` component，因为公共 Mesh 位于该组件。完整程序见
+[`main.cpp`](../../examples/tutorials/05_mesh/main.cpp)。
 
 准确契约见 [Mesh](../reference/mesh.md)。下一章用材质资产替换手写纹理绑定，并加入光照。
 
