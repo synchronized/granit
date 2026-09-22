@@ -19,7 +19,7 @@ TEST_CASE("模型查看器 Core 严格执行启动状态机", "[example][model-v
   scene.nodes.resize(1);
   REQUIRE(core.accept_scene(std::move(scene)) == granit::result::success);
   CHECK(core.phase() == application_phase::gpu_upload);
-  CHECK(core.upload(GRANIT_NULL_HANDLE) == granit::result::invalid_handle);
+  CHECK(core.upload(granit::renderer_ref{}) == granit::result::invalid_handle);
   CHECK(core.phase() == application_phase::failed);
   CHECK_FALSE(core.diagnostic().empty());
   core.reset();

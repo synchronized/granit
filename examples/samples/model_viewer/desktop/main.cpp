@@ -360,7 +360,7 @@ unsigned gpu_upload_percentage(
 
 struct gpu_upload_command_context {
   granit::example::model_viewer::application_core* core{};
-  granit_renderer renderer{GRANIT_NULL_HANDLE};
+  granit::renderer_ref renderer;
   std::span<const std::byte> environment_bytes;
   float sampler_anisotropy{1.0F};
   gpu_upload_status* status{};
@@ -409,9 +409,9 @@ bool update_gpu_upload_status(
 granit::result execute_gpu_upload(void* user_data) {
   const auto& context = *static_cast<gpu_upload_command_context*>(user_data);
   try {
-    const auto result =
-        context.core->upload(context.renderer, context.environment_bytes,
-                             context.sampler_anisotropy, update_gpu_upload_status, user_data);
+    const auto result = context.core->upload(context.renderer, context.environment_bytes,
+                                             context.sampler_anisotropy,
+                                             update_gpu_upload_status, user_data);
     return result == granit::result::not_ready && context.render_result.failed()
                ? context.render_result
                : result;
@@ -453,7 +453,7 @@ granit::result execute_swapchain_recreate(void* user_data) {
 }
 
 struct pipeline_initialize_context {
-  granit_renderer renderer{GRANIT_NULL_HANDLE};
+  granit::renderer_ref renderer;
   granit::render_pipeline* pipeline{};
   granit::render_pipeline_desc desc{};
   bool metrics_enabled{};
@@ -462,8 +462,7 @@ struct pipeline_initialize_context {
 granit::result execute_pipeline_initialize(void* user_data) {
   auto& context = *static_cast<pipeline_initialize_context*>(user_data);
   granit::render_pipeline candidate;
-  auto result =
-      candidate.initialize(granit::renderer_ref::from_native(context.renderer), context.desc);
+  auto result = candidate.initialize(context.renderer, context.desc);
   if (result.failed())
     return result;
   const auto metrics_result = candidate.enable_metrics();
@@ -476,7 +475,7 @@ granit::result execute_pipeline_initialize(void* user_data) {
 }
 
 struct quality_change_context {
-  granit_renderer renderer{GRANIT_NULL_HANDLE};
+  granit::renderer_ref renderer;
   granit::example::model_viewer::application_core* core{};
   granit::render_pipeline* pipeline{};
   granit::render_pipeline_desc desc{};
@@ -488,8 +487,7 @@ struct quality_change_context {
 granit::result execute_quality_change(void* user_data) {
   auto& context = *static_cast<quality_change_context*>(user_data);
   granit::render_pipeline replacement;
-  auto result =
-      replacement.initialize(granit::renderer_ref::from_native(context.renderer), context.desc);
+  auto result = replacement.initialize(context.renderer, context.desc);
   if (result.failed())
     return result;
   const auto metrics_result = replacement.enable_metrics();
@@ -855,7 +853,7 @@ int main(int argc, char** argv) {
   if (result.ok()) {
     gpu_upload_command_context upload_context{
         .core = &core,
-        .renderer = renderer.native_handle(),
+        .renderer = renderer.ref(),
         .environment_bytes = environment_bytes,
         .sampler_anisotropy = render_quality.sampler_anisotropy,
         .status = &upload_status,
@@ -917,7 +915,7 @@ int main(int argc, char** argv) {
       .enable_fxaa = render_quality.enable_fxaa != 0,
       .enable_specular_aa = render_quality.enable_specular_aa != 0};
   pipeline_initialize_context pipeline_context{
-      .renderer = renderer.native_handle(), .pipeline = &pipeline, .desc = pipeline_desc};
+      .renderer = renderer.ref(), .pipeline = &pipeline, .desc = pipeline_desc};
   if (result.ok())
     result = run_render_command(frame_executor, execute_pipeline_initialize, &pipeline_context);
   bool gpu_metrics_enabled = pipeline_context.metrics_enabled;
@@ -1133,7 +1131,7 @@ int main(int argc, char** argv) {
           .enable_fxaa = changes.quality->enable_fxaa != 0,
           .enable_specular_aa = changes.quality->enable_specular_aa != 0};
       quality_change_context quality_context{
-          .renderer = renderer.native_handle(),
+          .renderer = renderer.ref(),
           .core = &core,
           .pipeline = &pipeline,
           .desc = replacement_desc,

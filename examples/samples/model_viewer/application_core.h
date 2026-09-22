@@ -67,7 +67,7 @@ public:
   /** 接收已经在资产线程完成打包的 CPU Scene 与 GPU 创建计划。 */
   [[nodiscard]] granit::result accept_scene(gltf::scene scene, gpu_scene_plan plan);
   /** 上传场景；environment_bytes 为空时使用内置摄影棚环境，否则加载 GRENV 资产。 */
-  [[nodiscard]] granit::result upload(granit_renderer renderer,
+  [[nodiscard]] granit::result upload(granit::renderer_ref renderer,
                                       std::span<const std::byte> environment_bytes = {},
                                       float sampler_anisotropy = 8.0F,
                                       gpu_scene_upload_callback progress = nullptr,
@@ -77,14 +77,15 @@ public:
                                       float sampler_anisotropy = 8.0F,
                                       gpu_scene_upload_callback progress = nullptr,
                                       void* progress_user_data = nullptr) {
-    return upload(renderer.native_handle(), environment_bytes, sampler_anisotropy, progress,
+    return upload(renderer.ref(), environment_bytes, sampler_anisotropy, progress,
                   progress_user_data);
   }
   /** 按新采样质量事务式重建 GPU Scene；环境资源与查看器状态保持不变。 */
-  [[nodiscard]] granit::result reupload_scene(granit_renderer renderer, float sampler_anisotropy);
+  [[nodiscard]] granit::result reupload_scene(granit::renderer_ref renderer,
+                                              float sampler_anisotropy);
   [[nodiscard]] granit::result reupload_scene(granit::renderer& renderer,
                                               float sampler_anisotropy) {
-    return reupload_scene(renderer.native_handle(), sampler_anisotropy);
+    return reupload_scene(renderer.ref(), sampler_anisotropy);
   }
   [[nodiscard]] granit::result tick(const application_tick_input& input, frame_packet& output);
   void fail(granit::result result, std::string diagnostic);

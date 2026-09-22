@@ -129,7 +129,8 @@ public:
   gpu_scene& operator=(gpu_scene&& other) noexcept;
 
   /** 成功后替换现有资源；失败时当前对象保持不变。 */
-  [[nodiscard]] granit::result initialize(granit_renderer renderer, const gltf::scene& source,
+  [[nodiscard]] granit::result initialize(granit::renderer_ref renderer,
+                                          const gltf::scene& source,
                                           float sampler_anisotropy = 8.0F,
                                           gpu_scene_upload_callback progress = nullptr,
                                           void* progress_user_data = nullptr);
@@ -137,11 +138,11 @@ public:
                                           float sampler_anisotropy = 8.0F,
                                           gpu_scene_upload_callback progress = nullptr,
                                           void* progress_user_data = nullptr) {
-    return initialize(renderer.native_handle(), source, sampler_anisotropy, progress,
-                      progress_user_data);
+    return initialize(renderer.ref(), source, sampler_anisotropy, progress, progress_user_data);
   }
   /** 使用工作线程预先生成的计划创建资源；plan 在失败时仍会被消费。 */
-  [[nodiscard]] granit::result initialize(granit_renderer renderer, const gltf::scene& source,
+  [[nodiscard]] granit::result initialize(granit::renderer_ref renderer,
+                                          const gltf::scene& source,
                                           gpu_scene_plan plan, float sampler_anisotropy = 8.0F,
                                           gpu_scene_upload_callback progress = nullptr,
                                           void* progress_user_data = nullptr);
@@ -149,12 +150,12 @@ public:
                                           gpu_scene_plan plan, float sampler_anisotropy = 8.0F,
                                           gpu_scene_upload_callback progress = nullptr,
                                           void* progress_user_data = nullptr) {
-    return initialize(renderer.native_handle(), source, std::move(plan), sampler_anisotropy,
-                      progress, progress_user_data);
+    return initialize(renderer.ref(), source, std::move(plan), sampler_anisotropy, progress,
+                      progress_user_data);
   }
   void reset() noexcept;
 
-  [[nodiscard]] bool valid() const noexcept { return renderer_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] bool valid() const noexcept { return renderer_.valid(); }
   [[nodiscard]] const gpu_scene_plan& plan() const noexcept { return plan_; }
   [[nodiscard]] const std::vector<gpu_texture>& textures() const noexcept { return textures_; }
   [[nodiscard]] const std::vector<granit::mesh>& meshes() const noexcept { return meshes_; }
@@ -197,11 +198,11 @@ public:
   [[nodiscard]] granit::result update_debug_display(std::uint32_t mode) noexcept;
 
 private:
-  [[nodiscard]] granit::result create(granit_renderer renderer, const gltf::scene& source,
+  [[nodiscard]] granit::result create(granit::renderer_ref renderer, const gltf::scene& source,
                                       gpu_scene_plan plan, float sampler_anisotropy,
                                       gpu_scene_upload_callback progress, void* progress_user_data);
 
-  granit_renderer renderer_{GRANIT_NULL_HANDLE};
+  granit::renderer_ref renderer_;
   gpu_scene_plan plan_;
   granit::buffer vertex_buffer_;
   granit::buffer index_buffer_;

@@ -119,7 +119,7 @@ granit::result application_core::accept_scene(gltf::scene scene, gpu_scene_plan 
   }
 }
 
-granit::result application_core::upload(granit_renderer renderer,
+granit::result application_core::upload(granit::renderer_ref renderer,
                                         std::span<const std::byte> environment_bytes,
                                         float sampler_anisotropy,
                                         gpu_scene_upload_callback progress,
@@ -134,11 +134,9 @@ granit::result application_core::upload(granit_renderer renderer,
   }
   granit::result environment_result;
   if (environment_bytes.empty()) {
-    environment_result =
-        environment_.initialize_builtin(granit::renderer_ref::from_native(renderer));
+    environment_result = environment_.initialize_builtin(renderer);
   } else {
-    environment_result =
-        environment_.initialize(granit::renderer_ref::from_native(renderer), environment_bytes);
+    environment_result = environment_.initialize(renderer, environment_bytes);
   }
   if (environment_result.ok())
     environment_result = environment_.get_info(environment_info_);
@@ -158,7 +156,7 @@ granit::result application_core::upload(granit_renderer renderer,
   return granit::result::success;
 }
 
-granit::result application_core::reupload_scene(granit_renderer renderer,
+granit::result application_core::reupload_scene(granit::renderer_ref renderer,
                                                 float sampler_anisotropy) {
   if (phase_ != application_phase::ready)
     return granit::result::invalid_argument;

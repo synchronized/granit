@@ -668,7 +668,8 @@ granit_result configure_render_quality(granit_sample_count sample_count, unsigne
     return result;
   if (sampler_anisotropy != state.sampler_anisotropy) {
     result = granit::to_native(
-        state.core.reupload_scene(state.renderer, static_cast<float>(sampler_anisotropy)));
+        state.core.reupload_scene(granit::renderer_ref::from_native(state.renderer),
+                                  static_cast<float>(sampler_anisotropy)));
     if (result != GRANIT_SUCCESS) {
       static_cast<void>(granit_render_pipeline_destroy(state.renderer, replacement));
       return result;
@@ -811,7 +812,8 @@ void tick(void*) noexcept {
         fail("asset-load", granit::to_native(result));
         return;
       }
-      result = state.core.upload(state.renderer, {}, 8.0F, report_upload_progress, nullptr);
+      result = state.core.upload(granit::renderer_ref::from_native(state.renderer), {}, 8.0F,
+                                 report_upload_progress, nullptr);
       state.upload_active = false;
       if (result != granit::result::success) {
         fail("asset-upload", granit::to_native(result));

@@ -251,7 +251,7 @@ TEST_CASE("GPU Scene 事务式创建合并 Buffer 与 Mesh", "[example][model-vi
 TEST_CASE("GPU Scene 创建失败时保留原 Scene", "[example][model-viewer][transaction]") {
   granit::example::model_viewer::gpu_scene scene;
   granit::example::gltf::scene source;
-  CHECK(scene.initialize(GRANIT_NULL_HANDLE, source) == granit::result::invalid_handle);
+  CHECK(scene.initialize(granit::renderer_ref{}, source) == granit::result::invalid_handle);
   CHECK_FALSE(scene.valid());
   auto view = granit::texture_view_ref::from_native(1);
   auto sampler = granit::sampler_ref::from_native(1);
