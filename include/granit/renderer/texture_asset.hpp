@@ -6,7 +6,10 @@
 
 #include <granit/core/content_id.hpp>
 #include <granit/core/result.hpp>
+#include <granit/renderer/renderer.hpp>
+#include <granit/renderer/texture.hpp>
 #include <granit/renderer/texture_asset.h>
+#include <granit/renderer/upload_batch.hpp>
 
 #include <array>
 #include <cstddef>
@@ -76,9 +79,10 @@ struct texture_asset_selection {
 }
 
 [[nodiscard]] inline result
-select_texture_asset_variant(granit_renderer renderer, std::span<const std::byte> manifest,
+select_texture_asset_variant(renderer_ref owner, std::span<const std::byte> manifest,
                              texture_asset_selection& selection,
                              texture_asset_selection_options options = {}) noexcept {
+  const auto renderer = owner.native_handle();
   const granit_texture_asset_selection_desc desc{GRANIT_TEXTURE_ASSET_SELECTION_DESC_SIZE,
                                                  options.required_usage, options.required_features,
                                                  UINT32_C(0)};
@@ -91,13 +95,20 @@ select_texture_asset_variant(granit_renderer renderer, std::span<const std::byte
 }
 
 [[nodiscard]] inline result
-write_texture_asset_mips(granit_renderer renderer, granit_upload_batch batch,
-                         granit_texture texture, std::span<const std::byte> manifest,
+select_texture_asset_variant(renderer& owner, std::span<const std::byte> manifest,
+                             texture_asset_selection& selection,
+                             texture_asset_selection_options options = {}) noexcept {
+  return select_texture_asset_variant(owner.ref(), manifest, selection, options);
+}
+
+[[nodiscard]] inline result
+write_texture_asset_mips(upload_batch& batch, texture_ref texture,
+                         std::span<const std::byte> manifest,
                          std::span<const std::byte> payload, std::uint32_t variant_index,
                          std::uint32_t first_mip, std::uint32_t mip_count) noexcept {
   return from_native(granit_upload_batch_write_texture_asset_mips(
-      renderer, batch, texture, manifest.data(), manifest.size(), payload.data(), payload.size(),
-      variant_index, first_mip, mip_count));
+      batch.owner().native_handle(), batch.native_handle(), texture.native_handle(), manifest.data(),
+      manifest.size(), payload.data(), payload.size(), variant_index, first_mip, mip_count));
 }
 
 } // namespace granit

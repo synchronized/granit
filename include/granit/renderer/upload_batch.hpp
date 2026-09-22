@@ -136,6 +136,9 @@ public:
     return from_native(value);
   }
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] renderer_ref owner() const noexcept {
+    return renderer_ref::from_native(renderer_);
+  }
   [[nodiscard]] granit_upload_batch native_handle() const noexcept { return handle_; }
 
 private:

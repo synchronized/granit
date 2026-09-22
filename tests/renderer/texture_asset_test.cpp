@@ -122,15 +122,15 @@ TEST_CASE("Texture Asset按Renderer能力选择首个兼容变体", "[texture_as
   REQUIRE(initialized == granit::result::success);
   const auto manifest = make_manifest();
   granit::texture_asset_selection selection;
-  REQUIRE(granit::select_texture_asset_variant(renderer.native_handle(), manifest, selection) ==
+  REQUIRE(granit::select_texture_asset_variant(renderer, manifest, selection) ==
           granit::result::success);
   CHECK(selection.variant_index == 0);
   CHECK(selection.format == GRANIT_TEXTURE_FORMAT_RGBA8_SRGB);
 
   granit::texture_asset_selection_options storage;
   storage.required_usage = GRANIT_TEXTURE_USAGE_STORAGE_BIT;
-  CHECK(granit::select_texture_asset_variant(renderer.native_handle(), manifest, selection,
-                                             storage) == granit::result::unsupported);
+  CHECK(granit::select_texture_asset_variant(renderer, manifest, selection, storage) ==
+        granit::result::unsupported);
 }
 
 TEST_CASE("Texture Asset逐Mip接口复用Upload Batch", "[texture_asset][upload]") {
@@ -144,26 +144,18 @@ TEST_CASE("Texture Asset逐Mip接口复用Upload Batch", "[texture_asset][upload
   const auto manifest = make_manifest();
   constexpr std::array<std::byte, 64> payload{};
 
-  granit_texture_desc texture_desc = GRANIT_TEXTURE_DESC_INIT;
-  texture_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_SRGB;
-  texture_desc.usage = GRANIT_TEXTURE_USAGE_SAMPLED_BIT |
-                       GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT |
-                       GRANIT_TEXTURE_USAGE_TRANSFER_SOURCE_BIT;
-  texture_desc.width = 4;
-  texture_desc.height = 4;
-  granit_texture texture = GRANIT_NULL_HANDLE;
-  REQUIRE(granit_texture_create(renderer.native_handle(), &texture_desc, &texture) ==
-          GRANIT_SUCCESS);
-  granit_upload_batch_desc batch_desc = GRANIT_UPLOAD_BATCH_DESC_INIT;
-  granit_upload_batch batch = GRANIT_NULL_HANDLE;
-  REQUIRE(granit_upload_batch_create(renderer.native_handle(), &batch_desc, &batch) ==
-          GRANIT_SUCCESS);
-  REQUIRE(granit_upload_batch_write_texture_asset_mips(
-              renderer.native_handle(), batch, texture, manifest.data(), manifest.size(),
-              payload.data(), payload.size(), 0, 0, 1) == GRANIT_SUCCESS);
-  CHECK(granit_upload_batch_submit(renderer.native_handle(), batch) == GRANIT_SUCCESS);
-  CHECK(granit_upload_batch_destroy(renderer.native_handle(), batch) == GRANIT_SUCCESS);
-  CHECK(granit_texture_destroy(renderer.native_handle(), texture) == GRANIT_SUCCESS);
+  granit::texture texture;
+  REQUIRE(texture.initialize(renderer, {.format = granit::texture_format::rgba8_srgb,
+                                        .usage = granit::texture_usage::sampled |
+                                                 granit::texture_usage::transfer_destination |
+                                                 granit::texture_usage::transfer_source,
+                                        .width = 4,
+                                        .height = 4}) == granit::result::success);
+  granit::upload_batch batch;
+  REQUIRE(batch.initialize(renderer) == granit::result::success);
+  REQUIRE(granit::write_texture_asset_mips(batch, texture.ref(), manifest, payload, 0, 0, 1) ==
+          granit::result::success);
+  CHECK(batch.submit() == granit::result::success);
 }
 
 TEST_CASE("Texture Asset逐Mip接口在复制前执行背压和摘要校验",
