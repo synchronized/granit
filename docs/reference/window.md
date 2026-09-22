@@ -95,6 +95,34 @@ Emscripten 后端接收 DOM 焦点和 Canvas 尺寸变化。浏览器没有独�
 负责退出和导航。`process_events` 不主动泵送 DOM，而是同步最新 Canvas 内容尺寸、像素尺寸和
 缩放，并将变化写入同一 Window 事件队列。
 
+## 可选托管 Loop
+
+Window component 提供 `granit_window_system_run_loop`，用于让桌面和 Emscripten 共用同一个应用
+Tick。每轮先调用 `granit_window_system_process_events`，再调用宿主 Tick。Tick 通过 Action 表示：
+
+- `GRANIT_WINDOW_LOOP_CONTINUE`：立即继续推进；
+- `GRANIT_WINDOW_LOOP_IDLE`：当前无工作，桌面端短暂等待后继续；
+- `GRANIT_WINDOW_LOOP_STOP`：正常停止。
+
+Tick 返回失败也会停止。描述被接受后，停止时恰好调用一次 Shutdown，并将最终结果传入。回调和
+`user_data` 始终由宿主拥有；它们必须持续有效到 Shutdown 返回。Loop 不持有或推进 Renderer，应用
+仍在 Tick 中自行调用 `renderer.process_events()`、处理异步 Ready 状态和录制帧。
+
+C++ 包装使用 `granit::run_window_loop(system, application)`。Application 提供两个 `noexcept` 成员：
+
+```cpp
+granit::result tick(granit::window_loop_action& action) noexcept;
+void shutdown(granit::result reason) noexcept;
+```
+
+Win32、XCB 和 Wayland 上，`run_window_loop` 阻塞至停止。Emscripten 上，它注册浏览器主循环后立即
+返回；Application 不得是随后离开作用域的局部对象，通常由页面宿主或静态存储持有，并在
+`shutdown` 中按 Frame Context、Swapchain、Surface、Renderer、Window、Window System 的顺序释放。
+
+每个 Window System 同时只能运行一个托管 Loop。递归运行返回
+`GRANIT_ERROR_RESOURCE_IN_USE`；错误线程调用返回 `GRANIT_ERROR_INVALID_ARGUMENT`。复杂引擎、
+SDL 等外部框架仍可继续直接使用非阻塞 `process_events`，无需采用托管 Loop。
+
 ## Renderer 接入
 
 ```c

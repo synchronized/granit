@@ -9,6 +9,8 @@
 
 ## 最近完成
 
+- [S-49：0.28.0 Window 跨平台可选主循环](S-49-0.28.0-window-loop.md)——以可选托管 Loop 统一
+  桌面与 Emscripten 的逐帧调度，同时保留引擎自有事件循环。
 - [S-47：Window 跨平台入口收敛](S-47-window-platform-convergence.md)——让 Emscripten 与
   Win32、XCB、Wayland 共享 Window、输入和 Surface 公共流程。
 - [S-45：0.26.0 文档一致性与历史收敛](S-45-0.26.0-documentation-convergence.md)——修正当前
@@ -21,8 +23,6 @@
 
 - [S-48：0.28.0 线性入门教程与配套示例](S-48-0.28.0-linear-tutorial-series.md)——从 Window 到
   ImGui 逐章扩展同一个应用，并为每章提供可运行源码与自动验证。
-- [S-49：0.28.0 Window 跨平台可选主循环](S-49-0.28.0-window-loop.md)——以可选托管 Loop 统一
-  桌面与 Emscripten 的逐帧调度，同时保留引擎自有事件循环。
 
 ## 已取代
 

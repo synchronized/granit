@@ -9,6 +9,7 @@
 #include <array>
 #include <cstddef>
 #include <cstring>
+#include <thread>
 
 namespace {
 
@@ -51,15 +52,37 @@ struct failing_loop_application {
   std::uint32_t shutdowns{};
   granit::result shutdown_reason{granit::result::unknown};
 
-  granit::result tick(granit::window_loop_action&) noexcept {
-    return granit::result::cancelled;
-  }
+  granit::result tick(granit::window_loop_action&) noexcept { return granit::result::cancelled; }
 
   void shutdown(granit::result reason) noexcept {
     ++shutdowns;
     shutdown_reason = reason;
   }
 };
+
+struct raw_loop_context {
+  granit_window_system system{};
+  const granit_window_loop_desc* desc{};
+  granit_window_loop_action action{GRANIT_WINDOW_LOOP_STOP};
+  granit_result nested_result{GRANIT_ERROR_UNKNOWN};
+  granit_result shutdown_reason{GRANIT_ERROR_UNKNOWN};
+  std::uint32_t shutdowns{};
+};
+
+granit_result GRANIT_WINDOW_CALLBACK raw_loop_tick(void* user_data,
+                                                   granit_window_loop_action* action) {
+  auto& context = *static_cast<raw_loop_context*>(user_data);
+  if (context.desc != nullptr)
+    context.nested_result = granit_window_system_run_loop(context.system, context.desc);
+  *action = context.action;
+  return GRANIT_SUCCESS;
+}
+
+void GRANIT_WINDOW_CALLBACK raw_loop_shutdown(void* user_data, granit_result reason) {
+  auto& context = *static_cast<raw_loop_context*>(user_data);
+  ++context.shutdowns;
+  context.shutdown_reason = reason;
+}
 
 } // namespace
 
@@ -87,6 +110,57 @@ TEST_CASE("Window Loop 在接受回调前校验描述", "[window][loop][abi]") {
   granit_window_loop_desc desc = GRANIT_WINDOW_LOOP_DESC_INIT;
   CHECK(granit_window_system_run_loop(UINT64_MAX, nullptr) == GRANIT_ERROR_INVALID_ARGUMENT);
   CHECK(granit_window_system_run_loop(UINT64_MAX, &desc) == GRANIT_ERROR_INVALID_ARGUMENT);
+}
+
+TEST_CASE("Window Loop 拒绝未知动作和递归运行", "[window][loop]") {
+  granit::window_system system;
+  const auto initialize_result = system.initialize();
+  if (initialize_result == granit::result::backend_unavailable)
+    SKIP("当前环境没有可用的 Window 后端");
+  REQUIRE(initialize_result == granit::result::success);
+
+  raw_loop_context unknown;
+  unknown.system = system.native_handle();
+  unknown.action = UINT32_MAX;
+  granit_window_loop_desc unknown_desc = GRANIT_WINDOW_LOOP_DESC_INIT;
+  unknown_desc.tick = raw_loop_tick;
+  unknown_desc.shutdown = raw_loop_shutdown;
+  unknown_desc.user_data = &unknown;
+  CHECK(granit_window_system_run_loop(unknown.system, &unknown_desc) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(unknown.shutdowns == 1);
+  CHECK(unknown.shutdown_reason == GRANIT_ERROR_INVALID_ARGUMENT);
+
+  raw_loop_context recursive;
+  recursive.system = system.native_handle();
+  granit_window_loop_desc recursive_desc = GRANIT_WINDOW_LOOP_DESC_INIT;
+  recursive_desc.tick = raw_loop_tick;
+  recursive_desc.shutdown = raw_loop_shutdown;
+  recursive_desc.user_data = &recursive;
+  recursive.desc = &recursive_desc;
+  CHECK(granit_window_system_run_loop(recursive.system, &recursive_desc) == GRANIT_SUCCESS);
+  CHECK(recursive.nested_result == GRANIT_ERROR_RESOURCE_IN_USE);
+  CHECK(recursive.shutdowns == 1);
+}
+
+TEST_CASE("Window Loop 只能从 Window System 创建线程运行", "[window][loop][thread]") {
+  granit::window_system system;
+  const auto initialize_result = system.initialize();
+  if (initialize_result == granit::result::backend_unavailable)
+    SKIP("当前环境没有可用的 Window 后端");
+  REQUIRE(initialize_result == granit::result::success);
+
+  raw_loop_context context;
+  context.system = system.native_handle();
+  granit_window_loop_desc desc = GRANIT_WINDOW_LOOP_DESC_INIT;
+  desc.tick = raw_loop_tick;
+  desc.shutdown = raw_loop_shutdown;
+  desc.user_data = &context;
+  granit_result thread_result = GRANIT_ERROR_UNKNOWN;
+  std::thread worker{[&] { thread_result = granit_window_system_run_loop(context.system, &desc); }};
+  worker.join();
+  CHECK(thread_result == GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(context.shutdowns == 0);
 }
 
 TEST_CASE("C++ Input Event 把 C 事件转换为强类型字段", "[input][cpp]") {

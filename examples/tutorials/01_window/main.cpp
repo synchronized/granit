@@ -7,12 +7,14 @@
 #include <granit/renderer/swapchain.hpp>
 #include <granit/window.hpp>
 
-#include <chrono>
 #include <cstdint>
 #include <iostream>
 #include <span>
 #include <string_view>
-#include <thread>
+
+#if defined(__EMSCRIPTEN__)
+#include <emscripten/emscripten.h>
+#endif
 
 namespace {
 
@@ -90,147 +92,180 @@ granit::result render_clear_frame(granit::swapchain& swapchain, granit::frame_co
   return result;
 }
 
+enum class application_phase { renderer_initializing, running, stopped };
+
+class tutorial_application {
+public:
+  granit::result initialize(bool smoke_test) noexcept {
+    smoke_test_ = smoke_test;
+    auto result = window_system_.initialize();
+    if (result.failed())
+      return result;
+    result = window_.initialize(window_system_,
+                                {.title = "Granit Tutorial 01", .width = 1280, .height = 720});
+    if (result.failed())
+      return result;
+    return renderer_.initialize({.application_name = "Granit Tutorial 01",
+                                 .presentation = granit::presentation_mode::enabled});
+  }
+
+  granit::result tick(granit::window_loop_action& action) noexcept {
+    auto result = poll_window_events(window_system_, running_, recreate_);
+    if (result.ok())
+      result = poll_input_events(window_system_, running_);
+    if (result.failed())
+      return result;
+    if (!running_) {
+      action = granit::window_loop_action::stop;
+      return smoke_complete() || !smoke_test_ ? granit::result::success
+                                              : granit::result::initialization_failed;
+    }
+
+    result = renderer_.process_events();
+    if (result.failed())
+      return result;
+    if (phase_ == application_phase::renderer_initializing) {
+      granit::renderer_status status;
+      result = renderer_.get_status(status);
+      if (result.failed())
+        return result;
+      if (status.state == granit::renderer_state::initializing) {
+        action = granit::window_loop_action::idle;
+        return granit::result::success;
+      }
+      if (status.state != granit::renderer_state::ready)
+        return status.failure_result;
+      result = initialize_presentation();
+      if (result == granit::result::not_ready) {
+        action = granit::window_loop_action::idle;
+        return granit::result::success;
+      }
+      if (result.failed())
+        return result;
+      phase_ = application_phase::running;
+    }
+
+    result = window_.get_state(window_state_);
+    if (result.failed())
+      return result;
+    const auto width = window_state_.framebuffer_width;
+    const auto height = window_state_.framebuffer_height;
+    if (width == 0 || height == 0) {
+      action = granit::window_loop_action::idle;
+      return granit::result::success;
+    }
+    if (recreate_ || width != swapchain_info_.width || height != swapchain_info_.height) {
+      result = swapchain_.recreate({.width = width, .height = height});
+      if (result == granit::result::not_ready) {
+        action = granit::window_loop_action::idle;
+        return granit::result::success;
+      }
+      if (result.failed())
+        return result;
+      result = swapchain_.query_info(swapchain_info_);
+      if (result.failed())
+        return result;
+      recreate_ = false;
+      ++completed_recreates_;
+    }
+
+    result = render_clear_frame(swapchain_, frame_context_, swapchain_info_, recreate_);
+    if (result == granit::result::out_of_date) {
+      recreate_ = true;
+      return granit::result::success;
+    }
+    if (result.failed())
+      return result;
+
+    ++rendered_frames_;
+    if (smoke_test_ && rendered_frames_ == 1)
+      recreate_ = true;
+    if (smoke_complete())
+      action = granit::window_loop_action::stop;
+    return granit::result::success;
+  }
+
+  void shutdown(granit::result) noexcept {
+    phase_ = application_phase::stopped;
+    static_cast<void>(frame_context_.reset());
+    static_cast<void>(swapchain_.reset());
+    static_cast<void>(surface_.reset());
+    static_cast<void>(renderer_.reset());
+    static_cast<void>(window_.reset());
+    static_cast<void>(window_system_.reset());
+  }
+
+  [[nodiscard]] granit::window_system& system() noexcept { return window_system_; }
+  [[nodiscard]] std::uint32_t rendered_frames() const noexcept { return rendered_frames_; }
+  [[nodiscard]] std::uint32_t completed_recreates() const noexcept { return completed_recreates_; }
+  [[nodiscard]] bool ready() const noexcept { return phase_ == application_phase::running; }
+
+private:
+  granit::result initialize_presentation() noexcept {
+    auto result = window_.get_state(window_state_);
+    if (result.failed())
+      return result;
+    if (window_state_.framebuffer_width == 0 || window_state_.framebuffer_height == 0)
+      return granit::result::not_ready;
+    result = window_.create_surface(renderer_, surface_);
+    if (result.ok()) {
+      result = swapchain_.initialize(
+          renderer_, surface_,
+          {.width = window_state_.framebuffer_width, .height = window_state_.framebuffer_height});
+    }
+    if (result.ok())
+      result = swapchain_.query_info(swapchain_info_);
+    if (result.ok())
+      result = frame_context_.initialize(renderer_);
+    return result;
+  }
+
+  [[nodiscard]] bool smoke_complete() const noexcept {
+    return smoke_test_ && rendered_frames_ >= 3 && completed_recreates_ >= 1;
+  }
+
+  granit::window_system window_system_;
+  granit::window window_;
+  granit::renderer renderer_;
+  granit::surface surface_;
+  granit::swapchain swapchain_;
+  granit::frame_context frame_context_;
+  granit::window_state window_state_{};
+  granit::swapchain_info swapchain_info_{};
+  application_phase phase_{application_phase::renderer_initializing};
+  bool running_{true};
+  bool recreate_{};
+  bool smoke_test_{};
+  std::uint32_t rendered_frames_{};
+  std::uint32_t completed_recreates_{};
+};
+
+tutorial_application application;
+
 } // namespace
 
-int main(int argument_count, char** arguments) {
-  const bool smoke_test =
-      argument_count == 2 && std::string_view{arguments[1]} == "--smoke-test";
+#if defined(__EMSCRIPTEN__)
+extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_01_rendered_frames() noexcept {
+  return application.rendered_frames();
+}
 
-  // 创建窗口系统。
-  granit::window_system window_system;
-  granit::result result = window_system.initialize();
+extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_01_recreate_count() noexcept {
+  return application.completed_recreates();
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE int granit_tutorial_01_ready() noexcept {
+  return application.ready() ? 1 : 0;
+}
+#endif
+
+int main(int argument_count, char** arguments) {
+  const bool smoke_test = argument_count == 2 && std::string_view{arguments[1]} == "--smoke-test";
+
+  auto result = application.initialize(smoke_test);
   if (smoke_test && result == granit::result::backend_unavailable)
     return 77;
-  if (result.failed()) {
-    return report_failure("window system initialize", result);
-  }
-  const std::string_view application_name = "Granit Tutorial 01";
-  constexpr std::uint32_t width = 1280;
-  constexpr std::uint32_t height = 720;
-
-  // 创建窗口。
-  granit::window window;
-  result = window.initialize(window_system,
-                             {.title = application_name, .width = width, .height = height});
-  if (result.failed()) {
-    return report_failure("window initialize", result);
-  }
-
-  granit::window_state window_state;
-  result = window.get_state(window_state);
-  if (result.failed()) {
-    return report_failure("window state query", result);
-  }
-
-  // 创建渲染器。
-  granit::renderer renderer;
-  result = renderer.initialize(
-      {.application_name = application_name, .presentation = granit::presentation_mode::enabled});
-  if (result.failed()) {
-    return report_failure("renderer initialize", result);
-  }
-
-  // 创建表面。
-  granit::surface surface;
-  result = window.create_surface(renderer, surface);
-  if (result.failed()) {
-    return report_failure("surface initialize", result);
-  }
-
-  // 创建交换链。
-  granit::swapchain swapchain;
-  result = swapchain.initialize(renderer, surface,
-                                {.width = window_state.framebuffer_width,
-                                 .height = window_state.framebuffer_height});
-  if (result.failed()) {
-    return report_failure("swapchain initialize", result);
-  }
-
-  granit::swapchain_info swapchain_info;
-  result = swapchain.query_info(swapchain_info);
-  if (result.failed()) {
-    return report_failure("swapchain info query", result);
-  }
-
-  // 创建帧上下文。
-  granit::frame_context context;
-  result = context.initialize(renderer);
-  if (result.failed()) {
-    return report_failure("frame context initialize", result);
-  }
-
-  bool running = true;
-  bool recreate = false;
-  std::uint32_t rendered_frames = 0;
-  std::uint32_t completed_recreates = 0;
-  while (running) {
-    if (result = window_system.process_events(); result.failed()) {
-      return report_failure("window system process events", result);
-    }
-
-    result = poll_window_events(window_system, running, recreate);
-    if (result.failed())
-      return report_failure("window event poll", result);
-
-    result = poll_input_events(window_system, running);
-    if (result.failed())
-      return report_failure("input event poll", result);
-
-    if (!running)
-      break;
-
-    // 处理渲染事件。
-    if (result = renderer.process_events(); result.failed()) {
-      return report_failure("renderer process events", result);
-    }
-
-    result = window.get_state(window_state);
-    if (result.failed()) {
-      return report_failure("window state query", result);
-    }
-    const auto framebuffer_width = window_state.framebuffer_width;
-    const auto framebuffer_height = window_state.framebuffer_height;
-    if (framebuffer_width == 0 || framebuffer_height == 0) {
-      std::this_thread::sleep_for(std::chrono::milliseconds{16});
-      continue;
-    }
-
-    if (recreate || framebuffer_width != swapchain_info.width ||
-        framebuffer_height != swapchain_info.height) {
-      result = swapchain.recreate({.width = framebuffer_width, .height = framebuffer_height});
-      if (result == granit::result::not_ready) {
-        std::this_thread::sleep_for(std::chrono::milliseconds{16});
-        continue;
-      }
-      if (result.failed()) {
-        return report_failure("swapchain recreate", result);
-      }
-      result = swapchain.query_info(swapchain_info);
-      if (result.failed()) {
-        return report_failure("swapchain info query", result);
-      }
-      recreate = false;
-      ++completed_recreates;
-    }
-
-    result = render_clear_frame(swapchain, context, swapchain_info, recreate);
-    if (result == granit::result::out_of_date) {
-      recreate = true;
-      continue;
-    }
-    if (result.failed())
-      return report_failure("render clear frame", result);
-
-    ++rendered_frames;
-    if (smoke_test && rendered_frames == 1) {
-      recreate = true;
-    } else if (smoke_test && rendered_frames >= 3 && completed_recreates >= 1) {
-      running = false;
-    }
-  }
-
-  if (smoke_test && (rendered_frames < 3 || completed_recreates < 1)) {
-    std::cerr << "tutorial smoke test did not render and recreate the swapchain\n";
-    return 1;
-  }
+  if (result.failed())
+    return report_failure("application initialize", result);
+  result = granit::run_window_loop(application.system(), application);
+  return result.failed() ? report_failure("application loop", result) : 0;
 }

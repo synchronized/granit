@@ -8,7 +8,11 @@ target_link_libraries(granit_tutorial_01_window PRIVATE granit::granit granit::w
 granit_target_compile_warnings(granit_tutorial_01_window)
 granit_target_output_directories(granit_tutorial_01_window)
 
-if(BUILD_TESTING)
+if(EMSCRIPTEN)
+  include(granit_web)
+  granit_target_webgpu(granit_tutorial_01_window)
+  granit_target_web_page(granit_tutorial_01_window "${CMAKE_CURRENT_LIST_DIR}/web_shell.html")
+elseif(BUILD_TESTING)
   add_test(
     NAME granit.tutorial.01_window
     COMMAND granit_tutorial_01_window --smoke-test

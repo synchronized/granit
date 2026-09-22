@@ -12,3 +12,4 @@ granit_window_poll_input_event
 granit_window_system_create
 granit_window_system_destroy
 granit_window_system_process_events
+granit_window_system_run_loop

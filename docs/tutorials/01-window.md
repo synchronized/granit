@@ -69,13 +69,23 @@ check(frames.initialize(renderer));
 每帧先处理事件并读取 framebuffer 像素尺寸。尺寸为零表示窗口最小化，此时暂停获取 Swapchain
 图像。驱动可能调整实际交换链范围，因此录制命令使用 `swapchain_info` 的宽高。
 
-## 4. 清屏并呈现
+## 4. 使用跨平台 Loop 清屏并呈现
 
-通用 Frame 生命周期是获取、开始录制、提交和呈现；事件推进发生在 Frame 之外。第一章在“录制
-命令”阶段只做 Backbuffer 清屏：
+应用把每轮工作放进 `tick`，并把所有资源释放放进 `shutdown`：
+
+```cpp
+granit::result tick(granit::window_loop_action& action) noexcept;
+void shutdown(granit::result reason) noexcept;
+
+auto result = granit::run_window_loop(application.system(), application);
+```
+
+Window Loop 会在每次 Tick 前处理平台事件。应用在 Tick 中轮询 Window/Input 队列，推进 Renderer
+异步初始化，并在 Renderer Ready 后创建 Surface、Swapchain 和 Frame Context。通用 Frame 生命周期
+是获取、开始录制、提交和呈现；第一章在“录制命令”阶段只做 Backbuffer 清屏：
 
 ```text
-每轮推进：window_system.process_events + renderer.process_events
+每轮推进：Window Loop 处理平台事件 → tick → renderer.process_events
 呈现帧：  acquire → backbuffer → frame_context.begin → [录制命令] → submit → present
 本章录制：begin_rendering(clear) → end_rendering
 ```
@@ -88,6 +98,10 @@ check(frames.initialize(renderer));
 
 获取成功的 Frame 必须提交并呈现，或者在录制失败时中止 Recording 并取消 Frame。C++ 包装会在
 析构时兜底清理，本章源码仍显式执行失败清理，使帧生命周期可以从代码中直接看出。
+
+桌面端 `run_window_loop` 阻塞到退出。Emscripten 端注册浏览器主循环后立即返回，因此完整源码让
+Application 使用静态存储期，并只在 `shutdown` 回调中释放资源，避免浏览器下一帧访问已经离开
+作用域的对象。
 
 完整调用顺序、取消路径与恢复规则见
 [Frame Context 的完整窗口帧循环](../reference/frame-context.md#完整窗口帧循环)。
@@ -109,6 +123,16 @@ cmake --preset linux-clang-debug
 cmake --build --preset linux-clang-debug --target granit_tutorial_01_window
 ./build/linux-clang-debug/bin/granit_tutorial_01_window
 ```
+
+Emscripten WebGPU：
+
+```sh
+cmake --preset emscripten-debug
+cmake --build --preset emscripten-debug --target granit_tutorial_01_window
+```
+
+通过 HTTP 服务打开 `build/emscripten-debug/web/granit_tutorial_01_window.html`。浏览器版本与桌面版本
+编译同一个 `main.cpp` 和同一个 Tick；平台差异由 Window Loop 调度层处理。
 
 请从 preset 对应的 `bin` 目录运行生成程序。共享库构建会把 Granit 动态库输出到同一目录，直接从
 其他目录复制可执行文件可能导致系统找不到 DLL 或共享库。

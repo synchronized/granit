@@ -8,6 +8,11 @@
 
 ## Unreleased
 
+### 新增
+
+- Window component 新增可选跨平台托管 Loop；Win32、XCB、Wayland 与 Emscripten 可以复用同一个
+  应用 Tick 和 Shutdown 生命周期，同时保留已有的手动事件循环入口。
+
 ### 变更
 
 - C++ 基础资源及 Mesh、Material、Scene、Render Pipeline、Canvas、Debug Draw、Text 等高层包装
