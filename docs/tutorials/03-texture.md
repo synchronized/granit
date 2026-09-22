@@ -25,6 +25,20 @@ check(texture_view.initialize(renderer, texture));
 ```
 
 使用 Upload Batch 写入四个 RGBA 像素。Batch 会复制调用方字节，成功提交后局部像素数组可以释放。
+本章使用紧密排列的两行 RGBA8 数据，因此 `bytes_per_row` 为 8，`rows_per_image` 为 2：
+
+```cpp
+constexpr std::array<std::uint8_t, 16> pixels{
+    255, 80, 80, 255, 80, 220, 120, 255,
+    80, 140, 255, 255, 245, 220, 80, 255,
+};
+granit::upload_batch upload;
+check(upload.initialize(renderer));
+check(upload.write_texture(texture.ref(), std::as_bytes(std::span{pixels}),
+                           {.bytes_per_row = 8, .rows_per_image = 2},
+                           {.width = 2, .height = 2}));
+check(upload.submit());
+```
 
 ## 2. 创建 Sampler 与绑定
 
@@ -71,12 +85,33 @@ check(recorder.draw(6));
 
 Texture、View、Sampler 与 Bind Group 都要保持到 GPU 不再使用当前帧。
 
-## 4. 验收
+## 4. 构建并运行
+
+完整源码、HLSL 和 Shader Library 清单位于
+[`examples/tutorials/03_texture`](../../examples/tutorials/03_texture)。使用锁定 Shader Toolchain 构建：
+
+```powershell
+cmake --preset windows-clang-debug -DGRANIT_SHADER_TOOLCHAIN_MODE=auto
+cmake --build --preset windows-clang-debug --target granit_tutorial_03_texture
+.\build\windows-clang-debug\bin\granit_tutorial_03_texture.exe
+```
+
+Linux 使用 `linux-clang-debug` preset 和对应构建目录。自动 Smoke 会绘制三帧、执行一次 Swapchain
+Recreate 并正常退出：
+
+```powershell
+ctest --preset windows-clang-debug -R granit.tutorial.03_texture --output-on-failure
+```
+
+## 5. 验收
 
 - 四个颜色块方向正确且边界清晰。
 - 删除 `sampled` Usage 或提供错误布局时能得到稳定错误结果。
 - Resize 只重建窗口相关资源，不重复上传不变的纹理。
 - 多帧运行后没有 Upload Batch 或 Bind Group 生命周期诊断。
+
+销毁时先释放 Pipeline 和 Bind Group，再释放 Pipeline Layout、Bind Group Layout、Sampler、Texture
+View 与 Texture。完整程序见 [`main.cpp`](../../examples/tutorials/03_texture/main.cpp)。
 
 资源规则见 [Texture](../reference/texture.md)、[Sampler](../reference/sampler.md)和
 [Upload Batch](../reference/upload-batch.md)。下一章把程序扩展为有深度和相机的三维场景。
