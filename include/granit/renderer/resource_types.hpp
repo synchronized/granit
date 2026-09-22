@@ -58,6 +58,16 @@ enum class texture_usage : std::uint32_t {
                                     static_cast<std::uint32_t>(right));
 }
 
+enum class texture_format_feature : std::uint32_t {
+  filterable = GRANIT_TEXTURE_FORMAT_FEATURE_FILTERABLE_BIT,
+};
+
+[[nodiscard]] constexpr texture_format_feature operator|(texture_format_feature left,
+                                                         texture_format_feature right) noexcept {
+  return static_cast<texture_format_feature>(static_cast<std::uint32_t>(left) |
+                                             static_cast<std::uint32_t>(right));
+}
+
 enum class texture_format : std::uint32_t {
   undefined = GRANIT_TEXTURE_FORMAT_UNDEFINED,
   r8_unorm = GRANIT_TEXTURE_FORMAT_R8_UNORM,

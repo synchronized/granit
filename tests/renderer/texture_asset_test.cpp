@@ -97,7 +97,12 @@ TEST_CASE("Texture Asset检查返回变体与子资源", "[texture_asset][inspec
   granit::texture_asset_info cpp_info;
   REQUIRE(granit::inspect_texture_asset(manifest, cpp_info) == granit::result::success);
   CHECK(cpp_info.variants.size() == 1);
+  CHECK(cpp_info.dimension == granit::texture_dimension::two_dimensional);
+  CHECK(cpp_info.variants.front().format == granit::texture_format::rgba8_srgb);
+  CHECK(cpp_info.variants.front().usage ==
+        (granit::texture_usage::sampled | granit::texture_usage::transfer_destination));
   CHECK(cpp_info.subresources.size() == 1);
+  CHECK(cpp_info.subresources.front().data_size == 64);
 }
 
 TEST_CASE("Texture Asset检查拒绝损坏布局和未知版本", "[texture_asset][validation]") {
@@ -125,10 +130,10 @@ TEST_CASE("Texture Asset按Renderer能力选择首个兼容变体", "[texture_as
   REQUIRE(granit::select_texture_asset_variant(renderer, manifest, selection) ==
           granit::result::success);
   CHECK(selection.variant_index == 0);
-  CHECK(selection.format == GRANIT_TEXTURE_FORMAT_RGBA8_SRGB);
+  CHECK(selection.format == granit::texture_format::rgba8_srgb);
 
   granit::texture_asset_selection_options storage;
-  storage.required_usage = GRANIT_TEXTURE_USAGE_STORAGE_BIT;
+  storage.required_usage = granit::texture_usage::storage;
   CHECK(granit::select_texture_asset_variant(renderer, manifest, selection, storage) ==
         granit::result::unsupported);
 }

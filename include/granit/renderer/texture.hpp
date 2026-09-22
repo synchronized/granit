@@ -78,15 +78,19 @@ struct texture_data_footprint {
 struct texture_format_capabilities {
   texture_format format{texture_format::undefined};
   texture_usage supported_usage{};
-  std::uint32_t features{};
+  texture_format_feature features{};
   sample_count sample_counts{};
 
   [[nodiscard]] constexpr bool supports(texture_usage usage) const noexcept {
     const auto requested = static_cast<std::uint32_t>(usage);
     return (static_cast<std::uint32_t>(supported_usage) & requested) == requested;
   }
+  [[nodiscard]] constexpr bool supports(texture_format_feature feature) const noexcept {
+    const auto requested = static_cast<std::uint32_t>(feature);
+    return (static_cast<std::uint32_t>(features) & requested) == requested;
+  }
   [[nodiscard]] constexpr bool filterable() const noexcept {
-    return (features & GRANIT_TEXTURE_FORMAT_FEATURE_FILTERABLE_BIT) != 0;
+    return supports(texture_format_feature::filterable);
   }
 };
 
@@ -129,7 +133,7 @@ get_texture_format_capabilities(renderer_ref owner, texture_format format,
   if (value == GRANIT_SUCCESS) {
     capabilities = {.format = static_cast<texture_format>(native.format),
                     .supported_usage = static_cast<texture_usage>(native.supported_usage),
-                    .features = native.features,
+                    .features = static_cast<texture_format_feature>(native.features),
                     .sample_counts = static_cast<sample_count>(native.sample_counts)};
   }
   return from_native(value);
