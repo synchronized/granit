@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+## 0.28.0 - 2026-09-23
+
 ### 新增
 
 - Window component 新增可选跨平台托管 Loop；Win32、XCB、Wayland 与 Emscripten 可以复用同一个
