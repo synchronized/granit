@@ -57,20 +57,14 @@ private:
   granit_surface_desc native_;
 };
 
-inline result surface::initialize(granit_renderer renderer, const surface_desc& desc) noexcept {
+inline result surface::initialize(renderer& owner, const surface_desc& desc) noexcept {
   if (valid())
     return result::invalid_argument;
-  if (renderer == GRANIT_NULL_HANDLE)
-    return result::invalid_handle;
   granit_surface handle = GRANIT_NULL_HANDLE;
-  const auto value = granit_surface_create(renderer, &desc.native(), &handle);
+  const auto value = granit_surface_create(owner.native_handle(), &desc.native(), &handle);
   if (value == GRANIT_SUCCESS)
-    adopt(renderer, handle);
+    adopt(owner.native_handle(), handle);
   return from_native(value);
-}
-
-inline result surface::initialize(renderer& owner, const surface_desc& desc) noexcept {
-  return initialize(owner.native_handle(), desc);
 }
 
 } // namespace granit

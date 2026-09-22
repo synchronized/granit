@@ -36,7 +36,6 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result initialize(granit_renderer renderer, const surface_desc& desc) noexcept;
   [[nodiscard]] result initialize(renderer& owner, const surface_desc& desc) noexcept;
 
   [[nodiscard]] result reset() noexcept {

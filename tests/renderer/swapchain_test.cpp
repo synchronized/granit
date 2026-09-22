@@ -81,7 +81,7 @@ TEST_CASE("Swapchain 支持创建、查询、重建和销毁", "[swapchain][win3
   REQUIRE(renderer_result == granit::result::success);
 
   granit::surface surface;
-  REQUIRE(surface.initialize(renderer.native_handle(),
+  REQUIRE(surface.initialize(renderer,
                              granit::surface_desc::win32(window.instance(), window.window())) ==
           granit::result::success);
 
@@ -284,7 +284,7 @@ TEST_CASE("Surface 销毁时自动使所属 Swapchain 失效", "[swapchain][life
   REQUIRE(renderer_result == granit::result::success);
 
   granit::surface surface;
-  REQUIRE(surface.initialize(renderer.native_handle(),
+  REQUIRE(surface.initialize(renderer,
                              granit::surface_desc::win32(window.instance(), window.window())) ==
           granit::result::success);
   granit::swapchain swapchain;
