@@ -15,7 +15,7 @@ namespace {
 
 TEST_CASE("Shader包装把空Renderer归类为无效句柄", "[shader][contract]") {
   granit::shader shader;
-  CHECK(shader.initialize(GRANIT_NULL_HANDLE, {}) == granit::result::invalid_handle);
+  CHECK(shader.initialize(granit::renderer_ref{}, {}) == granit::result::invalid_handle);
 }
 
 constexpr std::array vertex_spirv{
@@ -70,7 +70,7 @@ TEST_CASE("Shader 创建后不依赖 SPIR-V 输入内存", "[shader]") {
 
   auto code = vertex_spirv;
   granit::shader shader;
-  REQUIRE(shader.initialize(renderer.native_handle(), {.stage = granit::shader_stage::vertex,
+  REQUIRE(shader.initialize(renderer, {.stage = granit::shader_stage::vertex,
                                                        .code = std::as_bytes(std::span{code})}) ==
           granit::result::success);
   code.fill(0);

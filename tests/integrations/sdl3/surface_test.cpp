@@ -40,8 +40,7 @@ int main(int argc, char** argv) {
                                      .presentation = granit::presentation_mode::enabled});
   granit::surface surface;
   if (result.ok()) {
-    result =
-        granit::integration::sdl3::create_surface(renderer.native_handle(), window.get(), surface);
+    result = granit::integration::sdl3::create_surface(renderer, window.get(), surface);
   }
 
   int pixel_width = 0;
@@ -51,13 +50,13 @@ int main(int argc, char** argv) {
   }
   granit::swapchain swapchain;
   if (result.ok()) {
-    result = swapchain.initialize(renderer.native_handle(), surface.native_handle(),
+    result = swapchain.initialize(renderer, surface,
                                   {.width = static_cast<std::uint32_t>(pixel_width),
                                    .height = static_cast<std::uint32_t>(pixel_height)});
   }
   granit::frame_context frame_context;
   if (result.ok())
-    result = frame_context.initialize(renderer.native_handle());
+    result = frame_context.initialize(renderer);
 
   bool running = result.ok();
   bool recreate = false;

@@ -73,6 +73,9 @@ while (granit_window_poll_event(system, &event) == GRANIT_SUCCESS) {
 队列。`granit_window_poll_event` 只读取窗口事件队列，不隐式处理平台消息；队列为空返回
 `GRANIT_ERROR_NOT_READY`。输入轮询和状态查询见[Window 输入](input.md)。Win32 后端产生：
 
+C++ `window_system::poll` 将 C ABI 事件转换为独立的 `window_event` 值，事件类型使用
+`window_event_type` scoped enum；应用不需要与 `GRANIT_WINDOW_EVENT_*` 整数常量比较。
+
 - `GRANIT_WINDOW_EVENT_CLOSE_REQUESTED`
 - `GRANIT_WINDOW_EVENT_RESIZED`
 - `GRANIT_WINDOW_EVENT_FOCUS_CHANGED`
@@ -92,6 +95,34 @@ Emscripten 后端接收 DOM 焦点和 Canvas 尺寸变化。浏览器没有独�
 负责退出和导航。`process_events` 不主动泵送 DOM，而是同步最新 Canvas 内容尺寸、像素尺寸和
 缩放，并将变化写入同一 Window 事件队列。
 
+## 可选托管 Loop
+
+Window component 提供 `granit_window_system_run_loop`，用于让桌面和 Emscripten 共用同一个应用
+Tick。每轮先调用 `granit_window_system_process_events`，再调用宿主 Tick。Tick 通过 Action 表示：
+
+- `GRANIT_WINDOW_LOOP_CONTINUE`：立即继续推进；
+- `GRANIT_WINDOW_LOOP_IDLE`：当前无工作，桌面端短暂等待后继续；
+- `GRANIT_WINDOW_LOOP_STOP`：正常停止。
+
+Tick 返回失败也会停止。描述被接受后，停止时恰好调用一次 Shutdown，并将最终结果传入。回调和
+`user_data` 始终由宿主拥有；它们必须持续有效到 Shutdown 返回。Loop 不持有或推进 Renderer，应用
+仍在 Tick 中自行调用 `renderer.process_events()`、处理异步 Ready 状态和录制帧。
+
+C++ 包装使用 `granit::run_window_loop(system, application)`。Application 提供两个 `noexcept` 成员：
+
+```cpp
+granit::result tick(granit::window_loop_action& action) noexcept;
+void shutdown(granit::result reason) noexcept;
+```
+
+Win32、XCB 和 Wayland 上，`run_window_loop` 阻塞至停止。Emscripten 上，它注册浏览器主循环后立即
+返回；Application 不得是随后离开作用域的局部对象，通常由页面宿主或静态存储持有，并在
+`shutdown` 中按 Frame Context、Swapchain、Surface、Renderer、Window、Window System 的顺序释放。
+
+每个 Window System 同时只能运行一个托管 Loop。递归运行返回
+`GRANIT_ERROR_RESOURCE_IN_USE`；错误线程调用返回 `GRANIT_ERROR_INVALID_ARGUMENT`。复杂引擎、
+SDL 等外部框架仍可继续直接使用非阻塞 `process_events`，无需采用托管 Loop。
+
 ## Renderer 接入
 
 ```c
@@ -105,19 +136,25 @@ Window System 的顺序销毁。函数校验 Window System、Window 归属和创
 `granit::window::create_surface(renderer, surface)`，输出为 `granit::surface` RAII 对象。
 
 原生互操作仍可显式包含 `<granit/window/native.h>` 或对应 C++ 头，并使用
-`granit_window_get_win32`、`granit_window_get_xcb` 与 `granit_window_get_wayland`；查询值仅在
-Window 存活期间借用。这些查询不进入普通 Window 聚合头。
+`granit_window_get_native_win32`、`granit_window_get_native_xcb`、
+`granit_window_get_native_wayland` 与 `granit_window_get_native_emscripten`。每个平台通过一次查询
+返回版本化快照结构，查询值仅在 Window 存活期间借用。这些查询不进入普通 Window 聚合头。
 
-在 Win32 Window 上查询 XCB 或 Wayland 值返回 `GRANIT_ERROR_UNSUPPORTED`，输出参数清零。
-XCB Window 可通过 `granit_window_get_xcb` 借用 connection 和 `xcb_window_t` 数值。未设置或
-无法连接 `DISPLAY` 时，创建 Window System 返回
+在 Win32 Window 上查询 XCB、Wayland 或 Emscripten 值返回 `GRANIT_ERROR_UNSUPPORTED`，输出结构
+恢复为空值。XCB Window 可通过 `granit_window_get_native_xcb` 借用 connection 和
+`xcb_window_t` 数值。未设置或无法连接 `DISPLAY` 时，创建 Window System 返回
 `GRANIT_ERROR_BACKEND_UNAVAILABLE`。
 
-Wayland Window 可通过 `granit_window_get_wayland` 借用 `wl_display*` 和 `wl_surface*`。
-Window 拥有 xdg-shell 角色及原生 Surface，调用方不得自行销毁。
-自动后端在 `WAYLAND_DISPLAY` 存在时优先选择 Wayland，否则选择 XCB；应用也可在 Window System
-描述中明确指定后端。Emscripten 构建的自动后端固定选择 Emscripten，Surface 来源固定为
-`#canvas`。
+Wayland Window 可通过 `granit_window_get_native_wayland` 借用 `wl_display*` 和 `wl_surface*`。
+Window 拥有 xdg-shell 角色及原生 Surface，调用方不得自行销毁。自动后端在
+`WAYLAND_DISPLAY` 存在时优先选择 Wayland，否则选择 XCB；应用也可在 Window System 描述中明确
+指定后端。Emscripten 构建的自动后端固定选择 Emscripten，Surface 来源固定为 `#canvas`。
+`granit_window_get_native_emscripten` 返回借用的 Canvas selector 字节序列，不把 DOM 对象伪装成
+可跨 ABI 使用的指针。
+
+C++ 使用重载的 `granit::get_native(system, window, output)`，其中 output 为
+`window_native_win32`、`window_native_xcb`、`window_native_wayland` 或
+`window_native_emscripten`。包装直接接收 RAII 对象，不要求调用方提取 C 句柄。
 
 ## 线程约束
 

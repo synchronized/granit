@@ -13,6 +13,10 @@ Unicode 解码、字体回退、换行、文字整形或字形栅格化。
 - 所属 CMake component：`RenderPipeline`，目标为 `granit::render_pipeline`。
 - R8 Atlas：`<granit/pipeline/text_atlas.h>` 或 C++20 的 `<granit/pipeline/text_atlas.hpp>`。
 
+C++ 包装提供强类型的 Atlas、字形位图、字形实例、创建描述和统计类型。Atlas、Text Draw List
+与 Canvas 之间通过 `text_atlas_ref`、和 `canvas_draw_list_ref` 传递借用关系；
+正常 C++ 调用无需手动取 `native_handle()`。
+
 ## 字形语义
 
 - `font_key` 是调用方定义的非零 64 位身份，应覆盖字体、字号和会改变位图的栅格化参数。

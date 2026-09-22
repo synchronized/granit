@@ -9,6 +9,7 @@
 #include <granit/pipeline/export.h>
 #include <granit/pipeline/material.h>
 #include <granit/pipeline/mesh.h>
+#include <granit/renderer/command_recorder.h>
 #include <granit/renderer/render_target.h>
 
 namespace granit::pipeline::detail {

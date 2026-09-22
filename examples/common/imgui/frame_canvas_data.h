@@ -15,7 +15,7 @@ namespace granit::example::imgui {
 struct frame_canvas_data {
   std::vector<granit_canvas_vertex> vertices;
   std::vector<std::uint32_t> indices;
-  std::vector<granit_canvas_draw_range> ranges;
+  std::vector<granit::canvas_draw_range> ranges;
 
   [[nodiscard]] bool empty() const noexcept { return ranges.empty(); }
   void clear() noexcept;

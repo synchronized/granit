@@ -13,7 +13,11 @@ Render Pipeline 是可选的高级参考渲染入口。当前实现组织 Direct
   `granit::render_pipeline`。
 - 所属 CMake component：`RenderPipeline`，目标为 `granit::render_pipeline`。
 
-创建描述使用 `GRANIT_RENDER_PIPELINE_DESC_INIT` 初始化。未提供录制回调时使用完整自动路径；
+C++ 包装提供强类型的创建描述、每 View 输出、Draw Binding、环境光、渲染描述和指标。
+Scene、Mesh、Material、Texture View、Canvas 与 Debug Draw List 均通过对应的非拥有 `ref` 类型传入；
+窗口帧通过 `const acquired_frame*` 借用。录制回调继续采用稳定的 C ABI 函数指针，方便跨动态库边界。
+
+C API 创建描述使用 `GRANIT_RENDER_PIPELINE_DESC_INIT` 初始化。未提供录制回调时使用完整自动路径；
 提供回调时可以覆盖 Shadow 和 Opaque 阶段的 Draw 录制，并在 Tone Mapping 后接收 Overlay 阶段。
 
 创建描述的 `sample_count` 控制自动 PBR 路径的采样数，当前接受 1 或 4。选择 4 时，
@@ -27,7 +31,7 @@ Tone Mapping。自定义录制回调仍使用单采样契约，避免回调在�
 
 ## 每帧输入
 
-渲染描述使用 `GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT` 初始化，主要包含：
+C API 渲染描述使用 `GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT` 初始化，主要包含：
 
 - Scene Snapshot 和要渲染的连续 View 范围。
 - `payload` 到 Mesh、Material 的 Draw Binding。

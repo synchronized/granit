@@ -10,6 +10,8 @@
 
 #include <granit/core/result.hpp>
 #include <granit/renderer/async_operation.hpp>
+#include <granit/renderer/buffer.hpp>
+#include <granit/renderer/renderer.hpp>
 #include <granit/renderer/texture.hpp>
 #include <granit/renderer/upload_batch.h>
 
@@ -46,8 +48,8 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result initialize(granit_renderer renderer,
-                                  upload_batch_options options = {}) noexcept {
+  [[nodiscard]] result initialize(renderer_ref owner, upload_batch_options options = {}) noexcept {
+    const auto renderer = owner.native_handle();
     if (valid())
       return result::invalid_argument;
     if (renderer == GRANIT_NULL_HANDLE)
@@ -60,12 +62,15 @@ public:
       renderer_ = renderer;
     return from_native(value);
   }
-  [[nodiscard]] result write_buffer(granit_buffer buffer, std::uint64_t offset,
-                                    std::span<const std::byte> data) noexcept {
-    return from_native(granit_upload_batch_write_buffer(renderer_, handle_, buffer, offset,
-                                                        data.data(), data.size()));
+  [[nodiscard]] result initialize(renderer& owner, upload_batch_options options = {}) noexcept {
+    return initialize(owner.ref(), options);
   }
-  [[nodiscard]] result write_texture(granit_texture texture, std::span<const std::byte> data,
+  [[nodiscard]] result write_buffer(buffer_ref buffer, std::uint64_t offset,
+                                    std::span<const std::byte> data) noexcept {
+    return from_native(granit_upload_batch_write_buffer(renderer_, handle_, buffer.native_handle(),
+                                                        offset, data.data(), data.size()));
+  }
+  [[nodiscard]] result write_texture(texture_ref texture, std::span<const std::byte> data,
                                      texture_data_layout layout,
                                      texture_write_region region) noexcept {
     const granit_texture_data_layout native_layout{.offset = layout.offset,
@@ -83,7 +88,8 @@ public:
                                                     .height = region.height,
                                                     .depth = region.depth};
     return from_native(granit_upload_batch_write_texture(
-        renderer_, handle_, texture, data.data(), data.size(), &native_layout, &native_region));
+        renderer_, handle_, texture.native_handle(), data.data(), data.size(), &native_layout,
+        &native_region));
   }
   [[nodiscard]] result submit() noexcept {
     return from_native(granit_upload_batch_submit(renderer_, handle_));
@@ -94,7 +100,7 @@ public:
     granit_async_operation native = GRANIT_NULL_HANDLE;
     const auto value = granit_upload_batch_submit_async(renderer_, handle_, &native);
     if (value == GRANIT_SUCCESS)
-      operation = async_operation{renderer_, native};
+      detail::async_operation_access::adopt(operation, renderer_, native);
     return from_native(value);
   }
   [[nodiscard]] result get_info(upload_batch_info& info) const noexcept {
@@ -122,6 +128,9 @@ public:
     return from_native(value);
   }
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] renderer_ref owner() const noexcept {
+    return renderer_ref::from_native(renderer_);
+  }
   [[nodiscard]] granit_upload_batch native_handle() const noexcept { return handle_; }
 
 private:

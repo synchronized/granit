@@ -76,10 +76,6 @@ typedef struct granit_vertex_buffer_binding {
   uint64_t offset;
 } granit_vertex_buffer_binding;
 
-typedef uint32_t granit_index_type;
-#define GRANIT_INDEX_TYPE_UINT16 UINT32_C(1)
-#define GRANIT_INDEX_TYPE_UINT32 UINT32_C(2)
-
 typedef struct granit_command_recorder_desc {
   uint32_t struct_size;
   uint32_t flags;

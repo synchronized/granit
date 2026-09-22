@@ -5,6 +5,9 @@
 
 #include <type_traits>
 
+using granit_window_native_win32_function = granit::result (*)(
+    const granit::window_system&, granit::window_ref, granit::window_native_win32&) noexcept;
+
 static_assert(
-    std::is_same_v<decltype(granit::native_win32),
-                   granit::result(granit_window_system, granit_window, void*&, void*&) noexcept>);
+    std::is_same_v<decltype(static_cast<granit_window_native_win32_function>(&granit::get_native)),
+                   granit_window_native_win32_function>);

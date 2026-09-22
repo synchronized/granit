@@ -23,11 +23,6 @@ TEST_CASE("Surface创建把空Renderer归类为无效句柄", "[surface][contrac
   CHECK(granit_surface_create(GRANIT_NULL_HANDLE, &desc, &handle) == GRANIT_ERROR_INVALID_HANDLE);
   CHECK(handle == GRANIT_NULL_HANDLE);
 
-  granit::surface surface;
-  CHECK(surface.initialize(
-            GRANIT_NULL_HANDLE,
-            granit::surface_desc::win32(reinterpret_cast<void*>(1), reinterpret_cast<void*>(1))) ==
-        granit::result::invalid_handle);
 }
 
 TEST_CASE("Linux Surface 公共入口验证原生描述", "[surface][xcb][wayland]") {
@@ -91,7 +86,7 @@ TEST_CASE("Vulkan Renderer 明确拒绝 Canvas Surface", "[surface][canvas]") {
   REQUIRE(renderer_result == granit::result::success);
 
   granit::surface surface;
-  CHECK(surface.initialize(renderer.native_handle(), granit::surface_desc::canvas()) ==
+  CHECK(surface.initialize(renderer, granit::surface_desc::canvas()) ==
         granit::result::unsupported);
   CHECK_FALSE(surface.valid());
 }
@@ -142,11 +137,11 @@ TEST_CASE("Win32 Surface 支持创建、移动和销毁", "[surface][win32]") {
   REQUIRE(renderer_result == granit::result::success);
 
   granit::surface surface;
-  REQUIRE(surface.initialize(renderer.native_handle(),
+  REQUIRE(surface.initialize(renderer,
                              granit::surface_desc::win32(window.instance(), window.window())) ==
           granit::result::success);
   REQUIRE(surface.valid());
-  REQUIRE(surface.renderer_handle() == renderer.native_handle());
+  REQUIRE(surface.owner().native_handle() == renderer.native_handle());
 
   granit::surface moved{std::move(surface)};
   CHECK_FALSE(surface.valid());
@@ -168,7 +163,7 @@ TEST_CASE("Renderer 未启用 Win32 输出时拒绝创建 Surface", "[surface][w
   REQUIRE(renderer_result == granit::result::success);
 
   granit::surface surface;
-  CHECK(surface.initialize(renderer.native_handle(),
+  CHECK(surface.initialize(renderer,
                            granit::surface_desc::win32(window.instance(), window.window())) ==
         granit::result::unsupported);
   CHECK_FALSE(surface.valid());

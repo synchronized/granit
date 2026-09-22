@@ -15,8 +15,8 @@ inline constexpr ImTextureID imgui_font_texture_id = 1;
 inline constexpr ImTextureID imgui_checker_texture_id = 2;
 
 struct imgui_texture_binding {
-  granit_texture_view view{GRANIT_NULL_HANDLE};
-  granit_sampler sampler{GRANIT_NULL_HANDLE};
+  texture_view_ref view;
+  sampler_ref sampler;
 };
 
 struct imgui_sample_texture_bindings {
@@ -25,21 +25,20 @@ struct imgui_sample_texture_bindings {
 };
 
 [[nodiscard]] result resolve_imgui_sample_texture(ImTextureID texture,
-                                                  granit_canvas_draw_state& state,
+                                                  canvas_draw_state& state,
                                                   void* user_data) noexcept;
 
-[[nodiscard]] result upload_imgui_checker_texture(granit_renderer renderer, texture& output,
+[[nodiscard]] result upload_imgui_checker_texture(renderer& renderer, texture& output,
                                                   texture_view& view);
 
-[[nodiscard]] result upload_imgui_font_atlas(granit_renderer renderer, texture& output,
+[[nodiscard]] result upload_imgui_font_atlas(renderer& renderer, texture& output,
                                              texture_view& view, sampler& output_sampler);
 
 [[nodiscard]] bool imgui_target_needs_srgb_encoding(texture_format format) noexcept;
 
 /** 将已转换的 ImGui Canvas 录制到当前颜色附件。 */
 [[nodiscard]] result record_imgui_sample_canvas(command_recorder& recorder,
-                                                canvas_draw_list& canvas,
-                                                granit_texture_view target,
+                                                canvas_draw_list& canvas, texture_view_ref target,
                                                 const swapchain_info& info,
                                                 std::uint32_t frame_slot) noexcept;
 

@@ -57,11 +57,10 @@ private:
   granit_surface_desc native_;
 };
 
-inline result surface::initialize(granit_renderer renderer, const surface_desc& desc) noexcept {
+inline result surface::initialize(renderer_ref owner, const surface_desc& desc) noexcept {
   if (valid())
     return result::invalid_argument;
-  if (renderer == GRANIT_NULL_HANDLE)
-    return result::invalid_handle;
+  const auto renderer = owner.native_handle();
   granit_surface handle = GRANIT_NULL_HANDLE;
   const auto value = granit_surface_create(renderer, &desc.native(), &handle);
   if (value == GRANIT_SUCCESS)

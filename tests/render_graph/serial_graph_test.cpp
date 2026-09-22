@@ -3,9 +3,9 @@
 
 #include "render_graph/serial_graph.h"
 
+#include <granit/renderer/native_surface.hpp>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/surface.hpp>
-#include <granit/renderer/native_surface.hpp>
 #include <granit/renderer/swapchain.hpp>
 
 #include <catch2/catch_all.hpp>
@@ -218,30 +218,30 @@ TEST_CASE("串行 Render Graph 提交 Swapchain Frame", "[render_graph][swapchai
   graph_test_window window;
   REQUIRE(window.valid());
   granit::renderer renderer;
-  const auto initialize = renderer.initialize(
-      {.application_name = "granit-graph-window", .presentation = granit::presentation_mode::enabled});
+  const auto initialize = renderer.initialize({.application_name = "granit-graph-window",
+                                               .presentation = granit::presentation_mode::enabled});
   if (environment_unavailable(initialize) || initialize == granit::result::unsupported) {
     SKIP("当前运行环境不支持 Vulkan Win32 Swapchain");
   }
   REQUIRE(initialize == granit::result::success);
 
   granit::surface surface;
-  REQUIRE(surface.initialize(renderer.native_handle(),
+  REQUIRE(surface.initialize(renderer,
                              granit::surface_desc::win32(window.instance(), window.window())) ==
           granit::result::success);
   granit::swapchain swapchain;
-  REQUIRE(swapchain.initialize(renderer.native_handle(), surface.native_handle(),
+  REQUIRE(swapchain.initialize(renderer, surface,
                                {.width = 96, .height = 72}) == granit::result::success);
   granit::swapchain_info info;
   REQUIRE(swapchain.query_info(info) == granit::result::success);
   granit::acquired_frame frame;
   REQUIRE(swapchain.acquire(frame) == granit::result::success);
-  granit_texture texture = GRANIT_NULL_HANDLE;
-  granit_texture_view view = GRANIT_NULL_HANDLE;
-  REQUIRE(swapchain.backbuffer(frame.image_index, texture, view) == granit::result::success);
+  granit::swapchain_backbuffer swapchain_output;
+  REQUIRE(swapchain.backbuffer(frame, swapchain_output) == granit::result::success);
 
   granit::render_graph::serial_graph graph;
-  const auto backbuffer = graph.import_texture_view(view, true, "Backbuffer");
+  const auto backbuffer =
+      graph.import_texture_view(swapchain_output.view.native_handle(), true, "Backbuffer");
   granit_result record_result = GRANIT_SUCCESS;
   static_cast<void>(graph.add_pass(
       {.side_effect = true, .accesses = {{backbuffer, granit::render_graph::access_type::write}}},
@@ -263,7 +263,7 @@ TEST_CASE("串行 Render Graph 提交 Swapchain Frame", "[render_graph][swapchai
       },
       "窗口清屏"));
 
-  const auto result = graph.execute_frame(renderer.native_handle(), frame.handle);
+  const auto result = graph.execute_frame(renderer.native_handle(), frame.native_handle());
   INFO("result=" << result.result << ", phase=" << static_cast<int>(result.phase)
                  << ", record=" << record_result);
   REQUIRE(result.succeeded());

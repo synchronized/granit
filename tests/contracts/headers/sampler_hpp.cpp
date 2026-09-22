@@ -3,3 +3,4 @@
 #include <granit/renderer/sampler.hpp>
 #include <type_traits>
 static_assert(!std::is_copy_constructible_v<granit::sampler>);
+static_assert(std::is_trivially_copyable_v<granit::sampler_ref>);

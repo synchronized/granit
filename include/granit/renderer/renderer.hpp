@@ -4,6 +4,7 @@
 #ifndef GRANIT_RENDERER_HPP_
 #define GRANIT_RENDERER_HPP_
 
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -134,6 +135,28 @@ struct renderer_status {
   result failure_result{result::success};
 };
 
+class renderer;
+
+/** 不拥有 Renderer，只在来源 Renderer 的有效期内使用。 */
+class renderer_ref {
+public:
+  renderer_ref() = default;
+
+  [[nodiscard]] constexpr bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr granit_renderer native_handle() const noexcept { return handle_; }
+  [[nodiscard]] static constexpr renderer_ref from_native(granit_renderer handle) noexcept {
+    return renderer_ref{handle};
+  }
+
+private:
+  friend class renderer;
+
+  explicit constexpr renderer_ref(granit_renderer handle) noexcept : handle_(handle) {}
+
+  granit_renderer handle_{GRANIT_NULL_HANDLE};
+};
+
 /** 无异常、move-only 的 renderer RAII 包装。 */
 class renderer {
 public:
@@ -202,12 +225,18 @@ public:
     return from_native(granit_renderer_destroy(handle));
   }
 
-  [[nodiscard]] result set_object_name(granit_handle object, std::string_view name) const noexcept {
+  template <typename Object>
+    requires requires(const Object& object) {
+      { object.native_handle() } -> std::convertible_to<granit_handle>;
+    }
+  [[nodiscard]] result set_object_name(const Object& object,
+                                       std::string_view name) const noexcept {
     if (name.size() > std::numeric_limits<std::uint32_t>::max()) {
       return result::invalid_argument;
     }
-    return from_native(granit_renderer_set_object_name(handle_, object, name.data(),
-                                                       static_cast<std::uint32_t>(name.size())));
+    return from_native(
+        granit_renderer_set_object_name(handle_, object.native_handle(), name.data(),
+                                        static_cast<std::uint32_t>(name.size())));
   }
 
   [[nodiscard]] result get_limits(renderer_limits& limits) const noexcept {
@@ -326,6 +355,7 @@ public:
 
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
   [[nodiscard]] explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr renderer_ref ref() const noexcept { return renderer_ref{handle_}; }
   [[nodiscard]] granit_renderer native_handle() const noexcept { return handle_; }
 
 private:

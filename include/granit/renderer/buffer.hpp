@@ -11,9 +11,32 @@
 
 #include <granit/core/result.hpp>
 #include <granit/renderer/buffer.h>
+#include <granit/renderer/renderer.hpp>
 #include <granit/renderer/resource_types.hpp>
 
 namespace granit {
+
+class buffer;
+
+/** 不拥有 Buffer，只在来源 Buffer 的有效期内使用。 */
+class buffer_ref {
+public:
+  buffer_ref() = default;
+
+  [[nodiscard]] constexpr bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr granit_buffer native_handle() const noexcept { return handle_; }
+  [[nodiscard]] static constexpr buffer_ref from_native(granit_buffer handle) noexcept {
+    return buffer_ref{handle};
+  }
+
+private:
+  friend class buffer;
+
+  explicit constexpr buffer_ref(granit_buffer handle) noexcept : handle_(handle) {}
+
+  granit_buffer handle_{GRANIT_NULL_HANDLE};
+};
 
 struct buffer_desc {
   std::uint64_t size{};
@@ -43,7 +66,8 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result initialize(granit_renderer renderer, const buffer_desc& desc) noexcept {
+  [[nodiscard]] result initialize(renderer_ref owner, const buffer_desc& desc) noexcept {
+    const auto renderer = owner.native_handle();
     if (valid()) {
       return result::invalid_argument;
     }
@@ -64,8 +88,13 @@ public:
     return from_native(native_result);
   }
 
-  [[nodiscard]] result initialize(granit_renderer renderer, const buffer_desc& desc,
+  [[nodiscard]] result initialize(renderer& owner, const buffer_desc& desc) noexcept {
+    return initialize(owner.ref(), desc);
+  }
+
+  [[nodiscard]] result initialize(renderer_ref owner, const buffer_desc& desc,
                                   std::span<const std::byte> initial_data) noexcept {
+    const auto renderer = owner.native_handle();
     if (valid()) {
       return result::invalid_argument;
     }
@@ -91,6 +120,11 @@ public:
       renderer_ = renderer;
     }
     return from_native(native_result);
+  }
+
+  [[nodiscard]] result initialize(renderer& owner, const buffer_desc& desc,
+                                  std::span<const std::byte> initial_data) noexcept {
+    return initialize(owner.ref(), desc, initial_data);
   }
 
   [[nodiscard]] result write(std::uint64_t offset, std::span<const std::byte> data) noexcept {
@@ -120,6 +154,7 @@ public:
 
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
   [[nodiscard]] explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr buffer_ref ref() const noexcept { return buffer_ref{handle_}; }
   [[nodiscard]] granit_buffer native_handle() const noexcept { return handle_; }
 
 private:

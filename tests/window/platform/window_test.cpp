@@ -4,6 +4,7 @@
 #include <granit/window.h>
 #include <granit/window.hpp>
 #include <granit/window/native.h>
+#include <granit/window/native.hpp>
 
 #include <catch2/catch_all.hpp>
 
@@ -35,11 +36,10 @@ TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]")
   REQUIRE(granit_window_create(system, &window_desc, &window) == GRANIT_SUCCESS);
   REQUIRE(window != GRANIT_NULL_HANDLE);
 
-  void* first = nullptr;
-  void* second = nullptr;
-  REQUIRE(granit_window_get_win32(system, window, &first, &second) == GRANIT_SUCCESS);
-  CHECK(first != nullptr);
-  CHECK(second != nullptr);
+  granit_window_native_win32 native = GRANIT_WINDOW_NATIVE_WIN32_INIT;
+  REQUIRE(granit_window_get_native_win32(system, window, &native) == GRANIT_SUCCESS);
+  CHECK(native.instance != nullptr);
+  CHECK(native.window != nullptr);
 
   granit_window_state state = GRANIT_WINDOW_STATE_INIT;
   REQUIRE(granit_window_get_state(system, window, &state) == GRANIT_SUCCESS);
@@ -59,7 +59,7 @@ TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]")
   while (granit_window_poll_event(system, &event) == GRANIT_SUCCESS) {
     event = GRANIT_WINDOW_EVENT_INIT;
   }
-  REQUIRE(SetWindowPos(static_cast<HWND>(second), nullptr, 0, 0, 128, 96,
+  REQUIRE(SetWindowPos(static_cast<HWND>(native.window), nullptr, 0, 0, 128, 96,
                        SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE) != FALSE);
   bool saw_resize = false;
   for (int attempt = 0; attempt < 8 && !saw_resize; ++attempt) {
@@ -73,7 +73,7 @@ TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]")
   while (granit_window_poll_event(system, &event) == GRANIT_SUCCESS)
     event = GRANIT_WINDOW_EVENT_INIT;
   RECT suggested{0, 0, 144, 108};
-  SendMessageW(static_cast<HWND>(second), WM_DPICHANGED, MAKELONG(144, 144),
+  SendMessageW(static_cast<HWND>(native.window), WM_DPICHANGED, MAKELONG(144, 144),
                reinterpret_cast<LPARAM>(&suggested));
   bool saw_scale = false;
   for (int attempt = 0; attempt < 8 && !saw_scale; ++attempt) {
@@ -95,8 +95,8 @@ TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]")
 
   while (granit_window_poll_event(system, &event) == GRANIT_SUCCESS)
     event = GRANIT_WINDOW_EVENT_INIT;
-  SendMessageW(static_cast<HWND>(second), WM_KILLFOCUS, 0, 0);
-  SendMessageW(static_cast<HWND>(second), WM_SETFOCUS, 0, 0);
+  SendMessageW(static_cast<HWND>(native.window), WM_KILLFOCUS, 0, 0);
+  SendMessageW(static_cast<HWND>(native.window), WM_SETFOCUS, 0, 0);
   for (const auto focused : {UINT32_C(0), UINT32_C(1)}) {
     event = GRANIT_WINDOW_EVENT_INIT;
     REQUIRE(granit_window_poll_event(system, &event) == GRANIT_SUCCESS);
@@ -105,7 +105,7 @@ TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]")
     CHECK(event.data.focus.focused == focused);
   }
 
-  REQUIRE(PostMessageW(static_cast<HWND>(second), WM_CLOSE, 0, 0) != FALSE);
+  REQUIRE(PostMessageW(static_cast<HWND>(native.window), WM_CLOSE, 0, 0) != FALSE);
   event = GRANIT_WINDOW_EVENT_INIT;
   CHECK(granit_window_poll_event(system, &event) == GRANIT_ERROR_NOT_READY);
   REQUIRE(granit_window_system_process_events(system) == GRANIT_SUCCESS);
@@ -113,10 +113,12 @@ TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]")
   REQUIRE(granit_window_poll_event(system, &event) == GRANIT_SUCCESS);
   CHECK(event.type == GRANIT_WINDOW_EVENT_CLOSE_REQUESTED);
   CHECK(event.window == window);
-  uint32_t xcb_window = UINT32_C(42);
-  CHECK(granit_window_get_xcb(system, window, &first, &xcb_window) == GRANIT_ERROR_UNSUPPORTED);
-  CHECK(first == nullptr);
-  CHECK(xcb_window == 0);
+  granit_window_native_xcb xcb = GRANIT_WINDOW_NATIVE_XCB_INIT;
+  xcb.connection = reinterpret_cast<void*>(UINTPTR_MAX);
+  xcb.window = UINT32_C(42);
+  CHECK(granit_window_get_native_xcb(system, window, &xcb) == GRANIT_ERROR_UNSUPPORTED);
+  CHECK(xcb.connection == nullptr);
+  CHECK(xcb.window == 0);
 
   state = GRANIT_WINDOW_STATE_INIT;
   CHECK(granit_window_get_state(system, GRANIT_NULL_HANDLE, &state) == GRANIT_ERROR_INVALID_HANDLE);
@@ -142,19 +144,18 @@ TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]")
   granit_window window = GRANIT_NULL_HANDLE;
   REQUIRE(granit_window_create(system, &window_desc, &window) == GRANIT_SUCCESS);
 
-  void* connection = nullptr;
-  uint32_t native_window = 0;
-  REQUIRE(granit_window_get_xcb(system, window, &connection, &native_window) == GRANIT_SUCCESS);
-  REQUIRE(connection != nullptr);
-  REQUIRE(native_window != 0);
+  granit_window_native_xcb native = GRANIT_WINDOW_NATIVE_XCB_INIT;
+  REQUIRE(granit_window_get_native_xcb(system, window, &native) == GRANIT_SUCCESS);
+  REQUIRE(native.connection != nullptr);
+  REQUIRE(native.window != 0);
 
   const uint32_t size[] = {128, 96};
-  xcb_configure_window(static_cast<xcb_connection_t*>(connection), native_window,
+  xcb_configure_window(static_cast<xcb_connection_t*>(native.connection), native.window,
                        XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT, size);
-  xcb_flush(static_cast<xcb_connection_t*>(connection));
+  xcb_flush(static_cast<xcb_connection_t*>(native.connection));
   std::free(xcb_get_input_focus_reply(
-      static_cast<xcb_connection_t*>(connection),
-      xcb_get_input_focus(static_cast<xcb_connection_t*>(connection)), nullptr));
+      static_cast<xcb_connection_t*>(native.connection),
+      xcb_get_input_focus(static_cast<xcb_connection_t*>(native.connection)), nullptr));
   bool saw_resize = false;
   for (int attempt = 0; attempt < 32 && !saw_resize; ++attempt) {
     REQUIRE(granit_window_system_process_events(system) == GRANIT_SUCCESS);
@@ -179,6 +180,21 @@ TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]")
 #endif
 }
 
+#if defined(_WIN32)
+TEST_CASE("C++ Window 原生快照直接接收 RAII 对象", "[window][native][cpp]") {
+  granit::window_system system;
+  REQUIRE(system.initialize() == granit::result::success);
+  granit::window window;
+  REQUIRE(window.initialize(system, {.title = "Native snapshot", .width = 96, .height = 72}) ==
+          granit::result::success);
+
+  granit::window_native_win32 native{};
+  REQUIRE(granit::get_native(system, window.ref(), native) == granit::result::success);
+  CHECK(native.instance != nullptr);
+  CHECK(native.window != nullptr);
+}
+#endif
+
 #if defined(GRANIT_TEST_HAS_WAYLAND)
 TEST_CASE("Wayland Window 提供配置后的原生 Surface", "[window][wayland]") {
   granit_window_system_desc system_desc = GRANIT_WINDOW_SYSTEM_DESC_INIT;
@@ -198,11 +214,10 @@ TEST_CASE("Wayland Window 提供配置后的原生 Surface", "[window][wayland]"
   granit_window window = GRANIT_NULL_HANDLE;
   REQUIRE(granit_window_create(system, &window_desc, &window) == GRANIT_SUCCESS);
 
-  void* display = nullptr;
-  void* surface = nullptr;
-  REQUIRE(granit_window_get_wayland(system, window, &display, &surface) == GRANIT_SUCCESS);
-  REQUIRE(display != nullptr);
-  REQUIRE(surface != nullptr);
+  granit_window_native_wayland native = GRANIT_WINDOW_NATIVE_WAYLAND_INIT;
+  REQUIRE(granit_window_get_native_wayland(system, window, &native) == GRANIT_SUCCESS);
+  REQUIRE(native.display != nullptr);
+  REQUIRE(native.surface != nullptr);
   granit_window_state state = GRANIT_WINDOW_STATE_INIT;
   REQUIRE(granit_window_get_state(system, window, &state) == GRANIT_SUCCESS);
   CHECK(state.width > 0);
@@ -211,10 +226,12 @@ TEST_CASE("Wayland Window 提供配置后的原生 Surface", "[window][wayland]"
   CHECK(state.framebuffer_height == state.height);
   CHECK(state.content_scale_horizontal == Catch::Approx(1.0F));
   CHECK(state.content_scale_vertical == Catch::Approx(1.0F));
-  uint32_t xcb_window = UINT32_C(42);
-  REQUIRE(granit_window_get_xcb(system, window, &display, &xcb_window) == GRANIT_ERROR_UNSUPPORTED);
-  CHECK(display == nullptr);
-  CHECK(xcb_window == 0);
+  granit_window_native_xcb xcb = GRANIT_WINDOW_NATIVE_XCB_INIT;
+  xcb.connection = reinterpret_cast<void*>(UINTPTR_MAX);
+  xcb.window = UINT32_C(42);
+  REQUIRE(granit_window_get_native_xcb(system, window, &xcb) == GRANIT_ERROR_UNSUPPORTED);
+  CHECK(xcb.connection == nullptr);
+  CHECK(xcb.window == 0);
 
   REQUIRE(granit_window_destroy(system, window) == GRANIT_SUCCESS);
   REQUIRE(granit_window_system_destroy(system) == GRANIT_SUCCESS);

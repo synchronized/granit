@@ -77,6 +77,31 @@ Compute Bind Group 的资源状态由 Granit 自动准备。Uniform Buffer 与 S
 Storage Buffer 与 Storage Texture 保守按读写处理；每次 Dispatch 前生成所需访问状态，后续 Copy
 或渲染命令会自动衔接跨阶段屏障。
 
+## C++20 包装
+
+C++ Pipeline 描述使用 `pipeline_layout_ref` 和 `shader_ref` 表达创建期间借用的依赖，避免把同为
+64 位整数的 Layout、Shader 和其他资源句柄混用。拥有对象通过 `ref()` 生成引用；Recorder 可以
+直接接收拥有型 Pipeline：
+
+```cpp
+granit::graphics_pipeline pipeline;
+check(pipeline.initialize(renderer,
+                          {.layout = layout.ref(),
+                           .vertex_shader = vertex_shader.ref(),
+                           .fragment_shader = fragment_shader.ref(),
+                           .color_formats = color_formats}));
+
+check(recorder.bind_graphics_pipeline(pipeline));
+```
+
+`shader_ref`、`pipeline_layout_ref` 都不拥有资源，
+也没有销毁操作。`from_native()` 只用于明确的 C API 或第三方互操作边界。
+
+`bind_group_entry::resource` 使用 `binding_resource_ref`，只接受 `buffer_ref`、`texture_view_ref` 或
+`sampler_ref`。具体资源是否符合 Layout 声明仍在创建时校验。Pipeline Layout 接受
+`bind_group_layout_ref` 数组；单组绑定可直接调用 `bind_graphics_group(layout, index, group)` 或
+`bind_compute_group(layout, index, group)`，无需手工建立裸句柄数组。
+
 创建函数会复制格式数组。Pipeline 和 Layout 均由创建它们的 Renderer 管理，不能跨 Renderer
 混用或销毁。
 

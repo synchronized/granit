@@ -183,8 +183,8 @@ TEST_CASE("GPU Scene 事务式创建合并 Buffer 与 Mesh", "[example][model-vi
 
   granit::example::model_viewer::gpu_scene scene;
   upload_progress_log progress;
-  REQUIRE(scene.initialize(renderer.native_handle(), source, 8.0F, record_upload_progress,
-                           &progress) == granit::result::success);
+  REQUIRE(scene.initialize(renderer, source, 8.0F, record_upload_progress, &progress) ==
+          granit::result::success);
   CHECK_FALSE(progress.stages.empty());
   CHECK(progress.stages.front() == granit::example::model_viewer::gpu_scene_upload_stage::planning);
   CHECK(progress.stages.back() == granit::example::model_viewer::gpu_scene_upload_stage::materials);
@@ -200,11 +200,10 @@ TEST_CASE("GPU Scene 事务式创建合并 Buffer 与 Mesh", "[example][model-vi
   const auto original_mesh = scene.meshes().front().native_handle();
   upload_progress_log cancelled;
   cancelled.cancel_at_geometry = true;
-  CHECK(scene.initialize(renderer.native_handle(), source, 8.0F, record_upload_progress,
-                         &cancelled) == granit::result::cancelled);
+  CHECK(scene.initialize(renderer, source, 8.0F, record_upload_progress, &cancelled) ==
+        granit::result::cancelled);
   CHECK(scene.meshes().front().native_handle() == original_mesh);
-  CHECK(scene.initialize(renderer.native_handle(), source, 0.0F) ==
-        granit::result::invalid_argument);
+  CHECK(scene.initialize(renderer, source, 0.0F) == granit::result::invalid_argument);
   CHECK(scene.meshes().front().native_handle() == original_mesh);
 
   const granit::example::model_viewer::material_factor_edit edit{
@@ -240,8 +239,7 @@ TEST_CASE("GPU Scene 事务式创建合并 Buffer 与 Mesh", "[example][model-vi
   auto& invalid = invalid_source.meshes.emplace_back().primitives.emplace_back();
   invalid.positions.resize(2);
   invalid.normals.resize(1);
-  CHECK(scene.initialize(renderer.native_handle(), invalid_source) ==
-        granit::result::invalid_argument);
+  CHECK(scene.initialize(renderer, invalid_source) == granit::result::invalid_argument);
   CHECK(scene.valid());
   CHECK(scene.meshes().size() == 1);
   scene.reset();
@@ -253,11 +251,11 @@ TEST_CASE("GPU Scene 创建失败时保留原 Scene", "[example][model-viewer][t
   granit::example::gltf::scene source;
   CHECK(scene.initialize(GRANIT_NULL_HANDLE, source) == granit::result::invalid_handle);
   CHECK_FALSE(scene.valid());
-  granit_texture_view view = 1;
-  granit_sampler sampler = 1;
+  auto view = granit::texture_view_ref::from_native(1);
+  auto sampler = granit::sampler_ref::from_native(1);
   CHECK(scene.texture_binding({}, false, view, sampler) == granit::result::invalid_handle);
-  CHECK(view == GRANIT_NULL_HANDLE);
-  CHECK(sampler == GRANIT_NULL_HANDLE);
+  CHECK_FALSE(view);
+  CHECK_FALSE(sampler);
 }
 
 TEST_CASE("材质 GPU 更新失败时保留 CPU Factor", "[example][model-viewer][transaction]") {

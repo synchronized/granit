@@ -151,10 +151,7 @@ void print_json(const granit::asset_tools::shader::reflection& result,
 } // namespace
 
 int inspect_shader(const char* path, bool verify, bool json) {
-  granit_asset_tools_shader_inspect_desc desc{};
-  desc.struct_size = sizeof(desc);
-  desc.input_path = path;
-  desc.input_path_length = std::char_traits<char>::length(path);
+  const granit::asset_tools::shader::inspect_desc desc{.input_path = path};
   auto [status, result] = granit::asset_tools::shader::inspect_spirv(desc);
   const auto info = result.info();
   const auto stage = info.stage == granit::shader_stage::vertex     ? "vertex"

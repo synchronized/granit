@@ -1,18 +1,19 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/pipeline/material.hpp>
 #include <granit/pipeline/environment_map.hpp>
+#include <granit/pipeline/material.hpp>
 #include <granit/pipeline/mesh.hpp>
 #include <granit/pipeline/render_pipeline.hpp>
 #include <granit/pipeline/scene.hpp>
 #include <granit/renderer/renderer.hpp>
-#include <granit/renderer/texture.h>
+#include <granit/renderer/texture.hpp>
 
 #include "linkage_check.h"
 
 #include <cstdint>
 #include <iostream>
+#include <span>
 #include <utility>
 
 namespace {
@@ -62,8 +63,8 @@ int main() {
   if (pipeline.valid() || scene.valid() || material.valid() || mesh.valid() ||
       granit::material_parameter_id("base_color") == 0)
     return 1;
-  granit_render_pipeline_desc desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
-  if (pipeline.initialize(GRANIT_NULL_HANDLE, desc) != granit::result::invalid_handle ||
+  granit::render_pipeline_desc desc{};
+  if (pipeline.initialize(granit::renderer_ref{}, desc) != granit::result::invalid_handle ||
       pipeline.valid())
     return 2;
 
@@ -78,20 +79,18 @@ int main() {
   auto native_renderer = renderer.native_handle();
   desc.record = record_stage;
   desc.user_data = &native_renderer;
-  if ((pipeline.initialize(renderer.native_handle(), desc)).failed())
+  if ((pipeline.initialize(renderer.ref(), desc)).failed())
     return 5;
 
   constexpr std::uint32_t size = 4;
-  granit_texture output = GRANIT_NULL_HANDLE;
-  granit_texture_view output_view = GRANIT_NULL_HANDLE;
-  granit_texture_desc output_desc = GRANIT_TEXTURE_DESC_INIT;
-  output_desc.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
-  output_desc.usage =
-      GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT | GRANIT_TEXTURE_USAGE_TRANSFER_SOURCE_BIT;
-  output_desc.width = size;
-  output_desc.height = size;
-  if (granit_texture_create_with_default_view(renderer.native_handle(), &output_desc, &output,
-                                              &output_view) != GRANIT_SUCCESS)
+  granit::texture output;
+  granit::texture_view output_view;
+  if (output.initialize(renderer, {.format = granit::texture_format::rgba8_unorm,
+                                   .usage = granit::texture_usage::color_attachment |
+                                            granit::texture_usage::transfer_source,
+                                   .width = size,
+                                   .height = size}) != granit::result::success ||
+      output_view.initialize(renderer, output) != granit::result::success)
     return 6;
 
   granit_scene_view view{};
@@ -101,18 +100,16 @@ int main() {
   view.viewport_width = static_cast<float>(size);
   view.viewport_height = static_cast<float>(size);
   view.layer_mask = UINT64_MAX;
-  granit_scene_snapshot_desc scene_desc = GRANIT_SCENE_SNAPSHOT_DESC_INIT;
-  scene_desc.views = &view;
-  scene_desc.view_count = 1;
-  if ((scene.initialize(renderer.native_handle(), scene_desc)).failed())
+  if ((scene.initialize(renderer, {.views = std::span{&view, 1}})).failed())
     return 7;
 
-  granit_render_pipeline_render_desc render_desc = GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT;
-  render_desc.scene = scene.native_handle();
-  render_desc.output = output_view;
-  render_desc.output_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
-  render_desc.width = size;
-  render_desc.height = size;
+  const granit::render_pipeline_render_desc render_desc{
+      .scene = scene.ref(),
+      .output = output_view.ref(),
+      .output_format = granit::texture_format::rgba8_unorm,
+      .width = size,
+      .height = size,
+  };
   const auto render_result = pipeline.render(render_desc);
   if (render_result.failed() && render_result != granit::result::not_ready) {
     std::cerr << "RenderPipeline实际渲染失败：" << static_cast<granit_result>(render_result)
@@ -120,24 +117,20 @@ int main() {
     return 8;
   }
 
-  if (granit_texture_view_destroy(renderer.native_handle(), output_view) != GRANIT_SUCCESS ||
-      granit_texture_destroy(renderer.native_handle(), output) != GRANIT_SUCCESS)
-    return 9;
   granit::render_pipeline moved = std::move(pipeline);
   if (pipeline.valid() || !moved.valid())
-    return 10;
+    return 9;
   if ((scene.reset()).failed())
-    return 11;
+    return 10;
   if ((moved.reset()).failed() || (moved.reset()).failed())
-    return 12;
+    return 11;
   granit::environment_map environment;
-  if (environment.initialize_builtin(renderer.native_handle()).failed())
+  if (environment.initialize_builtin(renderer).failed())
+    return 12;
+  granit::environment_map_info environment_info{};
+  if (environment.get_info(environment_info).failed() || !environment_info.environment.irradiance)
     return 13;
-  granit_environment_map_info environment_info = GRANIT_ENVIRONMENT_MAP_INFO_INIT;
-  if (environment.get_info(environment_info).failed() ||
-      environment_info.environment.irradiance == GRANIT_NULL_HANDLE)
-    return 14;
   if (environment.reset().failed())
-    return 15;
-  return (renderer.reset()).failed() ? 16 : 0;
+    return 14;
+  return (renderer.reset()).failed() ? 15 : 0;
 }

@@ -53,6 +53,8 @@ extern "C" granit_result granit_window_system_destroy(granit_window_system handl
     return GRANIT_ERROR_INVALID_HANDLE;
   if (!on_owner_thread(*system))
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (system->loop_running)
+    return GRANIT_ERROR_RESOURCE_IN_USE;
 #if defined(_WIN32)
   return destroy_win32_system(handle, system);
 #elif defined(GRANIT_WINDOW_HAS_XCB) || defined(GRANIT_WINDOW_HAS_WAYLAND)

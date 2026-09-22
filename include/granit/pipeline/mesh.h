@@ -11,7 +11,6 @@
 #include <granit/core/types.h>
 #include <granit/pipeline/export.h>
 #include <granit/renderer/buffer.h>
-#include <granit/renderer/command_recorder.h>
 #include <granit/renderer/pipeline.h>
 
 /** 一次不可变 GPU Draw 的 Mesh 句柄。零值无效。 */

@@ -38,11 +38,12 @@ granit_result tone_mapping_pipeline_resources::initialize(
       output_format == granit::texture_format::undefined || !library.valid()) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  auto result = sampler_.initialize(renderer, {.mag_filter = granit::filter::linear,
-                                               .min_filter = granit::filter::linear,
-                                               .address_u = granit::address_mode::clamp_to_edge,
-                                               .address_v = granit::address_mode::clamp_to_edge,
-                                               .address_w = granit::address_mode::clamp_to_edge});
+  auto result = sampler_.initialize(granit::renderer_ref::from_native(renderer),
+                                    {.mag_filter = granit::filter::linear,
+                                     .min_filter = granit::filter::linear,
+                                     .address_u = granit::address_mode::clamp_to_edge,
+                                     .address_v = granit::address_mode::clamp_to_edge,
+                                     .address_w = granit::address_mode::clamp_to_edge});
   constexpr auto fragment = granit::shader_stage_flags::fragment;
   const std::array layout_entries{
       granit::bind_group_layout_entry{.binding = 0,
@@ -57,20 +58,21 @@ granit_result tone_mapping_pipeline_resources::initialize(
                                       .type = granit::binding_type::sampler,
                                       .array_count = 1,
                                       .visibility = fragment}};
+  auto renderer_ref = granit::renderer_ref::from_native(renderer);
   if (result.ok())
-    result = group_layout_.initialize(renderer, layout_entries);
-  const std::array layouts{group_layout_.native_handle()};
+    result = group_layout_.initialize(renderer_ref, layout_entries);
+  const std::array layouts{group_layout_.ref()};
   if (result.ok())
-    result = pipeline_layout_.initialize(renderer, layouts);
+    result = pipeline_layout_.initialize(renderer_ref, layouts);
   if (result.ok())
     result = library.create_shader(vertex_id, vertex_shader_);
   if (result.ok())
     result = library.create_shader(fragment_id, fragment_shader_);
   if (result.ok()) {
     result = pipeline_.initialize(
-        renderer, {.layout = pipeline_layout_.native_handle(),
-                   .vertex_shader = vertex_shader_.native_handle(),
-                   .fragment_shader = fragment_shader_.native_handle(),
+        renderer_ref, {.layout = pipeline_layout_.ref(),
+                   .vertex_shader = vertex_shader_.ref(),
+                   .fragment_shader = fragment_shader_.ref(),
                    .color_formats = std::span{&output_format, 1},
                    .depth_stencil_format = granit::texture_format::undefined,
                    .samples = granit::sample_count::one,
@@ -116,20 +118,24 @@ tone_mapping_binding_resources::initialize(const tone_mapping_pipeline_resources
       !valid(values) || !compatible_output(pipeline.output_format(), values)) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
+  const auto renderer_view = granit::renderer_ref::from_native(pipeline.renderer());
   auto result = constants_.initialize(
-      pipeline.renderer(),
+      renderer_view,
       {.size = sizeof(values),
        .usage = granit::buffer_usage::uniform | granit::buffer_usage::transfer_destination,
        .location = granit::memory_location::automatic},
       bytes(values));
-  const std::array entries{granit::bind_group_entry{.binding = 0,
-                                                    .resource = constants_.native_handle(),
-                                                    .offset = 0,
-                                                    .size = sizeof(values)},
-                           granit::bind_group_entry{.binding = 1, .resource = hdr_view},
-                           granit::bind_group_entry{.binding = 2, .resource = pipeline.sampler()}};
+  const std::array entries{
+      granit::bind_group_entry{
+          .binding = 0, .resource = constants_.ref(), .offset = 0, .size = sizeof(values)},
+      granit::bind_group_entry{.binding = 1,
+                               .resource = granit::binding_resource_ref::from_native(hdr_view)},
+      granit::bind_group_entry{
+          .binding = 2, .resource = granit::binding_resource_ref::from_native(pipeline.sampler())}};
   if (result.ok())
-    result = group_.initialize(pipeline.renderer(), pipeline.group_layout(), entries);
+    result = group_.initialize(
+        granit::renderer_ref::from_native(pipeline.renderer()),
+        granit::bind_group_layout_ref::from_native(pipeline.group_layout()), entries);
   if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);

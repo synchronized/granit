@@ -4,6 +4,8 @@
 #ifndef GRANIT_WINDOW_BACKEND_INTERNAL_H_
 #define GRANIT_WINDOW_BACKEND_INTERNAL_H_
 
+#include <granit/window/native.h>
+
 #include "window/event_queue.h"
 #include "window/input/input_state.h"
 #include "window/registry.h"
@@ -19,8 +21,8 @@ granit_result create_win32_window(const std::shared_ptr<window_system_record>& s
                                   const granit_window_desc* desc, granit_window* output);
 granit_result destroy_win32_window(const std::shared_ptr<window_system_record>& system,
                                    granit_window handle);
-granit_result get_win32_window(const std::shared_ptr<window_record>& window, void** instance,
-                               void** native_window);
+granit_result get_native_win32(const std::shared_ptr<window_record>& window,
+                               granit_window_native_win32& output);
 #endif
 
 #if defined(GRANIT_WINDOW_HAS_XCB)
@@ -32,9 +34,9 @@ granit_result create_xcb_window(const std::shared_ptr<window_system_record>& sys
                                 const granit_window_desc* desc, granit_window* output);
 granit_result destroy_xcb_window(const std::shared_ptr<window_system_record>& system,
                                  const std::shared_ptr<window_record>& window);
-granit_result get_xcb_window(const std::shared_ptr<window_system_record>& system,
-                             const std::shared_ptr<window_record>& window, void** connection,
-                             std::uint32_t* native_window);
+granit_result get_native_xcb(const std::shared_ptr<window_system_record>& system,
+                             const std::shared_ptr<window_record>& window,
+                             granit_window_native_xcb& output);
 void pump_xcb_events(const std::shared_ptr<window_system_record>& system);
 #endif
 
@@ -55,9 +57,9 @@ granit_result create_wayland_window(const std::shared_ptr<window_system_record>&
 granit_result destroy_registered_wayland_window(const std::shared_ptr<window_system_record>& system,
                                                 const std::shared_ptr<window_record>& window,
                                                 granit_window handle);
-granit_result get_wayland_window(const std::shared_ptr<window_system_record>& system,
-                                 const std::shared_ptr<window_record>& window, void** display,
-                                 void** native_surface);
+granit_result get_native_wayland(const std::shared_ptr<window_system_record>& system,
+                                 const std::shared_ptr<window_record>& window,
+                                 granit_window_native_wayland& output);
 #endif
 
 #if defined(__EMSCRIPTEN__)
@@ -69,6 +71,7 @@ granit_result create_emscripten_window(const std::shared_ptr<window_system_recor
                                        const granit_window_desc* desc, granit_window* output);
 granit_result destroy_emscripten_window(const std::shared_ptr<window_system_record>& system,
                                         granit_window handle);
+granit_result get_native_emscripten(granit_window_native_emscripten& output);
 #endif
 
 } // namespace granit::window::detail

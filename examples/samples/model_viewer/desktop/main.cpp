@@ -69,7 +69,7 @@ constexpr std::string_view present_mode_label(granit::present_mode mode) noexcep
   }
 }
 
-granit::result upload_font_atlas(granit_renderer renderer, granit::texture& texture,
+granit::result upload_font_atlas(granit::renderer& renderer, granit::texture& texture,
                                  granit::texture_view& view, granit::sampler& sampler) {
   unsigned char* pixels = nullptr;
   int width = 0;
@@ -102,7 +102,7 @@ granit::result upload_font_atlas(granit_renderer renderer, granit::texture& text
         {.width = static_cast<std::uint32_t>(width), .height = static_cast<std::uint32_t>(height)});
   }
   if (result.ok())
-    result = view.initialize(renderer, texture.native_handle());
+    result = view.initialize(renderer, texture);
   if (result.ok())
     result = sampler.initialize(renderer, {.address_u = granit::address_mode::clamp_to_edge,
                                            .address_v = granit::address_mode::clamp_to_edge,
@@ -270,23 +270,23 @@ granit::result render_loading_frame_data(granit::swapchain& swapchain,
   granit::acquired_frame frame;
   if (result.ok())
     result = swapchain.acquire(frame);
-  granit_texture backbuffer = GRANIT_NULL_HANDLE;
-  granit_texture_view backbuffer_view = GRANIT_NULL_HANDLE;
+  granit::swapchain_backbuffer backbuffer;
   if (result.ok())
-    result = swapchain.backbuffer(frame.image_index, backbuffer, backbuffer_view);
+    result = swapchain.backbuffer(frame, backbuffer);
   granit::frame_recording recording;
   if (result.ok())
     result = frame_context.begin(frame, recording);
   if (result.ok()) {
-    granit_canvas_record_desc record = GRANIT_CANVAS_RECORD_DESC_INIT;
-    record.color = backbuffer_view;
-    record.color_format = static_cast<granit_texture_format>(swapchain_info.format);
-    record.width = swapchain_info.width;
-    record.height = swapchain_info.height;
-    record.load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR;
-    record.encode_srgb = loading_needs_srgb_encoding(swapchain_info.format) ? 1U : 0U;
-    record.frame_slot = recording.frame_slot();
-    result = canvas.record(recording.recorder().native_handle(), record);
+    const granit::canvas_record_desc record{
+        .color = backbuffer.view,
+        .color_format = swapchain_info.format,
+        .width = swapchain_info.width,
+        .height = swapchain_info.height,
+        .load_operation = granit::attachment_load_operation::clear,
+        .encode_srgb = loading_needs_srgb_encoding(swapchain_info.format),
+        .frame_slot = recording.frame_slot(),
+    };
+    result = canvas.record(recording.recorder(), record);
   }
   if (result.ok())
     result = recording.submit();
@@ -455,14 +455,15 @@ granit::result execute_swapchain_recreate(void* user_data) {
 struct pipeline_initialize_context {
   granit_renderer renderer{GRANIT_NULL_HANDLE};
   granit::render_pipeline* pipeline{};
-  granit_render_pipeline_desc desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
+  granit::render_pipeline_desc desc{};
   bool metrics_enabled{};
 };
 
 granit::result execute_pipeline_initialize(void* user_data) {
   auto& context = *static_cast<pipeline_initialize_context*>(user_data);
   granit::render_pipeline candidate;
-  auto result = candidate.initialize(context.renderer, context.desc);
+  auto result =
+      candidate.initialize(granit::renderer_ref::from_native(context.renderer), context.desc);
   if (result.failed())
     return result;
   const auto metrics_result = candidate.enable_metrics();
@@ -478,7 +479,7 @@ struct quality_change_context {
   granit_renderer renderer{GRANIT_NULL_HANDLE};
   granit::example::model_viewer::application_core* core{};
   granit::render_pipeline* pipeline{};
-  granit_render_pipeline_desc desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
+  granit::render_pipeline_desc desc{};
   float sampler_anisotropy{1.0F};
   bool reupload_scene{};
   bool metrics_enabled{};
@@ -487,7 +488,8 @@ struct quality_change_context {
 granit::result execute_quality_change(void* user_data) {
   auto& context = *static_cast<quality_change_context*>(user_data);
   granit::render_pipeline replacement;
-  auto result = replacement.initialize(context.renderer, context.desc);
+  auto result =
+      replacement.initialize(granit::renderer_ref::from_native(context.renderer), context.desc);
   if (result.failed())
     return result;
   const auto metrics_result = replacement.enable_metrics();
@@ -572,10 +574,9 @@ granit::result execute_desktop_frame(granit::example::model_viewer::frame_packet
   if (result.failed())
     return result;
 
-  output.needs_recreate = frame.needs_recreate;
-  granit_texture backbuffer = GRANIT_NULL_HANDLE;
-  granit_texture_view backbuffer_view = GRANIT_NULL_HANDLE;
-  result = context.swapchain->backbuffer(frame.image_index, backbuffer, backbuffer_view);
+  output.needs_recreate = frame.needs_recreate();
+  granit::swapchain_backbuffer backbuffer;
+  result = context.swapchain->backbuffer(frame, backbuffer);
   if (result.ok()) {
     granit_canvas_draw_list canvas = GRANIT_NULL_HANDLE;
     if (!packet.canvas.empty()) {
@@ -592,9 +593,11 @@ granit::result execute_desktop_frame(granit::example::model_viewer::frame_packet
       return result;
     }
     const auto render = packet.render_desc(
-        backbuffer_view, static_cast<granit_texture_format>(context.swapchain_info->format),
-        frame.handle, canvas);
-    result = context.pipeline->render(render);
+        backbuffer.view.native_handle(),
+        static_cast<granit_texture_format>(context.swapchain_info->format), frame.native_handle(),
+        canvas);
+    result = granit::from_native(granit_render_pipeline_render(
+        context.pipeline->owner().native_handle(), context.pipeline->native_handle(), &render));
   }
   if (result.failed()) {
     const auto frame_result = result;
@@ -607,9 +610,9 @@ granit::result execute_desktop_frame(granit::example::model_viewer::frame_packet
   output.present_wait_ms =
       std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() - present_begin)
           .count();
-  output.needs_recreate = output.needs_recreate || frame.needs_recreate;
+  output.needs_recreate = output.needs_recreate || frame.needs_recreate();
   if (context.metrics_enabled) {
-    granit_render_pipeline_metrics metrics = GRANIT_RENDER_PIPELINE_METRICS_INIT;
+    granit::render_pipeline_metrics metrics{};
     const auto metrics_result = context.pipeline->get_metrics(metrics);
     if (metrics_result.ok()) {
       output.gpu_frame_ms = static_cast<float>(metrics.total_gpu_ns) / 1'000'000.0F;
@@ -696,7 +699,7 @@ int main(int argc, char** argv) {
 
   if (result.ok())
     result =
-        granit::integration::sdl3::create_surface(renderer.native_handle(), window.get(), surface);
+        granit::integration::sdl3::create_surface(renderer, window.get(), surface);
   int pixel_width = 0;
   int pixel_height = 0;
   if (result.ok() && !SDL_GetWindowSizeInPixels(window.get(), &pixel_width, &pixel_height)) {
@@ -709,7 +712,7 @@ int main(int argc, char** argv) {
     result = granit::result::invalid_argument;
   }
   if (result.ok()) {
-    result = swapchain.initialize(renderer.native_handle(), surface.native_handle(),
+    result = swapchain.initialize(renderer, surface,
                                   {.width = static_cast<std::uint32_t>(pixel_width),
                                    .height = static_cast<std::uint32_t>(pixel_height),
                                    .presentation = options.presentation});
@@ -728,22 +731,20 @@ int main(int argc, char** argv) {
 
   granit::frame_context loading_frame_context;
   if (result.ok() && options.show_ui)
-    result = loading_frame_context.initialize(renderer.native_handle());
+    result = loading_frame_context.initialize(renderer);
   if (result.ok() && options.show_ui)
-    result = upload_font_atlas(renderer.native_handle(), font_texture, font_view, font_sampler);
+    result = upload_font_atlas(renderer, font_texture, font_view, font_sampler);
   ImTextureID font_texture_id = ImTextureID_Invalid;
   if (result.ok() && options.show_ui) {
-    result = textures.register_texture(font_view.native_handle(), font_sampler.native_handle(),
-                                       font_texture_id);
+    result = textures.register_texture(font_view.ref(), font_sampler.ref(), font_texture_id);
   }
   if (result.ok() && options.show_ui) {
     ImGui::GetIO().Fonts->SetTexID(font_texture_id);
     ImGui::GetIO().Fonts->TexRef._TexData->SetStatus(ImTextureStatus_OK);
-    granit_canvas_draw_list_desc canvas_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
-    result = canvas.initialize(renderer.native_handle(), canvas_desc);
+    result = canvas.initialize(renderer);
     for (auto& frame_canvas : frame_canvases) {
       if (result.ok())
-        result = frame_canvas.initialize(renderer.native_handle(), canvas_desc);
+        result = frame_canvas.initialize(renderer);
     }
   }
 
@@ -914,10 +915,10 @@ int main(int argc, char** argv) {
   if (result.ok() && options.show_ui)
     result = render_loading_frame(swapchain, swapchain_info, loading_frame_context, canvas,
                                   textures, "Creating render pipeline...", 0.96F);
-  granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
-  pipeline_desc.sample_count = render_quality.sample_count;
-  pipeline_desc.enable_fxaa = render_quality.enable_fxaa;
-  pipeline_desc.enable_specular_aa = render_quality.enable_specular_aa;
+  granit::render_pipeline_desc pipeline_desc{
+      .samples = static_cast<granit::sample_count>(render_quality.sample_count),
+      .enable_fxaa = render_quality.enable_fxaa != 0,
+      .enable_specular_aa = render_quality.enable_specular_aa != 0};
   pipeline_initialize_context pipeline_context{
       .renderer = renderer.native_handle(), .pipeline = &pipeline, .desc = pipeline_desc};
   if (result.ok())
@@ -932,8 +933,8 @@ int main(int argc, char** argv) {
     ImTextureID existing = ImTextureID_Invalid;
     if (find_texture_preview(reference, srgb, previews, existing))
       return granit::result::success;
-    granit_texture_view view = GRANIT_NULL_HANDLE;
-    granit_sampler sampler = GRANIT_NULL_HANDLE;
+    granit::texture_view_ref view;
+    granit::sampler_ref sampler;
     auto preview_result = core.scene_gpu().texture_binding(reference, srgb, view, sampler);
     ImTextureID texture = ImTextureID_Invalid;
     if (preview_result.ok())
@@ -1056,10 +1057,9 @@ int main(int argc, char** argv) {
       if (result.failed())
         break;
       if ((result = swapchain.reset()).failed() || (result = surface.reset()).failed() ||
-          (result = granit::integration::sdl3::create_surface(renderer.native_handle(),
-                                                              window.get(), surface))
+          (result = granit::integration::sdl3::create_surface(renderer, window.get(), surface))
               .failed() ||
-          (result = swapchain.initialize(renderer.native_handle(), surface.native_handle(),
+          (result = swapchain.initialize(renderer, surface,
                                          {.width = static_cast<std::uint32_t>(pixel_width),
                                           .height = static_cast<std::uint32_t>(pixel_height),
                                           .presentation = options.presentation}))
@@ -1131,10 +1131,10 @@ int main(int argc, char** argv) {
       break;
 
     if (changes.quality) {
-      granit_render_pipeline_desc replacement_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
-      replacement_desc.sample_count = changes.quality->sample_count;
-      replacement_desc.enable_fxaa = changes.quality->enable_fxaa;
-      replacement_desc.enable_specular_aa = changes.quality->enable_specular_aa;
+      granit::render_pipeline_desc replacement_desc{
+          .samples = static_cast<granit::sample_count>(changes.quality->sample_count),
+          .enable_fxaa = changes.quality->enable_fxaa != 0,
+          .enable_specular_aa = changes.quality->enable_specular_aa != 0};
       quality_change_context quality_context{
           .renderer = renderer.native_handle(),
           .core = &core,

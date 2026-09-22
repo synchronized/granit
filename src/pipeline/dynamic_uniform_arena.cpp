@@ -107,11 +107,11 @@ granit_result dynamic_uniform_arena::ensure_buffer(frame_slot_state& slot) noexc
   if (slot.buffer.valid() && slot.buffer_capacity >= required_capacity)
     return GRANIT_SUCCESS;
   granit::buffer replacement;
-  const auto result =
-      replacement.initialize(renderer_, {.size = required_capacity,
-                                         .usage = granit::buffer_usage::uniform |
-                                                  granit::buffer_usage::transfer_destination,
-                                         .location = granit::memory_location::upload});
+  const auto result = replacement.initialize(
+      granit::renderer_ref::from_native(renderer_),
+      {.size = required_capacity,
+       .usage = granit::buffer_usage::uniform | granit::buffer_usage::transfer_destination,
+       .location = granit::memory_location::upload});
   if (result.failed())
     return static_cast<granit_result>(result);
   slot.groups.clear();
@@ -137,17 +137,23 @@ granit_result dynamic_uniform_arena::acquire_groups(frame_slot_state& slot,
     candidate.object_layout = material.object_layout;
     const std::array frame_entry{
         granit::bind_group_entry{.binding = 0,
-                                 .resource = slot.buffer.native_handle(),
+                                 .resource = slot.buffer.ref(),
                                  .offset = 0,
                                  .size = sizeof(granit::material::pbr_frame_constants)}};
-    auto result = candidate.frame_group.initialize(renderer_, material.frame_layout, frame_entry);
+    const auto renderer_view = granit::renderer_ref::from_native(renderer_);
+    auto result =
+        candidate.frame_group.initialize(
+            renderer_view, granit::bind_group_layout_ref::from_native(material.frame_layout),
+            frame_entry);
     const std::array object_entry{
         granit::bind_group_entry{.binding = 0,
-                                 .resource = slot.buffer.native_handle(),
+                                 .resource = slot.buffer.ref(),
                                  .offset = 0,
                                  .size = sizeof(granit::material::pbr_object_constants)}};
     if (result.ok())
-      result = candidate.object_group.initialize(renderer_, material.object_layout, object_entry);
+      result = candidate.object_group.initialize(
+          renderer_view, granit::bind_group_layout_ref::from_native(material.object_layout),
+          object_entry);
     if (result.failed())
       return static_cast<granit_result>(result);
     slot.groups.push_back(std::move(candidate));

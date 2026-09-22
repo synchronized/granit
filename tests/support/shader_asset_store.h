@@ -81,7 +81,7 @@ public:
            granit::detail::shader_format::shader_library_error::success;
   }
 
-  bool initialize_library(granit_renderer renderer, std::vector<std::byte>& bytes,
+  bool initialize_library(granit::renderer& renderer, std::vector<std::byte>& bytes,
                           granit::shader_library& library) const {
     return build_library(bytes) && library.initialize(renderer, bytes).ok();
   }

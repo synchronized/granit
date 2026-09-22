@@ -15,7 +15,7 @@ namespace {
 struct conversion_scratch {
   std::vector<granit_canvas_vertex> vertices;
   std::vector<std::uint32_t> indices;
-  std::vector<granit_canvas_draw_range> ranges;
+  std::vector<canvas_draw_range> ranges;
 };
 
 thread_local conversion_scratch scratch;
@@ -86,11 +86,11 @@ result append_draw_data(const ImDrawData* draw_data, canvas_draw_list& canvas,
                                            0.0F, framebuffer_height);
         if (clip_max_x <= clip_min_x || clip_max_y <= clip_min_y)
           continue;
-        granit_canvas_draw_state state{};
-        state.scissor = {.x = static_cast<std::int32_t>(clip_min_x),
-                         .y = static_cast<std::int32_t>(clip_min_y),
-                         .width = static_cast<std::uint32_t>(clip_max_x - clip_min_x),
-                         .height = static_cast<std::uint32_t>(clip_max_y - clip_min_y)};
+        canvas_draw_state state{};
+        state.clip = {.x = static_cast<std::int32_t>(clip_min_x),
+                      .y = static_cast<std::int32_t>(clip_min_y),
+                      .width = static_cast<std::uint32_t>(clip_max_x - clip_min_x),
+                      .height = static_cast<std::uint32_t>(clip_max_y - clip_min_y)};
         const auto resolve_result = resolver(command.GetTexID(), state, user_data);
         if (resolve_result != result::success)
           return resolve_result;

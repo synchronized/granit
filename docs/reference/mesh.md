@@ -9,7 +9,8 @@ Mesh 描述一次不可变的绘制，包括图元拓扑、Vertex/Index Buffer�
 ## 公共入口
 
 - C：`<granit/pipeline/mesh.h>`，使用 `granit_mesh_create` 和 `granit_mesh_destroy`。
-- C++20：`<granit/pipeline/mesh.hpp>`，使用 move-only 的 `granit::mesh`。
+- C++20：`<granit/pipeline/mesh.hpp>`，使用 move-only 的 `granit::mesh`、创建用的
+  `granit::mesh_desc` 和非拥有的 `granit::mesh_ref`。
 - 所属 CMake component：`RenderPipeline`，目标为 `granit::render_pipeline`。
 
 创建描述使用 `GRANIT_MESH_DESC_INIT` 初始化，再填写：
@@ -18,6 +19,10 @@ Mesh 描述一次不可变的绘制，包括图元拓扑、Vertex/Index Buffer�
 - `vertex_buffers`：一个或多个 Vertex Buffer 及对应布局。
 - `indexed` 与 Index Buffer 字段：是否使用索引绘制及索引范围。
 - Vertex、Index 和 Instance 的起始位置与数量。
+
+C++20 调用方使用 `mesh_vertex_buffer` 和 `mesh_desc`，其中 Buffer 通过 `buffer::ref()` 借用；包装层
+在创建调用期间转换并复制顶点属性布局。需要传给其他 C++ 组件时使用 `mesh::ref()`，裸句柄入口
+只用于显式 C/C++ 互操作。
 
 ## 所有权与生命周期
 
@@ -38,4 +43,3 @@ Mesh 描述一次不可变的绘制，包括图元拓扑、Vertex/Index Buffer�
 ## 线程安全
 
 Mesh 创建后不可更新。不要让销毁与使用该 Mesh 的渲染调用并发执行。
-

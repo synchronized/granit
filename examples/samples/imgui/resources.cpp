@@ -12,7 +12,7 @@
 
 namespace granit::example {
 
-result resolve_imgui_sample_texture(ImTextureID texture, granit_canvas_draw_state& state,
+result resolve_imgui_sample_texture(ImTextureID texture, canvas_draw_state& state,
                                     void* user_data) noexcept {
   if (user_data == nullptr)
     return result::invalid_argument;
@@ -30,27 +30,25 @@ result resolve_imgui_sample_texture(ImTextureID texture, granit_canvas_draw_stat
   return result::success;
 }
 
-result upload_imgui_checker_texture(granit_renderer renderer, texture& output,
-                                    texture_view& view) {
+result upload_imgui_checker_texture(renderer& renderer, texture& output, texture_view& view) {
   constexpr std::array<std::uint8_t, 16> pixels{238, 194, 255, 255, 35,  31, 52,  255,
                                                 35,  31,  52,  255, 104, 87, 204, 255};
-  auto upload_result =
-      output.initialize(renderer, {.format = texture_format::rgba8_unorm,
-                                   .usage = texture_usage::sampled |
-                                            texture_usage::transfer_destination,
-                                   .width = 2,
-                                   .height = 2});
+  auto upload_result = output.initialize(
+      renderer, {.format = texture_format::rgba8_unorm,
+                 .usage = texture_usage::sampled | texture_usage::transfer_destination,
+                 .width = 2,
+                 .height = 2});
   if (upload_result.ok()) {
-    upload_result = output.write(std::as_bytes(std::span{pixels}),
-                                 {.bytes_per_row = 8, .rows_per_image = 2},
-                                 {.width = 2, .height = 2});
+    upload_result =
+        output.write(std::as_bytes(std::span{pixels}), {.bytes_per_row = 8, .rows_per_image = 2},
+                     {.width = 2, .height = 2});
   }
   if (upload_result.ok())
-    upload_result = view.initialize(renderer, output.native_handle());
+    upload_result = view.initialize(renderer, output);
   return upload_result;
 }
 
-result upload_imgui_font_atlas(granit_renderer renderer, texture& output, texture_view& view,
+result upload_imgui_font_atlas(renderer& renderer, texture& output, texture_view& view,
                                sampler& output_sampler) {
   unsigned char* pixels = nullptr;
   int width = 0;
@@ -70,27 +68,24 @@ result upload_imgui_font_atlas(granit_renderer renderer, texture& output, textur
     premultiplied_pixels[offset + 3] = static_cast<std::byte>(alpha);
   }
 
-  auto upload_result =
-      output.initialize(renderer, {.format = texture_format::rgba8_unorm,
-                                   .usage = texture_usage::sampled |
-                                            texture_usage::transfer_destination,
-                                   .width = static_cast<std::uint32_t>(width),
-                                   .height = static_cast<std::uint32_t>(height)});
+  auto upload_result = output.initialize(
+      renderer, {.format = texture_format::rgba8_unorm,
+                 .usage = texture_usage::sampled | texture_usage::transfer_destination,
+                 .width = static_cast<std::uint32_t>(width),
+                 .height = static_cast<std::uint32_t>(height)});
   if (upload_result.ok()) {
     upload_result = output.write(
         premultiplied_pixels,
         {.bytes_per_row = static_cast<std::uint32_t>(width) * 4,
          .rows_per_image = static_cast<std::uint32_t>(height)},
-        {.width = static_cast<std::uint32_t>(width),
-         .height = static_cast<std::uint32_t>(height)});
+        {.width = static_cast<std::uint32_t>(width), .height = static_cast<std::uint32_t>(height)});
   }
   if (upload_result.ok())
-    upload_result = view.initialize(renderer, output.native_handle());
+    upload_result = view.initialize(renderer, output);
   if (upload_result.ok()) {
-    upload_result = output_sampler.initialize(renderer,
-                                              {.address_u = address_mode::clamp_to_edge,
-                                               .address_v = address_mode::clamp_to_edge,
-                                               .address_w = address_mode::clamp_to_edge});
+    upload_result = output_sampler.initialize(renderer, {.address_u = address_mode::clamp_to_edge,
+                                                         .address_v = address_mode::clamp_to_edge,
+                                                         .address_w = address_mode::clamp_to_edge});
   }
   if (upload_result.ok()) {
     ImGui::GetIO().Fonts->SetTexID(imgui_font_texture_id);
@@ -104,14 +99,14 @@ bool imgui_target_needs_srgb_encoding(texture_format format) noexcept {
 }
 
 result record_imgui_sample_canvas(command_recorder& recorder, canvas_draw_list& canvas,
-                                  granit_texture_view target, const swapchain_info& info,
+                                  texture_view_ref target, const swapchain_info& info,
                                   std::uint32_t frame_slot) noexcept {
-  granit_canvas_draw_list_stats stats = GRANIT_CANVAS_DRAW_LIST_STATS_INIT;
+  granit::canvas_draw_list_stats stats{};
   auto record_result = canvas.get_stats(stats);
   if (record_result.failed())
     return record_result;
   if (stats.item_count == 0) {
-    const color_attachment_desc color{.view = target};
+    const color_attachment_desc color{.view = target, .resolve_view = {}};
     const rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                    .area = {0, 0, info.width, info.height}};
     record_result = recorder.begin_rendering(rendering);
@@ -120,15 +115,14 @@ result record_imgui_sample_canvas(command_recorder& recorder, canvas_draw_list& 
     return record_result;
   }
 
-  granit_canvas_record_desc record = GRANIT_CANVAS_RECORD_DESC_INIT;
-  record.color = target;
-  record.color_format = static_cast<granit_texture_format>(info.format);
-  record.width = info.width;
-  record.height = info.height;
-  record.load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR;
-  record.encode_srgb = imgui_target_needs_srgb_encoding(info.format) ? 1U : 0U;
-  record.frame_slot = frame_slot;
-  return canvas.record(recorder.native_handle(), record);
+  const canvas_record_desc record{.color = target,
+                                  .color_format = info.format,
+                                  .width = info.width,
+                                  .height = info.height,
+                                  .load_operation = attachment_load_operation::clear,
+                                  .encode_srgb = imgui_target_needs_srgb_encoding(info.format),
+                                  .frame_slot = frame_slot};
+  return canvas.record(recorder, record);
 }
 
 } // namespace granit::example

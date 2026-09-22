@@ -23,9 +23,10 @@ pbr_draw_bindings::initialize(granit_renderer renderer, const material_draw_stat
       material.frame_layout == GRANIT_NULL_HANDLE || material.object_layout == GRANIT_NULL_HANDLE) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
+  const auto renderer_view = granit::renderer_ref::from_native(renderer);
   const auto make_buffer = [&](granit::buffer& buffer, const auto& value) {
     return buffer.initialize(
-        renderer,
+        renderer_view,
         {.size = sizeof(value),
          .usage = granit::buffer_usage::uniform | granit::buffer_usage::transfer_destination,
          .location = granit::memory_location::upload},
@@ -35,15 +36,15 @@ pbr_draw_bindings::initialize(granit_renderer renderer, const material_draw_stat
   if (result.ok())
     result = make_buffer(object_buffer_, object);
   const std::array frame_entry{granit::bind_group_entry{
-      .binding = 0, .resource = frame_buffer_.native_handle(), .offset = 0, .size = sizeof(frame)}};
+      .binding = 0, .resource = frame_buffer_.ref(), .offset = 0, .size = sizeof(frame)}};
   if (result.ok())
-    result = frame_group_.initialize(renderer, material.frame_layout, frame_entry);
-  const std::array object_entry{granit::bind_group_entry{.binding = 0,
-                                                         .resource = object_buffer_.native_handle(),
-                                                         .offset = 0,
-                                                         .size = sizeof(object)}};
+    result = frame_group_.initialize(
+        renderer_view, granit::bind_group_layout_ref::from_native(material.frame_layout), frame_entry);
+  const std::array object_entry{granit::bind_group_entry{
+      .binding = 0, .resource = object_buffer_.ref(), .offset = 0, .size = sizeof(object)}};
   if (result.ok())
-    result = object_group_.initialize(renderer, material.object_layout, object_entry);
+    result = object_group_.initialize(
+        renderer_view, granit::bind_group_layout_ref::from_native(material.object_layout), object_entry);
   if (result.failed())
     static_cast<void>(reset());
   else {

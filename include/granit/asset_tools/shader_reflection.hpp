@@ -9,10 +9,26 @@
 #include <granit/asset_tools/shader_reflection.h>
 
 #include <cstddef>
+#include <new>
+#include <span>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 namespace granit::asset_tools::shader {
+
+class compilation;
+
+struct expected_binding {
+  std::uint32_t group{};
+  std::uint32_t binding{};
+};
+
+struct inspect_desc {
+  std::string_view input_path;
+  bool validate_binding_set{};
+  std::span<const expected_binding> expected_bindings{};
+};
 
 struct reflection_info {
   ::granit::result status = ::granit::result::invalid_handle;
@@ -79,7 +95,6 @@ struct override_info {
 class reflection {
 public:
   reflection() = default;
-  explicit reflection(granit_asset_tools_shader_reflection handle) noexcept : handle_(handle) {}
   ~reflection() { reset(); }
   reflection(const reflection&) = delete;
   reflection& operator=(const reflection&) = delete;
@@ -191,6 +206,11 @@ public:
   }
 
 private:
+  friend class compilation;
+  friend std::pair<::granit::result, reflection> inspect_spirv(const inspect_desc&) noexcept;
+
+  explicit reflection(granit_asset_tools_shader_reflection handle) noexcept : handle_(handle) {}
+
   using interface_getter = granit_result (*)(granit_asset_tools_shader_reflection, uint64_t,
                                              granit_asset_tools_shader_interface_variable_info*);
 
@@ -213,11 +233,31 @@ private:
   granit_asset_tools_shader_reflection handle_ = 0;
 };
 
-inline std::pair<::granit::result, reflection>
-inspect_spirv(const granit_asset_tools_shader_inspect_desc& desc) noexcept {
-  granit_asset_tools_shader_reflection handle = 0;
-  const auto status = granit_asset_tools_shader_inspect_spirv(&desc, &handle);
-  return {::granit::from_native(status), reflection{handle}};
+inline std::pair<::granit::result, reflection> inspect_spirv(const inspect_desc& desc) noexcept {
+  try {
+    std::vector<granit_asset_tools_shader_expected_binding> expected;
+    expected.reserve(desc.expected_bindings.size());
+    for (const auto binding : desc.expected_bindings) {
+      expected.push_back({.struct_size = sizeof(granit_asset_tools_shader_expected_binding),
+                          .group = binding.group,
+                          .binding = binding.binding});
+    }
+    const granit_asset_tools_shader_inspect_desc native{
+        .struct_size = sizeof(granit_asset_tools_shader_inspect_desc),
+        .input_path = desc.input_path.data(),
+        .input_path_length = desc.input_path.size(),
+        .validate_binding_set = desc.validate_binding_set ? 1U : 0U,
+        .expected_bindings = expected.data(),
+        .expected_binding_count = expected.size(),
+    };
+    granit_asset_tools_shader_reflection handle = 0;
+    const auto status = granit_asset_tools_shader_inspect_spirv(&native, &handle);
+    return {::granit::from_native(status), reflection{handle}};
+  } catch (const std::bad_alloc&) {
+    return {::granit::result::out_of_memory, reflection{}};
+  } catch (...) {
+    return {::granit::result::internal, reflection{}};
+  }
 }
 
 } // namespace granit::asset_tools::shader

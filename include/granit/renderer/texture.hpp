@@ -10,10 +10,55 @@
 #include <utility>
 
 #include <granit/core/result.hpp>
+#include <granit/renderer/renderer.hpp>
 #include <granit/renderer/resource_types.hpp>
 #include <granit/renderer/texture.h>
 
 namespace granit {
+
+class swapchain;
+
+/** 不拥有 Texture，只在来源资源的有效期内使用。 */
+class texture_ref {
+public:
+  texture_ref() = default;
+
+  [[nodiscard]] constexpr bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr granit_texture native_handle() const noexcept { return handle_; }
+  [[nodiscard]] static constexpr texture_ref from_native(granit_texture handle) noexcept {
+    return texture_ref{handle};
+  }
+
+private:
+  friend class swapchain;
+  friend class texture;
+
+  explicit constexpr texture_ref(granit_texture handle) noexcept : handle_(handle) {}
+
+  granit_texture handle_{GRANIT_NULL_HANDLE};
+};
+
+/** 不拥有 Texture View，只在来源资源的有效期内使用。 */
+class texture_view_ref {
+public:
+  texture_view_ref() = default;
+
+  [[nodiscard]] constexpr bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr granit_texture_view native_handle() const noexcept { return handle_; }
+  [[nodiscard]] static constexpr texture_view_ref from_native(granit_texture_view handle) noexcept {
+    return texture_view_ref{handle};
+  }
+
+private:
+  friend class swapchain;
+  friend class texture_view;
+
+  explicit constexpr texture_view_ref(granit_texture_view handle) noexcept : handle_(handle) {}
+
+  granit_texture_view handle_{GRANIT_NULL_HANDLE};
+};
 
 struct texture_format_footprint {
   std::uint32_t block_width{};
@@ -33,15 +78,19 @@ struct texture_data_footprint {
 struct texture_format_capabilities {
   texture_format format{texture_format::undefined};
   texture_usage supported_usage{};
-  std::uint32_t features{};
+  texture_format_feature features{};
   sample_count sample_counts{};
 
   [[nodiscard]] constexpr bool supports(texture_usage usage) const noexcept {
     const auto requested = static_cast<std::uint32_t>(usage);
     return (static_cast<std::uint32_t>(supported_usage) & requested) == requested;
   }
+  [[nodiscard]] constexpr bool supports(texture_format_feature feature) const noexcept {
+    const auto requested = static_cast<std::uint32_t>(feature);
+    return (static_cast<std::uint32_t>(features) & requested) == requested;
+  }
   [[nodiscard]] constexpr bool filterable() const noexcept {
-    return (features & GRANIT_TEXTURE_FORMAT_FEATURE_FILTERABLE_BIT) != 0;
+    return supports(texture_format_feature::filterable);
   }
 };
 
@@ -75,18 +124,25 @@ calculate_texture_data_footprint(texture_format format, std::uint32_t width, std
 }
 
 [[nodiscard]] inline result
-get_texture_format_capabilities(granit_renderer renderer, texture_format format,
-                                texture_format_capabilities& capabilities) noexcept {
+get_texture_format_capabilities(renderer_ref owner, texture_format format,
+                                 texture_format_capabilities& capabilities) noexcept {
+  const auto renderer = owner.native_handle();
   granit_texture_format_capabilities native = GRANIT_TEXTURE_FORMAT_CAPABILITIES_INIT;
   const auto value = granit_renderer_get_texture_format_capabilities(
       renderer, static_cast<std::uint32_t>(format), &native);
   if (value == GRANIT_SUCCESS) {
     capabilities = {.format = static_cast<texture_format>(native.format),
                     .supported_usage = static_cast<texture_usage>(native.supported_usage),
-                    .features = native.features,
+                    .features = static_cast<texture_format_feature>(native.features),
                     .sample_counts = static_cast<sample_count>(native.sample_counts)};
   }
   return from_native(value);
+}
+
+[[nodiscard]] inline result
+get_texture_format_capabilities(renderer& owner, texture_format format,
+                                texture_format_capabilities& capabilities) noexcept {
+  return get_texture_format_capabilities(owner.ref(), format, capabilities);
 }
 
 struct texture_desc {
@@ -164,7 +220,8 @@ public:
     }
     return *this;
   }
-  [[nodiscard]] result initialize(granit_renderer renderer, const texture_desc& desc) noexcept {
+  [[nodiscard]] result initialize(renderer_ref owner, const texture_desc& desc) noexcept {
+    const auto renderer = owner.native_handle();
     if (valid())
       return result::invalid_argument;
     if (renderer == GRANIT_NULL_HANDLE)
@@ -185,6 +242,10 @@ public:
     if (value == GRANIT_SUCCESS)
       renderer_ = renderer;
     return from_native(value);
+  }
+
+  [[nodiscard]] result initialize(renderer& owner, const texture_desc& desc) noexcept {
+    return initialize(owner.ref(), desc);
   }
   [[nodiscard]] result reset() noexcept {
     if (!valid()) {
@@ -227,6 +288,7 @@ public:
   }
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
   [[nodiscard]] explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr texture_ref ref() const noexcept { return texture_ref{handle_}; }
   [[nodiscard]] granit_texture native_handle() const noexcept { return handle_; }
 
 private:
@@ -279,8 +341,10 @@ public:
     }
     return *this;
   }
-  [[nodiscard]] result initialize(granit_renderer renderer, granit_texture texture,
+  [[nodiscard]] result initialize(renderer_ref owner, texture_ref source,
                                   const texture_view_desc& desc = {}) noexcept {
+    const auto renderer = owner.native_handle();
+    const auto texture = source.native_handle();
     if (valid())
       return result::invalid_argument;
     if (renderer == GRANIT_NULL_HANDLE || texture == GRANIT_NULL_HANDLE)
@@ -304,6 +368,11 @@ public:
       renderer_ = renderer;
     return from_native(value);
   }
+
+  [[nodiscard]] result initialize(renderer& owner, const texture& source,
+                                  const texture_view_desc& desc = {}) noexcept {
+    return initialize(owner.ref(), source.ref(), desc);
+  }
   [[nodiscard]] result reset() noexcept {
     if (!valid()) {
       return result::success;
@@ -314,6 +383,9 @@ public:
   }
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
   [[nodiscard]] explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr texture_view_ref ref() const noexcept {
+    return texture_view_ref{handle_};
+  }
   [[nodiscard]] granit_texture_view native_handle() const noexcept { return handle_; }
 
 private:

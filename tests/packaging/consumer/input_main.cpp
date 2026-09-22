@@ -14,7 +14,7 @@ int main() {
 
   if ((windows.process_events()).failed())
     return 2;
-  granit::input_event event = GRANIT_INPUT_EVENT_INIT;
+  granit::input_event event;
   if (windows.poll(event) != granit::result::not_ready)
     return 3;
   if ((windows.reset()).failed() || (windows.reset()).failed())

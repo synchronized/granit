@@ -454,11 +454,11 @@ granit_result destroy_registered_wayland_window(const std::shared_ptr<window_sys
   return wl_display_flush(system->display) >= 0 ? GRANIT_SUCCESS : GRANIT_ERROR_BACKEND_UNAVAILABLE;
 }
 
-granit_result get_wayland_window(const std::shared_ptr<window_system_record>& system,
-                                 const std::shared_ptr<window_record>& window, void** display,
-                                 void** native_surface) {
-  *display = system->display;
-  *native_surface = window->wayland_surface;
+granit_result get_native_wayland(const std::shared_ptr<window_system_record>& system,
+                                 const std::shared_ptr<window_record>& window,
+                                 granit_window_native_wayland& output) {
+  output.display = system->display;
+  output.surface = window->wayland_surface;
   return GRANIT_SUCCESS;
 }
 

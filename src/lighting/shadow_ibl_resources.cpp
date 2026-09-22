@@ -57,11 +57,12 @@ granit_result shadow_ibl_resources::initialize(
       (external_layout != GRANIT_NULL_HANDLE && (!features.shadows || !features.ibl)))
     return GRANIT_ERROR_INVALID_ARGUMENT;
 
+  const auto renderer_view = granit::renderer_ref::from_native(renderer);
   features_ = features;
 
   const auto make_constants = [&](granit::buffer& buffer, auto& value) {
     return buffer.initialize(
-        renderer,
+        renderer_view,
         {.size = sizeof(value),
          .usage = granit::buffer_usage::uniform | granit::buffer_usage::transfer_destination,
          .location = memory_location},
@@ -73,14 +74,15 @@ granit_result shadow_ibl_resources::initialize(
   if (result.ok() && features.ibl)
     result = make_constants(ibl_constants_, ibl_values);
   if (result.ok() && features.shadows) {
-    result =
-        shadow_sampler_.initialize(renderer, {.address_u = granit::address_mode::clamp_to_edge,
-                                              .address_v = granit::address_mode::clamp_to_edge,
-                                              .address_w = granit::address_mode::clamp_to_edge,
-                                              .compare = granit::compare_operation::less_equal});
+    result = shadow_sampler_.initialize(renderer_view,
+                                        {.address_u = granit::address_mode::clamp_to_edge,
+                                         .address_v = granit::address_mode::clamp_to_edge,
+                                         .address_w = granit::address_mode::clamp_to_edge,
+                                         .compare = granit::compare_operation::less_equal});
   }
   if (result.ok() && features.ibl) {
-    result = ibl_sampler_.initialize(renderer, {.mag_filter = granit::filter::linear,
+    result =
+        ibl_sampler_.initialize(renderer_view, {.mag_filter = granit::filter::linear,
                                                 .min_filter = granit::filter::linear,
                                                 .mip_filter = granit::mipmap_filter::linear,
                                                 .address_u = granit::address_mode::clamp_to_edge,
@@ -131,7 +133,7 @@ granit_result shadow_ibl_resources::initialize(
         {light_binding_spot, granit::binding_type::storage_buffer, 1, fragment});
   }
   if (external_layout == GRANIT_NULL_HANDLE) {
-    result = layout_.initialize(renderer, layout_entries);
+    result = layout_.initialize(renderer_view, layout_entries);
     if (result.failed()) {
       static_cast<void>(reset());
       return static_cast<granit_result>(result);
@@ -143,52 +145,57 @@ granit_result shadow_ibl_resources::initialize(
 
   std::vector<granit::bind_group_entry> group_entries;
   if (features.shadows) {
-    group_entries.insert(
-        group_entries.end(),
-        {{.binding = shadow_binding_constants,
-          .resource = shadow_constants_.native_handle(),
-          .offset = 0,
-          .size = sizeof(shadow_values)},
-         {.binding = shadow_binding_texture, .resource = views.shadow},
-         {.binding = shadow_binding_sampler, .resource = shadow_sampler_.native_handle()}});
+    group_entries.insert(group_entries.end(),
+                         {{.binding = shadow_binding_constants,
+                           .resource = shadow_constants_.ref(),
+                           .offset = 0,
+                           .size = sizeof(shadow_values)},
+                          {.binding = shadow_binding_texture,
+                           .resource = granit::binding_resource_ref::from_native(views.shadow)},
+                          {.binding = shadow_binding_sampler, .resource = shadow_sampler_.ref()}});
   }
   if (features.ibl) {
     group_entries.insert(
         group_entries.end(),
         {{.binding = ibl_binding_constants,
-          .resource = ibl_constants_.native_handle(),
+          .resource = ibl_constants_.ref(),
           .offset = 0,
           .size = sizeof(ibl_values)},
-         {.binding = ibl_binding_irradiance, .resource = views.ibl.irradiance},
+         {.binding = ibl_binding_irradiance,
+          .resource = granit::binding_resource_ref::from_native(views.ibl.irradiance)},
          {.binding = ibl_binding_prefiltered_environment,
-          .resource = views.ibl.prefiltered_environment},
-         {.binding = ibl_binding_brdf_lut, .resource = views.ibl.brdf_lut},
-         {.binding = ibl_binding_sampler, .resource = ibl_sampler_.native_handle()}});
+          .resource = granit::binding_resource_ref::from_native(views.ibl.prefiltered_environment)},
+         {.binding = ibl_binding_brdf_lut,
+          .resource = granit::binding_resource_ref::from_native(views.ibl.brdf_lut)},
+         {.binding = ibl_binding_sampler, .resource = ibl_sampler_.ref()}});
   }
   group_entries.insert(
       group_entries.end(),
       {
           granit::bind_group_entry{.binding = light_binding_counts,
-                                   .resource = lights_.counts(),
+                                   .resource =
+                                       granit::binding_resource_ref::from_native(lights_.counts()),
                                    .offset = 0,
                                    .size = sizeof(gpu_light_counts)},
           granit::bind_group_entry{
               .binding = light_binding_directional,
-              .resource = lights_.directional(),
+              .resource = granit::binding_resource_ref::from_native(lights_.directional()),
               .offset = 0,
               .size = light_buffer_size<gpu_directional_light>(light_capacities.directional)},
-          granit::bind_group_entry{.binding = light_binding_point,
-                                   .resource = lights_.point(),
-                                   .offset = 0,
-                                   .size =
-                                       light_buffer_size<gpu_point_light>(light_capacities.point)},
-          granit::bind_group_entry{.binding = light_binding_spot,
-                                   .resource = lights_.spot(),
-                                   .offset = 0,
-                                   .size =
-                                       light_buffer_size<gpu_spot_light>(light_capacities.spot)},
+          granit::bind_group_entry{
+              .binding = light_binding_point,
+              .resource = granit::binding_resource_ref::from_native(lights_.point()),
+              .offset = 0,
+              .size = light_buffer_size<gpu_point_light>(light_capacities.point)},
+          granit::bind_group_entry{
+              .binding = light_binding_spot,
+              .resource = granit::binding_resource_ref::from_native(lights_.spot()),
+              .offset = 0,
+              .size = light_buffer_size<gpu_spot_light>(light_capacities.spot)},
       });
-  result = group_.initialize(renderer, layout_handle_, group_entries);
+  result = group_.initialize(renderer_view,
+                             granit::bind_group_layout_ref::from_native(layout_handle_),
+                             group_entries);
   if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);

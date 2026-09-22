@@ -149,12 +149,11 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
           .count();
   if (result.failed())
     return result;
-  needs_recreate = frame.needs_recreate;
+  needs_recreate = frame.needs_recreate();
 
-  granit_texture texture = GRANIT_NULL_HANDLE;
-  granit_texture_view view = GRANIT_NULL_HANDLE;
+  granit::swapchain_backbuffer backbuffer;
   operation = "backbuffer";
-  result = swapchain.backbuffer(frame.image_index, texture, view);
+  result = swapchain.backbuffer(frame, backbuffer);
   granit::frame_recording recording;
   if (result.ok()) {
     operation = "frame_context.begin";
@@ -184,25 +183,25 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
   const auto first_query = slot_index * 2;
   if (result.ok() && timestamps_enabled) {
     operation = "timestamps.reset";
-    result = recorder.reset_timestamp_queries(timestamps.native_handle(), first_query, 2);
+    result = recorder.reset_timestamp_queries(timestamps, first_query, 2);
   }
   if (result.ok() && timestamps_enabled) {
     operation = "timestamps.begin";
-    result = recorder.write_timestamp(timestamps.native_handle(), GRANIT_TIMESTAMP_STAGE_TOP,
-                                      first_query);
+    result = recorder.write_timestamp(timestamps, granit::timestamp_stage::top, first_query);
   }
   if (result.ok()) {
     operation = "canvas.record";
     const auto canvas_begin = std::chrono::steady_clock::now();
-    result = granit::example::record_imgui_sample_canvas(recorder, canvas, view, info, slot_index);
+    result = granit::example::record_imgui_sample_canvas(recorder, canvas, backbuffer.view, info,
+                                                         slot_index);
     sample.canvas_record_ms =
         std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - canvas_begin)
             .count();
   }
   if (result.ok() && timestamps_enabled) {
     operation = "timestamps.end";
-    result = recorder.write_timestamp(timestamps.native_handle(), GRANIT_TIMESTAMP_STAGE_BOTTOM,
-                                      first_query + 1);
+    result =
+        recorder.write_timestamp(timestamps, granit::timestamp_stage::bottom, first_query + 1);
   }
   if (result.ok()) {
     operation = "frame_context.submit";
@@ -225,7 +224,7 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
         std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - present_begin)
             .count();
   }
-  needs_recreate = needs_recreate || frame.needs_recreate;
+  needs_recreate = needs_recreate || frame.needs_recreate();
   if (result.failed()) {
     if (recording.valid())
       static_cast<void>(recording.abort());
@@ -320,8 +319,7 @@ int main(int argc, char** argv) {
                            .frames_in_flight = static_cast<std::uint32_t>(frame_slot_count)});
   granit::surface surface;
   if (result.ok()) {
-    result =
-        granit::integration::sdl3::create_surface(renderer.native_handle(), window.get(), surface);
+    result = granit::integration::sdl3::create_surface(renderer, window.get(), surface);
   }
 
   int pixel_width = 0;
@@ -331,7 +329,7 @@ int main(int argc, char** argv) {
   }
   granit::swapchain swapchain;
   if (result.ok()) {
-    result = swapchain.initialize(renderer.native_handle(), surface.native_handle(),
+    result = swapchain.initialize(renderer, surface,
                                   {.width = static_cast<std::uint32_t>(pixel_width),
                                    .height = static_cast<std::uint32_t>(pixel_height),
                                    .presentation = presentation});
@@ -341,17 +339,18 @@ int main(int argc, char** argv) {
     result = swapchain.query_info(swapchain_info);
   granit::frame_context frame_context;
   if (result.ok())
-    result = frame_context.initialize(renderer.native_handle());
+    result = frame_context.initialize(renderer);
   granit::timestamp_query_pool timestamps;
   if (result.ok() && timestamps_enabled) {
-    result = timestamps.initialize(renderer.native_handle(),
-                                   static_cast<std::uint32_t>(frame_slot_count * 2));
+    result = timestamps.initialize(renderer, static_cast<std::uint32_t>(frame_slot_count * 2));
   }
   granit::canvas_draw_list canvas;
-  granit_canvas_draw_list_desc canvas_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
-  canvas_desc.frame_slot_count = static_cast<std::uint32_t>(frame_slot_count);
   if (result.ok())
-    result = canvas.initialize(renderer.native_handle(), canvas_desc);
+    result = canvas.initialize(renderer,
+                               {.initial_vertex_capacity = 0,
+                                .initial_index_capacity = 0,
+                                .initial_item_capacity = 0,
+                                .frame_slot_count = static_cast<std::uint32_t>(frame_slot_count)});
 
   granit::texture font_texture;
   granit::texture_view font_view;
@@ -359,17 +358,16 @@ int main(int argc, char** argv) {
   granit::texture_view checker_view;
   granit::sampler font_sampler;
   if (result.ok()) {
-    result = granit::example::upload_imgui_font_atlas(renderer.native_handle(), font_texture,
-                                                      font_view, font_sampler);
+    result =
+        granit::example::upload_imgui_font_atlas(renderer, font_texture, font_view, font_sampler);
   }
   if (result.ok())
-    result = granit::example::upload_imgui_checker_texture(renderer.native_handle(),
-                                                           checker_texture, checker_view);
+    result = granit::example::upload_imgui_checker_texture(renderer, checker_texture, checker_view);
   if (result.failed())
     std::cerr << "SDL3 + ImGui 初始化失败，Granit 结果码：" << static_cast<int>(result) << '\n';
   granit::example::imgui_sample_texture_bindings bindings{
-      .font = {font_view.native_handle(), font_sampler.native_handle()},
-      .checker = {checker_view.native_handle(), font_sampler.native_handle()}};
+      .font = {font_view.ref(), font_sampler.ref()},
+      .checker = {checker_view.ref(), font_sampler.ref()}};
 
   bool running = result.ok();
   bool recreate = false;

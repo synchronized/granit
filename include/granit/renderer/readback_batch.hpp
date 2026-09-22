@@ -10,7 +10,9 @@
 
 #include <granit/core/result.hpp>
 #include <granit/renderer/async_operation.hpp>
+#include <granit/renderer/buffer.hpp>
 #include <granit/renderer/readback_batch.h>
+#include <granit/renderer/renderer.hpp>
 #include <granit/renderer/texture.hpp>
 
 namespace granit {
@@ -41,7 +43,7 @@ struct readback_batch_info {
 struct readback_result_info {
   readback_result_type type{readback_result_type::buffer};
   std::uint64_t required_size{};
-  granit_texture_format format{GRANIT_TEXTURE_FORMAT_UNDEFINED};
+  texture_format format{texture_format::undefined};
   std::uint32_t width{};
   std::uint32_t height{};
   std::uint32_t depth{};
@@ -72,8 +74,9 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result create(granit_renderer renderer,
+  [[nodiscard]] result create(renderer_ref owner,
                               const readback_batch_options& options = {}) noexcept {
+    const auto renderer = owner.native_handle();
     static_cast<void>(reset_handle());
     const granit_readback_batch_desc desc{
         GRANIT_READBACK_BATCH_DESC_VERSION_1_SIZE, 0, options.max_result_bytes,
@@ -84,27 +87,33 @@ public:
     return from_native(value);
   }
 
-  [[nodiscard]] result read_buffer(granit_buffer buffer, std::uint64_t offset, std::uint64_t size,
-                                   std::uint32_t& result_index) noexcept {
-    return from_native(
-        granit_readback_batch_read_buffer(renderer_, handle_, buffer, offset, size, &result_index));
+  [[nodiscard]] result create(renderer& owner,
+                              const readback_batch_options& options = {}) noexcept {
+    return create(owner.ref(), options);
   }
 
-  [[nodiscard]] result read_texture(granit_texture texture,
-                                    const texture_write_region& region,
+  [[nodiscard]] result read_buffer(buffer_ref buffer, std::uint64_t offset, std::uint64_t size,
+                                   std::uint32_t& result_index) noexcept {
+    return from_native(granit_readback_batch_read_buffer(
+        renderer_, handle_, buffer.native_handle(), offset, size, &result_index));
+  }
+
+  [[nodiscard]] result read_texture(texture_ref texture, const texture_write_region& region,
                                     std::uint32_t& result_index) noexcept {
     const granit_texture_write_region native{.mip_level = region.mip_level,
                                              .base_array_layer = region.base_array_layer,
                                              .array_layer_count = region.array_layer_count,
-                                             .aspect = static_cast<granit_texture_aspect>(region.aspect),
+                                             .aspect =
+                                                 static_cast<granit_texture_aspect>(region.aspect),
                                              .x = region.x,
                                              .y = region.y,
                                              .z = region.z,
                                              .width = region.width,
                                              .height = region.height,
                                              .depth = region.depth};
-    return from_native(granit_readback_batch_read_texture(renderer_, handle_, texture, &native,
-                                                           &result_index));
+    return from_native(
+        granit_readback_batch_read_texture(renderer_, handle_, texture.native_handle(), &native,
+                                           &result_index));
   }
 
   [[nodiscard]] result get_info(readback_batch_info& info) const noexcept {
@@ -124,7 +133,7 @@ public:
     granit_async_operation native = GRANIT_NULL_HANDLE;
     const auto value = granit_readback_batch_submit_async(renderer_, handle_, &native);
     if (value == GRANIT_SUCCESS)
-      operation = async_operation{renderer_, native};
+      detail::async_operation_access::adopt(operation, renderer_, native);
     return from_native(value);
   }
 
@@ -154,11 +163,12 @@ private:
                                                      readback_result_info& info) noexcept {
   granit_readback_result_info native = GRANIT_READBACK_RESULT_INFO_INIT;
   const auto value = granit_readback_operation_get_result_info(
-      operation.native_renderer(), operation.native_handle(), result_index, &native);
+      detail::async_operation_access::renderer(operation),
+      detail::async_operation_access::handle(operation), result_index, &native);
   if (value == GRANIT_SUCCESS) {
     info = {.type = static_cast<readback_result_type>(native.type),
             .required_size = native.required_size,
-            .format = native.format,
+            .format = static_cast<texture_format>(native.format),
             .width = native.width,
             .height = native.height,
             .depth = native.depth,
@@ -174,9 +184,10 @@ private:
                                                  std::span<std::byte> data,
                                                  std::uint64_t& required_size) noexcept {
   required_size = data.size();
-  return from_native(granit_readback_operation_copy_result(operation.native_renderer(),
-                                                           operation.native_handle(), result_index,
-                                                           data.data(), &required_size));
+  return from_native(granit_readback_operation_copy_result(
+      detail::async_operation_access::renderer(operation),
+      detail::async_operation_access::handle(operation), result_index, data.data(),
+      &required_size));
 }
 
 } // namespace granit

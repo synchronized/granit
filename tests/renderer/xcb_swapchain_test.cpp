@@ -2,10 +2,10 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <granit/renderer/command_recorder.hpp>
+#include <granit/renderer/native_surface.hpp>
 #include <granit/renderer/render_target.hpp>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/surface.hpp>
-#include <granit/renderer/native_surface.hpp>
 #include <granit/renderer/swapchain.hpp>
 
 #include <catch2/catch_all.hpp>
@@ -88,27 +88,28 @@ TEST_CASE("XCB Surface 可以完成 Swapchain 清屏和 Present", "[swapchain][x
   REQUIRE(renderer_result == granit::result::success);
 
   granit::surface surface;
-  REQUIRE(surface.initialize(renderer.native_handle(),
+  REQUIRE(surface.initialize(renderer,
                              granit::surface_desc::xcb(window.connection(), window.window())) ==
           granit::result::success);
 
   granit::swapchain swapchain;
-  REQUIRE(swapchain.initialize(renderer.native_handle(), surface.native_handle(),
+  REQUIRE(swapchain.initialize(renderer, surface,
                                {.width = 96, .height = 72}) == granit::result::success);
   granit::swapchain_info info;
   REQUIRE(swapchain.query_info(info) == granit::result::success);
 
   granit::acquired_frame frame;
   REQUIRE(swapchain.acquire(frame) == granit::result::success);
-  granit_texture texture = GRANIT_NULL_HANDLE;
-  granit_texture_view view = GRANIT_NULL_HANDLE;
-  REQUIRE(swapchain.backbuffer(frame.image_index, texture, view) == granit::result::success);
+  granit::swapchain_backbuffer backbuffer;
+  REQUIRE(swapchain.backbuffer(frame, backbuffer) == granit::result::success);
 
   granit::command_recorder recorder;
-  REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(recorder.initialize(renderer) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
   const granit::color_attachment_desc color{
-      .view = view, .clear_value = {.red = 0.03F, .green = 0.09F, .blue = 0.18F, .alpha = 1.0F}};
+      .view = backbuffer.view,
+      .resolve_view = {},
+      .clear_value = {.red = 0.03F, .green = 0.09F, .blue = 0.18F, .alpha = 1.0F}};
   const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                          .area = {.width = info.width, .height = info.height}};
   REQUIRE(recorder.begin_rendering(rendering) == granit::result::success);

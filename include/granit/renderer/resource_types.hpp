@@ -27,6 +27,11 @@ enum class buffer_usage : std::uint32_t {
   indirect = GRANIT_BUFFER_USAGE_INDIRECT_BIT,
 };
 
+enum class index_type : std::uint32_t {
+  uint16 = GRANIT_INDEX_TYPE_UINT16,
+  uint32 = GRANIT_INDEX_TYPE_UINT32,
+};
+
 [[nodiscard]] constexpr buffer_usage operator|(buffer_usage left, buffer_usage right) noexcept {
   return static_cast<buffer_usage>(static_cast<std::uint32_t>(left) |
                                    static_cast<std::uint32_t>(right));
@@ -51,6 +56,16 @@ enum class texture_usage : std::uint32_t {
 [[nodiscard]] constexpr texture_usage operator|(texture_usage left, texture_usage right) noexcept {
   return static_cast<texture_usage>(static_cast<std::uint32_t>(left) |
                                     static_cast<std::uint32_t>(right));
+}
+
+enum class texture_format_feature : std::uint32_t {
+  filterable = GRANIT_TEXTURE_FORMAT_FEATURE_FILTERABLE_BIT,
+};
+
+[[nodiscard]] constexpr texture_format_feature operator|(texture_format_feature left,
+                                                         texture_format_feature right) noexcept {
+  return static_cast<texture_format_feature>(static_cast<std::uint32_t>(left) |
+                                             static_cast<std::uint32_t>(right));
 }
 
 enum class texture_format : std::uint32_t {

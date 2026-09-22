@@ -177,13 +177,13 @@ TEST_CASE("材质模板在Group0和1后追加高层布局") {
 
   granit::bind_group_layout object_layout;
   granit::bind_group_layout shadow_layout;
-  REQUIRE(object_layout.initialize(renderer.native_handle(), {}) == granit::result::success);
+  REQUIRE(object_layout.initialize(renderer, {}) == granit::result::success);
   const granit::bind_group_layout_entry shadow_entry{.binding = 0,
                                                      .type = granit::binding_type::uniform_buffer,
                                                      .array_count = 1,
                                                      .visibility =
                                                          granit::shader_stage_flags::fragment};
-  REQUIRE(shadow_layout.initialize(renderer.native_handle(), std::span{&shadow_entry, 1}) ==
+  REQUIRE(shadow_layout.initialize(renderer, std::span{&shadow_entry, 1}) ==
           granit::result::success);
   const std::array additional{object_layout.native_handle(), shadow_layout.native_handle()};
 

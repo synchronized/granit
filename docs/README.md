@@ -9,15 +9,17 @@
 
 ## 推荐阅读顺序
 
-### 第一次使用参考渲染管线
+### 从零构建渲染程序
 
-1. [创建第一个 Renderer](tutorials/01-first-renderer.md)
-2. [创建资源并上传数据](tutorials/02-resources-and-upload.md)
-3. [创建 Shader 与 Graphics Pipeline](tutorials/03-shader-and-pipeline.md)
-4. [窗口与帧循环](tutorials/04-window-and-frame-loop.md)
-5. [Render Pipeline 离屏渲染教程](tutorials/05-render-pipeline-offscreen.md)
-6. [示例程序及运行方式](guides/examples.md)
-7. [Render Pipeline](reference/render-pipeline.md)
+1. [教程系列说明](tutorials/README.md)
+2. [创建窗口并清屏](tutorials/01-window.md)
+3. [绘制三角形](tutorials/02-triangle.md)
+4. [添加纹理](tutorials/03-texture.md)
+5. [加入深度与相机](tutorials/04-depth-and-camera.md)
+6. [把几何组织为 Mesh](tutorials/05-mesh.md)
+7. [添加材质与光照](tutorials/06-material-and-lighting.md)
+8. [迁移到 Render Pipeline](tutorials/07-render-pipeline.md)
+9. [接入 ImGui 调试界面](tutorials/08-imgui.md)
 
 ### 使用核心 Renderer
 
@@ -34,16 +36,17 @@
 2. [Render Pipeline](reference/render-pipeline.md)
 3. [Material](reference/material.md)
 4. [Scene Snapshot](reference/scene-snapshot.md)
-5. [运行跨后端 Model Viewer](tutorials/06-model-viewer.md)
+5. [运行跨后端 Model Viewer](guides/model-viewer.md)
 
 ### 参与开发
 
 1. [开发规范](guides/development.md)
 2. [项目文档规范](../DOCUMENTATION_GUIDE.md)
 3. [路线图](roadmap.md)
-4. [API 教程与可运行示例阶梯计划](plans/S-46-api-tutorial-example-ladder.md)
-5. [开发计划与完成历史](plans/README.md)
-6. [第三方依赖](../3rd/README.md)
+4. [线性入门教程计划](plans/S-48-0.28.0-linear-tutorial-series.md)
+5. [0.28.0 Window 跨平台 Loop 计划](plans/S-49-0.28.0-window-loop.md)
+6. [开发计划与完成历史](plans/README.md)
+7. [第三方依赖](../3rd/README.md)
 
 ## 操作指南
 
@@ -56,20 +59,25 @@
 - [版本迁移指南索引](guides/migrations.md)
 - [从 0.24 迁移到 0.25](guides/migrate-0.24-to-0.25.md)
 - [示例程序及运行方式](guides/examples.md)
+- [运行跨后端模型查看器](guides/model-viewer.md)
 - [运行浏览器 WebGPU 平台 Smoke](guides/webgpu-browser-example.md)
 - [异步回读与 Pipeline 预热](guides/async-readback-and-pipeline-warmup.md)
 - [纹理同步回读](guides/texture-readback.md)
 
 ## 教程
 
-教程从前置条件开始，连续完成一个可验证的目标；其中的 API 细节以对应参考文档为准。
+教程从窗口清屏开始，逐章扩展同一个应用；每章只增加一种主要能力。01 已提供配套源码与自动
+验证，02～08 当前是后续内容预览。API 细节以对应 Reference 为准。
 
-- [01：创建第一个 Renderer](tutorials/01-first-renderer.md)
-- [02：创建资源并上传数据](tutorials/02-resources-and-upload.md)
-- [03：创建 Shader 与 Graphics Pipeline](tutorials/03-shader-and-pipeline.md)
-- [04：窗口与帧循环](tutorials/04-window-and-frame-loop.md)
-- [05：使用 Render Pipeline 完成第一次离屏渲染](tutorials/05-render-pipeline-offscreen.md)
-- [06：运行跨后端模型查看器](tutorials/06-model-viewer.md)
+- [教程系列说明](tutorials/README.md)
+- [01：创建窗口并清屏](tutorials/01-window.md)
+- [02：绘制三角形](tutorials/02-triangle.md)
+- [03：添加纹理](tutorials/03-texture.md)
+- [04：加入深度与相机](tutorials/04-depth-and-camera.md)
+- [05：把几何组织为 Mesh](tutorials/05-mesh.md)
+- [06：添加材质与光照](tutorials/06-material-and-lighting.md)
+- [07：迁移到 Render Pipeline](tutorials/07-render-pipeline.md)
+- [08：接入 ImGui 调试界面](tutorials/08-imgui.md)
 
 ## API 与行为参考
 

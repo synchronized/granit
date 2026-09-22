@@ -7,7 +7,7 @@
 
 namespace {
 
-granit::result resolve_texture(ImTextureID, granit_canvas_draw_state&, void*) noexcept {
+granit::result resolve_texture(ImTextureID, granit::canvas_draw_state&, void*) noexcept {
   return granit::result::success;
 }
 

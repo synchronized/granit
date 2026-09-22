@@ -36,7 +36,7 @@
 下载锁定版本），并将 `GRANIT_WARNINGS_AS_ERRORS` 设为 `ON`，以便尽早发现问题。作为子项目手动
 引入时，依赖策略与警告选项默认保持 `auto` / `OFF`；所有警告选项均为目标私有属性，不会传递给使用者。
 
-Model Viewer 和 SDL3/ImGui 集成的组合配置见[模型查看器教程](../tutorials/06-model-viewer.md)；浏览器构建和
+Model Viewer 和 SDL3/ImGui 集成的组合配置见[模型查看器指南](model-viewer.md)；浏览器构建和
 平台验证见[浏览器 WebGPU 指南](webgpu-browser-example.md)。
 
 Wayland Window 需要 `wayland-client`、`wayland-scanner` 和 `wayland-protocols`，其输入支持额外

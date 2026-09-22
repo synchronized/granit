@@ -7,7 +7,9 @@
 #include <imgui.h>
 
 #include <granit/core/result.hpp>
-#include <granit/pipeline/canvas_draw_list.h>
+#include <granit/pipeline/canvas_draw_list.hpp>
+#include <granit/renderer/sampler.hpp>
+#include <granit/renderer/texture.hpp>
 
 #include <cstdint>
 #include <vector>
@@ -21,20 +23,22 @@ namespace granit::example::imgui {
  */
 class texture_registry {
 public:
-  [[nodiscard]] granit::result register_texture(granit_texture_view view, granit_sampler sampler,
+  [[nodiscard]] granit::result register_texture(granit::texture_view_ref view,
+                                                granit::sampler_ref sampler,
                                                 ImTextureID& texture);
   [[nodiscard]] granit::result unregister_texture(ImTextureID texture) noexcept;
   void clear() noexcept;
 
   [[nodiscard]] granit::result resolve(ImTextureID texture,
-                                       granit_canvas_draw_state& state) const noexcept;
-  [[nodiscard]] static granit::result resolver(ImTextureID texture, granit_canvas_draw_state& state,
+                                       granit::canvas_draw_state& state) const noexcept;
+  [[nodiscard]] static granit::result resolver(ImTextureID texture,
+                                               granit::canvas_draw_state& state,
                                                void* user_data) noexcept;
 
 private:
   struct slot {
-    granit_texture_view view{GRANIT_NULL_HANDLE};
-    granit_sampler sampler{GRANIT_NULL_HANDLE};
+    granit::texture_view_ref view;
+    granit::sampler_ref sampler;
     std::uint32_t generation{1};
     bool alive{};
   };

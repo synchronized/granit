@@ -8,6 +8,7 @@
 #include <span>
 
 #include <granit/renderer/render_target.h>
+#include <granit/renderer/texture.hpp>
 
 namespace granit {
 
@@ -37,8 +38,8 @@ struct clear_depth_stencil_value {
 };
 
 struct color_attachment_desc {
-  granit_texture_view view{GRANIT_NULL_HANDLE};
-  granit_texture_view resolve_view{GRANIT_NULL_HANDLE};
+  texture_view_ref view;
+  texture_view_ref resolve_view;
   attachment_load_operation load_operation{attachment_load_operation::clear};
   attachment_store_operation store_operation{attachment_store_operation::store};
   clear_color_value clear_value{};
@@ -49,15 +50,15 @@ struct color_attachment_desc {
         .load_operation = static_cast<granit_attachment_load_operation>(load_operation),
         .store_operation = static_cast<granit_attachment_store_operation>(store_operation),
         .reserved = 0,
-        .view = view,
+        .view = view.native_handle(),
         .clear_value = {clear_value.red, clear_value.green, clear_value.blue, clear_value.alpha},
         .reserved_2 = 0,
-        .resolve_view = resolve_view};
+        .resolve_view = resolve_view.native_handle()};
   }
 };
 
 struct depth_stencil_attachment_desc {
-  granit_texture_view view{GRANIT_NULL_HANDLE};
+  texture_view_ref view;
   attachment_load_operation depth_load_operation{attachment_load_operation::clear};
   attachment_store_operation depth_store_operation{attachment_store_operation::store};
   attachment_load_operation stencil_load_operation{attachment_load_operation::discard};
@@ -75,7 +76,7 @@ struct depth_stencil_attachment_desc {
         .stencil_store_operation =
             static_cast<granit_attachment_store_operation>(stencil_store_operation),
         .reserved = 0,
-        .view = view,
+        .view = view.native_handle(),
         .clear_value = {clear_value.depth, clear_value.stencil},
         .reserved_2 = 0,
     };

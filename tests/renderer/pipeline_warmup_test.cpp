@@ -49,7 +49,7 @@ void await(granit::renderer& renderer, granit::async_operation& operation) {
 
 TEST_CASE("Pipeline 预热批次拒绝空提交和越界", "[pipeline-warmup][contract]") {
   granit::pipeline_warmup_batch batch;
-  CHECK(batch.create(GRANIT_NULL_HANDLE) == granit::result::invalid_argument);
+  CHECK(batch.create(granit::renderer_ref{}) == granit::result::invalid_argument);
 }
 
 TEST_CASE("Compute Pipeline 预热提供稳定键和缓存命中", "[pipeline-warmup][compute]") {
@@ -63,22 +63,20 @@ TEST_CASE("Compute Pipeline 预热提供稳定键和缓存命中", "[pipeline-wa
   REQUIRE(limits.supports_non_blocking_pipeline_warmup());
 
   granit::pipeline_layout layout;
-  REQUIRE(layout.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(layout.initialize(renderer) == granit::result::success);
   const auto spirv = load_binary("minimal.comp.spv");
   REQUIRE_FALSE(spirv.empty());
   granit::shader shader;
-  REQUIRE(shader.initialize(renderer.native_handle(),
+  REQUIRE(shader.initialize(renderer,
                             {.stage = granit::shader_stage::compute, .code = spirv}) ==
           granit::result::success);
 
-  granit_compute_pipeline_desc desc = GRANIT_COMPUTE_PIPELINE_DESC_INIT;
-  desc.layout = layout.native_handle();
-  desc.compute_shader = shader.native_handle();
+  const granit::compute_pipeline_desc desc{.layout = layout.ref(),
+                                           .compute_shader = shader.ref()};
   std::array<std::byte, GRANIT_PIPELINE_WARMUP_CACHE_KEY_SIZE> first_key{};
   for (int pass = 0; pass < 2; ++pass) {
     granit::pipeline_warmup_batch batch;
-    REQUIRE(batch.create(renderer.native_handle(), {.max_operation_count = 1}) ==
-            granit::result::success);
+    REQUIRE(batch.create(renderer, {.max_operation_count = 1}) == granit::result::success);
     std::uint32_t index{};
     REQUIRE(batch.add_compute(desc, index) == granit::result::success);
     REQUIRE(index == 0);
@@ -108,17 +106,16 @@ TEST_CASE("Pipeline 预热操作保留已经提交的资源", "[pipeline-warmup]
   REQUIRE(initialized == granit::result::success);
 
   granit::pipeline_layout layout;
-  REQUIRE(layout.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(layout.initialize(renderer) == granit::result::success);
   granit::shader shader;
-  REQUIRE(shader.initialize(renderer.native_handle(),
+  REQUIRE(shader.initialize(renderer,
                             {.stage = granit::shader_stage::compute,
                              .code = load_binary("minimal.comp.spv")}) ==
           granit::result::success);
-  granit_compute_pipeline_desc desc = GRANIT_COMPUTE_PIPELINE_DESC_INIT;
-  desc.layout = layout.native_handle();
-  desc.compute_shader = shader.native_handle();
+  const granit::compute_pipeline_desc desc{.layout = layout.ref(),
+                                           .compute_shader = shader.ref()};
   granit::pipeline_warmup_batch batch;
-  REQUIRE(batch.create(renderer.native_handle(), {.max_operation_count = 1}) ==
+  REQUIRE(batch.create(renderer, {.max_operation_count = 1}) ==
           granit::result::success);
   std::uint32_t index{};
   REQUIRE(batch.add_compute(desc, index) == granit::result::success);
@@ -141,17 +138,16 @@ TEST_CASE("Pipeline 预热取消收敛终态并安全释放资源", "[pipeline-w
   REQUIRE(initialized == granit::result::success);
 
   granit::pipeline_layout layout;
-  REQUIRE(layout.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(layout.initialize(renderer) == granit::result::success);
   granit::shader shader;
-  REQUIRE(shader.initialize(renderer.native_handle(),
+  REQUIRE(shader.initialize(renderer,
                             {.stage = granit::shader_stage::compute,
                              .code = load_binary("minimal.comp.spv")}) ==
           granit::result::success);
-  granit_compute_pipeline_desc desc = GRANIT_COMPUTE_PIPELINE_DESC_INIT;
-  desc.layout = layout.native_handle();
-  desc.compute_shader = shader.native_handle();
+  const granit::compute_pipeline_desc desc{.layout = layout.ref(),
+                                           .compute_shader = shader.ref()};
   granit::pipeline_warmup_batch batch;
-  REQUIRE(batch.create(renderer.native_handle(), {.max_operation_count = 32}) ==
+  REQUIRE(batch.create(renderer, {.max_operation_count = 32}) ==
           granit::result::success);
   for (std::uint32_t entry = 0; entry < 32; ++entry) {
     std::uint32_t index{};

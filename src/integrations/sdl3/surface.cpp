@@ -26,7 +26,7 @@ const char* video_driver() noexcept {
 
 } // namespace
 
-result create_surface(granit_renderer renderer, SDL_Window* window, surface& output) noexcept {
+result create_surface(renderer& owner, SDL_Window* window, surface& output) noexcept {
   if (window == nullptr)
     return result::invalid_argument;
   const auto properties = SDL_GetWindowProperties(window);
@@ -41,7 +41,7 @@ result create_surface(granit_renderer renderer, SDL_Window* window, surface& out
         SDL_GetPointerProperty(properties, SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
     if (instance == nullptr || native_window == nullptr)
       return result::backend_unavailable;
-    return output.initialize(renderer, granit::surface_desc::win32(instance, native_window));
+    return output.initialize(owner, granit::surface_desc::win32(instance, native_window));
   }
 
   if (std::strcmp(driver, "wayland") == 0) {
@@ -51,7 +51,7 @@ result create_surface(granit_renderer renderer, SDL_Window* window, surface& out
         SDL_GetPointerProperty(properties, SDL_PROP_WINDOW_WAYLAND_SURFACE_POINTER, nullptr);
     if (display == nullptr || native_surface == nullptr)
       return result::backend_unavailable;
-    return output.initialize(renderer, granit::surface_desc::wayland(display, native_surface));
+    return output.initialize(owner, granit::surface_desc::wayland(display, native_surface));
   }
 
 #if defined(GRANIT_INTEGRATION_SDL3_HAS_X11)
@@ -68,7 +68,7 @@ result create_surface(granit_renderer renderer, SDL_Window* window, surface& out
       return result::backend_unavailable;
     granit::surface_desc surface_create_desc = surface_desc::xcb(
         connection, static_cast<std::uint32_t>(native_window));
-    return output.initialize(renderer, surface_create_desc);
+    return output.initialize(owner, surface_create_desc);
   }
 #endif
 
@@ -76,7 +76,7 @@ result create_surface(granit_renderer renderer, SDL_Window* window, surface& out
     const char* canvas_id = SDL_GetStringProperty(
         properties, SDL_PROP_WINDOW_EMSCRIPTEN_CANVAS_ID_STRING, nullptr);
     std::string selector = (canvas_id != nullptr && canvas_id[0] != '\0') ? canvas_id : "#canvas";
-    return output.initialize(renderer, granit::surface_desc::canvas(selector));
+    return output.initialize(owner, granit::surface_desc::canvas(selector));
   }
 
   return result::unsupported;

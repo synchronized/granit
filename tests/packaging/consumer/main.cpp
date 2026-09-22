@@ -83,7 +83,7 @@ int main() {
     return 10;
 
   granit::buffer buffer;
-  if ((buffer.initialize(renderer.native_handle(), {.size = 64,
+  if ((buffer.initialize(renderer, {.size = 64,
                                                     .usage = granit::buffer_usage::transfer_source,
                                                     .location = granit::memory_location::upload}))
           .failed())

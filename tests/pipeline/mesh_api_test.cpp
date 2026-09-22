@@ -27,35 +27,38 @@ TEST_CASE("公共Mesh复制一次Draw描述并校验Buffer用途") {
   REQUIRE(initialized == granit::result::success);
 
   granit::buffer vertices;
-  REQUIRE(vertices.initialize(renderer.native_handle(),
-                              {.size = 3 * 12,
-                               .usage = granit::buffer_usage::vertex,
-                               .location = granit::memory_location::upload}) ==
+  REQUIRE(vertices.initialize(renderer, {.size = 3 * 12,
+                                         .usage = granit::buffer_usage::vertex,
+                                         .location = granit::memory_location::upload}) ==
           granit::result::success);
-  const granit_vertex_attribute position{0, GRANIT_VERTEX_FORMAT_FLOAT32X3, 0, 0};
-  const granit_mesh_vertex_buffer vertex{
-      vertices.native_handle(), 0, {12, GRANIT_VERTEX_STEP_MODE_VERTEX, 1, 0, &position}};
-  granit_mesh_desc desc = GRANIT_MESH_DESC_INIT;
-  desc.vertex_buffers = &vertex;
-  desc.vertex_buffer_count = 1;
+  const granit::vertex_attribute position{.location = 0,
+                                          .format = granit::vertex_format::float32x3};
+  const granit::mesh_vertex_buffer vertex{
+      .buffer = vertices.ref(),
+      .layout = {.stride = 12, .attributes = std::span{&position, 1}},
+  };
+  granit::mesh_desc desc;
+  desc.vertex_buffers = std::span{&vertex, 1};
   desc.vertex_count = 3;
   granit::mesh mesh;
-  REQUIRE(mesh.initialize(renderer.native_handle(), desc) == granit::result::success);
+  REQUIRE(mesh.initialize(renderer, desc) == granit::result::success);
+  CHECK(mesh.ref().native_handle() == mesh.native_handle());
 
   const auto old = mesh.native_handle();
   REQUIRE(mesh.reset() == granit::result::success);
   CHECK(granit_mesh_destroy(renderer.native_handle(), old) == GRANIT_ERROR_INVALID_HANDLE);
 
   granit::buffer wrong_usage;
-  REQUIRE(wrong_usage.initialize(renderer.native_handle(),
-                                 {.size = 36,
-                                  .usage = granit::buffer_usage::uniform,
-                                  .location = granit::memory_location::upload}) ==
+  REQUIRE(wrong_usage.initialize(renderer, {.size = 36,
+                                            .usage = granit::buffer_usage::uniform,
+                                            .location = granit::memory_location::upload}) ==
           granit::result::success);
   auto invalid_vertex = vertex;
-  invalid_vertex.buffer = wrong_usage.native_handle();
-  desc.vertex_buffers = &invalid_vertex;
-  CHECK(mesh.initialize(renderer.native_handle(), desc) == granit::result::invalid_argument);
+  invalid_vertex.buffer = wrong_usage.ref();
+  granit::mesh_desc invalid_desc;
+  invalid_desc.vertex_buffers = std::span{&invalid_vertex, 1};
+  invalid_desc.vertex_count = 3;
+  CHECK(mesh.initialize(renderer, invalid_desc) == granit::result::invalid_argument);
 }
 
 TEST_CASE("公共Mesh拒绝跨Renderer Buffer与重复Attribute位置") {
@@ -69,11 +72,10 @@ TEST_CASE("公共Mesh拒绝跨Renderer Buffer与重复Attribute位置") {
   REQUIRE(second_result == granit::result::success);
 
   granit::buffer vertices;
-  REQUIRE(
-      vertices.initialize(first.native_handle(), {.size = 64,
-                                                  .usage = granit::buffer_usage::vertex,
-                                                  .location = granit::memory_location::upload}) ==
-      granit::result::success);
+  REQUIRE(vertices.initialize(first, {.size = 64,
+                                      .usage = granit::buffer_usage::vertex,
+                                      .location = granit::memory_location::upload}) ==
+          granit::result::success);
   const std::array attributes{granit_vertex_attribute{0, GRANIT_VERTEX_FORMAT_FLOAT32X2, 0, 0},
                               granit_vertex_attribute{0, GRANIT_VERTEX_FORMAT_FLOAT32X2, 8, 0}};
   granit_mesh_vertex_buffer vertex{

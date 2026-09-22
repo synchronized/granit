@@ -27,7 +27,24 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 
 各能力的准确使用方式和限制以 [Reference](README.md#api-与行为参考) 为准。
 
+## 当前计划
+
+### S-48：线性入门教程与配套示例
+
+**状态：实施中，P1。**
+
+[S-48](plans/S-48-0.28.0-linear-tutorial-series.md) 将现有主题式教程替换为从 Window、Triangle、
+Texture、Camera、Mesh、Material/Lighting、Render Pipeline 到 ImGui 的连续路径。0.28.0 已完成
+可运行的 Window 章节；其余章节在各自源码和自动验证完成后分阶段交付。
+
 ## 最近完成
+
+### S-49：0.28.0 Window 跨平台可选主循环
+
+**状态：已完成，P1。**
+
+[S-49](plans/S-49-0.28.0-window-loop.md) 已在非阻塞 Window 事件泵之上增加可选托管 Loop。桌面和
+Emscripten 可复用同一个应用 Tick，Loop 不持有或推进 Renderer，也不接管资源或引擎任务系统。
 
 ### S-47：Window 跨平台入口收敛
 

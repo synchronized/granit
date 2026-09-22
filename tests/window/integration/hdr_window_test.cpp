@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "support/shader_asset_store.h"
-#include "support/tone_mapping_shader_library.h"
 #include "lighting/tone_mapping_resources.h"
 #include "material/pbr_material_schema.h"
 #include "support/pbr_test_support.h"
+#include "support/shader_asset_store.h"
+#include "support/tone_mapping_shader_library.h"
 
 #include <granit/granit.hpp>
 #include <granit/window.hpp>
@@ -41,22 +41,24 @@ struct window_hdr_resources {
                             const granit::shader_library& shader_library,
                             const granit::shader_content_id& vertex_shader_id,
                             const granit::shader_content_id& fragment_shader_id) {
-    auto result = texture.initialize(renderer, {.format = granit::texture_format::rgba16_float,
-                                                .usage = granit::texture_usage::color_attachment |
-                                                         granit::texture_usage::sampled,
-                                                .width = width,
-                                                .height = height});
+    const auto renderer_view = granit::renderer_ref::from_native(renderer);
+    auto result =
+        texture.initialize(renderer_view, {.format = granit::texture_format::rgba16_float,
+                                           .usage = granit::texture_usage::color_attachment |
+                                                    granit::texture_usage::sampled,
+                                           .width = width,
+                                           .height = height});
     if (result.ok())
-      result = view.initialize(renderer, texture.native_handle());
+      result = view.initialize(renderer_view, texture.ref());
     if (result.ok()) {
-      result = depth_texture.initialize(renderer,
+      result = depth_texture.initialize(renderer_view,
                                         {.format = granit::texture_format::d32_float,
                                          .usage = granit::texture_usage::depth_stencil_attachment,
                                          .width = width,
                                          .height = height});
     }
     if (result.ok())
-      result = depth_view.initialize(renderer, depth_texture.native_handle());
+      result = depth_view.initialize(renderer_view, depth_texture.ref());
     if (result.ok()) {
       result = granit::from_native(tone_mapping.initialize(
           renderer, view.native_handle(), output_format,
@@ -96,19 +98,18 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
   auto result = swapchain.acquire(frame);
   if (result.failed())
     return result;
-  needs_recreate = frame.needs_recreate;
+  needs_recreate = frame.needs_recreate();
 
-  granit_texture backbuffer = GRANIT_NULL_HANDLE;
-  granit_texture_view backbuffer_view = GRANIT_NULL_HANDLE;
+  granit::swapchain_backbuffer backbuffer;
   if (result.ok())
-    result = swapchain.backbuffer(frame.image_index, backbuffer, backbuffer_view);
+    result = swapchain.backbuffer(frame, backbuffer);
   granit::frame_recording recording;
   if (result.ok())
     result = context.begin(frame, recording);
   auto& recorder = recording.recorder();
 
-  const granit::depth_stencil_attachment_desc shadow_depth{.view = shadow_view,
-                                                           .clear_value = {.depth = 1.0F}};
+  const granit::depth_stencil_attachment_desc shadow_depth{
+      .view = granit::texture_view_ref::from_native(shadow_view), .clear_value = {.depth = 1.0F}};
   const granit::rendering_desc shadow_rendering{
       .color_attachments = {}, .depth_stencil_attachment = &shadow_depth, .area = {0, 0, 1, 1}};
   if (result.ok())
@@ -117,22 +118,26 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
     result = recorder.end_rendering();
 
   const granit::color_attachment_desc hdr_color{
-      .view = resources.view.native_handle(),
+      .view = resources.view.ref(),
+      .resolve_view = {},
       .clear_value = {.red = 0.03F, .green = 0.03F, .blue = 0.05F, .alpha = 1.0F}};
-  const granit::depth_stencil_attachment_desc depth{.view = resources.depth_view.native_handle(),
+  const granit::depth_stencil_attachment_desc depth{.view = resources.depth_view.ref(),
                                                     .clear_value = {.depth = 1.0F}};
   const granit::rendering_desc hdr_rendering{.color_attachments = std::span{&hdr_color, 1},
                                              .depth_stencil_attachment = &depth,
                                              .area = {0, 0, width, height}};
   if (result.ok())
-    result = recorder.bind_graphics_pipeline(pbr_pipeline);
+    result = recorder.bind_graphics_pipeline(
+        granit::graphics_pipeline_ref::from_native(pbr_pipeline));
   if (result.ok()) {
-    result = recorder.bind_graphics_groups(pbr_material.pipeline_layout(), 1,
-                                           std::span{&material_group, 1});
+    const std::array groups{granit::bind_group_ref::from_native(material_group)};
+    result = recorder.bind_graphics_groups(
+        granit::pipeline_layout_ref::from_native(pbr_material.pipeline_layout()), 1, groups);
   }
   if (result.ok()) {
-    result = recorder.bind_graphics_groups(pbr_material.pipeline_layout(), 3,
-                                           std::span{&lighting_group, 1});
+    const std::array groups{granit::bind_group_ref::from_native(lighting_group)};
+    result = recorder.bind_graphics_groups(
+        granit::pipeline_layout_ref::from_native(pbr_material.pipeline_layout()), 3, groups);
   }
   const granit::viewport viewport{0, 0, static_cast<float>(width), static_cast<float>(height),
                                   0, 1};
@@ -149,17 +154,20 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
     result = recorder.end_rendering();
 
   if (result.ok())
-    result = recorder.bind_graphics_pipeline(resources.tone_mapping.pipeline());
+    result = recorder.bind_graphics_pipeline(
+        granit::graphics_pipeline_ref::from_native(resources.tone_mapping.pipeline()));
   const auto tone_group = resources.tone_mapping.group();
   if (result.ok()) {
-    result = recorder.bind_graphics_groups(resources.tone_mapping.pipeline_layout(), 0,
-                                           std::span{&tone_group, 1});
+    const std::array groups{granit::bind_group_ref::from_native(tone_group)};
+    result = recorder.bind_graphics_groups(
+        granit::pipeline_layout_ref::from_native(resources.tone_mapping.pipeline_layout()), 0,
+        groups);
   }
   if (result.ok())
     result = recorder.set_viewports(0, std::span{&viewport, 1});
   if (result.ok())
     result = recorder.set_scissors(0, std::span{&scissor, 1});
-  const granit::color_attachment_desc output_color{.view = backbuffer_view};
+  const granit::color_attachment_desc output_color{.view = backbuffer.view, .resolve_view = {}};
   const granit::rendering_desc output_rendering{.color_attachments = std::span{&output_color, 1},
                                                 .area = {0, 0, width, height}};
   if (result.ok())
@@ -172,7 +180,7 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
     result = recording.submit();
   if (result.ok())
     result = swapchain.present(frame);
-  needs_recreate = needs_recreate || frame.needs_recreate;
+  needs_recreate = needs_recreate || frame.needs_recreate();
   if (result.failed()) {
     if (recording.valid())
       static_cast<void>(recording.abort());
@@ -192,7 +200,7 @@ int main(int argument_count, char** arguments) {
     return 77;
   granit::window window;
   if (result.ok()) {
-    result = window.initialize(window_system.native_handle(),
+    result = window.initialize(window_system,
                                {.title = "Granit HDR Tone Mapping", .width = 800, .height = 600});
   }
   granit::window_state window_state{};
@@ -207,12 +215,12 @@ int main(int argument_count, char** arguments) {
   }
   granit::surface surface;
   if (result.ok())
-    result = window.create_surface(renderer.native_handle(), surface);
+    result = window.create_surface(renderer, surface);
   granit::swapchain swapchain;
   if (result.ok()) {
-    result = swapchain.initialize(renderer.native_handle(), surface.native_handle(),
-                                  {.width = window_state.framebuffer_width,
-                                   .height = window_state.framebuffer_height});
+    result = swapchain.initialize(
+        renderer, surface,
+        {.width = window_state.framebuffer_width, .height = window_state.framebuffer_height});
   }
   granit::swapchain_info info;
   if (result.ok())
@@ -226,10 +234,9 @@ int main(int argument_count, char** arguments) {
     result = granit::result::initialization_failed;
   std::vector<std::byte> shader_library_bytes;
   granit::shader_library shader_library;
-  if (result.ok() &&
-      !assets.initialize_library(renderer.native_handle(), shader_library_bytes, shader_library))
+  if (result.ok() && !assets.initialize_library(renderer, shader_library_bytes, shader_library))
     result = granit::result::initialization_failed;
-  if (result.ok() && !tone_shaders.initialize(renderer.native_handle()))
+  if (result.ok() && !tone_shaders.initialize(renderer))
     result = granit::result::initialization_failed;
 
   granit::material::material_package pbr_package;
@@ -246,7 +253,7 @@ int main(int argument_count, char** arguments) {
     result = pbr_lighting.initialize(renderer.native_handle());
   granit::bind_group_layout object_layout;
   if (result.ok())
-    result = object_layout.initialize(renderer.native_handle(), {});
+    result = object_layout.initialize(renderer, {});
   granit::material::material_template_gpu pbr_material;
   if (result.ok()) {
     const std::array additional_layouts{object_layout.native_handle(), pbr_lighting.layout()};
@@ -280,7 +287,7 @@ int main(int argument_count, char** arguments) {
   }
   granit::frame_context frame_context;
   if (result.ok())
-    result = frame_context.initialize(renderer.native_handle());
+    result = frame_context.initialize(renderer);
   if (result.ok()) {
     std::cout << "Swapchain 格式=" << static_cast<std::uint32_t>(info.format)
               << (shader_encodes_srgb(info.format) ? "，Shader 执行 sRGB 编码\n"
@@ -294,13 +301,13 @@ int main(int argument_count, char** arguments) {
     result = window_system.process_events();
     granit::window_event event{};
     while (result.ok() && (result = window_system.poll(event)).ok()) {
-      if (event.window != window.native_handle())
+      if (event.window != window.ref())
         continue;
-      if (event.type == GRANIT_WINDOW_EVENT_CLOSE_REQUESTED)
+      if (event.type == granit::window_event_type::close_requested)
         running = false;
-      if (event.type == GRANIT_WINDOW_EVENT_RESIZED ||
-          event.type == GRANIT_WINDOW_EVENT_SCALE_CHANGED ||
-          event.type == GRANIT_WINDOW_EVENT_NATIVE_HANDLE_CHANGED) {
+      if (event.type == granit::window_event_type::resized ||
+          event.type == granit::window_event_type::scale_changed ||
+          event.type == granit::window_event_type::native_handle_changed) {
         recreate = true;
       }
     }

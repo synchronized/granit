@@ -13,6 +13,5 @@ add_subdirectory(common/validation)
 add_subdirectory(common/web)
 add_subdirectory(common/imgui)
 
-add_subdirectory(samples/model_viewer)
-add_subdirectory(samples/imgui)
-add_subdirectory(samples/minimal_renderer)
+add_subdirectory(samples)
+add_subdirectory(tutorials)

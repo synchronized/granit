@@ -11,7 +11,7 @@ CPU 墙钟、帧时间或 Present 等待统计。当前能力必须通过
 
 - C：`<granit/renderer/timestamp_query.h>`。
 - C++20：`<granit/renderer/timestamp_query.hpp>`，使用 move-only 的
-  `granit::timestamp_query_pool`。
+  `granit::timestamp_query_pool`；Recorder 通过 `timestamp_query_pool::ref()` 借用查询池。
 - 所属 CMake component：Core，目标为 `granit::granit`。
 
 ## 记录时间戳

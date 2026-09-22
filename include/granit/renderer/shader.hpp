@@ -18,6 +18,27 @@
 namespace granit {
 
 class shader_library;
+class shader;
+
+/** 不拥有 Shader，只在来源 Shader 的有效期内使用。 */
+class shader_ref {
+public:
+  shader_ref() = default;
+
+  [[nodiscard]] constexpr bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr granit_shader native_handle() const noexcept { return handle_; }
+  [[nodiscard]] static constexpr shader_ref from_native(granit_shader handle) noexcept {
+    return shader_ref{handle};
+  }
+
+private:
+  friend class shader;
+
+  explicit constexpr shader_ref(granit_shader handle) noexcept : handle_(handle) {}
+
+  granit_shader handle_{GRANIT_NULL_HANDLE};
+};
 
 struct shader_desc {
   shader_stage stage{shader_stage::vertex};
@@ -44,7 +65,8 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result initialize(granit_renderer renderer, const shader_desc& desc) noexcept {
+  [[nodiscard]] result initialize(renderer_ref owner, const shader_desc& desc) noexcept {
+    const auto renderer = owner.native_handle();
     if (valid() || desc.entry_point.size() > UINT32_MAX)
       return result::invalid_argument;
     if (renderer == GRANIT_NULL_HANDLE)
@@ -59,7 +81,11 @@ public:
         .entry_point = desc.entry_point.data(),
         .entry_point_length = static_cast<std::uint32_t>(desc.entry_point.size()),
         .reserved_2 = 0};
-    return initialize_native(renderer, native);
+    return create_native(renderer, native);
+  }
+
+  [[nodiscard]] result initialize(renderer& owner, const shader_desc& desc) noexcept {
+    return initialize(owner.ref(), desc);
   }
 
   [[nodiscard]] result reset() noexcept {
@@ -72,13 +98,14 @@ public:
 
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
   [[nodiscard]] explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr shader_ref ref() const noexcept { return shader_ref{handle_}; }
   [[nodiscard]] granit_shader native_handle() const noexcept { return handle_; }
 
 private:
   friend class shader_library;
 
-  [[nodiscard]] result initialize_native(granit_renderer renderer,
-                                         const granit_shader_desc& native) noexcept {
+  [[nodiscard]] result create_native(granit_renderer renderer,
+                                      const granit_shader_desc& native) noexcept {
     const auto value = granit_shader_create(renderer, &native, &handle_);
     if (value == GRANIT_SUCCESS)
       renderer_ = renderer;

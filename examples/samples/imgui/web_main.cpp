@@ -14,10 +14,10 @@
 #include "samples/imgui/resources.h"
 
 #include <granit/granit.hpp>
-#include <granit/renderer/native_surface.hpp>
 #include <granit/integrations/imgui/renderer.hpp>
 #include <granit/integrations/sdl3/surface.hpp>
 #include <granit/pipeline/canvas_draw_list.hpp>
+#include <granit/renderer/native_surface.hpp>
 
 #include <cstdint>
 #include <cstdio>
@@ -82,37 +82,36 @@ granit::result initialize_gpu_resources() {
   auto result = query_canvas_size(width, height);
   if (result.failed())
     return result;
-  result = granit::integration::sdl3::create_surface(state.renderer.native_handle(), state.window, state.surface);
+  result = granit::integration::sdl3::create_surface(state.renderer, state.window, state.surface);
 
   if (result.ok()) {
-    result =
-        state.swapchain.initialize(state.renderer.native_handle(), state.surface.native_handle(),
-                                   {.width = width,
-                                    .height = height,
-                                    .minimum_image_count = 2,
-                                    .presentation = granit::present_mode::fifo});
+    result = state.swapchain.initialize(state.renderer, state.surface,
+                                        {.width = width,
+                                         .height = height,
+                                         .minimum_image_count = 2,
+                                         .presentation = granit::present_mode::fifo});
   }
   if (result.ok())
     result = state.swapchain.query_info(state.swapchain_info);
   if (result.ok())
-    result = state.frame_context.initialize(state.renderer.native_handle());
+    result = state.frame_context.initialize(state.renderer);
+  if (result.ok())
+    result = state.canvas.initialize(state.renderer, {.initial_vertex_capacity = 0,
+                                                      .initial_index_capacity = 0,
+                                                      .initial_item_capacity = 0,
+                                                      .frame_slot_count = 2});
   if (result.ok()) {
-    granit_canvas_draw_list_desc desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
-    desc.frame_slot_count = 2;
-    result = state.canvas.initialize(state.renderer.native_handle(), desc);
+    result = granit::example::upload_imgui_font_atlas(state.renderer, state.font_texture,
+                                                      state.font_view, state.sampler);
   }
   if (result.ok()) {
-    result = granit::example::upload_imgui_font_atlas(
-        state.renderer.native_handle(), state.font_texture, state.font_view, state.sampler);
-  }
-  if (result.ok()) {
-    result = granit::example::upload_imgui_checker_texture(
-        state.renderer.native_handle(), state.checker_texture, state.checker_view);
+    result = granit::example::upload_imgui_checker_texture(state.renderer, state.checker_texture,
+                                                           state.checker_view);
   }
   if (result.ok()) {
     state.bindings = {
-        .font = {state.font_view.native_handle(), state.sampler.native_handle()},
-        .checker = {state.checker_view.native_handle(), state.sampler.native_handle()}};
+        .font = {state.font_view.ref(), state.sampler.ref()},
+        .checker = {state.checker_view.ref(), state.sampler.ref()}};
   }
   return result;
 }
@@ -172,11 +171,10 @@ granit::result render_frame() {
     operation = "acquire";
     result = state.swapchain.acquire(frame);
   }
-  granit_texture backbuffer{};
-  granit_texture_view view{};
+  granit::swapchain_backbuffer backbuffer;
   if (result.ok()) {
     operation = "backbuffer";
-    result = state.swapchain.backbuffer(frame.image_index, backbuffer, view);
+    result = state.swapchain.backbuffer(frame, backbuffer);
   }
   granit::frame_recording recording;
   if (result.ok()) {
@@ -185,8 +183,9 @@ granit::result render_frame() {
   }
   if (result.ok()) {
     operation = "canvas-record";
-    result = granit::example::record_imgui_sample_canvas(
-        recording.recorder(), state.canvas, view, state.swapchain_info, recording.frame_slot());
+    result = granit::example::record_imgui_sample_canvas(recording.recorder(), state.canvas,
+                                                         backbuffer.view, state.swapchain_info,
+                                                         recording.frame_slot());
   }
   if (result.ok()) {
     operation = "submit";

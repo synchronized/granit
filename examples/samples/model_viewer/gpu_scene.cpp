@@ -109,20 +109,21 @@ bool build_rgba8_mip_chain(const gltf::image& source, bool srgb, std::vector<std
 granit::result create_default_texture(granit_renderer renderer, granit::upload_batch& uploads,
                                       bool srgb, std::span<const std::byte, 4> pixel,
                                       gpu_texture& output) {
+  const auto renderer_view = granit::renderer_ref::from_native(renderer);
   const auto format =
       srgb ? granit::texture_format::rgba8_srgb : granit::texture_format::rgba8_unorm;
-  if (const auto result =
-          output.texture.initialize(renderer, {.format = format,
-                                               .usage = granit::texture_usage::sampled |
-                                                        granit::texture_usage::transfer_destination,
-                                               .location = granit::memory_location::device});
+  if (const auto result = output.texture.initialize(
+          renderer_view,
+          {.format = format,
+           .usage = granit::texture_usage::sampled | granit::texture_usage::transfer_destination,
+           .location = granit::memory_location::device});
       result.failed())
     return result;
   if (const auto result =
-          output.view.initialize(renderer, output.texture.native_handle(), {.format = format});
+          output.view.initialize(renderer_view, output.texture.ref(), {.format = format});
       result.failed())
     return result;
-  return uploads.write_texture(output.texture.native_handle(), pixel,
+  return uploads.write_texture(output.texture.ref(), pixel,
                                {.bytes_per_row = 4, .rows_per_image = 1}, {});
 }
 
@@ -194,50 +195,52 @@ granit::result create_material(granit_renderer renderer, const gltf::material& s
       result.failed())
     return result;
   const std::array updates{
-      granit_material_parameter_update{granit::material_parameter_id("base_color"),
-                                       GRANIT_MATERIAL_PARAMETER_FLOAT4, 0, &source.base_color,
-                                       sizeof(source.base_color), 0},
-      granit_material_parameter_update{granit::material_parameter_id("metallic"),
-                                       GRANIT_MATERIAL_PARAMETER_FLOAT32, 0, &source.metallic,
-                                       sizeof(source.metallic), 0},
-      granit_material_parameter_update{granit::material_parameter_id("perceptual_roughness"),
-                                       GRANIT_MATERIAL_PARAMETER_FLOAT32, 0, &source.roughness,
-                                       sizeof(source.roughness), 0},
-      granit_material_parameter_update{granit::material_parameter_id("normal_scale"),
-                                       GRANIT_MATERIAL_PARAMETER_FLOAT32, 0, &source.normal_scale,
-                                       sizeof(source.normal_scale), 0},
-      granit_material_parameter_update{
-          granit::material_parameter_id("occlusion_strength"), GRANIT_MATERIAL_PARAMETER_FLOAT32, 0,
-          &source.occlusion_strength, sizeof(source.occlusion_strength), 0},
-      granit_material_parameter_update{granit::material_parameter_id("emissive"),
-                                       GRANIT_MATERIAL_PARAMETER_FLOAT3, 0, &source.emissive,
-                                       sizeof(source.emissive), 0},
-      granit_material_parameter_update{granit::material_parameter_id("base_color_texture"),
-                                       GRANIT_MATERIAL_PARAMETER_TEXTURE_VIEW, 0, nullptr, 0,
-                                       base_color},
-      granit_material_parameter_update{granit::material_parameter_id("metallic_roughness_texture"),
-                                       GRANIT_MATERIAL_PARAMETER_TEXTURE_VIEW, 0, nullptr, 0,
-                                       metallic_roughness},
-      granit_material_parameter_update{granit::material_parameter_id("normal_texture"),
-                                       GRANIT_MATERIAL_PARAMETER_TEXTURE_VIEW, 0, nullptr, 0,
-                                       normal},
-      granit_material_parameter_update{granit::material_parameter_id("occlusion_texture"),
-                                       GRANIT_MATERIAL_PARAMETER_TEXTURE_VIEW, 0, nullptr, 0,
-                                       occlusion},
-      granit_material_parameter_update{granit::material_parameter_id("emissive_texture"),
-                                       GRANIT_MATERIAL_PARAMETER_TEXTURE_VIEW, 0, nullptr, 0,
-                                       emissive},
-      granit_material_parameter_update{granit::material_parameter_id("pbr_sampler"),
-                                       GRANIT_MATERIAL_PARAMETER_SAMPLER, 0, nullptr, 0, sampler},
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("base_color"), granit::material_parameter_type::float4,
+          std::as_bytes(std::span{&source.base_color, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("metallic"), granit::material_parameter_type::float32,
+          std::as_bytes(std::span{&source.metallic, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("perceptual_roughness"),
+          granit::material_parameter_type::float32,
+          std::as_bytes(std::span{&source.roughness, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("normal_scale"), granit::material_parameter_type::float32,
+          std::as_bytes(std::span{&source.normal_scale, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("occlusion_strength"),
+          granit::material_parameter_type::float32,
+          std::as_bytes(std::span{&source.occlusion_strength, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("emissive"), granit::material_parameter_type::float3,
+          std::as_bytes(std::span{&source.emissive, 1})),
+      granit::material_parameter_update::texture_binding(
+          granit::material_parameter_id("base_color_texture"),
+          granit::texture_view_ref::from_native(base_color)),
+      granit::material_parameter_update::texture_binding(
+          granit::material_parameter_id("metallic_roughness_texture"),
+          granit::texture_view_ref::from_native(metallic_roughness)),
+      granit::material_parameter_update::texture_binding(
+          granit::material_parameter_id("normal_texture"),
+          granit::texture_view_ref::from_native(normal)),
+      granit::material_parameter_update::texture_binding(
+          granit::material_parameter_id("occlusion_texture"),
+          granit::texture_view_ref::from_native(occlusion)),
+      granit::material_parameter_update::texture_binding(
+          granit::material_parameter_id("emissive_texture"),
+          granit::texture_view_ref::from_native(emissive)),
+      granit::material_parameter_update::sampler_binding(
+          granit::material_parameter_id("pbr_sampler"),
+          granit::sampler_ref::from_native(sampler)),
   };
   const auto archive = model_viewer_material_archive();
-  granit_material_desc desc = GRANIT_MATERIAL_DESC_INIT;
-  desc.archive_data = archive.data();
-  desc.archive_size = archive.size();
-  desc.initial_updates = updates.data();
-  desc.initial_update_count = static_cast<std::uint32_t>(updates.size());
-  desc.shader_library = shader_library;
-  return output.initialize(renderer, desc);
+  const granit::material_desc desc{
+      .archive = archive,
+      .initial_updates = updates,
+      .shader_library = granit::shader_library_ref::from_native(shader_library),
+  };
+  return output.initialize(granit::renderer_ref::from_native(renderer), desc);
 }
 
 math::float3 transform_point(const math::matrix4& matrix, const math::float3& point) {
@@ -370,19 +373,20 @@ gpu_scene_plan_error append_primitive(const gltf::primitive& source, gpu_scene_p
 } // namespace
 
 granit::result gpu_scene::add_pipeline_warmups(
-    granit_pipeline_warmup_batch batch, granit_texture_format color_format,
-    granit_sample_count sample_count, std::vector<std::uint32_t>& result_indices) noexcept {
+    pipeline_warmup_batch_ref batch, texture_format color_format, sample_count samples,
+    std::vector<std::uint32_t>& result_indices) noexcept {
   result_indices.clear();
-  if (!valid() || batch == GRANIT_NULL_HANDLE || color_format == GRANIT_TEXTURE_FORMAT_UNDEFINED)
+  if (!valid() || !batch || color_format == texture_format::undefined)
     return granit::result::invalid_argument;
   try {
     result_indices.reserve(materials_.size());
     for (const auto& material : materials_) {
-      granit_material_pipeline_warmup_desc desc = GRANIT_MATERIAL_PIPELINE_WARMUP_DESC_INIT;
-      desc.pass = granit::material_parameter_id("opaque");
-      desc.color_format = color_format;
-      desc.depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT;
-      desc.sample_count = sample_count;
+      const material_pipeline_warmup_desc desc{
+          .pass = granit::material_parameter_id("opaque"),
+          .color_format = color_format,
+          .depth_stencil_format = texture_format::d32_float,
+          .samples = samples,
+      };
       std::uint32_t index{};
       const auto result = material.add_pipeline_warmup(desc, batch, index);
       if (result.failed()) {
@@ -544,10 +548,10 @@ void gpu_scene::reset() noexcept {
 }
 
 granit::result gpu_scene::texture_binding(const gltf::texture_reference& reference, bool srgb,
-                                          granit_texture_view& view,
-                                          granit_sampler& sampler) const noexcept {
-  view = GRANIT_NULL_HANDLE;
-  sampler = GRANIT_NULL_HANDLE;
+                                          granit::texture_view_ref& view,
+                                          granit::sampler_ref& sampler) const noexcept {
+  view = {};
+  sampler = {};
   if (!valid())
     return granit::result::invalid_handle;
   const auto* texture = find_texture(textures_, reference.image, srgb);
@@ -562,8 +566,8 @@ granit::result gpu_scene::texture_binding(const gltf::texture_reference& referen
       return granit::result::invalid_argument;
     selected_sampler = &samplers_[mapped];
   }
-  view = texture->view.native_handle();
-  sampler = selected_sampler->native_handle();
+  view = texture->view.ref();
+  sampler = selected_sampler->ref();
   return granit::result::success;
 }
 
@@ -581,18 +585,14 @@ gpu_scene::create_snapshot(std::span<const granit_scene_view> views,
       point_lights.size() > std::numeric_limits<std::uint32_t>::max() ||
       spot_lights.size() > std::numeric_limits<std::uint32_t>::max())
     return granit::result::invalid_argument;
-  granit_scene_snapshot_desc desc = GRANIT_SCENE_SNAPSHOT_DESC_INIT;
-  desc.views = views.data();
-  desc.view_count = static_cast<std::uint32_t>(views.size());
-  desc.renderables = plan_.renderables.data();
-  desc.renderable_count = static_cast<std::uint32_t>(plan_.renderables.size());
-  desc.directional_lights = directional_lights.data();
-  desc.directional_light_count = static_cast<std::uint32_t>(directional_lights.size());
-  desc.point_lights = point_lights.data();
-  desc.point_light_count = static_cast<std::uint32_t>(point_lights.size());
-  desc.spot_lights = spot_lights.data();
-  desc.spot_light_count = static_cast<std::uint32_t>(spot_lights.size());
-  return output.initialize(renderer_, desc);
+  const granit::scene_snapshot_desc desc{
+      .views = views,
+      .renderables = plan_.renderables,
+      .directional_lights = directional_lights,
+      .point_lights = point_lights,
+      .spot_lights = spot_lights,
+  };
+  return output.initialize(granit::renderer_ref::from_native(renderer_), desc);
 }
 
 granit::result gpu_scene::update_material_factors(gltf::scene& source, std::uint32_t material_index,
@@ -610,24 +610,26 @@ granit::result gpu_scene::update_material_factors(gltf::scene& source, std::uint
     return granit::result::invalid_argument;
 
   const std::array updates{
-      granit_material_parameter_update{granit::material_parameter_id("base_color"),
-                                       GRANIT_MATERIAL_PARAMETER_FLOAT4, 0, &edit.base_color,
-                                       sizeof(edit.base_color), 0},
-      granit_material_parameter_update{granit::material_parameter_id("metallic"),
-                                       GRANIT_MATERIAL_PARAMETER_FLOAT32, 0, &edit.metallic,
-                                       sizeof(edit.metallic), 0},
-      granit_material_parameter_update{granit::material_parameter_id("perceptual_roughness"),
-                                       GRANIT_MATERIAL_PARAMETER_FLOAT32, 0, &edit.roughness,
-                                       sizeof(edit.roughness), 0},
-      granit_material_parameter_update{granit::material_parameter_id("normal_scale"),
-                                       GRANIT_MATERIAL_PARAMETER_FLOAT32, 0, &edit.normal_scale,
-                                       sizeof(edit.normal_scale), 0},
-      granit_material_parameter_update{
-          granit::material_parameter_id("occlusion_strength"), GRANIT_MATERIAL_PARAMETER_FLOAT32, 0,
-          &edit.occlusion_strength, sizeof(edit.occlusion_strength), 0},
-      granit_material_parameter_update{granit::material_parameter_id("emissive"),
-                                       GRANIT_MATERIAL_PARAMETER_FLOAT3, 0, &edit.emissive,
-                                       sizeof(edit.emissive), 0},
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("base_color"), granit::material_parameter_type::float4,
+          std::as_bytes(std::span{&edit.base_color, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("metallic"), granit::material_parameter_type::float32,
+          std::as_bytes(std::span{&edit.metallic, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("perceptual_roughness"),
+          granit::material_parameter_type::float32,
+          std::as_bytes(std::span{&edit.roughness, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("normal_scale"), granit::material_parameter_type::float32,
+          std::as_bytes(std::span{&edit.normal_scale, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("occlusion_strength"),
+          granit::material_parameter_type::float32,
+          std::as_bytes(std::span{&edit.occlusion_strength, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("emissive"), granit::material_parameter_type::float3,
+          std::as_bytes(std::span{&edit.emissive, 1})),
   };
   const auto result = materials_[material_index].update(updates);
   if (result.failed())
@@ -647,12 +649,9 @@ granit::result gpu_scene::update_debug_display(std::uint32_t mode) noexcept {
     return granit::result::invalid_handle;
   if (mode > static_cast<std::uint32_t>(debug_display_mode::vertex_tangents))
     return granit::result::invalid_argument;
-  const granit_material_parameter_update update{granit::material_parameter_id("debug_display"),
-                                                GRANIT_MATERIAL_PARAMETER_UINT32,
-                                                0,
-                                                &mode,
-                                                sizeof(mode),
-                                                0};
+  const auto update = granit::material_parameter_update::value(
+      granit::material_parameter_id("debug_display"), granit::material_parameter_type::uint32,
+      std::as_bytes(std::span{&mode, 1}));
   for (auto& material : materials_) {
     if (const auto result = material.update(std::span{&update, 1}); result.failed())
       return result;
@@ -677,12 +676,13 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
     return granit::result::invalid_handle;
   if (!std::isfinite(sampler_anisotropy) || sampler_anisotropy < 1.0F)
     return granit::result::invalid_argument;
+  const auto renderer_view = granit::renderer_ref::from_native(renderer);
   plan_ = std::move(plan);
   if (!report(gpu_scene_upload_stage::planning, 1, 1))
     return granit::result::cancelled;
 
   granit::upload_batch uploads;
-  if (const auto result = uploads.initialize(renderer); result.failed())
+  if (const auto result = uploads.initialize(renderer_view); result.failed())
     return result;
   std::vector<granit::async_operation> upload_operations;
   const auto submit_uploads = [&]() -> granit::result {
@@ -695,28 +695,28 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
   if (!plan_.vertices.empty()) {
     const auto size = plan_.vertices.size() * sizeof(packed_vertex);
     if (const auto result = vertex_buffer_.initialize(
-            renderer,
+            renderer_view,
             {.size = size,
              .usage = granit::buffer_usage::vertex | granit::buffer_usage::transfer_destination,
              .location = granit::memory_location::device});
         result.failed())
       return result;
-    if (const auto result = uploads.write_buffer(vertex_buffer_.native_handle(), 0,
-                                                 std::as_bytes(std::span{plan_.vertices}));
+    if (const auto result =
+            uploads.write_buffer(vertex_buffer_.ref(), 0, std::as_bytes(std::span{plan_.vertices}));
         result.failed())
       return result;
   }
   if (!plan_.indices.empty()) {
     const auto size = plan_.indices.size() * sizeof(std::uint32_t);
-    if (const auto result =
-            index_buffer_.initialize(renderer, {.size = size,
-                                                .usage = granit::buffer_usage::index |
-                                                         granit::buffer_usage::transfer_destination,
-                                                .location = granit::memory_location::device});
+    if (const auto result = index_buffer_.initialize(
+            renderer_view,
+            {.size = size,
+             .usage = granit::buffer_usage::index | granit::buffer_usage::transfer_destination,
+             .location = granit::memory_location::device});
         result.failed())
       return result;
-    if (const auto result = uploads.write_buffer(index_buffer_.native_handle(), 0,
-                                                 std::as_bytes(std::span{plan_.indices}));
+    if (const auto result =
+            uploads.write_buffer(index_buffer_.ref(), 0, std::as_bytes(std::span{plan_.indices}));
         result.failed())
       return result;
   }
@@ -744,7 +744,7 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
     const auto& mips = generate_mips ? generated_mips : source_image.mips;
     const auto mip_levels = static_cast<std::uint32_t>(mips.size());
     if (const auto result = target.texture.initialize(
-            renderer,
+            renderer_view,
             {.format = variant.srgb ? granit::texture_format::rgba8_srgb
                                     : granit::texture_format::rgba8_unorm,
              .usage = granit::texture_usage::sampled | granit::texture_usage::transfer_destination,
@@ -755,7 +755,7 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
         result.failed())
       return result;
     if (const auto result =
-            target.view.initialize(renderer, target.texture.native_handle(),
+            target.view.initialize(renderer_view, target.texture.ref(),
                                    {.format = variant.srgb ? granit::texture_format::rgba8_srgb
                                                            : granit::texture_format::rgba8_unorm,
                                     .mip_level_count = mip_levels});
@@ -784,7 +784,7 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
         upload_bytes = padded_bytes;
       }
       if (const auto result = uploads.write_texture(
-              target.texture.native_handle(), upload_bytes,
+              target.texture.ref(), upload_bytes,
               {.bytes_per_row = row_pitch, .rows_per_image = mip.height},
               {.mip_level = mip_index, .width = mip.width, .height = mip.height});
           result.failed())
@@ -820,13 +820,13 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
                                         use_anisotropy && sampler_anisotropy > 1.0F,
                                     .max_anisotropy = use_anisotropy ? sampler_anisotropy : 1.0F,
                                     .max_lod = 1000.0F};
-    auto result = samplers_.back().initialize(renderer, desc);
+    auto result = samplers_.back().initialize(renderer_view, desc);
     // 各向异性是画质增强项；设备限制较低时保留三线性采样，不阻止场景加载。
     if (result == granit::result::unsupported && use_anisotropy) {
       auto fallback = desc;
       fallback.anisotropy_enabled = false;
       fallback.max_anisotropy = 1.0F;
-      result = samplers_.back().initialize(renderer, fallback);
+      result = samplers_.back().initialize(renderer_view, fallback);
     }
     if (result.failed())
       return result;
@@ -836,7 +836,7 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
   if (plan_.samplers.empty() && !report(gpu_scene_upload_stage::samplers, 0, 0))
     return granit::result::cancelled;
 
-  if (const auto result = default_sampler_.initialize(renderer, {.max_lod = 1000.0F});
+  if (const auto result = default_sampler_.initialize(renderer_view, {.max_lod = 1000.0F});
       result.failed())
     return result;
   if (const auto result = create_default_texture(renderer, uploads, true, white_pixel,
@@ -853,36 +853,32 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
     return result;
 
   constexpr std::array attributes{
-      granit_vertex_attribute{0, GRANIT_VERTEX_FORMAT_FLOAT32X3,
-                              static_cast<std::uint32_t>(offsetof(packed_vertex, position)), 0},
-      granit_vertex_attribute{1, GRANIT_VERTEX_FORMAT_FLOAT32X3,
-                              static_cast<std::uint32_t>(offsetof(packed_vertex, normal)), 0},
-      granit_vertex_attribute{2, GRANIT_VERTEX_FORMAT_FLOAT32X4,
-                              static_cast<std::uint32_t>(offsetof(packed_vertex, tangent)), 0},
-      granit_vertex_attribute{
-          3, GRANIT_VERTEX_FORMAT_FLOAT32X2,
+      granit::vertex_attribute{0, granit::vertex_format::float32x3,
+                               static_cast<std::uint32_t>(offsetof(packed_vertex, position)), 0},
+      granit::vertex_attribute{1, granit::vertex_format::float32x3,
+                               static_cast<std::uint32_t>(offsetof(packed_vertex, normal)), 0},
+      granit::vertex_attribute{2, granit::vertex_format::float32x4,
+                               static_cast<std::uint32_t>(offsetof(packed_vertex, tangent)), 0},
+      granit::vertex_attribute{
+          3, granit::vertex_format::float32x2,
           static_cast<std::uint32_t>(offsetof(packed_vertex, texture_coordinate)), 0},
   };
-  const granit_vertex_buffer_layout layout{sizeof(packed_vertex), GRANIT_VERTEX_STEP_MODE_VERTEX,
-                                           static_cast<std::uint32_t>(attributes.size()), 0,
-                                           attributes.data()};
+  const granit::vertex_buffer_layout layout{.stride = sizeof(packed_vertex),
+                                            .attributes = attributes};
   meshes_.reserve(plan_.primitives.size());
   for (std::size_t primitive_index = 0; primitive_index < plan_.primitives.size();
        ++primitive_index) {
     const auto& primitive = plan_.primitives[primitive_index];
-    const granit_mesh_vertex_buffer binding{vertex_buffer_.native_handle(), primitive.vertex_offset,
-                                            layout};
-    granit_mesh_desc desc = GRANIT_MESH_DESC_INIT;
-    desc.vertex_buffers = &binding;
-    desc.vertex_buffer_count = 1;
-    desc.indexed = 1;
-    desc.index_buffer = index_buffer_.native_handle();
-    desc.index_buffer_offset = primitive.index_offset;
-    desc.index_type = GRANIT_INDEX_TYPE_UINT32;
-    desc.vertex_count = primitive.vertex_count;
-    desc.index_count = primitive.index_count;
+    const granit::mesh_vertex_buffer binding{
+        .buffer = vertex_buffer_.ref(), .offset = primitive.vertex_offset, .layout = layout};
+    const granit::mesh_desc desc{.vertex_buffers = std::span{&binding, 1},
+                                 .index_buffer = index_buffer_.ref(),
+                                 .index_buffer_offset = primitive.index_offset,
+                                 .index_format = granit::index_type::uint32,
+                                 .vertex_count = primitive.vertex_count,
+                                 .index_count = primitive.index_count};
     meshes_.emplace_back();
-    if (const auto result = meshes_.back().initialize(renderer, desc); result.failed())
+    if (const auto result = meshes_.back().initialize(renderer_view, desc); result.failed())
       return result;
     if (!report(gpu_scene_upload_stage::meshes, primitive_index + 1, plan_.primitives.size()))
       return granit::result::cancelled;
@@ -891,7 +887,7 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
     return granit::result::cancelled;
   if (const auto result = submit_uploads(); result.failed())
     return result;
-  if (const auto result = shader_library_.initialize(renderer, model_viewer_shader_library());
+  if (const auto result = shader_library_.initialize(renderer_view, model_viewer_shader_library());
       result.failed())
     return result;
   materials_.reserve(source.materials.size() + 1);

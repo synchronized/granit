@@ -79,8 +79,9 @@ granit::result upload_cube_mip(granit::texture& texture, std::span<const std::by
 
 granit_result initialize_state(environment_state& state,
                                const granit::detail::environment_package& package) {
+  const auto renderer_view = granit::renderer_ref::from_native(state.renderer);
   auto result = state.irradiance_texture.initialize(
-      state.renderer,
+      renderer_view,
       {.dimension = granit::texture_dimension::cube,
        .format = granit::texture_format::rgba16_float,
        .usage = granit::texture_usage::sampled | granit::texture_usage::transfer_destination,
@@ -92,12 +93,12 @@ granit_result initialize_state(environment_state& state,
                              package.irradiance_resolution, 0);
   if (result.ok()) {
     result = state.irradiance_view.initialize(
-        state.renderer, state.irradiance_texture.native_handle(),
+        renderer_view, state.irradiance_texture.ref(),
         {.dimension = granit::texture_dimension::cube, .array_layer_count = 6});
   }
   if (result.ok()) {
     result = state.prefiltered_texture.initialize(
-        state.renderer,
+        renderer_view,
         {.dimension = granit::texture_dimension::cube,
          .format = granit::texture_format::rgba16_float,
          .usage = granit::texture_usage::sampled | granit::texture_usage::transfer_destination,
@@ -113,14 +114,14 @@ granit_result initialize_state(environment_state& state,
   }
   if (result.ok()) {
     result = state.prefiltered_view.initialize(
-        state.renderer, state.prefiltered_texture.native_handle(),
+        renderer_view, state.prefiltered_texture.ref(),
         {.dimension = granit::texture_dimension::cube,
          .mip_level_count = static_cast<std::uint32_t>(package.prefiltered_mips.size()),
          .array_layer_count = 6});
   }
   if (result.ok()) {
     result = state.brdf_texture.initialize(
-        state.renderer,
+        renderer_view,
         {.format = granit::texture_format::rgba16_float,
          .usage = granit::texture_usage::sampled | granit::texture_usage::transfer_destination,
          .width = package.brdf_width,
@@ -132,7 +133,7 @@ granit_result initialize_state(environment_state& state,
         {.width = package.brdf_width, .height = package.brdf_height});
   }
   if (result.ok())
-    result = state.brdf_view.initialize(state.renderer, state.brdf_texture.native_handle());
+    result = state.brdf_view.initialize(renderer_view, state.brdf_texture.ref());
   if (result.failed())
     return static_cast<granit_result>(result);
 

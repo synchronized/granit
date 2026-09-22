@@ -171,6 +171,16 @@ if (result.failed()) {
 `granit::renderer` 不使用异常，是 move-only RAII 类型。成功初始化后析构函数自动销毁；`reset`
 可提前释放。`native_handle` 只返回 Granit C 句柄，用于 C/C++ 层互操作，并非 Vulkan 句柄。
 
+Buffer、Texture、Shader、Pipeline、Surface、Swapchain 和 Frame Context 等 C++ 包装直接接受
+`renderer&`；依赖另一资源时继续接受对应包装引用，例如
+`swapchain.initialize(renderer, surface, desc)` 和 `view.initialize(renderer, texture)`。这些调用只在
+ABI 边界提取句柄，不保存 C++ 对象指针，也不建立第二套状态；父对象仍须比子资源存活得更久。
+普通 C++ 代码无需调用 `native_handle()`。
+
+`renderer::ref()` 返回不拥有 Renderer 的 `renderer_ref`。它主要用于把已有 C ABI Renderer 句柄
+接入复合资源的 C++ 实现；`renderer_ref` 不延长 Renderer 生命周期，也不负责销毁。普通应用代码
+仍应优先传递 `renderer&`，只有 C/C++ 互操作边界才使用 `renderer_ref::from_native()`。
+
 C++ 调用方通过 `renderer::get_limits(renderer_limits&)` 查询相同限制快照，并通过
 `renderer::get_resource_stats(renderer_resource_stats&)` 查询资源统计，通过
 `renderer::get_status(renderer_status&)` 和 `renderer::process_events()` 使用相同的非阻塞生命周期

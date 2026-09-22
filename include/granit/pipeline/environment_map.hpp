@@ -6,12 +6,21 @@
 
 #include <granit/core/result.hpp>
 #include <granit/pipeline/environment_map.h>
+#include <granit/pipeline/render_pipeline.hpp>
+#include <granit/renderer/renderer.hpp>
 
 #include <cstddef>
 #include <span>
 #include <utility>
 
 namespace granit {
+
+struct environment_map_info {
+  render_pipeline_environment environment;
+  float recommended_exposure_ev{};
+};
+
+class environment_map;
 
 /** 公共 Environment Map C ABI 的轻量 move-only RAII 包装。 */
 class environment_map {
@@ -32,8 +41,9 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result initialize(granit_renderer renderer,
+  [[nodiscard]] result initialize(renderer_ref owner,
                                   std::span<const std::byte> asset) noexcept {
+    const auto renderer = owner.native_handle();
     if (valid())
       return result::invalid_argument;
     const granit_environment_map_asset_desc desc{sizeof(granit_environment_map_asset_desc), 0,
@@ -44,7 +54,11 @@ public:
       renderer_ = renderer;
     return value;
   }
-  [[nodiscard]] result initialize_builtin(granit_renderer renderer) noexcept {
+  [[nodiscard]] result initialize(renderer& owner, std::span<const std::byte> asset) noexcept {
+    return initialize(owner.ref(), asset);
+  }
+  [[nodiscard]] result initialize_builtin(renderer_ref owner) noexcept {
+    const auto renderer = owner.native_handle();
     if (valid())
       return result::invalid_argument;
     const auto value = from_native(granit_environment_map_create_builtin(renderer, &handle_));
@@ -52,9 +66,25 @@ public:
       renderer_ = renderer;
     return value;
   }
-  [[nodiscard]] result get_info(granit_environment_map_info& info) const noexcept {
-    info = GRANIT_ENVIRONMENT_MAP_INFO_INIT;
-    return from_native(granit_environment_map_get_info(renderer_, handle_, &info));
+  [[nodiscard]] result initialize_builtin(renderer& owner) noexcept {
+    return initialize_builtin(owner.ref());
+  }
+  [[nodiscard]] result get_info(environment_map_info& info) const noexcept {
+    granit_environment_map_info native = GRANIT_ENVIRONMENT_MAP_INFO_INIT;
+    const auto value = from_native(granit_environment_map_get_info(renderer_, handle_, &native));
+    if (value.ok()) {
+      info = {
+          .environment = {.irradiance =
+                              texture_view_ref::from_native(native.environment.irradiance),
+                          .prefiltered_environment = texture_view_ref::from_native(
+                              native.environment.prefiltered_environment),
+                          .brdf_lut = texture_view_ref::from_native(native.environment.brdf_lut),
+                          .rotation_radians = native.environment.rotation_radians,
+                          .intensity = native.environment.intensity,
+                          .prefiltered_max_mip = native.environment.prefiltered_max_mip},
+          .recommended_exposure_ev = native.recommended_exposure_ev};
+    }
+    return value;
   }
   [[nodiscard]] result reset() noexcept {
     if (!valid())

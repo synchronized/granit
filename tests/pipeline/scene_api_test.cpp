@@ -42,7 +42,8 @@ TEST_CASE("公共Scene Snapshot把空Renderer归类为无效句柄") {
   CHECK(snapshot == GRANIT_NULL_HANDLE);
 
   granit::scene_snapshot cpp_snapshot;
-  CHECK(cpp_snapshot.initialize(GRANIT_NULL_HANDLE, desc) == granit::result::invalid_handle);
+  CHECK(cpp_snapshot.initialize(granit::renderer_ref{}, {.views = views}) ==
+        granit::result::invalid_handle);
   CHECK_FALSE(cpp_snapshot.valid());
 }
 
@@ -103,10 +104,21 @@ TEST_CASE("公共Scene Snapshot Cpp包装提供移动所有权") {
   if (environment_unavailable(initialized))
     SKIP("当前运行环境没有满足要求的 Vulkan 设备");
   REQUIRE(initialized == granit::result::success);
-  std::array<granit_scene_view, 1> views{};
-  const auto desc = valid_desc(views);
+  std::array<granit::scene_view, 1> views{};
+  views[0].view = identity();
+  views[0].projection = identity();
+  views[0].view_projection = identity();
+  views[0].viewport_width = 32;
+  views[0].viewport_height = 32;
+  views[0].layer_mask = UINT64_MAX;
+  const granit::scene_snapshot_desc desc{.views = views,
+                                         .renderables = {},
+                                         .directional_lights = {},
+                                         .point_lights = {},
+                                         .spot_lights = {}};
   granit::scene_snapshot first;
-  REQUIRE(first.initialize(renderer.native_handle(), desc) == granit::result::success);
+  REQUIRE(first.initialize(renderer, desc) == granit::result::success);
+  CHECK(first.ref().native_handle() == first.native_handle());
   const auto handle = first.native_handle();
   granit::scene_snapshot second{std::move(first)};
   CHECK_FALSE(first.valid());

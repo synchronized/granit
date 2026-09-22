@@ -8,8 +8,13 @@
 
 #include <granit/core/result.hpp>
 #include <granit/renderer/async_operation.h>
+#include <granit/renderer/renderer.hpp>
 
 namespace granit {
+
+namespace detail {
+struct async_operation_access;
+}
 
 enum class async_operation_state : std::uint32_t {
   pending = GRANIT_ASYNC_OPERATION_STATE_PENDING,
@@ -33,8 +38,6 @@ struct async_operation_status {
 class async_operation {
 public:
   async_operation() = default;
-  async_operation(granit_renderer renderer, granit_async_operation handle) noexcept
-      : renderer_(renderer), handle_(handle) {}
   ~async_operation() { static_cast<void>(reset()); }
   async_operation(const async_operation&) = delete;
   async_operation& operator=(const async_operation&) = delete;
@@ -72,13 +75,34 @@ public:
     return from_native(granit_async_operation_destroy(renderer, handle));
   }
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
-  [[nodiscard]] granit_renderer native_renderer() const noexcept { return renderer_; }
-  [[nodiscard]] granit_async_operation native_handle() const noexcept { return handle_; }
 
 private:
+  friend struct detail::async_operation_access;
+
   granit_renderer renderer_{GRANIT_NULL_HANDLE};
   granit_async_operation handle_{GRANIT_NULL_HANDLE};
 };
+
+namespace detail {
+
+/** 仅供创建 Async Operation 的 C++ 包装内部接管和访问 C ABI 状态。 */
+struct async_operation_access {
+  static void adopt(async_operation& operation, granit_renderer renderer,
+                    granit_async_operation handle) noexcept {
+    operation.renderer_ = renderer;
+    operation.handle_ = handle;
+  }
+
+  [[nodiscard]] static granit_renderer renderer(const async_operation& operation) noexcept {
+    return operation.renderer_;
+  }
+
+  [[nodiscard]] static granit_async_operation handle(const async_operation& operation) noexcept {
+    return operation.handle_;
+  }
+};
+
+} // namespace detail
 
 } // namespace granit
 

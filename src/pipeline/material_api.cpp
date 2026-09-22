@@ -292,11 +292,12 @@ extern "C" granit_result granit_material_create(granit_renderer renderer,
                                         .type = granit::binding_type::dynamic_uniform_buffer,
                                         .array_count = 1,
                                         .visibility = granit::shader_stage_flags::vertex}};
-    const auto object_result = state->object_layout.initialize(renderer, object_entries);
+    auto renderer_ref = granit::renderer_ref::from_native(renderer);
+    const auto object_result = state->object_layout.initialize(renderer_ref, object_entries);
     if (object_result.failed())
       return static_cast<granit_result>(object_result);
     const auto lighting_result = state->lighting_layout.initialize(
-        renderer, granit::lighting::standard_lighting_layout_entries);
+        renderer_ref, granit::lighting::standard_lighting_layout_entries);
     if (lighting_result.failed())
       return static_cast<granit_result>(lighting_result);
     const std::array additional_layouts{state->object_layout.native_handle(),

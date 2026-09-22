@@ -6,6 +6,7 @@
 
 #include <granit/window/input.h>
 #include <granit/window/window.h>
+#include <granit/window/window_loop.h>
 
 #include "window/input/platform_adapter.h"
 
@@ -37,6 +38,11 @@ struct wl_pointer;
 namespace granit::window::detail {
 
 struct window_system_record;
+
+struct window_loop_record {
+  granit_window_system system{};
+  granit_window_loop_desc callbacks{};
+};
 
 struct window_record {
   granit_window handle{};
@@ -80,6 +86,8 @@ struct window_system_record {
   std::unordered_map<granit_window, granit_keyboard_state> keyboards;
   std::unordered_map<granit_window, granit_pointer_state> pointers;
   granit::input::detail::platform_input_adapter input_platform;
+  bool loop_running{};
+  std::unique_ptr<window_loop_record> loop;
 #if defined(GRANIT_WINDOW_HAS_XCB)
   xcb_connection_t* connection{};
   xcb_screen_t* screen{};

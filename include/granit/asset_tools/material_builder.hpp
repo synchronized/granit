@@ -24,7 +24,6 @@ struct build_desc {
 class result {
 public:
   result() = default;
-  explicit result(granit_asset_tools_material_result handle) noexcept : handle_(handle) {}
   ~result() { reset(); }
   result(const result&) = delete;
   result& operator=(const result&) = delete;
@@ -44,6 +43,11 @@ public:
   void reset() noexcept;
 
 private:
+  friend std::pair<::granit::result, result> build(const build_desc&) noexcept;
+  friend std::pair<::granit::result, result> inspect(std::span<const std::byte>) noexcept;
+
+  explicit result(granit_asset_tools_material_result handle) noexcept : handle_(handle) {}
+
   granit_asset_tools_material_result handle_{};
 };
 

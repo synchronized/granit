@@ -95,8 +95,8 @@ int main(int argc, char** argv) {
     result = granit::result::invalid_argument;
   std::vector<std::byte> shader_library_bytes;
   granit::shader_library shader_library;
-  if (result.ok() && !shader_assets.initialize_library(renderer.native_handle(),
-                                                       shader_library_bytes, shader_library)) {
+  if (result.ok() &&
+      !shader_assets.initialize_library(renderer, shader_library_bytes, shader_library)) {
     result = granit::result::invalid_argument;
   }
   const auto vertex_reference = shader_assets.reference(vertex_path);
@@ -108,15 +108,15 @@ int main(int argc, char** argv) {
 
   granit::pipeline_layout layout;
   if (result.ok())
-    result = layout.initialize(renderer.native_handle());
+    result = layout.initialize(renderer);
   constexpr granit::texture_format format = granit::texture_format::rgba8_unorm;
   granit::graphics_pipeline pipeline;
   if (result.ok()) {
-    result = pipeline.initialize(renderer.native_handle(),
+    result = pipeline.initialize(renderer,
                                  {
-                                     .layout = layout.native_handle(),
-                                     .vertex_shader = vertex.native_handle(),
-                                     .fragment_shader = fragment.native_handle(),
+                                     .layout = layout.ref(),
+                                     .vertex_shader = vertex.ref(),
+                                     .fragment_shader = fragment.ref(),
                                      .color_formats = std::span{&format, 1},
                                      .depth_stencil_format = granit::texture_format::undefined,
                                      .samples = granit::sample_count::one,
@@ -131,7 +131,7 @@ int main(int argc, char** argv) {
   granit::texture texture;
   if (result.ok()) {
     result = texture.initialize(
-        renderer.native_handle(),
+        renderer,
         {.format = format,
          .usage = granit::texture_usage::color_attachment | granit::texture_usage::transfer_source,
          .width = k_width,
@@ -139,15 +139,15 @@ int main(int argc, char** argv) {
   }
   granit::texture_view view;
   if (result.ok())
-    result = view.initialize(renderer.native_handle(), texture.native_handle());
+    result = view.initialize(renderer, texture);
 
   granit::command_recorder recorder;
   if (result.ok())
-    result = recorder.initialize(renderer.native_handle());
+    result = recorder.initialize(renderer);
   if (result.ok())
     result = recorder.begin();
   if (result.ok())
-    result = recorder.bind_graphics_pipeline(pipeline.native_handle());
+    result = recorder.bind_graphics_pipeline(pipeline);
   constexpr granit::viewport viewport{0, 0, k_width, k_height, 0, 1};
   constexpr granit::scissor scissor{0, 0, k_width, k_height};
   if (result.ok())
@@ -155,7 +155,8 @@ int main(int argc, char** argv) {
   if (result.ok())
     result = recorder.set_scissors(0, std::span{&scissor, 1});
   const granit::color_attachment_desc color{
-      .view = view.native_handle(),
+      .view = view.ref(),
+      .resolve_view = {},
       .clear_value = {.red = 0.03F, .green = 0.03F, .blue = 0.05F, .alpha = 1.0F}};
   const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                          .area = {0, 0, k_width, k_height}};

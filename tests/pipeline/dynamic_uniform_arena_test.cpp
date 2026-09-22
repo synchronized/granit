@@ -89,9 +89,9 @@ TEST_CASE("动态 Uniform Arena 隔离帧槽并按批次增长", "[pipeline][uni
                                       .visibility = granit::shader_stage_flags::vertex}};
   granit::bind_group_layout frame_layout;
   granit::bind_group_layout object_layout;
-  REQUIRE(frame_layout.initialize(renderer.native_handle(), frame_entries) ==
+  REQUIRE(frame_layout.initialize(renderer, frame_entries) ==
           granit::result::success);
-  REQUIRE(object_layout.initialize(renderer.native_handle(), object_entries) ==
+  REQUIRE(object_layout.initialize(renderer, object_entries) ==
           granit::result::success);
   material_draw_state material;
   material.frame_layout = frame_layout.native_handle();

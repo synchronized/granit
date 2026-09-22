@@ -192,7 +192,7 @@ int main(int argc, char** argv) {
   auto native_renderer = renderer.native_handle();
   std::vector<std::byte> shader_library_bytes;
   granit::shader_library shader_library;
-  if (!shader_assets().initialize_library(native_renderer, shader_library_bytes, shader_library)) {
+  if (!shader_assets().initialize_library(renderer, shader_library_bytes, shader_library)) {
     std::cerr << "创建 Shader Library 失败\n";
     return 1;
   }
@@ -215,7 +215,7 @@ int main(int argc, char** argv) {
   constexpr std::array<float, 9> positions{-0.65F, -0.65F, 0.5F,  0.65F, -0.65F,
                                            0.5F,   0.0F,   0.65F, 0.5F};
   granit::buffer vertex_buffer;
-  if ((vertex_buffer.initialize(native_renderer,
+  if ((vertex_buffer.initialize(granit::renderer_ref::from_native(native_renderer),
                                 {.size = sizeof(positions),
                                  .usage = granit::buffer_usage::vertex,
                                  .location = granit::memory_location::device},
@@ -249,8 +249,9 @@ int main(int argc, char** argv) {
     const granit::texture_desc texture_desc{.format = granit::texture_format::rgba8_unorm,
                                             .usage = granit::texture_usage::sampled |
                                                      granit::texture_usage::transfer_destination};
-    if ((workload_textures[index].initialize(native_renderer, texture_desc)).failed() ||
-        (workload_texture_views[index].initialize(native_renderer,
+    const auto renderer_view = granit::renderer_ref::from_native(native_renderer);
+    if ((workload_textures[index].initialize(renderer_view, texture_desc)).failed() ||
+        (workload_texture_views[index].initialize(renderer_view,
                                                   workload_textures[index].native_handle()))
             .failed()) {
       std::cerr << "创建纹理组失败\n";
@@ -266,7 +267,7 @@ int main(int argc, char** argv) {
     }
   }
   granit::sampler workload_sampler;
-  if ((workload_sampler.initialize(native_renderer)).failed()) {
+  if ((workload_sampler.initialize(granit::renderer_ref::from_native(native_renderer))).failed()) {
     std::cerr << "创建纹理组采样器失败\n";
     return 1;
   }
@@ -582,13 +583,13 @@ int main(int argc, char** argv) {
   granit::buffer readback;
   granit::command_recorder recorder;
   const char* readback_stage = "创建 Readback Buffer";
-  auto result =
-      readback.initialize(native_renderer, {.size = size * size * 4,
-                                            .usage = granit::buffer_usage::transfer_destination,
-                                            .location = granit::memory_location::readback});
+  auto result = readback.initialize(granit::renderer_ref::from_native(native_renderer),
+                                    {.size = size * size * 4,
+                                     .usage = granit::buffer_usage::transfer_destination,
+                                     .location = granit::memory_location::readback});
   if (result.ok()) {
     readback_stage = "创建 Command Recorder";
-    result = recorder.initialize(native_renderer);
+    result = recorder.initialize(granit::renderer_ref::from_native(native_renderer));
   }
   if (result.ok()) {
     readback_stage = "开始回读命令";
@@ -596,18 +597,19 @@ int main(int argc, char** argv) {
   }
   if (result.ok()) {
     readback_stage = "录制纹理回读";
-    const granit_texture_data_layout layout{};
-    const granit_texture_write_region region{.mip_level = 0,
+    const granit::texture_data_layout layout{};
+    const granit::texture_write_region region{.mip_level = 0,
                                              .base_array_layer = 0,
                                              .array_layer_count = 1,
-                                             .aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT,
+                                             .aspect = granit::texture_aspect::color,
                                              .x = 0,
                                              .y = 0,
                                              .z = 0,
                                              .width = size,
                                              .height = size,
                                              .depth = 1};
-    result = recorder.copy_texture_to_buffer(output, readback.native_handle(), layout, region);
+    result = recorder.copy_texture_to_buffer(granit::texture_ref::from_native(output),
+                                             readback.ref(), layout, region);
   }
   if (result.ok()) {
     readback_stage = "结束回读命令";

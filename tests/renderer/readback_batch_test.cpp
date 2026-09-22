@@ -23,29 +23,27 @@ TEST_CASE("Readback Batch 异步返回 Buffer 内容", "[readback_batch][buffer]
   REQUIRE(initialized == granit::result::success);
 
   granit::buffer buffer;
-  REQUIRE(buffer.initialize(renderer.native_handle(),
-                            {.size = 64,
-                             .usage = granit::buffer_usage::transfer_source |
-                                      granit::buffer_usage::transfer_destination,
-                             .location = granit::memory_location::device}) ==
+  REQUIRE(buffer.initialize(renderer, {.size = 64,
+                                       .usage = granit::buffer_usage::transfer_source |
+                                                granit::buffer_usage::transfer_destination,
+                                       .location = granit::memory_location::device}) ==
           granit::result::success);
   std::array<std::byte, 16> expected{};
   for (std::size_t index = 0; index < expected.size(); ++index)
     expected[index] = static_cast<std::byte>(index + 1);
   granit::upload_batch upload;
-  REQUIRE(upload.initialize(renderer.native_handle()) == granit::result::success);
-  REQUIRE(upload.write_buffer(buffer.native_handle(), 8, expected) == granit::result::success);
+  REQUIRE(upload.initialize(renderer) == granit::result::success);
+  REQUIRE(upload.write_buffer(buffer.ref(), 8, expected) == granit::result::success);
   REQUIRE(upload.submit() == granit::result::success);
 
   granit::readback_batch batch;
-  REQUIRE(
-      batch.create(renderer.native_handle(), {.max_result_bytes = 32, .max_operation_count = 1}) ==
-      granit::result::success);
+  REQUIRE(batch.create(renderer, {.max_result_bytes = 32, .max_operation_count = 1}) ==
+          granit::result::success);
   std::uint32_t result_index{};
-  REQUIRE(batch.read_buffer(buffer.native_handle(), 8, expected.size(), result_index) ==
+  REQUIRE(batch.read_buffer(buffer.ref(), 8, expected.size(), result_index) ==
           granit::result::success);
   CHECK(result_index == 0);
-  CHECK(batch.read_buffer(buffer.native_handle(), 0, 4, result_index) == granit::result::not_ready);
+  CHECK(batch.read_buffer(buffer.ref(), 0, 4, result_index) == granit::result::not_ready);
 
   granit::async_operation operation;
   REQUIRE(batch.submit_async(operation) == granit::result::success);
@@ -71,7 +69,7 @@ TEST_CASE("Readback Batch 异步返回 Buffer 内容", "[readback_batch][buffer]
 
 TEST_CASE("Readback Batch 拒绝空提交与无效句柄", "[readback_batch][contract]") {
   granit::readback_batch batch;
-  CHECK(batch.create(GRANIT_NULL_HANDLE) == granit::result::invalid_argument);
+  CHECK(batch.create(granit::renderer_ref{}) == granit::result::invalid_argument);
 }
 
 TEST_CASE("Readback Batch 异步返回紧密 Texture 内容", "[readback_batch][texture]") {
@@ -81,31 +79,30 @@ TEST_CASE("Readback Batch 异步返回紧密 Texture 内容", "[readback_batch][
     SKIP("当前运行环境没有满足要求的 Vulkan 设备");
   REQUIRE(initialized == granit::result::success);
   granit::texture texture;
-  REQUIRE(texture.initialize(renderer.native_handle(),
-                             {.format = granit::texture_format::rgba8_unorm,
-                              .usage = granit::texture_usage::transfer_source |
-                                       granit::texture_usage::transfer_destination,
-                              .width = 3,
-                              .height = 2}) == granit::result::success);
+  REQUIRE(texture.initialize(renderer, {.format = granit::texture_format::rgba8_unorm,
+                                        .usage = granit::texture_usage::transfer_source |
+                                                 granit::texture_usage::transfer_destination,
+                                        .width = 3,
+                                        .height = 2}) == granit::result::success);
   std::array<std::byte, 24> expected{};
   for (std::size_t index = 0; index < expected.size(); ++index)
     expected[index] = static_cast<std::byte>(index * 3 + 1);
   REQUIRE(texture.write(expected, {.bytes_per_row = 12, .rows_per_image = 2},
                         {.width = 3, .height = 2}) == granit::result::success);
   granit::readback_batch batch;
-  REQUIRE(batch.create(renderer.native_handle()) == granit::result::success);
+  REQUIRE(batch.create(renderer) == granit::result::success);
   std::uint32_t index{};
   const granit::texture_write_region region{.mip_level = 0,
-                                           .base_array_layer = 0,
-                                           .array_layer_count = 1,
-                                           .aspect = granit::texture_aspect::color,
-                                           .x = 0,
-                                           .y = 0,
-                                           .z = 0,
-                                           .width = 3,
-                                           .height = 2,
-                                           .depth = 1};
-  REQUIRE(batch.read_texture(texture.native_handle(), region, index) == granit::result::success);
+                                            .base_array_layer = 0,
+                                            .array_layer_count = 1,
+                                            .aspect = granit::texture_aspect::color,
+                                            .x = 0,
+                                            .y = 0,
+                                            .z = 0,
+                                            .width = 3,
+                                            .height = 2,
+                                            .depth = 1};
+  REQUIRE(batch.read_texture(texture.ref(), region, index) == granit::result::success);
   REQUIRE(texture.reset() == granit::result::success);
   granit::async_operation operation;
   REQUIRE(batch.submit_async(operation) == granit::result::success);

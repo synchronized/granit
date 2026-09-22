@@ -9,9 +9,34 @@
 
 #include <granit/core/result.hpp>
 #include <granit/renderer/async_operation.hpp>
+#include <granit/renderer/renderer.hpp>
 #include <granit/renderer/timestamp_query.h>
 
 namespace granit {
+
+class timestamp_query_pool;
+
+/** 不拥有 Timestamp Query Pool，只在来源 Pool 的有效期内使用。 */
+class timestamp_query_pool_ref {
+public:
+  timestamp_query_pool_ref() = default;
+
+  [[nodiscard]] constexpr bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr granit_timestamp_query_pool native_handle() const noexcept {
+    return handle_;
+  }
+  [[nodiscard]] static constexpr timestamp_query_pool_ref
+  from_native(granit_timestamp_query_pool handle) noexcept {
+    return timestamp_query_pool_ref{handle};
+  }
+
+private:
+  friend class timestamp_query_pool;
+  explicit constexpr timestamp_query_pool_ref(granit_timestamp_query_pool handle) noexcept
+      : handle_(handle) {}
+  granit_timestamp_query_pool handle_{GRANIT_NULL_HANDLE};
+};
 
 enum class timestamp_stage : std::uint32_t {
   top = GRANIT_TIMESTAMP_STAGE_TOP,
@@ -37,7 +62,8 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result initialize(granit_renderer renderer, std::uint32_t query_count) noexcept {
+  [[nodiscard]] result initialize(renderer_ref owner, std::uint32_t query_count) noexcept {
+    const auto renderer = owner.native_handle();
     if (valid())
       return result::invalid_argument;
     if (renderer == GRANIT_NULL_HANDLE)
@@ -48,6 +74,9 @@ public:
     if (value == GRANIT_SUCCESS)
       renderer_ = renderer;
     return from_native(value);
+  }
+  [[nodiscard]] result initialize(renderer& owner, std::uint32_t query_count) noexcept {
+    return initialize(owner.ref(), query_count);
   }
   [[nodiscard]] result get_results(std::uint32_t first,
                                    std::span<std::uint64_t> nanoseconds) noexcept {
@@ -60,16 +89,16 @@ public:
     if (operation.valid())
       return result::invalid_argument;
     granit_async_operation handle = GRANIT_NULL_HANDLE;
-    const auto value = granit_timestamp_query_pool_get_results_async(renderer_, handle_, first,
-                                                                      count, &handle);
+    const auto value =
+        granit_timestamp_query_pool_get_results_async(renderer_, handle_, first, count, &handle);
     if (value == GRANIT_SUCCESS)
-      operation = async_operation{renderer_, handle};
+      detail::async_operation_access::adopt(operation, renderer_, handle);
     return from_native(value);
   }
   [[nodiscard]] result copy_results(const async_operation& operation,
                                     std::span<std::uint64_t> nanoseconds) noexcept {
     return from_native(granit_timestamp_query_pool_copy_results(
-        renderer_, handle_, operation.native_handle(), nanoseconds.data(),
+        renderer_, handle_, detail::async_operation_access::handle(operation), nanoseconds.data(),
         static_cast<std::uint32_t>(nanoseconds.size())));
   }
   [[nodiscard]] result reset() noexcept {
@@ -80,6 +109,9 @@ public:
     return from_native(granit_timestamp_query_pool_destroy(renderer, handle));
   }
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr timestamp_query_pool_ref ref() const noexcept {
+    return timestamp_query_pool_ref{handle_};
+  }
   [[nodiscard]] granit_timestamp_query_pool native_handle() const noexcept { return handle_; }
 
 private:

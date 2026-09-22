@@ -23,6 +23,11 @@ typedef uint32_t granit_buffer_usage;
 #define GRANIT_BUFFER_USAGE_STORAGE_BIT (UINT32_C(1) << 5)
 #define GRANIT_BUFFER_USAGE_INDIRECT_BIT (UINT32_C(1) << 6)
 
+/** Index Buffer 中单个索引的整数类型。 */
+typedef uint32_t granit_index_type;
+#define GRANIT_INDEX_TYPE_UINT16 UINT32_C(1)
+#define GRANIT_INDEX_TYPE_UINT32 UINT32_C(2)
+
 /** Texture 或 Texture View 的维度。 */
 typedef uint32_t granit_texture_dimension;
 #define GRANIT_TEXTURE_DIMENSION_1D UINT32_C(1)

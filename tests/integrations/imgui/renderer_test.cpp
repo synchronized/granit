@@ -21,13 +21,14 @@ struct resolver_context {
   std::vector<granit_scissor> scissors;
 };
 
-granit::result resolve_texture(ImTextureID texture, granit_canvas_draw_state& state,
+granit::result resolve_texture(ImTextureID texture, granit::canvas_draw_state& state,
                                void* user_data) noexcept {
   auto& context = *static_cast<resolver_context*>(user_data);
   context.textures.push_back(texture);
-  context.scissors.push_back(state.scissor);
-  state.texture = static_cast<granit_texture_view>(texture + 100);
-  state.sampler = 7;
+  context.scissors.push_back(state.clip);
+  state.texture =
+      granit::texture_view_ref::from_native(static_cast<granit_texture_view>(texture + 100));
+  state.sampler = granit::sampler_ref::from_native(7);
   return granit::result::success;
 }
 
@@ -77,8 +78,7 @@ TEST_CASE("ImGui Integration转换偏移、裁剪与多纹理Draw Data") {
   REQUIRE(initialized == granit::result::success);
 
   granit::canvas_draw_list canvas;
-  granit_canvas_draw_list_desc desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
-  REQUIRE(canvas.initialize(renderer.native_handle(), desc) == granit::result::success);
+  REQUIRE(canvas.initialize(renderer) == granit::result::success);
 
   draw_fixture fixture;
   resolver_context context;
@@ -96,7 +96,7 @@ TEST_CASE("ImGui Integration转换偏移、裁剪与多纹理Draw Data") {
   CHECK(context.scissors[1].width == 140);
   CHECK(context.scissors[1].height == 80);
 
-  granit_canvas_draw_list_stats stats = GRANIT_CANVAS_DRAW_LIST_STATS_INIT;
+  granit::canvas_draw_list_stats stats{};
   REQUIRE(canvas.get_stats(stats) == granit::result::success);
   CHECK(stats.vertex_count == 4);
   CHECK(stats.index_count == 6);
@@ -112,8 +112,7 @@ TEST_CASE("ImGui Integration处理空数据并拒绝不支持的回调") {
   REQUIRE(initialized == granit::result::success);
 
   granit::canvas_draw_list canvas;
-  granit_canvas_draw_list_desc desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
-  REQUIRE(canvas.initialize(renderer.native_handle(), desc) == granit::result::success);
+  REQUIRE(canvas.initialize(renderer) == granit::result::success);
 
   ImDrawData empty;
   empty.Valid = true;

@@ -37,7 +37,13 @@ struct compile_desc {
   std::string_view wgsl_output_path;
   std::span<const shader_define> defines;
   bool validate_binding_set{};
-  std::span<const granit_asset_tools_shader_expected_binding> expected_bindings;
+  std::span<const expected_binding> expected_bindings;
+};
+
+struct target_capabilities_info {
+  shader_backend backend{shader_backend::none};
+  shader_profile profile{shader_profile::portable};
+  std::uint64_t supported_features{};
 };
 
 struct compilation_info {
@@ -51,7 +57,6 @@ struct compilation_info {
 class compilation {
 public:
   compilation() = default;
-  explicit compilation(granit_asset_tools_shader_compilation handle) noexcept : handle_(handle) {}
   ~compilation() { reset(); }
   compilation(const compilation&) = delete;
   compilation& operator=(const compilation&) = delete;
@@ -104,6 +109,9 @@ public:
   }
 
 private:
+  friend class compiler;
+  explicit compilation(granit_asset_tools_shader_compilation handle) noexcept : handle_(handle) {}
+
   granit_asset_tools_shader_compilation handle_ = 0;
 };
 
@@ -140,6 +148,7 @@ public:
       return {::granit::result::invalid_handle, compilation{}};
     try {
       std::vector<granit_asset_tools_shader_define> definitions;
+      std::vector<granit_asset_tools_shader_expected_binding> expected_bindings;
       definitions.reserve(desc.defines.size());
       for (const auto& define : desc.defines) {
         definitions.push_back({.struct_size = sizeof(granit_asset_tools_shader_define),
@@ -148,6 +157,13 @@ public:
                                .name_length = define.name.size(),
                                .value = define.value.data(),
                                .value_length = define.value.size()});
+      }
+      expected_bindings.reserve(desc.expected_bindings.size());
+      for (const auto binding : desc.expected_bindings) {
+        expected_bindings.push_back(
+            {.struct_size = sizeof(granit_asset_tools_shader_expected_binding),
+             .group = binding.group,
+             .binding = binding.binding});
       }
       const granit_asset_tools_shader_compile_desc native{
           .struct_size = sizeof(granit_asset_tools_shader_compile_desc),
@@ -164,8 +180,8 @@ public:
           .defines = definitions.data(),
           .define_count = static_cast<std::uint32_t>(definitions.size()),
           .validate_binding_set = desc.validate_binding_set ? 1U : 0U,
-          .expected_bindings = desc.expected_bindings.data(),
-          .expected_binding_count = desc.expected_bindings.size(),
+          .expected_bindings = expected_bindings.data(),
+          .expected_binding_count = expected_bindings.size(),
       };
       granit_asset_tools_shader_compilation compilation_handle = 0;
       const auto status =
@@ -191,14 +207,17 @@ private:
   granit_asset_tools_shader_compiler handle_{};
 };
 
-inline std::pair<::granit::result, granit_asset_tools_shader_target_capabilities>
+inline std::pair<::granit::result, target_capabilities_info>
 target_capabilities(shader_backend backend,
                     shader_profile profile = shader_profile::portable) noexcept {
   granit_asset_tools_shader_target_capabilities capabilities =
       GRANIT_ASSET_TOOLS_SHADER_TARGET_CAPABILITIES_INIT;
   const auto status = granit_asset_tools_shader_get_target_capabilities(
       static_cast<std::uint32_t>(backend), static_cast<std::uint32_t>(profile), &capabilities);
-  return {::granit::from_native(status), capabilities};
+  return {::granit::from_native(status),
+          {.backend = static_cast<shader_backend>(capabilities.backend),
+           .profile = static_cast<shader_profile>(capabilities.profile),
+           .supported_features = capabilities.supported_features}};
 }
 
 } // namespace granit::asset_tools::shader

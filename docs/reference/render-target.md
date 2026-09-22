@@ -64,6 +64,8 @@ Store 支持：
 - `attachment_load_operation` 和 `attachment_store_operation` 强类型枚举。
 - `clear_color_value` 和 `clear_depth_stencil_value`。
 - `color_attachment_desc` 和 `depth_stencil_attachment_desc`。
+- Attachment 的 View 字段使用非拥有的 `texture_view_ref`；拥有型 View 通过 `view.ref()` 传入，
+  Swapchain 输出可直接使用 `backbuffer.view`。
 - `native()` 转换，用于轻量映射到 C ABI，不维护额外运行时状态。
 
 ## 当前验证范围

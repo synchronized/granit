@@ -9,6 +9,8 @@
 
 ## 最近完成
 
+- [S-49：0.28.0 Window 跨平台可选主循环](S-49-0.28.0-window-loop.md)——以可选托管 Loop 统一
+  桌面与 Emscripten 的逐帧调度，同时保留引擎自有事件循环。
 - [S-47：Window 跨平台入口收敛](S-47-window-platform-convergence.md)——让 Emscripten 与
   Win32、XCB、Wayland 共享 Window、输入和 Surface 公共流程。
 - [S-45：0.26.0 文档一致性与历史收敛](S-45-0.26.0-documentation-convergence.md)——修正当前
@@ -17,10 +19,15 @@
 完整的已完成计划见[完成计划索引](completed.md)。计划文件仍保留在本目录中，便于追溯设计目标、
 验收条件和最终差异；当前行为应以 Reference、Concept 和仓库实现为准。
 
-## 待开始
+## 进行中
 
-- [S-46：API 教程与可运行示例阶梯](S-46-api-tutorial-example-ladder.md)——已完成路径设计和
-  `minimal_renderer`、`triangle` 及 `01`～`06` 教程，正在推进基础教程验收与维护收敛。
+- [S-48：线性入门教程与配套示例](S-48-0.28.0-linear-tutorial-series.md)——从 Window 到 ImGui
+  逐章扩展同一个应用；0.28.0 先交付 Window，后续章节按源码与自动验证的完成情况分阶段发布。
+
+## 已取代
+
+- [S-46：API 教程与可运行示例阶梯](S-46-api-tutorial-example-ladder.md)——其主题式教程方案由
+  S-48 的线性可见结果教程取代；已经完成的最小 Renderer 和 Triangle 实现继续复用。
 
 ## 暂缓与重新评估
 

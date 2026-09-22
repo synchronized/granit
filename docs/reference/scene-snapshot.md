@@ -9,7 +9,8 @@ Scene Snapshot 是提交给参考 Render Pipeline 的只读场景快照。它包
 ## 公共入口
 
 - C：`<granit/pipeline/scene.h>`。
-- C++20：`<granit/pipeline/scene.hpp>`，使用 move-only 的 `granit::scene_snapshot`。
+- C++20：`<granit/pipeline/scene.hpp>`，使用 move-only 的 `granit::scene_snapshot`、
+  `granit::scene_snapshot_desc` 和非拥有的 `granit::scene_snapshot_ref`。
 - 所属 CMake component：`RenderPipeline`，目标为 `granit::render_pipeline`。
 
 创建描述使用 `GRANIT_SCENE_SNAPSHOT_DESC_INIT` 初始化，并可提供：
@@ -17,6 +18,10 @@ Scene Snapshot 是提交给参考 Render Pipeline 的只读场景快照。它包
 - 一个或多个 View，包括矩阵、摄像机位置、viewport 和 layer mask。
 - Renderable，包括变换、包围球、排序键、对象 ID 和不透明 `payload`。
 - 方向光、点光和聚光灯值数据。
+
+C++20 入口在 `granit` 命名空间提供上述值类型，并通过 `scene_snapshot_desc` 的 `std::span` 借用
+输入数组；创建调用返回后同样不再持有这些 spans。把快照交给其他 C++ 组件时使用
+`scene_snapshot::ref()`。
 
 `payload` 由上层应用定义。Render Pipeline 通过它把 Renderable 映射到 Mesh 和 Material，不应
 把它解释为指针或可持久化资源句柄。

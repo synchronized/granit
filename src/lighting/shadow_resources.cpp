@@ -29,8 +29,9 @@ granit_result shadow_resources::initialize(granit_renderer renderer,
       !valid(values))
     return GRANIT_ERROR_INVALID_ARGUMENT;
 
+  const auto renderer_view = granit::renderer_ref::from_native(renderer);
   auto result = constants_.initialize(
-      renderer,
+      renderer_view,
       {.size = sizeof(values),
        .usage = granit::buffer_usage::uniform | granit::buffer_usage::transfer_destination,
        .location = granit::memory_location::automatic},
@@ -38,10 +39,10 @@ granit_result shadow_resources::initialize(granit_renderer renderer,
   if (result.failed())
     return static_cast<granit_result>(result);
 
-  result = sampler_.initialize(renderer, {.address_u = granit::address_mode::clamp_to_edge,
-                                          .address_v = granit::address_mode::clamp_to_edge,
-                                          .address_w = granit::address_mode::clamp_to_edge,
-                                          .compare = granit::compare_operation::less_equal});
+  result = sampler_.initialize(renderer_view, {.address_u = granit::address_mode::clamp_to_edge,
+                                               .address_v = granit::address_mode::clamp_to_edge,
+                                               .address_w = granit::address_mode::clamp_to_edge,
+                                               .compare = granit::compare_operation::less_equal});
   if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);
@@ -61,7 +62,7 @@ granit_result shadow_resources::initialize(granit_renderer renderer,
                                       .type = granit::binding_type::comparison_sampler,
                                       .array_count = 1,
                                       .visibility = granit::shader_stage_flags::fragment}};
-  result = layout_.initialize(renderer, layout_entries);
+  result = layout_.initialize(renderer_view, layout_entries);
   if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);
@@ -69,13 +70,13 @@ granit_result shadow_resources::initialize(granit_renderer renderer,
 
   const std::array group_entries{
       granit::bind_group_entry{.binding = shadow_binding_constants,
-                               .resource = constants_.native_handle(),
+                               .resource = constants_.ref(),
                                .offset = 0,
                                .size = sizeof(values)},
-      granit::bind_group_entry{.binding = shadow_binding_texture, .resource = shadow_view},
-      granit::bind_group_entry{.binding = shadow_binding_sampler,
-                               .resource = sampler_.native_handle()}};
-  result = group_.initialize(renderer, layout_.native_handle(), group_entries);
+      granit::bind_group_entry{.binding = shadow_binding_texture,
+                               .resource = granit::binding_resource_ref::from_native(shadow_view)},
+      granit::bind_group_entry{.binding = shadow_binding_sampler, .resource = sampler_.ref()}};
+  result = group_.initialize(renderer_view, layout_.ref(), group_entries);
   if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);

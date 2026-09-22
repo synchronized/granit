@@ -6,6 +6,9 @@
 Sampler 是独立于 Texture 的采样状态，可以由多个 Bind Group 复用。C API 使用 64 位句柄，
 C++20 提供 move-only `granit::sampler`。
 
+`sampler.ref()` 返回不拥有资源的 `sampler_ref`，供 Bind Group 等 C++ 描述使用；引用不延长
+Sampler 生命周期。
+
 ## 公共入口
 
 - C：`<granit/renderer/sampler.h>`，使用 `granit_sampler_create` 和

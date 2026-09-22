@@ -90,8 +90,7 @@ TEST_CASE("两个View执行独立PBR与Tone Mapping") {
   REQUIRE(assets.add(fragment_path));
   std::vector<std::byte> shader_library_bytes;
   granit::shader_library shader_library;
-  REQUIRE(
-      assets.initialize_library(renderer.native_handle(), shader_library_bytes, shader_library));
+  REQUIRE(assets.initialize_library(renderer, shader_library_bytes, shader_library));
   const auto vertex = assets.reference(vertex_path);
   const auto fragment = assets.reference(fragment_path);
   std::array<granit::material::material_package, 2> packages;
@@ -101,7 +100,7 @@ TEST_CASE("两个View执行独立PBR与Tone Mapping") {
   granit::material::pbr_default_resources defaults;
   REQUIRE(defaults.initialize(renderer.native_handle()) == GRANIT_SUCCESS);
   granit::bind_group_layout object_layout;
-  REQUIRE(object_layout.initialize(renderer.native_handle(), {}) == granit::result::success);
+  REQUIRE(object_layout.initialize(renderer, {}) == granit::result::success);
   for (std::size_t index = 0; index < materials.size(); ++index) {
     REQUIRE(granit::test::build_pbr_package(packages[index], vertex, fragment));
     const std::array layouts{object_layout.native_handle(), lights[index].layout()};
@@ -128,42 +127,37 @@ TEST_CASE("两个View执行独立PBR与Tone Mapping") {
   std::array<granit::texture_view, 2> output_views;
   std::array<granit::buffer, 2> readbacks;
   granit::tests::tone_mapping_shader_library tone_shaders;
-  REQUIRE(tone_shaders.initialize(renderer.native_handle()));
+  REQUIRE(tone_shaders.initialize(renderer));
   std::array<granit::lighting::tone_mapping_resources, 2> tone_mapping;
   constexpr std::uint64_t readback_size = 32 * 32 * 4;
   for (std::size_t index = 0; index < colors.size(); ++index) {
-    REQUIRE(colors[index].initialize(renderer.native_handle(),
-                                     {.format = granit::texture_format::rgba16_float,
-                                      .usage = granit::texture_usage::color_attachment |
-                                               granit::texture_usage::sampled |
-                                               granit::texture_usage::transfer_source,
-                                      .width = 32,
-                                      .height = 32}) == granit::result::success);
-    REQUIRE(
-        color_views[index].initialize(renderer.native_handle(), colors[index].native_handle()) ==
-        granit::result::success);
-    REQUIRE(depths[index].initialize(renderer.native_handle(),
+    REQUIRE(colors[index].initialize(renderer, {.format = granit::texture_format::rgba16_float,
+                                                .usage = granit::texture_usage::color_attachment |
+                                                         granit::texture_usage::sampled |
+                                                         granit::texture_usage::transfer_source,
+                                                .width = 32,
+                                                .height = 32}) == granit::result::success);
+    REQUIRE(color_views[index].initialize(renderer.ref(), colors[index].ref()) ==
+            granit::result::success);
+    REQUIRE(depths[index].initialize(renderer,
                                      {.format = granit::texture_format::d32_float,
                                       .usage = granit::texture_usage::depth_stencil_attachment,
                                       .width = 32,
                                       .height = 32}) == granit::result::success);
-    REQUIRE(
-        depth_views[index].initialize(renderer.native_handle(), depths[index].native_handle()) ==
-        granit::result::success);
-    REQUIRE(outputs[index].initialize(renderer.native_handle(),
-                                      {.format = granit::texture_format::rgba8_unorm,
-                                       .usage = granit::texture_usage::color_attachment |
-                                                granit::texture_usage::transfer_source,
-                                       .width = 32,
-                                       .height = 32}) == granit::result::success);
-    REQUIRE(
-        output_views[index].initialize(renderer.native_handle(), outputs[index].native_handle()) ==
-        granit::result::success);
-    REQUIRE(readbacks[index].initialize(renderer.native_handle(),
-                                        {.size = readback_size,
-                                         .usage = granit::buffer_usage::transfer_destination,
-                                         .location = granit::memory_location::readback}) ==
+    REQUIRE(depth_views[index].initialize(renderer.ref(), depths[index].ref()) ==
             granit::result::success);
+    REQUIRE(outputs[index].initialize(renderer, {.format = granit::texture_format::rgba8_unorm,
+                                                 .usage = granit::texture_usage::color_attachment |
+                                                          granit::texture_usage::transfer_source,
+                                                 .width = 32,
+                                                 .height = 32}) == granit::result::success);
+    REQUIRE(output_views[index].initialize(renderer.ref(), outputs[index].ref()) ==
+            granit::result::success);
+    REQUIRE(
+        readbacks[index].initialize(renderer, {.size = readback_size,
+                                               .usage = granit::buffer_usage::transfer_destination,
+                                               .location = granit::memory_location::readback}) ==
+        granit::result::success);
     REQUIRE(tone_mapping[index].initialize(
                 renderer.native_handle(), color_views[index].native_handle(),
                 granit::texture_format::rgba8_unorm, {.exposure_scale = 1.0F, .encode_srgb = 1},
@@ -174,23 +168,29 @@ TEST_CASE("两个View执行独立PBR与Tone Mapping") {
   CHECK(tone_mapping[0].group() != tone_mapping[1].group());
 
   granit::command_recorder recorder;
-  REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(recorder.initialize(renderer) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
   const granit::viewport viewport{0, 0, 32, 32, 0, 1};
   const granit::scissor scissor{0, 0, 32, 32};
   for (std::size_t index = 0; index < colors.size(); ++index) {
-    REQUIRE(recorder.bind_graphics_pipeline(pipelines[index]) == granit::result::success);
+    REQUIRE(recorder.bind_graphics_pipeline(
+                granit::graphics_pipeline_ref::from_native(pipelines[index])) ==
+            granit::result::success);
     const auto material_group = instances[index].bind_group();
-    REQUIRE(recorder.bind_graphics_groups(materials[index].pipeline_layout(), 1,
-                                          std::span{&material_group, 1}) ==
+    const std::array material_groups{granit::bind_group_ref::from_native(material_group)};
+    REQUIRE(recorder.bind_graphics_groups(
+                granit::pipeline_layout_ref::from_native(materials[index].pipeline_layout()), 1,
+                material_groups) ==
             granit::result::success);
     const auto light_group = lights[index].group();
-    REQUIRE(recorder.bind_graphics_groups(materials[index].pipeline_layout(), 3,
-                                          std::span{&light_group, 1}) == granit::result::success);
+    const std::array light_groups{granit::bind_group_ref::from_native(light_group)};
+    REQUIRE(recorder.bind_graphics_groups(
+                granit::pipeline_layout_ref::from_native(materials[index].pipeline_layout()), 3,
+                light_groups) == granit::result::success);
     REQUIRE(recorder.set_viewports(0, std::span{&viewport, 1}) == granit::result::success);
     REQUIRE(recorder.set_scissors(0, std::span{&scissor, 1}) == granit::result::success);
-    const granit::color_attachment_desc color{.view = color_views[index].native_handle()};
-    const granit::depth_stencil_attachment_desc depth{.view = depth_views[index].native_handle(),
+    const granit::color_attachment_desc color{.view = color_views[index].ref(), .resolve_view = {}};
+    const granit::depth_stencil_attachment_desc depth{.view = depth_views[index].ref(),
                                                       .clear_value = {.depth = 1.0F}};
     const granit::rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                            .depth_stencil_attachment = &depth,
@@ -198,30 +198,25 @@ TEST_CASE("两个View执行独立PBR与Tone Mapping") {
     REQUIRE(recorder.begin_rendering(rendering) == granit::result::success);
     REQUIRE(recorder.draw(3) == granit::result::success);
     REQUIRE(recorder.end_rendering() == granit::result::success);
-    REQUIRE(recorder.bind_graphics_pipeline(tone_mapping[index].pipeline()) ==
+    REQUIRE(recorder.bind_graphics_pipeline(
+                granit::graphics_pipeline_ref::from_native(tone_mapping[index].pipeline())) ==
             granit::result::success);
     const auto tone_group = tone_mapping[index].group();
-    REQUIRE(recorder.bind_graphics_groups(tone_mapping[index].pipeline_layout(), 0,
-                                          std::span{&tone_group, 1}) == granit::result::success);
-    const granit::color_attachment_desc output{.view = output_views[index].native_handle()};
+    const std::array tone_groups{granit::bind_group_ref::from_native(tone_group)};
+    REQUIRE(recorder.bind_graphics_groups(
+                granit::pipeline_layout_ref::from_native(tone_mapping[index].pipeline_layout()),
+                0, tone_groups) == granit::result::success);
+    const granit::color_attachment_desc output{.view = output_views[index].ref(),
+                                               .resolve_view = {}};
     const granit::rendering_desc tone_rendering{.color_attachments = std::span{&output, 1},
                                                 .area = {0, 0, 32, 32}};
     REQUIRE(recorder.begin_rendering(tone_rendering) == granit::result::success);
     REQUIRE(recorder.draw(3) == granit::result::success);
     REQUIRE(recorder.end_rendering() == granit::result::success);
-    const granit_texture_data_layout layout{};
-    const granit_texture_write_region region{.mip_level = 0,
-                                             .base_array_layer = 0,
-                                             .array_layer_count = 1,
-                                             .aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT,
-                                             .x = 0,
-                                             .y = 0,
-                                             .z = 0,
-                                             .width = 32,
-                                             .height = 32,
-                                             .depth = 1};
-    REQUIRE(recorder.copy_texture_to_buffer(outputs[index].native_handle(),
-                                            readbacks[index].native_handle(), layout,
+    const granit::texture_data_layout layout{};
+    const granit::texture_write_region region{.width = 32, .height = 32};
+    REQUIRE(recorder.copy_texture_to_buffer(outputs[index].ref(),
+                                            readbacks[index].ref(), layout,
                                             region) == granit::result::success);
   }
   REQUIRE(recorder.end() == granit::result::success);

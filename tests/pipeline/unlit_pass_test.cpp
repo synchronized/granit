@@ -47,29 +47,32 @@ TEST_CASE("Unlit Opaque与Alpha Cutoff产生预期像素") {
   std::vector<std::byte> shader_library_bytes;
   REQUIRE(shader_assets().build_library(shader_library_bytes));
   granit::shader_library shader_library;
-  REQUIRE(shader_library.initialize(renderer.native_handle(), shader_library_bytes) ==
-          granit::result::success);
+  REQUIRE(shader_library.initialize(renderer, shader_library_bytes) == granit::result::success);
   const auto native = renderer.native_handle();
   constexpr uint32_t size = 32;
   granit::texture color;
   granit::texture_view color_view;
   granit::texture depth;
   granit::texture_view depth_view;
-  REQUIRE(color.initialize(native, {.format = granit::texture_format::rgba8_unorm,
-                                    .usage = granit::texture_usage::color_attachment |
-                                             granit::texture_usage::transfer_source,
-                                    .width = size,
-                                    .height = size}) == granit::result::success);
-  REQUIRE(color_view.initialize(native, color.native_handle()) == granit::result::success);
-  REQUIRE(depth.initialize(native, {.format = granit::texture_format::d32_float,
-                                    .usage = granit::texture_usage::depth_stencil_attachment,
-                                    .width = size,
-                                    .height = size}) == granit::result::success);
-  REQUIRE(depth_view.initialize(native, depth.native_handle()) == granit::result::success);
+  REQUIRE(color.initialize(granit::renderer_ref::from_native(native),
+                           {.format = granit::texture_format::rgba8_unorm,
+                            .usage = granit::texture_usage::color_attachment |
+                                     granit::texture_usage::transfer_source,
+                            .width = size,
+                            .height = size}) == granit::result::success);
+  REQUIRE(color_view.initialize(granit::renderer_ref::from_native(native), color.ref()) ==
+          granit::result::success);
+  REQUIRE(depth.initialize(granit::renderer_ref::from_native(native),
+                           {.format = granit::texture_format::d32_float,
+                            .usage = granit::texture_usage::depth_stencil_attachment,
+                            .width = size,
+                            .height = size}) == granit::result::success);
+  REQUIRE(depth_view.initialize(granit::renderer_ref::from_native(native), depth.ref()) ==
+          granit::result::success);
 
   constexpr std::array<float, 9> positions{-0.8F, -0.8F, 0.5F, 0.8F, -0.8F, 0.5F, 0.0F, 0.8F, 0.5F};
   granit::buffer vertices;
-  REQUIRE(vertices.initialize(native,
+  REQUIRE(vertices.initialize(granit::renderer_ref::from_native(native),
                               {.size = sizeof(positions),
                                .usage = granit::buffer_usage::vertex,
                                .location = granit::memory_location::device},
@@ -87,26 +90,27 @@ TEST_CASE("Unlit Opaque与Alpha Cutoff产生预期像素") {
   const auto archive = load_package();
   REQUIRE_FALSE(archive.empty());
   granit::buffer readback;
-  REQUIRE(readback.initialize(native, {.size = size * size * 4,
-                                       .usage = granit::buffer_usage::transfer_destination,
-                                       .location = granit::memory_location::readback}) ==
+  REQUIRE(readback.initialize(granit::renderer_ref::from_native(native),
+                              {.size = size * size * 4,
+                               .usage = granit::buffer_usage::transfer_destination,
+                               .location = granit::memory_location::readback}) ==
           granit::result::success);
   const auto read_pixel = [&](uint32_t x, uint32_t y) {
     granit::command_recorder recorder;
-    REQUIRE(recorder.initialize(native) == granit::result::success);
+    REQUIRE(recorder.initialize(granit::renderer_ref::from_native(native)) == granit::result::success);
     REQUIRE(recorder.begin() == granit::result::success);
-    const granit_texture_write_region region{.mip_level = 0,
+    const granit::texture_write_region region{.mip_level = 0,
                                              .base_array_layer = 0,
                                              .array_layer_count = 1,
-                                             .aspect = GRANIT_TEXTURE_ASPECT_COLOR_BIT,
+                                             .aspect = granit::texture_aspect::color,
                                              .x = 0,
                                              .y = 0,
                                              .z = 0,
                                              .width = size,
                                              .height = size,
                                              .depth = 1};
-    REQUIRE(recorder.copy_texture_to_buffer(color.native_handle(), readback.native_handle(), {},
-                                            region) == granit::result::success);
+    REQUIRE(recorder.copy_texture_to_buffer(color.ref(), readback.ref(), {}, region) ==
+            granit::result::success);
     REQUIRE(recorder.end() == granit::result::success);
     REQUIRE(recorder.submit() == granit::result::success);
     REQUIRE(recorder.reset() == granit::result::success);
@@ -138,7 +142,7 @@ TEST_CASE("Unlit Opaque与Alpha Cutoff产生预期像素") {
         granit_material material = GRANIT_NULL_HANDLE;
         REQUIRE(granit_material_create(native, &material_desc, &material) == GRANIT_SUCCESS);
         granit::command_recorder recorder;
-        REQUIRE(recorder.initialize(native) == granit::result::success);
+        REQUIRE(recorder.initialize(granit::renderer_ref::from_native(native)) == granit::result::success);
         REQUIRE(recorder.begin() == granit::result::success);
         granit::material::pbr_frame_constants frame{.view_projection = identity(),
                                                     .camera_position = {},

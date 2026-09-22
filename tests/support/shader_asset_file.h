@@ -72,10 +72,11 @@ inline result load_shader_asset(granit_renderer renderer, const std::filesystem:
   const auto status = read_shader_asset(renderer, path, payload);
   if (status != result::success)
     return status;
-  return output.initialize(renderer, {.stage = payload.stage,
-                                      .code_format = payload.code_format,
-                                      .code = payload.code,
-                                      .entry_point = payload.entry_point});
+  return output.initialize(renderer_ref::from_native(renderer),
+                           {.stage = payload.stage,
+                            .code_format = payload.code_format,
+                            .code = payload.code,
+                            .entry_point = payload.entry_point});
 }
 
 inline result load_shader_asset(granit_renderer renderer, const std::filesystem::path& path,

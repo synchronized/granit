@@ -5,7 +5,8 @@
   "license": "MIT",
   "scripts": {
     "test": "node platform_smoke_test.cjs",
-    "test:imgui": "node imgui_test.cjs"
+    "test:imgui": "node imgui_test.cjs",
+    "test:tutorial-01": "node tutorial_01_test.cjs"
   },
   "devDependencies": {
     "playwright-core": "1.62.1"

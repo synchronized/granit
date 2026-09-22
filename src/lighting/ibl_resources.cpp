@@ -32,8 +32,9 @@ granit_result ibl_resources::initialize(granit_renderer renderer, ibl_texture_vi
   if (renderer == GRANIT_NULL_HANDLE || initialized() || !complete(views) || !valid(values))
     return GRANIT_ERROR_INVALID_ARGUMENT;
 
+  const auto renderer_view = granit::renderer_ref::from_native(renderer);
   auto result = constants_.initialize(
-      renderer,
+      renderer_view,
       {.size = sizeof(values),
        .usage = granit::buffer_usage::uniform | granit::buffer_usage::transfer_destination,
        .location = granit::memory_location::automatic},
@@ -41,7 +42,8 @@ granit_result ibl_resources::initialize(granit_renderer renderer, ibl_texture_vi
   if (result.failed())
     return static_cast<granit_result>(result);
 
-  result = sampler_.initialize(renderer, {.mag_filter = granit::filter::linear,
+  result =
+      sampler_.initialize(renderer_view, {.mag_filter = granit::filter::linear,
                                           .min_filter = granit::filter::linear,
                                           .mip_filter = granit::mipmap_filter::linear,
                                           .address_u = granit::address_mode::clamp_to_edge,
@@ -76,7 +78,7 @@ granit_result ibl_resources::initialize(granit_renderer renderer, ibl_texture_vi
                                       .type = granit::binding_type::sampler,
                                       .array_count = 1,
                                       .visibility = fragment}};
-  result = layout_.initialize(renderer, layout_entries);
+  result = layout_.initialize(renderer_view, layout_entries);
   if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);
@@ -84,17 +86,20 @@ granit_result ibl_resources::initialize(granit_renderer renderer, ibl_texture_vi
 
   const std::array group_entries{
       granit::bind_group_entry{.binding = ibl_binding_constants,
-                               .resource = constants_.native_handle(),
+                               .resource = constants_.ref(),
                                .offset = 0,
                                .size = sizeof(values)},
       granit::bind_group_entry{.binding = ibl_binding_irradiance,
-                               .resource = views.irradiance},
-      granit::bind_group_entry{.binding = ibl_binding_prefiltered_environment,
-                               .resource = views.prefiltered_environment},
-      granit::bind_group_entry{.binding = ibl_binding_brdf_lut, .resource = views.brdf_lut},
-      granit::bind_group_entry{.binding = ibl_binding_sampler,
-                               .resource = sampler_.native_handle()}};
-  result = group_.initialize(renderer, layout_.native_handle(), group_entries);
+                               .resource =
+                                   granit::binding_resource_ref::from_native(views.irradiance)},
+      granit::bind_group_entry{
+          .binding = ibl_binding_prefiltered_environment,
+          .resource = granit::binding_resource_ref::from_native(views.prefiltered_environment)},
+      granit::bind_group_entry{.binding = ibl_binding_brdf_lut,
+                               .resource =
+                                   granit::binding_resource_ref::from_native(views.brdf_lut)},
+      granit::bind_group_entry{.binding = ibl_binding_sampler, .resource = sampler_.ref()}};
+  result = group_.initialize(renderer_view, layout_.ref(), group_entries);
   if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);

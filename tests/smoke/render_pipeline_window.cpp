@@ -88,7 +88,7 @@ int main(int argument_count, char** arguments) {
     return 77;
   granit::window window;
   if (result.ok()) {
-    result = window.initialize(window_system.native_handle(),
+    result = window.initialize(window_system,
                                {.title = "Granit Render Pipeline", .width = 800, .height = 600});
   }
   granit::window_state window_state{};
@@ -103,17 +103,17 @@ int main(int argument_count, char** arguments) {
   }
   std::vector<std::byte> shader_library_bytes;
   granit::shader_library shader_library;
-  if (result.ok() && !shader_assets().initialize_library(renderer.native_handle(),
-                                                         shader_library_bytes, shader_library))
+  if (result.ok() &&
+      !shader_assets().initialize_library(renderer, shader_library_bytes, shader_library))
     result = granit::result::initialization_failed;
   granit::surface surface;
   if (result.ok())
-    result = window.create_surface(renderer.native_handle(), surface);
+    result = window.create_surface(renderer, surface);
   granit::swapchain swapchain;
   if (result.ok()) {
-    result = swapchain.initialize(renderer.native_handle(), surface.native_handle(),
-                                  {.width = window_state.framebuffer_width,
-                                   .height = window_state.framebuffer_height});
+    result = swapchain.initialize(
+        renderer, surface,
+        {.width = window_state.framebuffer_width, .height = window_state.framebuffer_height});
   }
   granit::swapchain_info info;
   if (result.ok())
@@ -125,7 +125,7 @@ int main(int argument_count, char** arguments) {
   granit::canvas_draw_list canvas;
   if (result.ok()) {
     result = canvas_texture.initialize(
-        renderer.native_handle(),
+        renderer,
         {.format = granit::texture_format::rgba8_unorm,
          .usage = granit::texture_usage::sampled | granit::texture_usage::transfer_destination,
          .width = 1,
@@ -135,18 +135,18 @@ int main(int argument_count, char** arguments) {
   if (result.ok())
     result = canvas_texture.write(std::as_bytes(std::span{canvas_pixel}), {}, {});
   if (result.ok())
-    result = canvas_view.initialize(renderer.native_handle(), canvas_texture.native_handle());
+    result = canvas_view.initialize(renderer, canvas_texture);
   if (result.ok())
-    result = canvas_sampler.initialize(renderer.native_handle(), {});
+    result = canvas_sampler.initialize(renderer, {});
   if (result.ok())
-    result = canvas.initialize(renderer.native_handle(), GRANIT_CANVAS_DRAW_LIST_DESC_INIT);
-  granit_canvas_rect_desc canvas_rect = GRANIT_CANVAS_RECT_DESC_INIT;
-  canvas_rect.x = 12;
-  canvas_rect.y = 12;
-  canvas_rect.width = 96;
-  canvas_rect.height = 48;
-  canvas_rect.state.texture = canvas_view.native_handle();
-  canvas_rect.state.sampler = canvas_sampler.native_handle();
+    result = canvas.initialize(renderer);
+  const granit::canvas_rect_desc canvas_rect{
+      .x = 12,
+      .y = 12,
+      .width = 96,
+      .height = 48,
+      .state = {.texture = canvas_view.ref(), .sampler = canvas_sampler.ref(), .clip = {}},
+  };
   if (result.ok())
     result = canvas.append_rect(canvas_rect);
 
@@ -154,10 +154,9 @@ int main(int argument_count, char** arguments) {
                                            0.5F,   0.0F,   0.65F, 0.5F};
   granit::buffer vertex_buffer;
   if (result.ok()) {
-    result =
-        vertex_buffer.initialize(renderer.native_handle(),
-                                 {.size = sizeof(positions), .usage = granit::buffer_usage::vertex},
-                                 std::as_bytes(std::span{positions}));
+    result = vertex_buffer.initialize(
+        renderer, {.size = sizeof(positions), .usage = granit::buffer_usage::vertex},
+        std::as_bytes(std::span{positions}));
   }
   const granit_vertex_attribute attribute{0, GRANIT_VERTEX_FORMAT_FLOAT32X3, 0, 0};
   const granit_mesh_vertex_buffer vertex{
@@ -221,13 +220,13 @@ int main(int argument_count, char** arguments) {
     result = window_system.process_events();
     granit::window_event event{};
     while (result.ok() && (result = window_system.poll(event)).ok()) {
-      if (event.window != window.native_handle())
+      if (event.window != window.ref())
         continue;
-      if (event.type == GRANIT_WINDOW_EVENT_CLOSE_REQUESTED)
+      if (event.type == granit::window_event_type::close_requested)
         running = false;
-      if (event.type == GRANIT_WINDOW_EVENT_RESIZED ||
-          event.type == GRANIT_WINDOW_EVENT_SCALE_CHANGED ||
-          event.type == GRANIT_WINDOW_EVENT_NATIVE_HANDLE_CHANGED) {
+      if (event.type == granit::window_event_type::resized ||
+          event.type == granit::window_event_type::scale_changed ||
+          event.type == granit::window_event_type::native_handle_changed) {
         recreate = true;
       }
     }
@@ -278,28 +277,27 @@ int main(int argument_count, char** arguments) {
     }
     if (result.failed())
       break;
-    recreate = frame.needs_recreate;
-    granit_texture backbuffer = GRANIT_NULL_HANDLE;
-    granit_texture_view backbuffer_view = GRANIT_NULL_HANDLE;
-    result = swapchain.backbuffer(frame.image_index, backbuffer, backbuffer_view);
+    recreate = frame.needs_recreate();
+    granit::swapchain_backbuffer backbuffer;
+    result = swapchain.backbuffer(frame, backbuffer);
     if (result.ok()) {
       granit_render_pipeline_render_desc desc = GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT;
       const bool empty_frame = smoke_test && rendered_frames == 0;
       desc.scene = empty_frame ? empty_scene : scene;
-      desc.output = backbuffer_view;
+      desc.output = backbuffer.view.native_handle();
       desc.output_format = static_cast<granit_texture_format>(info.format);
       desc.width = info.width;
       desc.height = info.height;
       desc.draw_binding_count = empty_frame ? 0 : 1;
       desc.draw_bindings = empty_frame ? nullptr : &binding;
-      desc.frame = frame.handle;
+      desc.frame = frame.native_handle();
       desc.canvas = canvas.native_handle();
       result = granit::from_native(
           granit_render_pipeline_render(renderer.native_handle(), pipeline, &desc));
     }
     if (result.ok())
       result = swapchain.present(frame);
-    recreate = recreate || frame.needs_recreate;
+    recreate = recreate || frame.needs_recreate();
     if (result.failed())
       break;
     ++rendered_frames;

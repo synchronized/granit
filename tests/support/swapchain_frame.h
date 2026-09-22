@@ -18,16 +18,17 @@ inline result render_clear_frame(swapchain& chain, frame_context& context, std::
   auto status = chain.acquire(frame);
   if (status.failed())
     return status;
-  needs_recreate = frame.needs_recreate;
+  needs_recreate = frame.needs_recreate();
 
-  granit_texture texture = GRANIT_NULL_HANDLE;
-  granit_texture_view view = GRANIT_NULL_HANDLE;
-  status = chain.backbuffer(frame.image_index, texture, view);
+  swapchain_backbuffer backbuffer;
+  status = chain.backbuffer(frame, backbuffer);
   frame_recording recording;
   if (status.ok())
     status = context.begin(frame, recording);
   const color_attachment_desc color{
-      .view = view, .clear_value = {.red = 0.04F, .green = 0.12F, .blue = 0.22F, .alpha = 1.0F}};
+      .view = backbuffer.view,
+      .resolve_view = {},
+      .clear_value = {.red = 0.04F, .green = 0.12F, .blue = 0.22F, .alpha = 1.0F}};
   const rendering_desc rendering{.color_attachments = std::span{&color, 1},
                                  .area = {0, 0, width, height}};
   if (status.ok())
@@ -38,7 +39,7 @@ inline result render_clear_frame(swapchain& chain, frame_context& context, std::
     status = recording.submit();
   if (status.ok())
     status = chain.present(frame);
-  needs_recreate = needs_recreate || frame.needs_recreate;
+  needs_recreate = needs_recreate || frame.needs_recreate();
   if (status.failed()) {
     if (recording.valid())
       static_cast<void>(recording.abort());

@@ -239,7 +239,9 @@ granit_result begin_public_pipeline_validation(granit_texture_format model_color
                                                       &compute_desc, &state.warmup_compute_index);
   if (result == GRANIT_SUCCESS) {
     result = granit::to_native(state.core.scene_gpu().add_pipeline_warmups(
-        state.warmup_batch, model_color_format, state.sample_count, state.material_warmup_indices));
+        granit::pipeline_warmup_batch_ref::from_native(state.warmup_batch),
+        static_cast<granit::texture_format>(model_color_format),
+        static_cast<granit::sample_count>(state.sample_count), state.material_warmup_indices));
   }
   if (result != GRANIT_SUCCESS)
     std::fprintf(stderr, "GRANIT_DIAGNOSTIC:Pipeline 预热批次构建失败：%d\n", result);

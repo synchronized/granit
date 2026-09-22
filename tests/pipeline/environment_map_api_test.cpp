@@ -28,22 +28,23 @@ TEST_CASE("Environment Map 拥有并释放 IBL 纹理", "[pipeline][environment-
   granit::renderer_resource_stats before;
   REQUIRE(renderer.get_resource_stats(before).ok());
   granit::environment_map environment;
-  REQUIRE(environment.initialize_builtin(renderer.native_handle()).ok());
+  REQUIRE(environment.initialize_builtin(renderer).ok());
   CHECK(environment.valid());
 
-  granit_environment_map_info info = GRANIT_ENVIRONMENT_MAP_INFO_INIT;
+  granit::environment_map_info info;
   REQUIRE(environment.get_info(info).ok());
-  CHECK(info.environment.irradiance != GRANIT_NULL_HANDLE);
-  CHECK(info.environment.prefiltered_environment != GRANIT_NULL_HANDLE);
-  CHECK(info.environment.brdf_lut != GRANIT_NULL_HANDLE);
+  CHECK(info.environment.irradiance.valid());
+  CHECK(info.environment.prefiltered_environment.valid());
+  CHECK(info.environment.brdf_lut.valid());
   CHECK(info.environment.intensity > 0.0F);
 
   granit::debug_draw_list debug;
-  REQUIRE(debug.initialize(renderer.native_handle(), GRANIT_DEBUG_DRAW_LIST_DESC_INIT).ok());
+  REQUIRE(debug.initialize(renderer.ref()).ok());
   CHECK(environment.native_handle() != debug.native_handle());
+  granit_environment_map_info cross_info = GRANIT_ENVIRONMENT_MAP_INFO_INIT;
   granit_debug_draw_list_stats debug_stats = GRANIT_DEBUG_DRAW_LIST_STATS_INIT;
-  CHECK(granit_environment_map_get_info(renderer.native_handle(), debug.native_handle(), &info) ==
-        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(granit_environment_map_get_info(renderer.native_handle(), debug.native_handle(),
+                                        &cross_info) == GRANIT_ERROR_INVALID_HANDLE);
   CHECK(granit_debug_draw_list_get_stats(renderer.native_handle(), environment.native_handle(),
                                          &debug_stats) == GRANIT_ERROR_INVALID_HANDLE);
   REQUIRE(debug.destroy().ok());
@@ -58,7 +59,7 @@ TEST_CASE("Environment Map 拥有并释放 IBL 纹理", "[pipeline][environment-
   REQUIRE(renderer.get_resource_stats(live).ok());
   CHECK(live.texture_count == before.texture_count);
   CHECK(live.texture_view_count == before.texture_view_count);
-  CHECK(granit_environment_map_get_info(renderer.native_handle(), stale, &info) ==
+  CHECK(granit_environment_map_get_info(renderer.native_handle(), stale, &cross_info) ==
         GRANIT_ERROR_INVALID_HANDLE);
   CHECK(granit_environment_map_destroy(renderer.native_handle(), stale) ==
         GRANIT_ERROR_INVALID_HANDLE);

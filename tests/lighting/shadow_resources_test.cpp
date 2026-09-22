@@ -27,14 +27,12 @@ TEST_CASE("阴影Group3资源拥有常量和比较Sampler") {
 
   granit::texture texture;
   granit::texture_view view;
-  REQUIRE(texture.initialize(renderer.native_handle(),
-                             {.format = granit::texture_format::d32_float,
-                              .usage = granit::texture_usage::depth_stencil_attachment |
-                                       granit::texture_usage::sampled,
-                              .width = 64,
-                              .height = 64}) == granit::result::success);
-  REQUIRE(view.initialize(renderer.native_handle(), texture.native_handle()) ==
-          granit::result::success);
+  REQUIRE(texture.initialize(renderer, {.format = granit::texture_format::d32_float,
+                                        .usage = granit::texture_usage::depth_stencil_attachment |
+                                                 granit::texture_usage::sampled,
+                                        .width = 64,
+                                        .height = 64}) == granit::result::success);
+  REQUIRE(view.initialize(renderer.ref(), texture.ref()) == granit::result::success);
 
   granit::lighting::shadow_sampling_constants constants{.light_view_projection =
                                                             granit::math::identity_matrix4,

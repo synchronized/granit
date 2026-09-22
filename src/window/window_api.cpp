@@ -101,13 +101,12 @@ extern "C" granit_result granit_window_get_state(granit_window_system system_han
   return GRANIT_SUCCESS;
 }
 
-extern "C" granit_result granit_window_get_win32(granit_window_system system_handle,
-                                                 granit_window window_handle, void** instance,
-                                                 void** native_window) {
-  if (instance == nullptr || native_window == nullptr)
+extern "C" granit_result granit_window_get_native_win32(granit_window_system system_handle,
+                                                        granit_window window_handle,
+                                                        granit_window_native_win32* output) {
+  if (output == nullptr || output->struct_size < GRANIT_WINDOW_NATIVE_WIN32_VERSION_1_SIZE)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  *instance = nullptr;
-  *native_window = nullptr;
+  *output = GRANIT_WINDOW_NATIVE_WIN32_INIT;
   auto system = acquire_system(system_handle);
   if (!system)
     return GRANIT_ERROR_INVALID_HANDLE;
@@ -117,19 +116,18 @@ extern "C" granit_result granit_window_get_win32(granit_window_system system_han
   if (found == system->windows.end())
     return GRANIT_ERROR_INVALID_HANDLE;
 #if defined(_WIN32)
-  return get_win32_window(found->second, instance, native_window);
+  return get_native_win32(found->second, *output);
 #else
   return GRANIT_ERROR_UNSUPPORTED;
 #endif
 }
 
-extern "C" granit_result granit_window_get_xcb(granit_window_system system_handle,
-                                               granit_window window_handle, void** connection,
-                                               uint32_t* native_window) {
-  if (connection == nullptr || native_window == nullptr)
+extern "C" granit_result granit_window_get_native_xcb(granit_window_system system_handle,
+                                                      granit_window window_handle,
+                                                      granit_window_native_xcb* output) {
+  if (output == nullptr || output->struct_size < GRANIT_WINDOW_NATIVE_XCB_VERSION_1_SIZE)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  *connection = nullptr;
-  *native_window = 0;
+  *output = GRANIT_WINDOW_NATIVE_XCB_INIT;
   auto system = acquire_system(system_handle);
   if (!system)
     return GRANIT_ERROR_INVALID_HANDLE;
@@ -140,18 +138,17 @@ extern "C" granit_result granit_window_get_xcb(granit_window_system system_handl
     return GRANIT_ERROR_INVALID_HANDLE;
 #if defined(GRANIT_WINDOW_HAS_XCB)
   if (system->backend == GRANIT_WINDOW_BACKEND_XCB)
-    return get_xcb_window(system, found->second, connection, native_window);
+    return get_native_xcb(system, found->second, *output);
 #endif
   return GRANIT_ERROR_UNSUPPORTED;
 }
 
-extern "C" granit_result granit_window_get_wayland(granit_window_system system_handle,
-                                                   granit_window window_handle, void** display,
-                                                   void** native_surface) {
-  if (display == nullptr || native_surface == nullptr)
+extern "C" granit_result granit_window_get_native_wayland(granit_window_system system_handle,
+                                                          granit_window window_handle,
+                                                          granit_window_native_wayland* output) {
+  if (output == nullptr || output->struct_size < GRANIT_WINDOW_NATIVE_WAYLAND_VERSION_1_SIZE)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  *display = nullptr;
-  *native_surface = nullptr;
+  *output = GRANIT_WINDOW_NATIVE_WAYLAND_INIT;
   auto system = acquire_system(system_handle);
   if (!system)
     return GRANIT_ERROR_INVALID_HANDLE;
@@ -162,7 +159,29 @@ extern "C" granit_result granit_window_get_wayland(granit_window_system system_h
     return GRANIT_ERROR_INVALID_HANDLE;
 #if defined(GRANIT_WINDOW_HAS_WAYLAND)
   if (system->backend == GRANIT_WINDOW_BACKEND_WAYLAND)
-    return get_wayland_window(system, found->second, display, native_surface);
+    return get_native_wayland(system, found->second, *output);
 #endif
   return GRANIT_ERROR_UNSUPPORTED;
+}
+
+extern "C" granit_result
+granit_window_get_native_emscripten(granit_window_system system_handle, granit_window window_handle,
+                                    granit_window_native_emscripten* output) {
+  if (output == nullptr || output->struct_size < GRANIT_WINDOW_NATIVE_EMSCRIPTEN_VERSION_1_SIZE) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  *output = GRANIT_WINDOW_NATIVE_EMSCRIPTEN_INIT;
+  auto system = acquire_system(system_handle);
+  if (!system)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (!on_owner_thread(*system))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto found = system->windows.find(window_handle);
+  if (found == system->windows.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+#if defined(__EMSCRIPTEN__)
+  return get_native_emscripten(*output);
+#else
+  return GRANIT_ERROR_UNSUPPORTED;
+#endif
 }

@@ -32,39 +32,30 @@ TEST_CASE("IBL Group3资源绑定两个Cube和BRDF LUT") {
   granit::texture_view prefiltered_view;
   granit::texture_view lut_view;
   const auto cube_desc = granit::texture_desc{.dimension = granit::texture_dimension::cube,
-                                               .format = granit::texture_format::rgba16_float,
-                                               .usage = granit::texture_usage::sampled,
-                                               .width = 8,
-                                               .height = 8,
-                                               .mip_levels = 4,
-                                               .array_layers = 6};
-  REQUIRE(irradiance_texture.initialize(renderer.native_handle(), cube_desc) ==
-          granit::result::success);
-  REQUIRE(prefiltered_texture.initialize(renderer.native_handle(), cube_desc) ==
-          granit::result::success);
-  REQUIRE(lut_texture.initialize(renderer.native_handle(),
-                                 {.format = granit::texture_format::rgba16_float,
-                                  .usage = granit::texture_usage::sampled,
-                                  .width = 8,
-                                  .height = 8}) == granit::result::success);
+                                              .format = granit::texture_format::rgba16_float,
+                                              .usage = granit::texture_usage::sampled,
+                                              .width = 8,
+                                              .height = 8,
+                                              .mip_levels = 4,
+                                              .array_layers = 6};
+  REQUIRE(irradiance_texture.initialize(renderer, cube_desc) == granit::result::success);
+  REQUIRE(prefiltered_texture.initialize(renderer, cube_desc) == granit::result::success);
+  REQUIRE(lut_texture.initialize(renderer, {.format = granit::texture_format::rgba16_float,
+                                            .usage = granit::texture_usage::sampled,
+                                            .width = 8,
+                                            .height = 8}) == granit::result::success);
   const auto cube_view_desc = granit::texture_view_desc{
-      .dimension = granit::texture_dimension::cube,
-      .mip_level_count = 4,
-      .array_layer_count = 6};
-  REQUIRE(irradiance_view.initialize(renderer.native_handle(), irradiance_texture.native_handle(),
-                                     cube_view_desc) ==
-          granit::result::success);
-  REQUIRE(prefiltered_view.initialize(renderer.native_handle(),
-                                     prefiltered_texture.native_handle(), cube_view_desc) ==
-          granit::result::success);
-  REQUIRE(lut_view.initialize(renderer.native_handle(), lut_texture.native_handle()) ==
+      .dimension = granit::texture_dimension::cube, .mip_level_count = 4, .array_layer_count = 6};
+  REQUIRE(irradiance_view.initialize(renderer.ref(), irradiance_texture.ref(),
+                                     cube_view_desc) == granit::result::success);
+  REQUIRE(prefiltered_view.initialize(renderer.ref(), prefiltered_texture.ref(),
+                                      cube_view_desc) == granit::result::success);
+  REQUIRE(lut_view.initialize(renderer.ref(), lut_texture.ref()) ==
           granit::result::success);
 
   granit::lighting::ibl_resources resources;
-  granit::lighting::ibl_sampling_constants constants{.rotation_cos = 0.0F,
-                                                      .rotation_sin = 1.0F,
-                                                      .intensity = 2.0F,
-                                                      .prefiltered_max_mip = 3.0F};
+  granit::lighting::ibl_sampling_constants constants{
+      .rotation_cos = 0.0F, .rotation_sin = 1.0F, .intensity = 2.0F, .prefiltered_max_mip = 3.0F};
   REQUIRE(resources.initialize(renderer.native_handle(),
                                {.irradiance = irradiance_view.native_handle(),
                                 .prefiltered_environment = prefiltered_view.native_handle(),

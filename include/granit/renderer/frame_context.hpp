@@ -10,6 +10,7 @@
 #include <granit/core/result.hpp>
 #include <granit/renderer/command_recorder.hpp>
 #include <granit/renderer/frame_context.h>
+#include <granit/renderer/renderer.hpp>
 #include <granit/renderer/swapchain.hpp>
 
 namespace granit {
@@ -88,7 +89,8 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result initialize(granit_renderer renderer) noexcept {
+  [[nodiscard]] result initialize(renderer_ref owner) noexcept {
+    const auto renderer = owner.native_handle();
     if (valid())
       return result::invalid_argument;
     if (renderer == GRANIT_NULL_HANDLE)
@@ -100,18 +102,24 @@ public:
     return from_native(value);
   }
 
+  [[nodiscard]] result initialize(renderer& owner) noexcept {
+    return initialize(owner.ref());
+  }
+
   [[nodiscard]] result begin(const acquired_frame& frame, frame_recording& recording) noexcept {
     if (!valid() || !frame.valid() || recording.valid())
       return result::invalid_argument;
     granit_command_recorder recorder{};
     std::uint32_t frame_slot{};
     const auto value =
-        granit_frame_context_begin(renderer_, handle_, frame.handle, &recorder, &frame_slot);
+        granit_frame_context_begin(renderer_, handle_, frame.native_handle(), &recorder,
+                                   &frame_slot);
     if (value == GRANIT_SUCCESS) {
       recording.renderer_ = renderer_;
       recording.context_ = handle_;
-      recording.frame_ = frame.handle;
-      recording.recorder_ = command_recorder::borrow(renderer_, recorder);
+      recording.frame_ = frame.native_handle();
+      recording.recorder_ =
+          command_recorder::borrow(renderer_ref::from_native(renderer_), recorder);
       recording.frame_slot_ = frame_slot;
     }
     return from_native(value);

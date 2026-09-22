@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "gltf/loader.h"
 #include "application_core.h"
+#include "gltf/loader.h"
 #include "validation/screenshot_comparison.h"
 
 #include <granit/granit.hpp>
@@ -359,8 +359,7 @@ int main(int argc, char** argv) {
       stage = "读取环境包";
       result = granit::result::invalid_argument;
     } else {
-      result =
-          core.upload(renderer.native_handle(), environment_bytes, arguments.sampler_anisotropy);
+      result = core.upload(renderer, environment_bytes, arguments.sampler_anisotropy);
     }
   }
 
@@ -369,7 +368,7 @@ int main(int argc, char** argv) {
   if (result.ok()) {
     stage = "创建离屏颜色纹理";
     result = output_texture.initialize(
-        renderer.native_handle(),
+        renderer,
         {.format = granit::texture_format::rgba8_unorm,
          .usage = granit::texture_usage::color_attachment | granit::texture_usage::transfer_source,
          .width = render_size,
@@ -377,16 +376,19 @@ int main(int argc, char** argv) {
   }
   if (result.ok()) {
     stage = "创建离屏颜色视图";
-    result = output_view.initialize(renderer.native_handle(), output_texture.native_handle());
+    result = output_view.initialize(renderer, output_texture);
   }
   granit::render_pipeline pipeline;
   if (result.ok()) {
     stage = "创建 Render Pipeline";
-    granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
-    pipeline_desc.sample_count = arguments.sample_count;
-    pipeline_desc.enable_fxaa = arguments.enable_fxaa;
-    pipeline_desc.enable_specular_aa = arguments.enable_specular_aa;
-    result = pipeline.initialize(renderer.native_handle(), pipeline_desc);
+    const granit::render_pipeline_desc pipeline_desc{
+        .record = {},
+        .user_data = nullptr,
+        .samples = static_cast<granit::sample_count>(arguments.sample_count),
+        .enable_fxaa = arguments.enable_fxaa != 0,
+        .enable_specular_aa = arguments.enable_specular_aa != 0,
+    };
+    result = pipeline.initialize(renderer, pipeline_desc);
   }
 
   granit::example::model_viewer::viewer_change diagnostic_change{};
@@ -405,7 +407,8 @@ int main(int argc, char** argv) {
       tick.clear_color = {0.0F, 0.0F, 0.0F, 1.0F};
       const auto render =
           tick.render_desc(output_view.native_handle(), GRANIT_TEXTURE_FORMAT_RGBA8_UNORM);
-      result = pipeline.render(render);
+      result = granit::from_native(granit_render_pipeline_render(
+          renderer.native_handle(), pipeline.native_handle(), &render));
     }
   }
   if (result.failed()) {
@@ -418,11 +421,10 @@ int main(int argc, char** argv) {
 
   const granit::texture_write_region region{.width = render_size, .height = render_size};
   granit::readback_batch readback;
-  result = readback.create(renderer.native_handle(),
-                           {.texture_layout = granit::readback_layout::tight});
+  result = readback.create(renderer, {.texture_layout = granit::readback_layout::tight});
   std::uint32_t result_index{};
   if (result.ok())
-    result = readback.read_texture(output_texture.native_handle(), region, result_index);
+    result = readback.read_texture(output_texture.ref(), region, result_index);
   granit::async_operation operation;
   if (result.ok())
     result = readback.submit_async(operation);

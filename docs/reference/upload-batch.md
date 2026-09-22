@@ -48,5 +48,5 @@ if (result == GRANIT_SUCCESS) {
 granit_upload_batch_destroy(renderer, batch);
 ```
 
-C++20 用户可以使用 move-only 的 `granit::upload_batch`。其析构函数会销毁 Batch，但不会隐式
-提交尚未提交的内容。
+C++20 用户可以使用 move-only 的 `granit::upload_batch`。Buffer 和 Texture 写入接收相应资源的
+`ref()`，Batch 析构函数会销毁 Batch，但不会隐式提交尚未提交的内容。
