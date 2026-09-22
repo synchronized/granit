@@ -75,17 +75,15 @@ int main() {
   if (variant_result.failed() || variant_index != 0)
     return 13;
 
-  granit_buffer_desc invalid_desc = GRANIT_BUFFER_DESC_INIT;
-  granit_buffer invalid_buffer = GRANIT_NULL_HANDLE;
-  if (granit_buffer_create(renderer.native_handle(), &invalid_desc, &invalid_buffer) !=
-          GRANIT_ERROR_INVALID_ARGUMENT ||
-      invalid_buffer != GRANIT_NULL_HANDLE || !diagnostics.found_buffer_desc.load())
+  granit::buffer invalid_buffer;
+  if (invalid_buffer.initialize(renderer, {}) != granit::result::invalid_argument ||
+      invalid_buffer.valid() || !diagnostics.found_buffer_desc.load())
     return 10;
 
   granit::buffer buffer;
   if ((buffer.initialize(renderer, {.size = 64,
-                                                    .usage = granit::buffer_usage::transfer_source,
-                                                    .location = granit::memory_location::upload}))
+                                    .usage = granit::buffer_usage::transfer_source,
+                                    .location = granit::memory_location::upload}))
           .failed())
     return 6;
   granit::buffer moved = std::move(buffer);

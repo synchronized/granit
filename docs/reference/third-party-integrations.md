@@ -38,7 +38,7 @@ granit::renderer renderer;
 auto result = renderer.initialize({.presentation = granit::presentation_mode::enabled});
 
 granit::surface surface;
-result = granit::integration::sdl3::create_surface(renderer.native_handle(), window, surface);
+result = granit::integration::sdl3::create_surface(renderer, window, surface);
 ```
 
 Integration 借用 SDL Window 的 Properties，不取得窗口或原生对象所有权。当前识别 `windows`、
