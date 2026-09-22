@@ -6,9 +6,10 @@
 本系列从一个空的 CMake C++20 程序开始，每章在上一章基础上增加一种可见能力。读者不需要预先
 了解 Vulkan、WebGPU 或平台原生窗口 API；教程只使用 Granit 公共 C++ 接口和 HLSL-first 资产流程。
 
-> 状态：01 Window 已提供配套源码及桌面、浏览器自动验证。02～08 已确定教学主线，配套源码与
-> 自动验证将按 [S-48 计划](../plans/S-48-0.28.0-linear-tutorial-series.md)逐章落地；对应目标加入构建前，
-> 这些章节只作为后续内容预览。
+> 状态：01 Window 已提供桌面与浏览器自动验证；02 Triangle 已提供桌面源码和自动验证。03～08
+> 已确定教学主线，配套源码将按
+> [S-48 计划](../plans/S-48-0.28.0-linear-tutorial-series.md)逐章落地；对应目标加入构建前，这些章节
+> 只作为后续内容预览。
 
 ## 学习路线
 
@@ -37,5 +38,7 @@
 - 示例中的 `check(...)` 表示检查 `granit::result`，失败时打印 `message()` 并停止当前操作。
 - 父对象必须比子资源存活更久，章节末尾会列出新增资源的销毁顺序。
 - Shader 在构建期由 AssetTools 从 HLSL 生成 Shader Library，运行时不调用 DXC 或 Tint。
+- 02 之后的 Shader 章节需要完整 Shader Toolchain；系统缺少 DXC 或 Tint 时，使用
+  `-DGRANIT_SHADER_TOOLCHAIN_MODE=auto` 配置可下载项目锁定版本。
 - 窗口和 Surface 使用 `granit::window`，不在教程中展开 Win32、XCB、Wayland 原生值。
 - 每章完成后先验证预期画面，再进入下一章；不要一次复制最终应用跳过中间状态。
