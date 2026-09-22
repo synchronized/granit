@@ -4,6 +4,7 @@
 #ifndef GRANIT_RENDERER_HPP_
 #define GRANIT_RENDERER_HPP_
 
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -224,12 +225,18 @@ public:
     return from_native(granit_renderer_destroy(handle));
   }
 
-  [[nodiscard]] result set_object_name(granit_handle object, std::string_view name) const noexcept {
+  template <typename Object>
+    requires requires(const Object& object) {
+      { object.native_handle() } -> std::convertible_to<granit_handle>;
+    }
+  [[nodiscard]] result set_object_name(const Object& object,
+                                       std::string_view name) const noexcept {
     if (name.size() > std::numeric_limits<std::uint32_t>::max()) {
       return result::invalid_argument;
     }
-    return from_native(granit_renderer_set_object_name(handle_, object, name.data(),
-                                                       static_cast<std::uint32_t>(name.size())));
+    return from_native(
+        granit_renderer_set_object_name(handle_, object.native_handle(), name.data(),
+                                        static_cast<std::uint32_t>(name.size())));
   }
 
   [[nodiscard]] result get_limits(renderer_limits& limits) const noexcept {
