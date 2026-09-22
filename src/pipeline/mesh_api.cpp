@@ -350,3 +350,13 @@ extern "C" granit_result granit_mesh_destroy(granit_renderer renderer, granit_me
       registry[index].generation == generation_mask ? 1 : registry[index].generation + 1;
   return GRANIT_SUCCESS;
 }
+
+extern "C" granit_result granit_mesh_bind(granit_renderer renderer, granit_mesh mesh,
+                                          granit_command_recorder recorder) {
+  return granit::pipeline::detail::bind_mesh_buffers(renderer, recorder, mesh);
+}
+
+extern "C" granit_result granit_mesh_draw(granit_renderer renderer, granit_mesh mesh,
+                                          granit_command_recorder recorder) {
+  return granit::pipeline::detail::draw_mesh(renderer, recorder, mesh);
+}

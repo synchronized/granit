@@ -90,3 +90,10 @@ TEST_CASE("公共Mesh拒绝跨Renderer Buffer与重复Attribute位置") {
   CHECK(granit_mesh_create(first.native_handle(), &desc, &mesh) == GRANIT_ERROR_INVALID_ARGUMENT);
   CHECK(mesh == GRANIT_NULL_HANDLE);
 }
+
+TEST_CASE("公共Mesh录制入口拒绝无效对象") {
+  CHECK(granit_mesh_bind(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(granit_mesh_draw(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+}
