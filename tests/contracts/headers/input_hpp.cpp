@@ -13,8 +13,9 @@ static_assert(
     std::is_same_v<decltype(granit::input_event{}.data.key.logical), granit::logical_key>);
 static_assert(std::is_same_v<decltype(granit::input_event{}.data.key.action), granit::key_action>);
 static_assert(sizeof(granit::input_event) == sizeof(granit_input_event));
-static_assert(sizeof(granit::keyboard_state) == sizeof(granit_keyboard_state));
-static_assert(sizeof(granit::pointer_state) == sizeof(granit_pointer_state));
+static_assert(std::is_same_v<decltype(granit::keyboard_state{}.pressed_keys),
+                             std::array<std::uint64_t, 4>>);
+static_assert(std::is_same_v<decltype(granit::pointer_state{}.inside), bool>);
 static_assert(sizeof(granit::input_event) == 88);
 static_assert(static_cast<std::uint32_t>(granit::input_event_type::text) ==
               GRANIT_INPUT_EVENT_TEXT);

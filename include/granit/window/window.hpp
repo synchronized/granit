@@ -4,6 +4,7 @@
 #ifndef GRANIT_WINDOW_WINDOW_HPP_
 #define GRANIT_WINDOW_WINDOW_HPP_
 
+#include <cstddef>
 #include <cstdint>
 #include <string_view>
 #include <type_traits>
@@ -173,14 +174,25 @@ public:
     return from_native(value);
   }
   [[nodiscard]] result keyboard(window_ref window, keyboard_state& state) const noexcept {
-    state = GRANIT_KEYBOARD_STATE_INIT;
-    return from_native(
-        granit_window_get_keyboard_state(handle_, window.native_handle(), &state));
+    granit_keyboard_state native = GRANIT_KEYBOARD_STATE_INIT;
+    const auto value = granit_window_get_keyboard_state(handle_, window.native_handle(), &native);
+    if (value == GRANIT_SUCCESS) {
+      state.modifiers = native.modifiers;
+      for (std::size_t index = 0; index < state.pressed_keys.size(); ++index)
+        state.pressed_keys[index] = native.pressed_keys[index];
+    }
+    return from_native(value);
   }
   [[nodiscard]] result pointer(window_ref window, pointer_state& state) const noexcept {
-    state = GRANIT_POINTER_STATE_INIT;
-    return from_native(
-        granit_window_get_pointer_state(handle_, window.native_handle(), &state));
+    granit_pointer_state native = GRANIT_POINTER_STATE_INIT;
+    const auto value = granit_window_get_pointer_state(handle_, window.native_handle(), &native);
+    if (value == GRANIT_SUCCESS) {
+      state = {.buttons = native.buttons,
+               .x = native.x,
+               .y = native.y,
+               .inside = native.inside != 0};
+    }
+    return from_native(value);
   }
   [[nodiscard]] result reset() noexcept {
     if (!valid())

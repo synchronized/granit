@@ -4,6 +4,7 @@
 #ifndef GRANIT_WINDOW_INPUT_HPP_
 #define GRANIT_WINDOW_INPUT_HPP_
 
+#include <array>
 #include <cstdint>
 #include <cstring>
 #include <type_traits>
@@ -183,8 +184,17 @@ struct input_event {
   input_event_data data{};
 };
 
-using keyboard_state = granit_keyboard_state;
-using pointer_state = granit_pointer_state;
+struct keyboard_state {
+  std::uint32_t modifiers{};
+  std::array<std::uint64_t, 4> pressed_keys{};
+};
+
+struct pointer_state {
+  std::uint32_t buttons{};
+  float x{};
+  float y{};
+  bool inside{};
+};
 
 static_assert(std::is_trivially_copyable_v<input_event_data>);
 static_assert(sizeof(key_input_event) == sizeof(granit_input_event_data{}.key));
