@@ -185,7 +185,7 @@ public:
     }
   }
   [[nodiscard]] result add_pipeline_warmup(const material_pipeline_warmup_desc& desc,
-                                           const pipeline_warmup_batch& batch,
+                                           pipeline_warmup_batch_ref batch,
                                            std::uint32_t& result_index) const noexcept {
     const granit_material_pipeline_warmup_desc native{
         .struct_size = sizeof(granit_material_pipeline_warmup_desc),
@@ -197,8 +197,13 @@ public:
         .sample_count = static_cast<granit_sample_count>(desc.samples),
         .reserved_tail = 0,
     };
-    return from_native(granit_material_add_pipeline_warmup(
-        renderer_, handle_, &native, batch.native_handle(), &result_index));
+    return from_native(granit_material_add_pipeline_warmup(renderer_, handle_, &native,
+                                                           batch.native_handle(), &result_index));
+  }
+  [[nodiscard]] result add_pipeline_warmup(const material_pipeline_warmup_desc& desc,
+                                           const pipeline_warmup_batch& batch,
+                                           std::uint32_t& result_index) const noexcept {
+    return add_pipeline_warmup(desc, batch.ref(), result_index);
   }
   [[nodiscard]] result reset() noexcept {
     if (!valid())

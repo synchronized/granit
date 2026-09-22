@@ -373,22 +373,22 @@ gpu_scene_plan_error append_primitive(const gltf::primitive& source, gpu_scene_p
 } // namespace
 
 granit::result gpu_scene::add_pipeline_warmups(
-    granit_pipeline_warmup_batch batch, granit_texture_format color_format,
-    granit_sample_count sample_count, std::vector<std::uint32_t>& result_indices) noexcept {
+    pipeline_warmup_batch_ref batch, texture_format color_format, sample_count samples,
+    std::vector<std::uint32_t>& result_indices) noexcept {
   result_indices.clear();
-  if (!valid() || batch == GRANIT_NULL_HANDLE || color_format == GRANIT_TEXTURE_FORMAT_UNDEFINED)
+  if (!valid() || !batch || color_format == texture_format::undefined)
     return granit::result::invalid_argument;
   try {
     result_indices.reserve(materials_.size());
     for (const auto& material : materials_) {
-      granit_material_pipeline_warmup_desc desc = GRANIT_MATERIAL_PIPELINE_WARMUP_DESC_INIT;
-      desc.pass = granit::material_parameter_id("opaque");
-      desc.color_format = color_format;
-      desc.depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT;
-      desc.sample_count = sample_count;
+      const material_pipeline_warmup_desc desc{
+          .pass = granit::material_parameter_id("opaque"),
+          .color_format = color_format,
+          .depth_stencil_format = texture_format::d32_float,
+          .samples = samples,
+      };
       std::uint32_t index{};
-      const auto result = granit::from_native(granit_material_add_pipeline_warmup(
-          renderer_, material.native_handle(), &desc, batch, &index));
+      const auto result = material.add_pipeline_warmup(desc, batch, index);
       if (result.failed()) {
         result_indices.clear();
         return result;

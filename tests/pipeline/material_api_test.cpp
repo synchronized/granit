@@ -174,7 +174,7 @@ TEST_CASE("公共Material预热在Shader Asset缺少解析器时保持事务性"
       .color_format = granit::texture_format::rgba8_unorm,
   };
   std::uint32_t result_index{};
-  CHECK(material.add_pipeline_warmup(warmup_desc, batch, result_index) ==
+  CHECK(material.add_pipeline_warmup(warmup_desc, batch.ref(), result_index) ==
         granit::result::not_ready);
   granit::pipeline_warmup_batch_info info;
   REQUIRE(batch.get_info(info) == granit::result::success);

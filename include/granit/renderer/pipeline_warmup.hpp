@@ -10,12 +10,37 @@
 
 #include <granit/core/result.hpp>
 #include <granit/renderer/async_operation.hpp>
+#include <granit/renderer/pipeline.hpp>
 #include <granit/renderer/pipeline_warmup.h>
 #include <granit/renderer/renderer.hpp>
 
 namespace granit {
 
 class pipeline_warmup_batch;
+
+/** 不拥有 Pipeline 预热批次，只在来源批次的有效期内使用。 */
+class pipeline_warmup_batch_ref {
+public:
+  pipeline_warmup_batch_ref() = default;
+
+  [[nodiscard]] constexpr bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr granit_pipeline_warmup_batch native_handle() const noexcept {
+    return handle_;
+  }
+  [[nodiscard]] static constexpr pipeline_warmup_batch_ref
+  from_native(granit_pipeline_warmup_batch handle) noexcept {
+    return pipeline_warmup_batch_ref{handle};
+  }
+
+private:
+  friend class pipeline_warmup_batch;
+
+  explicit constexpr pipeline_warmup_batch_ref(granit_pipeline_warmup_batch handle) noexcept
+      : handle_(handle) {}
+
+  granit_pipeline_warmup_batch handle_{GRANIT_NULL_HANDLE};
+};
 
 enum class pipeline_warmup_type : std::uint32_t {
   graphics = GRANIT_PIPELINE_WARMUP_TYPE_GRAPHICS,
@@ -75,15 +100,17 @@ public:
                               const pipeline_warmup_batch_options& options = {}) noexcept {
     return create(owner.ref(), options);
   }
-  [[nodiscard]] result add_graphics(const granit_graphics_pipeline_desc& desc,
+  [[nodiscard]] result add_graphics(const graphics_pipeline_desc& desc,
                                     std::uint32_t& index) noexcept {
-    return from_native(
-        granit_pipeline_warmup_batch_add_graphics(renderer_, handle_, &desc, &index));
+    return detail::with_native_graphics_pipeline_desc(desc, [&](const auto& native) {
+      return granit_pipeline_warmup_batch_add_graphics(renderer_, handle_, &native, &index);
+    });
   }
-  [[nodiscard]] result add_compute(const granit_compute_pipeline_desc& desc,
+  [[nodiscard]] result add_compute(const compute_pipeline_desc& desc,
                                    std::uint32_t& index) noexcept {
+    const auto native = detail::to_native(desc);
     return from_native(
-        granit_pipeline_warmup_batch_add_compute(renderer_, handle_, &desc, &index));
+        granit_pipeline_warmup_batch_add_compute(renderer_, handle_, &native, &index));
   }
   [[nodiscard]] result get_info(pipeline_warmup_batch_info& info) const noexcept {
     granit_pipeline_warmup_batch_info native = GRANIT_PIPELINE_WARMUP_BATCH_INFO_INIT;
@@ -113,6 +140,9 @@ public:
     return from_native(granit_pipeline_warmup_batch_destroy(renderer, handle));
   }
   [[nodiscard]] granit_pipeline_warmup_batch native_handle() const noexcept { return handle_; }
+  [[nodiscard]] constexpr pipeline_warmup_batch_ref ref() const noexcept {
+    return pipeline_warmup_batch_ref{handle_};
+  }
 
 private:
   granit_renderer renderer_{};

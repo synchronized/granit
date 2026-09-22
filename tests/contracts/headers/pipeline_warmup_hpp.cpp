@@ -7,3 +7,4 @@
 
 static_assert(std::is_move_constructible_v<granit::pipeline_warmup_batch>);
 static_assert(!std::is_copy_constructible_v<granit::pipeline_warmup_batch>);
+static_assert(std::is_trivially_copyable_v<granit::pipeline_warmup_batch_ref>);

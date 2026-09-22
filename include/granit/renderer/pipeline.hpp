@@ -441,6 +441,96 @@ struct graphics_pipeline_desc {
   std::optional<depth_bias_state> depth_bias;
 };
 
+struct compute_pipeline_desc;
+
+namespace detail {
+
+template <typename Function>
+[[nodiscard]] result with_native_graphics_pipeline_desc(const graphics_pipeline_desc& desc,
+                                                        Function&& function) noexcept {
+  if (desc.color_formats.size() > UINT32_MAX || desc.vertex_buffers.size() > UINT32_MAX ||
+      desc.color_blends.size() > UINT32_MAX || desc.vertex_buffers.size() > 16 ||
+      desc.color_blends.size() > 8) {
+    return result::invalid_argument;
+  }
+  static_assert(sizeof(vertex_attribute) == sizeof(granit_vertex_attribute));
+  std::array<granit_vertex_buffer_layout, 16> vertex_buffers{};
+  for (std::size_t index = 0; index < desc.vertex_buffers.size(); ++index) {
+    const auto& source = desc.vertex_buffers[index];
+    if (source.attributes.size() > UINT32_MAX)
+      return result::invalid_argument;
+    vertex_buffers[index] = {
+        .stride = source.stride,
+        .step_mode = static_cast<granit_vertex_step_mode>(source.step_mode),
+        .attribute_count = static_cast<std::uint32_t>(source.attributes.size()),
+        .reserved = 0,
+        .attributes = reinterpret_cast<const granit_vertex_attribute*>(source.attributes.data())};
+  }
+  std::array<granit_color_blend_state, 8> color_blends{};
+  for (std::size_t index = 0; index < desc.color_blends.size(); ++index) {
+    const auto& source = desc.color_blends[index];
+    color_blends[index] = {
+        .enabled = source.enabled ? UINT32_C(1) : UINT32_C(0),
+        .source_color_factor = static_cast<granit_blend_factor>(source.source_color_factor),
+        .destination_color_factor =
+            static_cast<granit_blend_factor>(source.destination_color_factor),
+        .color_operation = static_cast<granit_blend_operation>(source.color_operation),
+        .source_alpha_factor = static_cast<granit_blend_factor>(source.source_alpha_factor),
+        .destination_alpha_factor =
+            static_cast<granit_blend_factor>(source.destination_alpha_factor),
+        .alpha_operation = static_cast<granit_blend_operation>(source.alpha_operation),
+        .write_mask = static_cast<granit_color_write_mask>(source.write_mask)};
+  }
+  granit_depth_state depth{};
+  const granit_depth_state* depth_pointer = nullptr;
+  if (desc.depth) {
+    depth = {.test_enabled = desc.depth->test_enabled ? UINT32_C(1) : UINT32_C(0),
+             .write_enabled = desc.depth->write_enabled ? UINT32_C(1) : UINT32_C(0),
+             .compare = static_cast<granit_compare_operation>(desc.depth->compare),
+             .reserved = 0};
+    depth_pointer = &depth;
+  }
+  granit_depth_bias_state depth_bias{};
+  const granit_depth_bias_state* depth_bias_pointer = nullptr;
+  if (desc.depth_bias) {
+    depth_bias = {.constant_factor = desc.depth_bias->constant_factor,
+                  .slope_factor = desc.depth_bias->slope_factor,
+                  .clamp = desc.depth_bias->clamp,
+                  .reserved = 0};
+    depth_bias_pointer = &depth_bias;
+  }
+  const auto* formats = reinterpret_cast<const granit_texture_format*>(desc.color_formats.data());
+  const granit_graphics_pipeline_desc native{
+      .struct_size = GRANIT_GRAPHICS_PIPELINE_DESC_SIZE,
+      .reserved = 0,
+      .layout = desc.layout.native_handle(),
+      .vertex_shader = desc.vertex_shader.native_handle(),
+      .fragment_shader = desc.fragment_shader.native_handle(),
+      .color_format_count = static_cast<std::uint32_t>(desc.color_formats.size()),
+      .color_formats = formats,
+      .depth_stencil_format = static_cast<granit_texture_format>(desc.depth_stencil_format),
+      .sample_count = static_cast<granit_sample_count>(desc.samples),
+      .reserved_2 = 0,
+      .vertex_buffer_layout_count = static_cast<std::uint32_t>(desc.vertex_buffers.size()),
+      .reserved_3 = 0,
+      .vertex_buffer_layouts = vertex_buffers.data(),
+      .primitive = {.topology = static_cast<granit_primitive_topology>(desc.primitive.topology),
+                    .front_face = static_cast<granit_front_face>(desc.primitive.front),
+                    .cull_mode = static_cast<granit_cull_mode>(desc.primitive.cull),
+                    .polygon_mode = static_cast<granit_polygon_mode>(desc.primitive.polygon)},
+      .depth = depth_pointer,
+      .color_blend_count = static_cast<std::uint32_t>(desc.color_blends.size()),
+      .reserved_4 = 0,
+      .color_blends = color_blends.data(),
+      .depth_bias = depth_bias_pointer};
+  return granit::from_native(function(native));
+}
+
+[[nodiscard]] inline granit_compute_pipeline_desc
+to_native(const compute_pipeline_desc& desc) noexcept;
+
+} // namespace detail
+
 class graphics_pipeline {
 public:
   graphics_pipeline() = default;
@@ -625,89 +715,16 @@ inline result pipeline_layout::reset() noexcept {
 inline result graphics_pipeline::initialize(renderer_ref owner,
                                             const graphics_pipeline_desc& desc) noexcept {
   const auto renderer = owner.native_handle();
-  if (valid() || desc.color_formats.size() > UINT32_MAX ||
-      desc.vertex_buffers.size() > UINT32_MAX || desc.color_blends.size() > UINT32_MAX)
+  if (valid())
     return result::invalid_argument;
   if (renderer == GRANIT_NULL_HANDLE)
     return result::invalid_handle;
-  static_assert(sizeof(vertex_attribute) == sizeof(granit_vertex_attribute));
-  if (desc.vertex_buffers.size() > 16)
-    return result::invalid_argument;
-  std::array<granit_vertex_buffer_layout, 16> vertex_buffers{};
-  for (std::size_t index = 0; index < desc.vertex_buffers.size(); ++index) {
-    const auto& source = desc.vertex_buffers[index];
-    if (source.attributes.size() > UINT32_MAX)
-      return result::invalid_argument;
-    vertex_buffers[index] = {
-        .stride = source.stride,
-        .step_mode = static_cast<granit_vertex_step_mode>(source.step_mode),
-        .attribute_count = static_cast<std::uint32_t>(source.attributes.size()),
-        .reserved = 0,
-        .attributes = reinterpret_cast<const granit_vertex_attribute*>(source.attributes.data())};
-  }
-  if (desc.color_blends.size() > 8)
-    return result::invalid_argument;
-  std::array<granit_color_blend_state, 8> color_blends{};
-  for (std::size_t index = 0; index < desc.color_blends.size(); ++index) {
-    const auto& source = desc.color_blends[index];
-    color_blends[index] = {
-        .enabled = source.enabled ? UINT32_C(1) : UINT32_C(0),
-        .source_color_factor = static_cast<granit_blend_factor>(source.source_color_factor),
-        .destination_color_factor =
-            static_cast<granit_blend_factor>(source.destination_color_factor),
-        .color_operation = static_cast<granit_blend_operation>(source.color_operation),
-        .source_alpha_factor = static_cast<granit_blend_factor>(source.source_alpha_factor),
-        .destination_alpha_factor =
-            static_cast<granit_blend_factor>(source.destination_alpha_factor),
-        .alpha_operation = static_cast<granit_blend_operation>(source.alpha_operation),
-        .write_mask = static_cast<granit_color_write_mask>(source.write_mask)};
-  }
-  granit_depth_state depth{};
-  const granit_depth_state* depth_pointer = nullptr;
-  if (desc.depth) {
-    depth = {.test_enabled = desc.depth->test_enabled ? UINT32_C(1) : UINT32_C(0),
-             .write_enabled = desc.depth->write_enabled ? UINT32_C(1) : UINT32_C(0),
-             .compare = static_cast<granit_compare_operation>(desc.depth->compare),
-             .reserved = 0};
-    depth_pointer = &depth;
-  }
-  granit_depth_bias_state depth_bias{};
-  const granit_depth_bias_state* depth_bias_pointer = nullptr;
-  if (desc.depth_bias) {
-    depth_bias = {.constant_factor = desc.depth_bias->constant_factor,
-                  .slope_factor = desc.depth_bias->slope_factor,
-                  .clamp = desc.depth_bias->clamp,
-                  .reserved = 0};
-    depth_bias_pointer = &depth_bias;
-  }
-  const auto* formats = reinterpret_cast<const granit_texture_format*>(desc.color_formats.data());
-  const granit_graphics_pipeline_desc native{
-      .struct_size = GRANIT_GRAPHICS_PIPELINE_DESC_SIZE,
-      .reserved = 0,
-      .layout = desc.layout.native_handle(),
-      .vertex_shader = desc.vertex_shader.native_handle(),
-      .fragment_shader = desc.fragment_shader.native_handle(),
-      .color_format_count = static_cast<std::uint32_t>(desc.color_formats.size()),
-      .color_formats = formats,
-      .depth_stencil_format = static_cast<granit_texture_format>(desc.depth_stencil_format),
-      .sample_count = static_cast<granit_sample_count>(desc.samples),
-      .reserved_2 = 0,
-      .vertex_buffer_layout_count = static_cast<std::uint32_t>(desc.vertex_buffers.size()),
-      .reserved_3 = 0,
-      .vertex_buffer_layouts = vertex_buffers.data(),
-      .primitive = {.topology = static_cast<granit_primitive_topology>(desc.primitive.topology),
-                    .front_face = static_cast<granit_front_face>(desc.primitive.front),
-                    .cull_mode = static_cast<granit_cull_mode>(desc.primitive.cull),
-                    .polygon_mode = static_cast<granit_polygon_mode>(desc.primitive.polygon)},
-      .depth = depth_pointer,
-      .color_blend_count = static_cast<std::uint32_t>(desc.color_blends.size()),
-      .reserved_4 = 0,
-      .color_blends = color_blends.data(),
-      .depth_bias = depth_bias_pointer};
-  const auto value = granit_graphics_pipeline_create(renderer, &native, &handle_);
-  if (value == GRANIT_SUCCESS)
+  const auto value = detail::with_native_graphics_pipeline_desc(desc, [&](const auto& native) {
+    return granit_graphics_pipeline_create(renderer, &native, &handle_);
+  });
+  if (value.ok())
     renderer_ = renderer;
-  return from_native(value);
+  return value;
 }
 
 inline result graphics_pipeline::reset() noexcept {
@@ -725,16 +742,19 @@ inline result compute_pipeline::initialize(renderer_ref owner,
     return result::invalid_argument;
   if (renderer == GRANIT_NULL_HANDLE)
     return result::invalid_handle;
-  const granit_compute_pipeline_desc native{.struct_size =
-                                                GRANIT_COMPUTE_PIPELINE_DESC_VERSION_1_SIZE,
-                                            .reserved = 0,
-                                            .layout = desc.layout.native_handle(),
-                                            .compute_shader = desc.compute_shader.native_handle(),
-                                            .reserved_2 = 0};
+  const auto native = detail::to_native(desc);
   const auto value = granit_compute_pipeline_create(renderer, &native, &handle_);
   if (value == GRANIT_SUCCESS)
     renderer_ = renderer;
   return from_native(value);
+}
+
+inline granit_compute_pipeline_desc detail::to_native(const compute_pipeline_desc& desc) noexcept {
+  return {.struct_size = GRANIT_COMPUTE_PIPELINE_DESC_VERSION_1_SIZE,
+          .reserved = 0,
+          .layout = desc.layout.native_handle(),
+          .compute_shader = desc.compute_shader.native_handle(),
+          .reserved_2 = 0};
 }
 
 inline result compute_pipeline::reset() noexcept {

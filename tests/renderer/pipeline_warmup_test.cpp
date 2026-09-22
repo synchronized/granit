@@ -71,9 +71,8 @@ TEST_CASE("Compute Pipeline 预热提供稳定键和缓存命中", "[pipeline-wa
                             {.stage = granit::shader_stage::compute, .code = spirv}) ==
           granit::result::success);
 
-  granit_compute_pipeline_desc desc = GRANIT_COMPUTE_PIPELINE_DESC_INIT;
-  desc.layout = layout.native_handle();
-  desc.compute_shader = shader.native_handle();
+  const granit::compute_pipeline_desc desc{.layout = layout.ref(),
+                                           .compute_shader = shader.ref()};
   std::array<std::byte, GRANIT_PIPELINE_WARMUP_CACHE_KEY_SIZE> first_key{};
   for (int pass = 0; pass < 2; ++pass) {
     granit::pipeline_warmup_batch batch;
@@ -113,9 +112,8 @@ TEST_CASE("Pipeline 预热操作保留已经提交的资源", "[pipeline-warmup]
                             {.stage = granit::shader_stage::compute,
                              .code = load_binary("minimal.comp.spv")}) ==
           granit::result::success);
-  granit_compute_pipeline_desc desc = GRANIT_COMPUTE_PIPELINE_DESC_INIT;
-  desc.layout = layout.native_handle();
-  desc.compute_shader = shader.native_handle();
+  const granit::compute_pipeline_desc desc{.layout = layout.ref(),
+                                           .compute_shader = shader.ref()};
   granit::pipeline_warmup_batch batch;
   REQUIRE(batch.create(renderer, {.max_operation_count = 1}) ==
           granit::result::success);
@@ -146,9 +144,8 @@ TEST_CASE("Pipeline 预热取消收敛终态并安全释放资源", "[pipeline-w
                             {.stage = granit::shader_stage::compute,
                              .code = load_binary("minimal.comp.spv")}) ==
           granit::result::success);
-  granit_compute_pipeline_desc desc = GRANIT_COMPUTE_PIPELINE_DESC_INIT;
-  desc.layout = layout.native_handle();
-  desc.compute_shader = shader.native_handle();
+  const granit::compute_pipeline_desc desc{.layout = layout.ref(),
+                                           .compute_shader = shader.ref()};
   granit::pipeline_warmup_batch batch;
   REQUIRE(batch.create(renderer, {.max_operation_count = 32}) ==
           granit::result::success);
