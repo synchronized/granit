@@ -97,7 +97,7 @@ TEST_CASE("Unlit Opaque与Alpha Cutoff产生预期像素") {
           granit::result::success);
   const auto read_pixel = [&](uint32_t x, uint32_t y) {
     granit::command_recorder recorder;
-    REQUIRE(recorder.initialize(native) == granit::result::success);
+    REQUIRE(recorder.initialize(granit::renderer_ref::from_native(native)) == granit::result::success);
     REQUIRE(recorder.begin() == granit::result::success);
     const granit_texture_write_region region{.mip_level = 0,
                                              .base_array_layer = 0,
@@ -142,7 +142,7 @@ TEST_CASE("Unlit Opaque与Alpha Cutoff产生预期像素") {
         granit_material material = GRANIT_NULL_HANDLE;
         REQUIRE(granit_material_create(native, &material_desc, &material) == GRANIT_SUCCESS);
         granit::command_recorder recorder;
-        REQUIRE(recorder.initialize(native) == granit::result::success);
+        REQUIRE(recorder.initialize(granit::renderer_ref::from_native(native)) == granit::result::success);
         REQUIRE(recorder.begin() == granit::result::success);
         granit::material::pbr_frame_constants frame{.view_projection = identity(),
                                                     .camera_position = {},

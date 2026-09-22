@@ -48,8 +48,8 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result initialize(granit_renderer renderer,
-                                  upload_batch_options options = {}) noexcept {
+  [[nodiscard]] result initialize(renderer_ref owner, upload_batch_options options = {}) noexcept {
+    const auto renderer = owner.native_handle();
     if (valid())
       return result::invalid_argument;
     if (renderer == GRANIT_NULL_HANDLE)
@@ -63,7 +63,7 @@ public:
     return from_native(value);
   }
   [[nodiscard]] result initialize(renderer& owner, upload_batch_options options = {}) noexcept {
-    return initialize(owner.native_handle(), options);
+    return initialize(owner.ref(), options);
   }
   [[nodiscard]] result write_buffer(granit_buffer buffer, std::uint64_t offset,
                                     std::span<const std::byte> data) noexcept {

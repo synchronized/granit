@@ -589,7 +589,7 @@ int main(int argc, char** argv) {
                                      .location = granit::memory_location::readback});
   if (result.ok()) {
     readback_stage = "创建 Command Recorder";
-    result = recorder.initialize(native_renderer);
+    result = recorder.initialize(granit::renderer_ref::from_native(native_renderer));
   }
   if (result.ok()) {
     readback_stage = "开始回读命令";

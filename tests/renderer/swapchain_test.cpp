@@ -202,7 +202,7 @@ TEST_CASE("Swapchain 支持创建、查询、重建和销毁", "[swapchain][win3
         GRANIT_ERROR_INVALID_HANDLE);
 
   granit::frame_context cpp_context;
-  REQUIRE(cpp_context.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(cpp_context.initialize(renderer) == granit::result::success);
   granit::acquired_frame cpp_frame;
   REQUIRE(swapchain.acquire(cpp_frame) == granit::result::success);
   granit::frame_recording cpp_recording;

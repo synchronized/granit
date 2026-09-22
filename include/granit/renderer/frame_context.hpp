@@ -89,7 +89,8 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result initialize(granit_renderer renderer) noexcept {
+  [[nodiscard]] result initialize(renderer_ref owner) noexcept {
+    const auto renderer = owner.native_handle();
     if (valid())
       return result::invalid_argument;
     if (renderer == GRANIT_NULL_HANDLE)
@@ -102,7 +103,7 @@ public:
   }
 
   [[nodiscard]] result initialize(renderer& owner) noexcept {
-    return initialize(owner.native_handle());
+    return initialize(owner.ref());
   }
 
   [[nodiscard]] result begin(const acquired_frame& frame, frame_recording& recording) noexcept {
@@ -116,7 +117,8 @@ public:
       recording.renderer_ = renderer_;
       recording.context_ = handle_;
       recording.frame_ = frame.handle;
-      recording.recorder_ = command_recorder::borrow(renderer_, recorder);
+      recording.recorder_ =
+          command_recorder::borrow(renderer_ref::from_native(renderer_), recorder);
       recording.frame_slot_ = frame_slot;
     }
     return from_native(value);

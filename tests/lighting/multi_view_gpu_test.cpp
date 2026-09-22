@@ -168,7 +168,7 @@ TEST_CASE("两个View执行独立PBR与Tone Mapping") {
   CHECK(tone_mapping[0].group() != tone_mapping[1].group());
 
   granit::command_recorder recorder;
-  REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(recorder.initialize(renderer) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
   const granit::viewport viewport{0, 0, 32, 32, 0, 1};
   const granit::scissor scissor{0, 0, 32, 32};

@@ -571,7 +571,7 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
                                           .location = granit::memory_location::readback}) ==
           granit::result::success);
   granit::command_recorder multi_view_recorder;
-  REQUIRE(multi_view_recorder.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(multi_view_recorder.initialize(renderer) == granit::result::success);
   REQUIRE(multi_view_recorder.begin() == granit::result::success);
   const granit_texture_write_region multi_view_region{.mip_level = 0,
                                                       .base_array_layer = 0,
@@ -771,7 +771,7 @@ TEST_CASE("Render Pipeline在没有可见物体时仍清屏并执行覆盖层") 
                                          .location = granit::memory_location::readback}) ==
           granit::result::success);
   granit::command_recorder recorder;
-  REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(recorder.initialize(renderer) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
   const granit_texture_write_region region{.mip_level = 0,
                                            .base_array_layer = 0,
@@ -908,7 +908,7 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
                                          .location = granit::memory_location::readback}) ==
           granit::result::success);
   granit::command_recorder recorder;
-  REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(recorder.initialize(renderer) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
   const granit_texture_data_layout layout{};
   const granit_texture_write_region region{.mip_level = 0,
@@ -1036,7 +1036,7 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
                                       .location = granit::memory_location::readback}) ==
           granit::result::success);
   granit::command_recorder manual_recorder;
-  REQUIRE(manual_recorder.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(manual_recorder.initialize(renderer) == granit::result::success);
   REQUIRE(manual_recorder.begin() == granit::result::success);
   REQUIRE(manual_recorder.bind_graphics_pipeline(manual_tone_mapping.pipeline()) ==
           granit::result::success);

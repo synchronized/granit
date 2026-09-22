@@ -422,7 +422,7 @@ int main(int argc, char** argv) {
                                             .location = granit::memory_location::readback});
   }
   if (result.ok())
-    result = recorder.initialize(renderer.native_handle());
+    result = recorder.initialize(renderer);
   if (result.ok())
     result = timestamps.initialize(renderer, 4);
   granit::tests::tone_mapping_shader_library tone_shaders;

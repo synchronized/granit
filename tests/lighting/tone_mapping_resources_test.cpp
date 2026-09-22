@@ -172,7 +172,7 @@ TEST_CASE("Tone Mapping GPU输出与CPU参考一致") {
                                          .location = granit::memory_location::readback}) ==
           granit::result::success);
   granit::command_recorder recorder;
-  REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(recorder.initialize(renderer) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
   REQUIRE(recorder.bind_graphics_pipeline(resources.pipeline()) == granit::result::success);
   const auto group = resources.group();

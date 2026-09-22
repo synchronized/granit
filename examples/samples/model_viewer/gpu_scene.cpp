@@ -684,7 +684,7 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
     return granit::result::cancelled;
 
   granit::upload_batch uploads;
-  if (const auto result = uploads.initialize(renderer); result.failed())
+  if (const auto result = uploads.initialize(renderer_view); result.failed())
     return result;
   std::vector<granit::async_operation> upload_operations;
   const auto submit_uploads = [&]() -> granit::result {

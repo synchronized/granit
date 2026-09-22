@@ -54,7 +54,8 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result initialize(granit_renderer renderer) noexcept {
+  [[nodiscard]] result initialize(renderer_ref owner) noexcept {
+    const auto renderer = owner.native_handle();
     if (valid()) {
       return result::invalid_argument;
     }
@@ -69,7 +70,7 @@ public:
     return from_native(value);
   }
   [[nodiscard]] result initialize(renderer& owner) noexcept {
-    return initialize(owner.native_handle());
+    return initialize(owner.ref());
   }
   [[nodiscard]] result begin() noexcept {
     return from_native(granit_command_recorder_begin(renderer_, handle_));
@@ -395,10 +396,9 @@ private:
   friend class frame_context;
   friend class frame_recording;
 
-  static command_recorder borrow(granit_renderer renderer,
-                                 granit_command_recorder handle) noexcept {
+  static command_recorder borrow(renderer_ref owner, granit_command_recorder handle) noexcept {
     command_recorder recorder;
-    recorder.renderer_ = renderer;
+    recorder.renderer_ = owner.native_handle();
     recorder.handle_ = handle;
     recorder.owned_ = false;
     return recorder;

@@ -77,7 +77,7 @@ TEST_CASE("Canvas Pass按Batch录制顶点色与Scissor") {
                        .scissor = {0, 0, 18, size}}) == granit::result::success);
 
   granit::command_recorder recorder;
-  REQUIRE(recorder.initialize(native) == granit::result::success);
+  REQUIRE(recorder.initialize(granit::renderer_ref::from_native(native)) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
   granit_canvas_record_desc record_desc = GRANIT_CANVAS_RECORD_DESC_INIT;
   record_desc.color = color_view.native_handle();
