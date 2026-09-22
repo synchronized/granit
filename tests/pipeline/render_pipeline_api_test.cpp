@@ -263,7 +263,7 @@ TEST_CASE("RenderPipeline component把空Renderer归类为无效句柄") {
   CHECK(pipeline == GRANIT_NULL_HANDLE);
 
   granit::render_pipeline cpp_pipeline;
-  CHECK(cpp_pipeline.initialize(granit::renderer_ref{}, desc) == granit::result::invalid_handle);
+  CHECK(cpp_pipeline.initialize(granit::renderer_ref{}, {}) == granit::result::invalid_handle);
   CHECK_FALSE(cpp_pipeline.valid());
 
   const granit_canvas_draw_list_desc canvas_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
@@ -414,9 +414,7 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
 
   callback_state callback;
   callback.renderer = renderer.native_handle();
-  granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
-  pipeline_desc.record = record;
-  pipeline_desc.user_data = &callback;
+  const granit::render_pipeline_desc pipeline_desc{.record = record, .user_data = &callback};
   granit::render_pipeline pipeline;
   REQUIRE(pipeline.initialize(renderer.ref(), pipeline_desc) == granit::result::success);
   granit_render_pipeline_render_desc render_desc = GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT;
@@ -425,30 +423,37 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   render_desc.output_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
   render_desc.width = 16;
   render_desc.height = 16;
-  CHECK(pipeline.render(render_desc) == granit::result::invalid_argument);
+  CHECK(granit_render_pipeline_render(renderer.native_handle(), pipeline.native_handle(),
+                                      &render_desc) == GRANIT_ERROR_INVALID_ARGUMENT);
   const granit_render_pipeline_draw_binding draw_binding{77, mesh.native_handle(),
                                                          material.native_handle(), 0};
   render_desc.draw_binding_count = 1;
   render_desc.draw_bindings = &draw_binding;
   granit_render_pipeline_environment environment = GRANIT_RENDER_PIPELINE_ENVIRONMENT_INIT;
   render_desc.environment = &environment;
-  CHECK(pipeline.render(render_desc) == granit::result::invalid_argument);
+  CHECK(granit_render_pipeline_render(renderer.native_handle(), pipeline.native_handle(),
+                                      &render_desc) == GRANIT_ERROR_INVALID_ARGUMENT);
   environment.irradiance = output_view.native_handle();
   environment.prefiltered_environment = output_view.native_handle();
   environment.brdf_lut = output_view.native_handle();
   environment.intensity = -1.0F;
-  CHECK(pipeline.render(render_desc) == granit::result::invalid_argument);
+  CHECK(granit_render_pipeline_render(renderer.native_handle(), pipeline.native_handle(),
+                                      &render_desc) == GRANIT_ERROR_INVALID_ARGUMENT);
   environment.intensity = 1.0F;
   environment.rotation_radians = std::numeric_limits<float>::quiet_NaN();
-  CHECK(pipeline.render(render_desc) == granit::result::invalid_argument);
+  CHECK(granit_render_pipeline_render(renderer.native_handle(), pipeline.native_handle(),
+                                      &render_desc) == GRANIT_ERROR_INVALID_ARGUMENT);
   render_desc.environment = nullptr;
   render_desc.clear_color.red = std::numeric_limits<float>::infinity();
-  CHECK(pipeline.render(render_desc) == granit::result::invalid_argument);
+  CHECK(granit_render_pipeline_render(renderer.native_handle(), pipeline.native_handle(),
+                                      &render_desc) == GRANIT_ERROR_INVALID_ARGUMENT);
   render_desc.clear_color = {0.02F, 0.04F, 0.06F, 1.0F};
-  REQUIRE(pipeline.render(render_desc) == granit::result::success);
+  REQUIRE(granit_render_pipeline_render(renderer.native_handle(), pipeline.native_handle(),
+                                        &render_desc) == GRANIT_SUCCESS);
   render_desc.frame = 1;
   render_desc.view_count = 2;
-  CHECK(pipeline.render(render_desc) == granit::result::invalid_argument);
+  CHECK(granit_render_pipeline_render(renderer.native_handle(), pipeline.native_handle(),
+                                      &render_desc) == GRANIT_ERROR_INVALID_ARGUMENT);
   render_desc.frame = GRANIT_NULL_HANDLE;
   render_desc.view_count = 1;
   CHECK(callback.stages ==
@@ -464,7 +469,8 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   CHECK(callback.overlay_encode_srgb == std::vector<uint32_t>{1});
   REQUIRE(callback.ibl_groups.size() == 1);
 
-  REQUIRE(pipeline.render(render_desc) == granit::result::success);
+  REQUIRE(granit_render_pipeline_render(renderer.native_handle(), pipeline.native_handle(),
+                                        &render_desc) == GRANIT_SUCCESS);
   CHECK(callback.stages.size() == 6);
   CHECK(callback.payloads == std::vector<uint64_t>{77, 77, 77, 77});
   CHECK(callback.meshes == std::vector<granit_mesh>{mesh.native_handle(), mesh.native_handle(),
@@ -475,7 +481,8 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   const std::array duplicate_bindings{draw_binding, draw_binding};
   render_desc.draw_binding_count = static_cast<uint32_t>(duplicate_bindings.size());
   render_desc.draw_bindings = duplicate_bindings.data();
-  CHECK(pipeline.render(render_desc) == granit::result::invalid_argument);
+  CHECK(granit_render_pipeline_render(renderer.native_handle(), pipeline.native_handle(),
+                                      &render_desc) == GRANIT_ERROR_INVALID_ARGUMENT);
   render_desc.draw_binding_count = 1;
   render_desc.draw_bindings = &draw_binding;
 
@@ -494,55 +501,45 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   REQUIRE(canvas_texture_view.initialize(renderer.ref(), canvas_texture.ref()) ==
           granit::result::success);
   REQUIRE(canvas_sampler.initialize(renderer, {}) == granit::result::success);
-  granit_canvas_draw_list_desc canvas_list_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
   granit::canvas_draw_list canvas;
-  REQUIRE(canvas.initialize(renderer.ref(), canvas_list_desc) == granit::result::success);
-  granit_canvas_rect_desc canvas_rect = GRANIT_CANVAS_RECT_DESC_INIT;
-  canvas_rect.width = 8;
-  canvas_rect.height = 8;
-  canvas_rect.state.texture = canvas_texture_view.native_handle();
-  canvas_rect.state.sampler = canvas_sampler.native_handle();
+  REQUIRE(canvas.initialize(renderer.ref()) == granit::result::success);
+  granit::canvas_rect_desc canvas_rect{
+      .width = 8,
+      .height = 8,
+      .state = {.texture = canvas_texture_view.ref(), .sampler = canvas_sampler.ref(), .clip = {}},
+  };
   REQUIRE(canvas.append_rect(canvas_rect) == granit::result::success);
 
-  granit_text_atlas_desc text_atlas_desc = GRANIT_TEXT_ATLAS_DESC_INIT;
-  text_atlas_desc.page_width = 16;
-  text_atlas_desc.page_height = 16;
   granit::text_atlas text_atlas;
-  REQUIRE(text_atlas.initialize(renderer.ref(), text_atlas_desc) ==
+  REQUIRE(text_atlas.initialize(renderer.ref(), {.page_width = 16, .page_height = 16}) ==
           granit::result::success);
   constexpr std::array<uint8_t, 64> glyph_coverage = [] {
     std::array<uint8_t, 64> values{};
     values.fill(255);
     return values;
   }();
-  granit_text_glyph_bitmap_desc glyph_bitmap = GRANIT_TEXT_GLYPH_BITMAP_DESC_INIT;
-  glyph_bitmap.font_key = 1;
-  glyph_bitmap.glyph_id = 1;
-  glyph_bitmap.width = 8;
-  glyph_bitmap.height = 8;
-  glyph_bitmap.bearing_y = 8;
-  glyph_bitmap.bitmap = glyph_coverage.data();
-  glyph_bitmap.bitmap_size = glyph_coverage.size();
+  const granit::text_glyph_bitmap_desc glyph_bitmap{
+      .glyph_id = 1,
+      .font_key = 1,
+      .width = 8,
+      .height = 8,
+      .bearing_y = 8,
+      .bitmap = glyph_coverage,
+  };
   REQUIRE(text_atlas.upload_glyph(glyph_bitmap) == granit::result::success);
-  granit_text_draw_list_desc text_list_desc = GRANIT_TEXT_DRAW_LIST_DESC_INIT;
   granit::text_draw_list text;
-  REQUIRE(text.initialize(renderer.ref(), text_list_desc) == granit::result::success);
-  const granit_text_glyph_instance glyph{1, 1, UINT32_C(0xff00ff00), 0, 8, {0, 0}};
+  REQUIRE(text.initialize(renderer.ref()) == granit::result::success);
+  const granit::text_glyph_instance glyph{1, 1, UINT32_C(0xff00ff00), 0, 8};
   REQUIRE(text.append_glyph_run(std::span{&glyph, 1}) == granit::result::success);
-  REQUIRE(text.append_to_canvas(text_atlas.native_handle(), canvas.native_handle()) ==
+  REQUIRE(text.append_to_canvas(text_atlas, canvas.ref()) ==
           granit::result::success);
 
-  granit_debug_draw_list_desc debug_list_desc = GRANIT_DEBUG_DRAW_LIST_DESC_INIT;
   granit::debug_draw_list debug_draw;
-  REQUIRE(debug_draw.initialize(renderer.ref(), debug_list_desc) ==
-          granit::result::success);
+  REQUIRE(debug_draw.initialize(renderer.ref()) == granit::result::success);
   const std::array debug_triangles{
-      granit_debug_draw_triangle{{{-0.8F, -0.8F, 0.5F, UINT32_C(0xff00ff00)},
-                                  {0.8F, -0.8F, 0.5F, UINT32_C(0xff00ff00)},
-                                  {0, 0.8F, 0.5F, UINT32_C(0xff00ff00)}},
-                                 GRANIT_DEBUG_DRAW_SPACE_WORLD,
-                                 GRANIT_DEBUG_DRAW_DEPTH_MODE_DISABLED,
-                                 {0, 0}}};
+      granit::debug_draw_triangle{{{{-0.8F, -0.8F, 0.5F, UINT32_C(0xff00ff00)},
+                                    {0.8F, -0.8F, 0.5F, UINT32_C(0xff00ff00)},
+                                    {0, 0.8F, 0.5F, UINT32_C(0xff00ff00)}}}}};
   REQUIRE(debug_draw.append_triangles(debug_triangles) == granit::result::success);
 
   const std::array multi_view_outputs{
@@ -556,7 +553,8 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   render_desc.view_count = 2;
   render_desc.output_count = static_cast<uint32_t>(multi_view_outputs.size());
   render_desc.outputs = multi_view_outputs.data();
-  REQUIRE(pipeline.render(render_desc) == granit::result::success);
+  REQUIRE(granit_render_pipeline_render(renderer.native_handle(), pipeline.native_handle(),
+                                        &render_desc) == GRANIT_SUCCESS);
   REQUIRE(callback.stages.size() == 12);
   CHECK(std::vector(callback.stages.end() - 6, callback.stages.end()) ==
         std::vector<granit_render_pipeline_stage>{
@@ -618,11 +616,13 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   auto invalid_mesh_binding = draw_binding;
   invalid_mesh_binding.mesh = 1001;
   render_desc.draw_bindings = &invalid_mesh_binding;
-  CHECK(pipeline.render(render_desc) == granit::result::invalid_handle);
+  CHECK(granit_render_pipeline_render(renderer.native_handle(), pipeline.native_handle(),
+                                      &render_desc) == GRANIT_ERROR_INVALID_HANDLE);
   render_desc.draw_bindings = &draw_binding;
 
   callback.result = GRANIT_ERROR_NOT_READY;
-  CHECK(pipeline.render(render_desc) == granit::result::not_ready);
+  CHECK(granit_render_pipeline_render(renderer.native_handle(), pipeline.native_handle(),
+                                      &render_desc) == GRANIT_ERROR_NOT_READY);
 }
 
 TEST_CASE("统一Render Pipeline拒绝跨Renderer与越界View") {
@@ -686,16 +686,15 @@ TEST_CASE("Render Pipeline在没有可见物体时仍清屏并执行覆盖层") 
   REQUIRE(canvas_texture_view.initialize(renderer.ref(), canvas_texture.ref()) ==
           granit::result::success);
   REQUIRE(canvas_sampler.initialize(renderer, {}) == granit::result::success);
-  granit_canvas_draw_list_desc canvas_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
   granit::canvas_draw_list canvas;
-  REQUIRE(canvas.initialize(renderer.ref(), canvas_desc) == granit::result::success);
-  granit_canvas_rect_desc rect = GRANIT_CANVAS_RECT_DESC_INIT;
-  rect.x = 2;
-  rect.y = 2;
-  rect.width = 4;
-  rect.height = 4;
-  rect.state.texture = canvas_texture_view.native_handle();
-  rect.state.sampler = canvas_sampler.native_handle();
+  REQUIRE(canvas.initialize(renderer.ref()) == granit::result::success);
+  granit::canvas_rect_desc rect{
+      .x = 2,
+      .y = 2,
+      .width = 4,
+      .height = 4,
+      .state = {.texture = canvas_texture_view.ref(), .sampler = canvas_sampler.ref(), .clip = {}},
+  };
   REQUIRE(canvas.append_rect(rect) == granit::result::success);
 
   granit_scene_view view{};

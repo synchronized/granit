@@ -100,11 +100,11 @@ TEST_CASE("GRENV环境资源上传为Render Pipeline输入", "[example][model-vi
   granit::environment_map environment;
   REQUIRE(environment.initialize(renderer.ref(), bytes) == granit::result::success);
   CHECK(environment.valid());
-  granit_environment_map_info info = GRANIT_ENVIRONMENT_MAP_INFO_INIT;
+  granit::environment_map_info info;
   REQUIRE(environment.get_info(info).ok());
-  CHECK(info.environment.irradiance != GRANIT_NULL_HANDLE);
-  CHECK(info.environment.prefiltered_environment != GRANIT_NULL_HANDLE);
-  CHECK(info.environment.brdf_lut != GRANIT_NULL_HANDLE);
+  CHECK(info.environment.irradiance.valid());
+  CHECK(info.environment.prefiltered_environment.valid());
+  CHECK(info.environment.brdf_lut.valid());
   CHECK(info.environment.prefiltered_max_mip == 2.0F);
   REQUIRE(environment.reset().ok());
   CHECK_FALSE(environment.valid());

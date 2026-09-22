@@ -385,7 +385,8 @@ granit::result gpu_scene::add_pipeline_warmups(
       desc.depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT;
       desc.sample_count = sample_count;
       std::uint32_t index{};
-      const auto result = material.add_pipeline_warmup(desc, batch, index);
+      const auto result = granit::from_native(granit_material_add_pipeline_warmup(
+          renderer_, material.native_handle(), &desc, batch, &index));
       if (result.failed()) {
         result_indices.clear();
         return result;
@@ -611,24 +612,26 @@ granit::result gpu_scene::update_material_factors(gltf::scene& source, std::uint
     return granit::result::invalid_argument;
 
   const std::array updates{
-      granit_material_parameter_update{granit::material_parameter_id("base_color"),
-                                       GRANIT_MATERIAL_PARAMETER_FLOAT4, 0, &edit.base_color,
-                                       sizeof(edit.base_color), 0},
-      granit_material_parameter_update{granit::material_parameter_id("metallic"),
-                                       GRANIT_MATERIAL_PARAMETER_FLOAT32, 0, &edit.metallic,
-                                       sizeof(edit.metallic), 0},
-      granit_material_parameter_update{granit::material_parameter_id("perceptual_roughness"),
-                                       GRANIT_MATERIAL_PARAMETER_FLOAT32, 0, &edit.roughness,
-                                       sizeof(edit.roughness), 0},
-      granit_material_parameter_update{granit::material_parameter_id("normal_scale"),
-                                       GRANIT_MATERIAL_PARAMETER_FLOAT32, 0, &edit.normal_scale,
-                                       sizeof(edit.normal_scale), 0},
-      granit_material_parameter_update{
-          granit::material_parameter_id("occlusion_strength"), GRANIT_MATERIAL_PARAMETER_FLOAT32, 0,
-          &edit.occlusion_strength, sizeof(edit.occlusion_strength), 0},
-      granit_material_parameter_update{granit::material_parameter_id("emissive"),
-                                       GRANIT_MATERIAL_PARAMETER_FLOAT3, 0, &edit.emissive,
-                                       sizeof(edit.emissive), 0},
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("base_color"), granit::material_parameter_type::float4,
+          std::as_bytes(std::span{&edit.base_color, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("metallic"), granit::material_parameter_type::float32,
+          std::as_bytes(std::span{&edit.metallic, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("perceptual_roughness"),
+          granit::material_parameter_type::float32,
+          std::as_bytes(std::span{&edit.roughness, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("normal_scale"), granit::material_parameter_type::float32,
+          std::as_bytes(std::span{&edit.normal_scale, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("occlusion_strength"),
+          granit::material_parameter_type::float32,
+          std::as_bytes(std::span{&edit.occlusion_strength, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("emissive"), granit::material_parameter_type::float3,
+          std::as_bytes(std::span{&edit.emissive, 1})),
   };
   const auto result = materials_[material_index].update(updates);
   if (result.failed())
@@ -648,12 +651,9 @@ granit::result gpu_scene::update_debug_display(std::uint32_t mode) noexcept {
     return granit::result::invalid_handle;
   if (mode > static_cast<std::uint32_t>(debug_display_mode::vertex_tangents))
     return granit::result::invalid_argument;
-  const granit_material_parameter_update update{granit::material_parameter_id("debug_display"),
-                                                GRANIT_MATERIAL_PARAMETER_UINT32,
-                                                0,
-                                                &mode,
-                                                sizeof(mode),
-                                                0};
+  const auto update = granit::material_parameter_update::value(
+      granit::material_parameter_id("debug_display"), granit::material_parameter_type::uint32,
+      std::as_bytes(std::span{&mode, 1}));
   for (auto& material : materials_) {
     if (const auto result = material.update(std::span{&update, 1}); result.failed())
       return result;

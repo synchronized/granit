@@ -80,7 +80,7 @@ void texture_registry::clear() noexcept {
 }
 
 granit::result texture_registry::resolve(ImTextureID texture,
-                                         granit_canvas_draw_state& state) const noexcept {
+                                         granit::canvas_draw_state& state) const noexcept {
   std::uint32_t index = 0;
   std::uint32_t generation = 0;
   if (!decode(texture, index, generation) || index >= slots_.size())
@@ -88,12 +88,12 @@ granit::result texture_registry::resolve(ImTextureID texture,
   const auto& target = slots_[index];
   if (!target.alive || target.generation != generation)
     return granit::result::invalid_handle;
-  state.texture = target.view.native_handle();
-  state.sampler = target.sampler.native_handle();
+  state.texture = target.view;
+  state.sampler = target.sampler;
   return granit::result::success;
 }
 
-granit::result texture_registry::resolver(ImTextureID texture, granit_canvas_draw_state& state,
+granit::result texture_registry::resolver(ImTextureID texture, granit::canvas_draw_state& state,
                                           void* user_data) noexcept {
   if (user_data == nullptr)
     return granit::result::invalid_argument;

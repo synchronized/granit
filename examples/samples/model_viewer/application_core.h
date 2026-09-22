@@ -107,7 +107,7 @@ private:
   gpu_scene_plan gpu_plan_;
   gpu_scene gpu_scene_;
   granit::environment_map environment_;
-  granit_environment_map_info environment_info_ = GRANIT_ENVIRONMENT_MAP_INFO_INIT;
+  granit::environment_map_info environment_info_;
   viewer_state state_;
   performance_history performance_;
   bool camera_initialized_{};

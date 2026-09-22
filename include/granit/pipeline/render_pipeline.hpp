@@ -112,16 +112,7 @@ public:
   }
 
   [[nodiscard]] result initialize(renderer_ref owner,
-                                  const granit_render_pipeline_desc& desc) noexcept {
-    const auto renderer = owner.native_handle();
-    if (valid())
-      return result::invalid_argument;
-    const auto value = from_native(granit_render_pipeline_create(renderer, &desc, &handle_));
-    if (value.ok())
-      renderer_ = renderer;
-    return value;
-  }
-  [[nodiscard]] result initialize(renderer& owner, const render_pipeline_desc& desc = {}) noexcept {
+                                  const render_pipeline_desc& desc = {}) noexcept {
     const granit_render_pipeline_desc native{
         .struct_size = GRANIT_RENDER_PIPELINE_DESC_VERSION_1_SIZE,
         .reserved = 0,
@@ -132,10 +123,10 @@ public:
         .enable_specular_aa = desc.enable_specular_aa ? 1U : 0U,
         .reserved_2 = 0,
     };
-    return initialize(owner.ref(), native);
+    return create_native(owner, native);
   }
-  [[nodiscard]] result render(const granit_render_pipeline_render_desc& desc) noexcept {
-    return from_native(granit_render_pipeline_render(renderer_, handle_, &desc));
+  [[nodiscard]] result initialize(renderer& owner, const render_pipeline_desc& desc = {}) noexcept {
+    return initialize(owner.ref(), desc);
   }
   [[nodiscard]] result render(const render_pipeline_render_desc& desc) noexcept {
     if (desc.draw_bindings.size() > std::numeric_limits<std::uint32_t>::max() ||
@@ -185,7 +176,7 @@ public:
                           desc.clear_color.alpha},
           .environment = environment_ptr,
       };
-      return render(native);
+      return render_native(native);
     } catch (const std::bad_alloc&) {
       return result::out_of_memory;
     } catch (...) {
@@ -195,12 +186,10 @@ public:
   [[nodiscard]] result enable_metrics() noexcept {
     return from_native(granit_render_pipeline_metrics_enable(renderer_, handle_));
   }
-  [[nodiscard]] result get_metrics(granit_render_pipeline_metrics& metrics) const noexcept {
-    return from_native(granit_render_pipeline_get_metrics(renderer_, handle_, &metrics));
-  }
   [[nodiscard]] result get_metrics(render_pipeline_metrics& metrics) const noexcept {
     granit_render_pipeline_metrics native = GRANIT_RENDER_PIPELINE_METRICS_INIT;
-    const auto value = get_metrics(native);
+    const auto value =
+        from_native(granit_render_pipeline_get_metrics(renderer_, handle_, &native));
     if (value.ok()) {
       metrics = {.sample_sequence = native.sample_sequence,
                  .shadow_gpu_ns = native.shadow_gpu_ns,
@@ -218,9 +207,28 @@ public:
     return from_native(granit_render_pipeline_destroy(renderer, handle));
   }
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] renderer_ref owner() const noexcept {
+    return renderer_ref::from_native(renderer_);
+  }
   [[nodiscard]] granit_render_pipeline native_handle() const noexcept { return handle_; }
 
 private:
+  [[nodiscard]] result create_native(renderer_ref owner,
+                                     const granit_render_pipeline_desc& desc) noexcept {
+    const auto renderer = owner.native_handle();
+    if (valid())
+      return result::invalid_argument;
+    const auto value = from_native(granit_render_pipeline_create(renderer, &desc, &handle_));
+    if (value.ok())
+      renderer_ = renderer;
+    return value;
+  }
+
+  [[nodiscard]] result
+  render_native(const granit_render_pipeline_render_desc& desc) noexcept {
+    return from_native(granit_render_pipeline_render(renderer_, handle_, &desc));
+  }
+
   [[nodiscard]] static constexpr granit_render_pipeline_output
   to_native(const render_pipeline_output& output) noexcept {
     return {.struct_size = GRANIT_RENDER_PIPELINE_OUTPUT_VERSION_1_SIZE,

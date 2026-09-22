@@ -208,7 +208,7 @@ TEST_CASE("Pipeline Layout 保持 Bind Group Layout 依赖", "[pipeline][bind-gr
                                       .visibility = granit::shader_stage_flags::fragment}};
   granit::bind_group_layout group_layout;
   REQUIRE(group_layout.initialize(renderer, entries) == granit::result::success);
-  const granit_bind_group_layout handle = group_layout.native_handle();
+  const auto handle = group_layout.ref();
   granit::pipeline_layout pipeline_layout;
   REQUIRE(pipeline_layout.initialize(renderer.ref(), std::span{&handle, 1}) ==
           granit::result::success);
@@ -253,7 +253,7 @@ TEST_CASE("动态 Uniform Offset 贯通 Bind Group 与图形计算命令录制",
       .visibility = granit::shader_stage_flags::vertex | granit::shader_stage_flags::compute}};
   granit::bind_group_layout group_layout;
   REQUIRE(group_layout.initialize(renderer, declarations) == granit::result::success);
-  const auto group_layout_handle = group_layout.native_handle();
+  const auto group_layout_handle = group_layout.ref();
   granit::pipeline_layout pipeline_layout;
   REQUIRE(
       pipeline_layout.initialize(renderer.ref(), std::span{&group_layout_handle, 1}) ==
@@ -307,7 +307,7 @@ TEST_CASE("动态 Offset 按 Bind Group 顺序跳过普通 Uniform", "[pipeline]
   granit::bind_group_layout second_layout;
   REQUIRE(first_layout.initialize(renderer, first_declarations) == granit::result::success);
   REQUIRE(second_layout.initialize(renderer, second_declarations) == granit::result::success);
-  const std::array layout_handles{first_layout.native_handle(), second_layout.native_handle()};
+  const std::array layout_handles{first_layout.ref(), second_layout.ref()};
   granit::pipeline_layout pipeline_layout;
   REQUIRE(pipeline_layout.initialize(renderer.ref(), layout_handles) ==
           granit::result::success);
@@ -391,7 +391,7 @@ TEST_CASE("跨后端索引纹理 Fixture 使用动态 Uniform 绘制两个对象
                                       .visibility = granit::shader_stage_flags::fragment}};
   granit::bind_group_layout group_layout;
   REQUIRE(group_layout.initialize(renderer, declarations) == granit::result::success);
-  const auto group_layout_handle = group_layout.native_handle();
+  const auto group_layout_handle = group_layout.ref();
   granit::pipeline_layout pipeline_layout;
   REQUIRE(
       pipeline_layout.initialize(renderer.ref(), std::span{&group_layout_handle, 1}) ==
@@ -644,7 +644,7 @@ TEST_CASE("不可变 Bind Group 保持 Buffer 与 Sampler 生命周期", "[pipel
                                       .visibility = granit::shader_stage_flags::fragment}};
   granit::bind_group_layout layout;
   REQUIRE(layout.initialize(renderer, declarations) == granit::result::success);
-  const auto layout_handle = layout.native_handle();
+  const auto layout_handle = layout.ref();
   granit::pipeline_layout binding_pipeline_layout;
   REQUIRE(binding_pipeline_layout.initialize(
               renderer.ref(), std::span{&layout_handle, 1}) == granit::result::success);
@@ -674,7 +674,7 @@ TEST_CASE("不可变 Bind Group 保持 Buffer 与 Sampler 生命周期", "[pipel
   const std::array groups{group.ref()};
   granit::bind_group_layout incompatible_group_layout;
   REQUIRE(incompatible_group_layout.initialize(renderer, declarations) == granit::result::success);
-  const auto incompatible_group_layout_handle = incompatible_group_layout.native_handle();
+  const auto incompatible_group_layout_handle = incompatible_group_layout.ref();
   granit::pipeline_layout incompatible_pipeline_layout;
   REQUIRE(incompatible_pipeline_layout.initialize(
               renderer.ref(), std::span{&incompatible_group_layout_handle, 1}) ==
@@ -1146,7 +1146,7 @@ TEST_CASE("Compute Dispatch 写入 Storage Buffer 并自动同步 Copy", "[pipel
                                                         granit::shader_stage_flags::compute};
   granit::bind_group_layout group_layout;
   REQUIRE(group_layout.initialize(renderer, std::span{&declaration, 1}) == granit::result::success);
-  const auto group_layout_handle = group_layout.native_handle();
+  const auto group_layout_handle = group_layout.ref();
   granit::pipeline_layout pipeline_layout;
   REQUIRE(
       pipeline_layout.initialize(renderer.ref(), std::span{&group_layout_handle, 1}) ==
@@ -1238,7 +1238,7 @@ TEST_CASE("Graphics 与 Compute 工作负载支持并行录制", "[pipeline][com
   granit::bind_group_layout compute_group_layout;
   REQUIRE(compute_group_layout.initialize(renderer, std::span{&declaration, 1}) ==
           granit::result::success);
-  const auto compute_group_layout_handle = compute_group_layout.native_handle();
+  const auto compute_group_layout_handle = compute_group_layout.ref();
   granit::pipeline_layout compute_layout;
   REQUIRE(compute_layout.initialize(renderer.ref(),
                                     std::span{&compute_group_layout_handle, 1}) ==

@@ -61,7 +61,7 @@ granit_result tone_mapping_pipeline_resources::initialize(
   auto renderer_ref = granit::renderer_ref::from_native(renderer);
   if (result.ok())
     result = group_layout_.initialize(renderer_ref, layout_entries);
-  const std::array layouts{group_layout_.native_handle()};
+  const std::array layouts{group_layout_.ref()};
   if (result.ok())
     result = pipeline_layout_.initialize(renderer_ref, layouts);
   if (result.ok())

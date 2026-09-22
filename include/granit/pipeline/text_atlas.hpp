@@ -55,17 +55,10 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result initialize(renderer_ref owner,
-                                  const granit_text_atlas_desc& desc) noexcept {
+  [[nodiscard]] result initialize(renderer_ref owner, const text_atlas_desc& desc = {}) noexcept {
     const auto renderer = owner.native_handle();
     if (valid())
       return result::invalid_argument;
-    const auto value = from_native(granit_text_atlas_create(renderer, &desc, &handle_));
-    if (value.ok())
-      renderer_ = renderer;
-    return value;
-  }
-  [[nodiscard]] result initialize(renderer& owner, const text_atlas_desc& desc = {}) noexcept {
     const granit_text_atlas_desc native{
         .struct_size = GRANIT_TEXT_ATLAS_DESC_VERSION_1_SIZE,
         .page_width = desc.page_width,
@@ -74,10 +67,13 @@ public:
         .padding = desc.padding,
         .reserved = {},
     };
-    return initialize(owner.ref(), native);
+    const auto value = from_native(granit_text_atlas_create(renderer, &native, &handle_));
+    if (value.ok())
+      renderer_ = renderer;
+    return value;
   }
-  [[nodiscard]] result upload_glyph(const granit_text_glyph_bitmap_desc& glyph) noexcept {
-    return from_native(granit_text_atlas_upload_glyph(renderer_, handle_, &glyph));
+  [[nodiscard]] result initialize(renderer& owner, const text_atlas_desc& desc = {}) noexcept {
+    return initialize(owner.ref(), desc);
   }
   [[nodiscard]] result upload_glyph(const text_glyph_bitmap_desc& glyph) noexcept {
     const granit_text_glyph_bitmap_desc native{
@@ -93,14 +89,11 @@ public:
         .bytes_per_row = glyph.bytes_per_row,
         .reserved = {},
     };
-    return upload_glyph(native);
-  }
-  [[nodiscard]] result get_stats(granit_text_atlas_stats& stats) const noexcept {
-    return from_native(granit_text_atlas_get_stats(renderer_, handle_, &stats));
+    return from_native(granit_text_atlas_upload_glyph(renderer_, handle_, &native));
   }
   [[nodiscard]] result get_stats(text_atlas_stats& stats) const noexcept {
     granit_text_atlas_stats native = GRANIT_TEXT_ATLAS_STATS_INIT;
-    const auto value = get_stats(native);
+    const auto value = from_native(granit_text_atlas_get_stats(renderer_, handle_, &native));
     if (value.ok())
       stats = {.glyph_count = native.glyph_count, .page_count = native.page_count};
     return value;

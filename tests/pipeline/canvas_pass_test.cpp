@@ -64,29 +64,27 @@ TEST_CASE("Canvas Pass按Batch录制顶点色与Scissor") {
   REQUIRE(sampler.initialize(granit::renderer_ref::from_native(native),
                              {.mag_filter = granit::filter::nearest,
                               .min_filter = granit::filter::nearest}) == granit::result::success);
-  granit_canvas_draw_list_desc list_desc = GRANIT_CANVAS_DRAW_LIST_DESC_INIT;
   granit::canvas_draw_list list;
-  REQUIRE(list.initialize(granit::renderer_ref::from_native(native), list_desc) ==
+  REQUIRE(list.initialize(granit::renderer_ref::from_native(native)) ==
           granit::result::success);
   REQUIRE(list.append(blue, indices,
-                      {.texture = blue_view.native_handle(),
-                       .sampler = sampler.native_handle(),
-                       .scissor = {0, 0, size, size}}) == granit::result::success);
+                      {.texture = blue_view.ref(),
+                       .sampler = sampler.ref(),
+                       .clip = {0, 0, size, size}}) == granit::result::success);
   REQUIRE(list.append(red, indices,
-                      {.texture = red_view.native_handle(),
-                       .sampler = sampler.native_handle(),
-                       .scissor = {0, 0, 18, size}}) == granit::result::success);
+                      {.texture = red_view.ref(),
+                       .sampler = sampler.ref(),
+                       .clip = {0, 0, 18, size}}) == granit::result::success);
 
   granit::command_recorder recorder;
   REQUIRE(recorder.initialize(granit::renderer_ref::from_native(native)) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
-  granit_canvas_record_desc record_desc = GRANIT_CANVAS_RECORD_DESC_INIT;
-  record_desc.color = color_view.native_handle();
-  record_desc.color_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
-  record_desc.width = size;
-  record_desc.height = size;
-  record_desc.load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR;
-  REQUIRE(list.record(recorder.native_handle(), record_desc) == granit::result::success);
+  granit::canvas_record_desc record_desc{.color = color_view.ref(),
+                                         .color_format = granit::texture_format::rgba8_unorm,
+                                         .width = size,
+                                         .height = size,
+                                         .load_operation = granit::attachment_load_operation::clear};
+  REQUIRE(list.record(recorder, record_desc) == granit::result::success);
   REQUIRE(recorder.end() == granit::result::success);
   REQUIRE(recorder.submit() == granit::result::success);
   REQUIRE(recorder.reset() == granit::result::success);
@@ -124,10 +122,10 @@ TEST_CASE("Canvas Pass按Batch录制顶点色与Scissor") {
   CHECK(pixel(20) == std::array<std::uint8_t, 4>{0, 0, 128, 128});
   REQUIRE(readback.unmap() == granit::result::success);
 
-  record_desc.encode_srgb = 1;
+  record_desc.encode_srgb = true;
   record_desc.frame_slot = 0;
   REQUIRE(recorder.begin() == granit::result::success);
-  REQUIRE(list.record(recorder.native_handle(), record_desc) == granit::result::success);
+  REQUIRE(list.record(recorder, record_desc) == granit::result::success);
   REQUIRE(recorder.end() == granit::result::success);
   REQUIRE(recorder.submit() == granit::result::success);
   REQUIRE(recorder.reset() == granit::result::success);
@@ -153,11 +151,11 @@ TEST_CASE("Canvas Pass按Batch录制顶点色与Scissor") {
     REQUIRE(red_view.initialize(granit::renderer_ref::from_native(native),
                                 red_texture.ref()) == granit::result::success);
     REQUIRE(list.append(red, indices,
-                        {.texture = red_view.native_handle(),
-                         .sampler = sampler.native_handle(),
-                         .scissor = {0, 0, size, size}}) == granit::result::success);
+                        {.texture = red_view.ref(),
+                         .sampler = sampler.ref(),
+                         .clip = {0, 0, size, size}}) == granit::result::success);
     REQUIRE(recorder.begin() == granit::result::success);
-    REQUIRE(list.record(recorder.native_handle(), record_desc) == granit::result::success);
+    REQUIRE(list.record(recorder, record_desc) == granit::result::success);
     REQUIRE(recorder.end() == granit::result::success);
     REQUIRE(recorder.submit() == granit::result::success);
     REQUIRE(recorder.reset() == granit::result::success);

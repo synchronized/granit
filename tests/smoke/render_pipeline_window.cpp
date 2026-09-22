@@ -140,13 +140,13 @@ int main(int argument_count, char** arguments) {
     result = canvas_sampler.initialize(renderer, {});
   if (result.ok())
     result = canvas.initialize(renderer);
-  granit_canvas_rect_desc canvas_rect = GRANIT_CANVAS_RECT_DESC_INIT;
-  canvas_rect.x = 12;
-  canvas_rect.y = 12;
-  canvas_rect.width = 96;
-  canvas_rect.height = 48;
-  canvas_rect.state.texture = canvas_view.native_handle();
-  canvas_rect.state.sampler = canvas_sampler.native_handle();
+  const granit::canvas_rect_desc canvas_rect{
+      .x = 12,
+      .y = 12,
+      .width = 96,
+      .height = 48,
+      .state = {.texture = canvas_view.ref(), .sampler = canvas_sampler.ref(), .clip = {}},
+  };
   if (result.ok())
     result = canvas.append_rect(canvas_rect);
 

@@ -175,12 +175,6 @@ public:
       return result::internal;
     }
   }
-  [[nodiscard]] result update(std::span<const granit_material_parameter_update> updates) noexcept {
-    if (updates.size() > std::numeric_limits<std::uint32_t>::max())
-      return result::invalid_argument;
-    return from_native(granit_material_update(renderer_, handle_, updates.data(),
-                                              static_cast<std::uint32_t>(updates.size())));
-  }
   [[nodiscard]] result update(std::span<const material_parameter_update> updates) noexcept {
     if (updates.size() > std::numeric_limits<std::uint32_t>::max())
       return result::invalid_argument;
@@ -189,19 +183,13 @@ public:
       native.reserve(updates.size());
       for (const auto& update : updates)
         native.push_back(update.native());
-      return update(
-          std::span<const granit_material_parameter_update>{native.data(), native.size()});
+      return from_native(granit_material_update(renderer_, handle_, native.data(),
+                                                static_cast<std::uint32_t>(native.size())));
     } catch (const std::bad_alloc&) {
       return result::out_of_memory;
     } catch (...) {
       return result::internal;
     }
-  }
-  [[nodiscard]] result add_pipeline_warmup(const granit_material_pipeline_warmup_desc& desc,
-                                           granit_pipeline_warmup_batch batch,
-                                           std::uint32_t& result_index) const noexcept {
-    return from_native(
-        granit_material_add_pipeline_warmup(renderer_, handle_, &desc, batch, &result_index));
   }
   [[nodiscard]] result add_pipeline_warmup(const material_pipeline_warmup_desc& desc,
                                            const pipeline_warmup_batch& batch,
@@ -216,7 +204,8 @@ public:
         .sample_count = static_cast<granit_sample_count>(desc.samples),
         .reserved_tail = 0,
     };
-    return add_pipeline_warmup(native, batch.native_handle(), result_index);
+    return from_native(granit_material_add_pipeline_warmup(
+        renderer_, handle_, &native, batch.native_handle(), &result_index));
   }
   [[nodiscard]] result reset() noexcept {
     if (!valid())

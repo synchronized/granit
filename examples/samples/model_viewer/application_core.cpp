@@ -225,7 +225,17 @@ granit::result application_core::tick(const application_tick_input& input, frame
   candidate.exposure_ev = state_.exposure_ev();
   const auto background = state_.background_color();
   candidate.clear_color = {background.x, background.y, background.z, 1.0F};
-  candidate.environment = environment_info_.environment;
+  candidate.environment = {
+      sizeof(granit_render_pipeline_environment),
+      0,
+      environment_info_.environment.irradiance.native_handle(),
+      environment_info_.environment.prefiltered_environment.native_handle(),
+      environment_info_.environment.brdf_lut.native_handle(),
+      environment_info_.environment.rotation_radians,
+      environment_info_.environment.intensity,
+      environment_info_.environment.prefiltered_max_mip,
+      0,
+  };
   candidate.environment.intensity = state_.environment_intensity();
   candidate.environment.rotation_radians = state_.environment_rotation_radians();
   try {
@@ -249,7 +259,7 @@ void application_core::fail(granit::result result, std::string diagnostic) {
 void application_core::reset() noexcept {
   gpu_scene_.reset();
   static_cast<void>(environment_.reset());
-  environment_info_ = GRANIT_ENVIRONMENT_MAP_INFO_INIT;
+  environment_info_ = {};
   cpu_scene_ = {};
   gpu_plan_ = {};
   state_ = {};

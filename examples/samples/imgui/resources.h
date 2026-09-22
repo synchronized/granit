@@ -25,7 +25,7 @@ struct imgui_sample_texture_bindings {
 };
 
 [[nodiscard]] result resolve_imgui_sample_texture(ImTextureID texture,
-                                                  granit_canvas_draw_state& state,
+                                                  canvas_draw_state& state,
                                                   void* user_data) noexcept;
 
 [[nodiscard]] result upload_imgui_checker_texture(renderer& renderer, texture& output,

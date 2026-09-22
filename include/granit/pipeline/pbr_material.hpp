@@ -39,17 +39,6 @@ enum class pbr_vertex_layout_result : std::uint32_t {
   invalid_argument = GRANIT_PBR_VERTEX_LAYOUT_INVALID_ARGUMENT,
 };
 
-/** 检查公共顶点布局是否满足指定标准 PBR 纹理变体。 */
-[[nodiscard]] inline pbr_vertex_layout_result
-validate_pbr_vertex_layout(std::span<const granit_vertex_buffer_layout> vertex_buffers,
-                           pbr_texture textures) noexcept {
-  if (vertex_buffers.size() > std::numeric_limits<std::uint32_t>::max())
-    return pbr_vertex_layout_result::invalid_argument;
-  return static_cast<pbr_vertex_layout_result>(granit_pbr_validate_vertex_layout(
-      vertex_buffers.data(), static_cast<std::uint32_t>(vertex_buffers.size()),
-      static_cast<std::uint32_t>(textures)));
-}
-
 /** 检查强类型 C++ 顶点布局是否满足指定标准 PBR 纹理变体。 */
 [[nodiscard]] inline pbr_vertex_layout_result
 validate_pbr_vertex_layout(std::span<const vertex_buffer_layout> vertex_buffers,
@@ -78,7 +67,9 @@ validate_pbr_vertex_layout(std::span<const vertex_buffer_layout> vertex_buffers,
                         .reserved = 0,
                         .attributes = native_attributes.data()});
     }
-    return validate_pbr_vertex_layout(native, textures);
+    return static_cast<pbr_vertex_layout_result>(granit_pbr_validate_vertex_layout(
+        native.data(), static_cast<std::uint32_t>(native.size()),
+        static_cast<std::uint32_t>(textures)));
   } catch (...) {
     return pbr_vertex_layout_result::invalid_argument;
   }

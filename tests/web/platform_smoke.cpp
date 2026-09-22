@@ -345,7 +345,7 @@ granit_result draw_shared_fixture(granit_renderer renderer, granit_frame frame,
   result = group_layout.initialize(renderer, declarations);
   if (result != granit::result::success)
     return granit::to_native(result);
-  const auto group_layout_handle = group_layout.native_handle();
+  const auto group_layout_handle = group_layout.ref();
   granit::pipeline_layout pipeline_layout;
   result = pipeline_layout.initialize(renderer, std::span{&group_layout_handle, 1});
   if (result != granit::result::success)

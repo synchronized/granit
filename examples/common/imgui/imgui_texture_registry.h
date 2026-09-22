@@ -7,7 +7,7 @@
 #include <imgui.h>
 
 #include <granit/core/result.hpp>
-#include <granit/pipeline/canvas_draw_list.h>
+#include <granit/pipeline/canvas_draw_list.hpp>
 #include <granit/renderer/sampler.hpp>
 #include <granit/renderer/texture.hpp>
 
@@ -30,8 +30,9 @@ public:
   void clear() noexcept;
 
   [[nodiscard]] granit::result resolve(ImTextureID texture,
-                                       granit_canvas_draw_state& state) const noexcept;
-  [[nodiscard]] static granit::result resolver(ImTextureID texture, granit_canvas_draw_state& state,
+                                       granit::canvas_draw_state& state) const noexcept;
+  [[nodiscard]] static granit::result resolver(ImTextureID texture,
+                                               granit::canvas_draw_state& state,
                                                void* user_data) noexcept;
 
 private:

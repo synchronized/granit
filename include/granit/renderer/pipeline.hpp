@@ -282,23 +282,13 @@ public:
   }
   [[nodiscard]] result
   initialize(renderer_ref owner,
-             std::span<const granit_bind_group_layout> bind_group_layouts = {}) noexcept;
+             std::span<const bind_group_layout_ref> bind_group_layouts = {}) noexcept;
   [[nodiscard]] result initialize(renderer& owner) noexcept {
     return initialize(owner.ref());
   }
   [[nodiscard]] result
   initialize(renderer& owner, std::span<const bind_group_layout_ref> bind_group_layouts) noexcept {
-    try {
-      std::vector<granit_bind_group_layout> handles;
-      handles.reserve(bind_group_layouts.size());
-      for (const auto layout : bind_group_layouts)
-        handles.push_back(layout.native_handle());
-      return initialize(owner.ref(), handles);
-    } catch (const std::bad_alloc&) {
-      return result::out_of_memory;
-    } catch (...) {
-      return result::internal;
-    }
+    return initialize(owner.ref(), bind_group_layouts);
   }
   [[nodiscard]] result reset() noexcept;
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
@@ -597,21 +587,31 @@ inline result bind_group::reset() noexcept {
 
 inline result
 pipeline_layout::initialize(renderer_ref owner,
-                            std::span<const granit_bind_group_layout> bind_group_layouts) noexcept {
+                            std::span<const bind_group_layout_ref> bind_group_layouts) noexcept {
   const auto renderer = owner.native_handle();
   if (valid() || bind_group_layouts.size() > UINT32_MAX)
     return result::invalid_argument;
   if (renderer == GRANIT_NULL_HANDLE)
     return result::invalid_handle;
-  const granit_pipeline_layout_desc desc{.struct_size = GRANIT_PIPELINE_LAYOUT_DESC_VERSION_1_SIZE,
-                                         .bind_group_layout_count =
-                                             static_cast<std::uint32_t>(bind_group_layouts.size()),
-                                         .bind_group_layouts = bind_group_layouts.data(),
-                                         .reserved = 0};
-  const auto value = granit_pipeline_layout_create(renderer, &desc, &handle_);
-  if (value == GRANIT_SUCCESS)
-    renderer_ = renderer;
-  return from_native(value);
+  try {
+    std::vector<granit_bind_group_layout> handles;
+    handles.reserve(bind_group_layouts.size());
+    for (const auto layout : bind_group_layouts)
+      handles.push_back(layout.native_handle());
+    const granit_pipeline_layout_desc desc{
+        .struct_size = GRANIT_PIPELINE_LAYOUT_DESC_VERSION_1_SIZE,
+        .bind_group_layout_count = static_cast<std::uint32_t>(handles.size()),
+        .bind_group_layouts = handles.data(),
+        .reserved = 0};
+    const auto value = granit_pipeline_layout_create(renderer, &desc, &handle_);
+    if (value == GRANIT_SUCCESS)
+      renderer_ = renderer;
+    return from_native(value);
+  } catch (const std::bad_alloc&) {
+    return result::out_of_memory;
+  } catch (...) {
+    return result::internal;
+  }
 }
 
 inline result pipeline_layout::reset() noexcept {

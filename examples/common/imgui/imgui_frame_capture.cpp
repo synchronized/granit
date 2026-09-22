@@ -76,11 +76,11 @@ granit::result capture_imgui_frame(const ImDrawData* draw_data,
                                            0.0F, framebuffer_height);
         if (clip_max_x <= clip_min_x || clip_max_y <= clip_min_y)
           continue;
-        granit_canvas_draw_state state{};
-        state.scissor = {.x = static_cast<std::int32_t>(clip_min_x),
-                         .y = static_cast<std::int32_t>(clip_min_y),
-                         .width = static_cast<std::uint32_t>(clip_max_x - clip_min_x),
-                         .height = static_cast<std::uint32_t>(clip_max_y - clip_min_y)};
+        granit::canvas_draw_state state{};
+        state.clip = {.x = static_cast<std::int32_t>(clip_min_x),
+                      .y = static_cast<std::int32_t>(clip_min_y),
+                      .width = static_cast<std::uint32_t>(clip_max_x - clip_min_x),
+                      .height = static_cast<std::uint32_t>(clip_max_y - clip_min_y)};
         const auto resolve_result = resolver(command.GetTexID(), state, user_data);
         if (resolve_result.failed())
           return resolve_result;

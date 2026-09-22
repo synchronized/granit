@@ -11,7 +11,7 @@
 
 namespace granit::integration::imgui {
 
-using texture_resolver = result (*)(ImTextureID texture, granit_canvas_draw_state& state,
+using texture_resolver = result (*)(ImTextureID texture, canvas_draw_state& state,
                                     void* user_data) noexcept;
 
 /** 把 ImGui Draw Data 追加到 Canvas；纹理与采样器由调用方的 resolver 映射。 */

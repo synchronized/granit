@@ -118,17 +118,10 @@ public:
   }
 
   [[nodiscard]] result initialize(renderer_ref owner,
-                                  const granit_canvas_draw_list_desc& desc) noexcept {
+                                  const canvas_draw_list_desc& desc = {}) noexcept {
     const auto renderer = owner.native_handle();
     if (valid())
       return result::invalid_argument;
-    const auto value = from_native(granit_canvas_draw_list_create(renderer, &desc, &handle_));
-    if (value.ok())
-      renderer_ = renderer;
-    return value;
-  }
-  [[nodiscard]] result initialize(renderer& owner,
-                                  const canvas_draw_list_desc& desc = {}) noexcept {
     const granit_canvas_draw_list_desc native{
         .struct_size = GRANIT_CANVAS_DRAW_LIST_DESC_VERSION_1_SIZE,
         .initial_vertex_capacity = desc.initial_vertex_capacity,
@@ -137,35 +130,28 @@ public:
         .frame_slot_count = desc.frame_slot_count,
         .reserved = {},
     };
-    return initialize(owner.ref(), native);
+    const auto value = from_native(granit_canvas_draw_list_create(renderer, &native, &handle_));
+    if (value.ok())
+      renderer_ = renderer;
+    return value;
+  }
+  [[nodiscard]] result initialize(renderer& owner,
+                                  const canvas_draw_list_desc& desc = {}) noexcept {
+    return initialize(owner.ref(), desc);
   }
   [[nodiscard]] result clear() noexcept {
     return from_native(granit_canvas_draw_list_clear(renderer_, handle_));
   }
-  [[nodiscard]] result append(std::span<const granit_canvas_vertex> vertices,
-                              std::span<const std::uint32_t> indices,
-                              const granit_canvas_draw_state& state) noexcept {
-    if (vertices.size() > std::numeric_limits<std::uint32_t>::max() ||
-        indices.size() > std::numeric_limits<std::uint32_t>::max()) {
-      return result::invalid_argument;
-    }
-    return from_native(granit_canvas_draw_list_append(
-        renderer_, handle_, vertices.data(), static_cast<std::uint32_t>(vertices.size()),
-        indices.data(), static_cast<std::uint32_t>(indices.size()), &state));
-  }
   [[nodiscard]] result append(std::span<const canvas_vertex> vertices,
                               std::span<const std::uint32_t> indices,
                               const canvas_draw_state& state) noexcept {
-    return append(vertices, indices, to_native(state));
-  }
-
-  [[nodiscard]] result append_batch(std::span<const granit_canvas_vertex> vertices,
-                                    std::span<const std::uint32_t> indices,
-                                    std::span<const granit_canvas_draw_range> ranges) noexcept {
-    return from_native(granit_canvas_draw_list_append_batch(
+    if (vertices.size() > std::numeric_limits<std::uint32_t>::max() ||
+        indices.size() > std::numeric_limits<std::uint32_t>::max())
+      return result::invalid_argument;
+    const auto native_state = to_native(state);
+    return from_native(granit_canvas_draw_list_append(
         renderer_, handle_, vertices.data(), static_cast<std::uint32_t>(vertices.size()),
-        indices.data(), static_cast<std::uint32_t>(indices.size()), ranges.data(),
-        static_cast<std::uint32_t>(ranges.size())));
+        indices.data(), static_cast<std::uint32_t>(indices.size()), &native_state));
   }
   [[nodiscard]] result append_batch(std::span<const canvas_vertex> vertices,
                                     std::span<const std::uint32_t> indices,
@@ -183,15 +169,15 @@ public:
                           .index_count = range.index_count,
                           .state = to_native(range.state)});
       }
-      return append_batch(vertices, indices, native);
+      return from_native(granit_canvas_draw_list_append_batch(
+          renderer_, handle_, vertices.data(), static_cast<std::uint32_t>(vertices.size()),
+          indices.data(), static_cast<std::uint32_t>(indices.size()), native.data(),
+          static_cast<std::uint32_t>(native.size())));
     } catch (const std::bad_alloc&) {
       return result::out_of_memory;
     } catch (...) {
       return result::internal;
     }
-  }
-  [[nodiscard]] result append_rect(const granit_canvas_rect_desc& desc) noexcept {
-    return from_native(granit_canvas_draw_list_append_rect(renderer_, handle_, &desc));
   }
   [[nodiscard]] result append_rect(const canvas_rect_desc& desc) noexcept {
     const granit_canvas_rect_desc native{
@@ -208,14 +194,12 @@ public:
         .state = to_native(desc.state),
         .reserved = {},
     };
-    return append_rect(native);
-  }
-  [[nodiscard]] result get_stats(granit_canvas_draw_list_stats& stats) const noexcept {
-    return from_native(granit_canvas_draw_list_get_stats(renderer_, handle_, &stats));
+    return from_native(granit_canvas_draw_list_append_rect(renderer_, handle_, &native));
   }
   [[nodiscard]] result get_stats(canvas_draw_list_stats& stats) const noexcept {
     granit_canvas_draw_list_stats native = GRANIT_CANVAS_DRAW_LIST_STATS_INIT;
-    const auto value = get_stats(native);
+    const auto value =
+        from_native(granit_canvas_draw_list_get_stats(renderer_, handle_, &native));
     if (value.ok()) {
       stats = {.vertex_count = native.vertex_count,
                .index_count = native.index_count,
@@ -223,10 +207,6 @@ public:
                .batch_count = native.batch_count};
     }
     return value;
-  }
-  [[nodiscard]] result record(granit_command_recorder recorder,
-                              const granit_canvas_record_desc& desc) noexcept {
-    return from_native(granit_canvas_draw_list_record(renderer_, recorder, handle_, &desc));
   }
   [[nodiscard]] result record(command_recorder& recorder, const canvas_record_desc& desc) noexcept {
     const granit_canvas_record_desc native{
@@ -240,7 +220,8 @@ public:
         .frame_slot = desc.frame_slot,
         .reserved = {},
     };
-    return record(recorder.native_handle(), native);
+    return from_native(
+        granit_canvas_draw_list_record(renderer_, recorder.native_handle(), handle_, &native));
   }
   [[nodiscard]] result destroy() noexcept {
     if (!valid())

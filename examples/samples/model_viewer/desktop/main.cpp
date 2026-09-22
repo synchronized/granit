@@ -455,7 +455,7 @@ granit::result execute_swapchain_recreate(void* user_data) {
 struct pipeline_initialize_context {
   granit_renderer renderer{GRANIT_NULL_HANDLE};
   granit::render_pipeline* pipeline{};
-  granit_render_pipeline_desc desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
+  granit::render_pipeline_desc desc{};
   bool metrics_enabled{};
 };
 
@@ -479,7 +479,7 @@ struct quality_change_context {
   granit_renderer renderer{GRANIT_NULL_HANDLE};
   granit::example::model_viewer::application_core* core{};
   granit::render_pipeline* pipeline{};
-  granit_render_pipeline_desc desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
+  granit::render_pipeline_desc desc{};
   float sampler_anisotropy{1.0F};
   bool reupload_scene{};
   bool metrics_enabled{};
@@ -595,7 +595,8 @@ granit::result execute_desktop_frame(granit::example::model_viewer::frame_packet
     const auto render = packet.render_desc(
         backbuffer.view.native_handle(),
         static_cast<granit_texture_format>(context.swapchain_info->format), frame.handle, canvas);
-    result = context.pipeline->render(render);
+    result = granit::from_native(granit_render_pipeline_render(
+        context.pipeline->owner().native_handle(), context.pipeline->native_handle(), &render));
   }
   if (result.failed()) {
     const auto frame_result = result;
@@ -610,7 +611,7 @@ granit::result execute_desktop_frame(granit::example::model_viewer::frame_packet
           .count();
   output.needs_recreate = output.needs_recreate || frame.needs_recreate;
   if (context.metrics_enabled) {
-    granit_render_pipeline_metrics metrics = GRANIT_RENDER_PIPELINE_METRICS_INIT;
+    granit::render_pipeline_metrics metrics{};
     const auto metrics_result = context.pipeline->get_metrics(metrics);
     if (metrics_result.ok()) {
       output.gpu_frame_ms = static_cast<float>(metrics.total_gpu_ns) / 1'000'000.0F;
@@ -913,10 +914,10 @@ int main(int argc, char** argv) {
   if (result.ok() && options.show_ui)
     result = render_loading_frame(swapchain, swapchain_info, loading_frame_context, canvas,
                                   textures, "Creating render pipeline...", 0.96F);
-  granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
-  pipeline_desc.sample_count = render_quality.sample_count;
-  pipeline_desc.enable_fxaa = render_quality.enable_fxaa;
-  pipeline_desc.enable_specular_aa = render_quality.enable_specular_aa;
+  granit::render_pipeline_desc pipeline_desc{
+      .samples = static_cast<granit::sample_count>(render_quality.sample_count),
+      .enable_fxaa = render_quality.enable_fxaa != 0,
+      .enable_specular_aa = render_quality.enable_specular_aa != 0};
   pipeline_initialize_context pipeline_context{
       .renderer = renderer.native_handle(), .pipeline = &pipeline, .desc = pipeline_desc};
   if (result.ok())
@@ -1129,10 +1130,10 @@ int main(int argc, char** argv) {
       break;
 
     if (changes.quality) {
-      granit_render_pipeline_desc replacement_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
-      replacement_desc.sample_count = changes.quality->sample_count;
-      replacement_desc.enable_fxaa = changes.quality->enable_fxaa;
-      replacement_desc.enable_specular_aa = changes.quality->enable_specular_aa;
+      granit::render_pipeline_desc replacement_desc{
+          .samples = static_cast<granit::sample_count>(changes.quality->sample_count),
+          .enable_fxaa = changes.quality->enable_fxaa != 0,
+          .enable_specular_aa = changes.quality->enable_specular_aa != 0};
       quality_change_context quality_context{
           .renderer = renderer.native_handle(),
           .core = &core,

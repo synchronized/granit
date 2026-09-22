@@ -12,7 +12,7 @@
 
 namespace granit::example {
 
-result resolve_imgui_sample_texture(ImTextureID texture, granit_canvas_draw_state& state,
+result resolve_imgui_sample_texture(ImTextureID texture, canvas_draw_state& state,
                                     void* user_data) noexcept {
   if (user_data == nullptr)
     return result::invalid_argument;
@@ -25,8 +25,8 @@ result resolve_imgui_sample_texture(ImTextureID texture, granit_canvas_draw_stat
                  static_cast<unsigned long long>(texture));
     return result::invalid_argument;
   }
-  state.texture = binding->view.native_handle();
-  state.sampler = binding->sampler.native_handle();
+  state.texture = binding->view;
+  state.sampler = binding->sampler;
   return result::success;
 }
 
@@ -101,7 +101,7 @@ bool imgui_target_needs_srgb_encoding(texture_format format) noexcept {
 result record_imgui_sample_canvas(command_recorder& recorder, canvas_draw_list& canvas,
                                   texture_view_ref target, const swapchain_info& info,
                                   std::uint32_t frame_slot) noexcept {
-  granit_canvas_draw_list_stats stats = GRANIT_CANVAS_DRAW_LIST_STATS_INIT;
+  granit::canvas_draw_list_stats stats{};
   auto record_result = canvas.get_stats(stats);
   if (record_result.failed())
     return record_result;

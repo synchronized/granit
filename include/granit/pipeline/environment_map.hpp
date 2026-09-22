@@ -69,13 +69,9 @@ public:
   [[nodiscard]] result initialize_builtin(renderer& owner) noexcept {
     return initialize_builtin(owner.ref());
   }
-  [[nodiscard]] result get_info(granit_environment_map_info& info) const noexcept {
-    info = GRANIT_ENVIRONMENT_MAP_INFO_INIT;
-    return from_native(granit_environment_map_get_info(renderer_, handle_, &info));
-  }
   [[nodiscard]] result get_info(environment_map_info& info) const noexcept {
     granit_environment_map_info native = GRANIT_ENVIRONMENT_MAP_INFO_INIT;
-    const auto value = get_info(native);
+    const auto value = from_native(granit_environment_map_get_info(renderer_, handle_, &native));
     if (value.ok()) {
       info = {
           .environment = {.irradiance =

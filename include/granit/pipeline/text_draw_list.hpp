@@ -56,36 +56,26 @@ public:
   }
 
   [[nodiscard]] result initialize(renderer_ref owner,
-                                  const granit_text_draw_list_desc& desc) noexcept {
+                                  const text_draw_list_desc& desc = {}) noexcept {
     const auto renderer = owner.native_handle();
     if (valid())
       return result::invalid_argument;
-    const auto value = from_native(granit_text_draw_list_create(renderer, &desc, &handle_));
-    if (value.ok())
-      renderer_ = renderer;
-    return value;
-  }
-  [[nodiscard]] result initialize(renderer& owner, const text_draw_list_desc& desc = {}) noexcept {
     const granit_text_draw_list_desc native{
         .struct_size = GRANIT_TEXT_DRAW_LIST_DESC_VERSION_1_SIZE,
         .initial_glyph_capacity = desc.initial_glyph_capacity,
         .initial_run_capacity = desc.initial_run_capacity,
         .reserved = {},
     };
-    return initialize(owner.ref(), native);
+    const auto value = from_native(granit_text_draw_list_create(renderer, &native, &handle_));
+    if (value.ok())
+      renderer_ = renderer;
+    return value;
+  }
+  [[nodiscard]] result initialize(renderer& owner, const text_draw_list_desc& desc = {}) noexcept {
+    return initialize(owner.ref(), desc);
   }
   [[nodiscard]] result clear() noexcept {
     return from_native(granit_text_draw_list_clear(renderer_, handle_));
-  }
-  [[nodiscard]] result append_glyph_run(std::span<const granit_text_glyph_instance> glyphs,
-                                        granit_scissor scissor = {}) noexcept {
-    if (glyphs.size() > std::numeric_limits<uint32_t>::max())
-      return result::invalid_argument;
-    granit_text_glyph_run_desc desc = GRANIT_TEXT_GLYPH_RUN_DESC_INIT;
-    desc.glyph_count = static_cast<uint32_t>(glyphs.size());
-    desc.glyphs = glyphs.data();
-    desc.scissor = scissor;
-    return from_native(granit_text_draw_list_append_glyph_run(renderer_, handle_, &desc));
   }
   [[nodiscard]] result append_glyph_run(std::span<const text_glyph_instance> glyphs,
                                         scissor clip = {}) noexcept {
@@ -102,30 +92,31 @@ public:
                           .y = glyph.y,
                           .reserved = {}});
       }
-      return append_glyph_run(native, clip);
+      const granit_text_glyph_run_desc desc{
+          .struct_size = GRANIT_TEXT_GLYPH_RUN_DESC_VERSION_1_SIZE,
+          .glyph_count = static_cast<std::uint32_t>(native.size()),
+          .glyphs = native.data(),
+          .scissor = clip,
+          .reserved = {}};
+      return from_native(granit_text_draw_list_append_glyph_run(renderer_, handle_, &desc));
     } catch (const std::bad_alloc&) {
       return result::out_of_memory;
     } catch (...) {
       return result::internal;
     }
   }
-  [[nodiscard]] result get_stats(granit_text_draw_list_stats& stats) const noexcept {
-    return from_native(granit_text_draw_list_get_stats(renderer_, handle_, &stats));
-  }
   [[nodiscard]] result get_stats(text_draw_list_stats& stats) const noexcept {
     granit_text_draw_list_stats native = GRANIT_TEXT_DRAW_LIST_STATS_INIT;
-    const auto value = get_stats(native);
+    const auto value =
+        from_native(granit_text_draw_list_get_stats(renderer_, handle_, &native));
     if (value.ok())
       stats = {.glyph_count = native.glyph_count, .run_count = native.run_count};
     return value;
   }
-  [[nodiscard]] result append_to_canvas(granit_text_atlas atlas,
-                                        granit_canvas_draw_list canvas) const noexcept {
-    return from_native(granit_text_draw_list_append_to_canvas(renderer_, handle_, atlas, canvas));
-  }
   [[nodiscard]] result append_to_canvas(const text_atlas& atlas,
                                         canvas_draw_list_ref canvas) const noexcept {
-    return append_to_canvas(atlas.native_handle(), canvas.native_handle());
+    return from_native(granit_text_draw_list_append_to_canvas(
+        renderer_, handle_, atlas.native_handle(), canvas.native_handle()));
   }
   [[nodiscard]] result destroy() noexcept {
     if (!valid())

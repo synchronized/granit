@@ -110,32 +110,26 @@ public:
   }
 
   [[nodiscard]] result initialize(renderer_ref owner,
-                                  const granit_debug_draw_list_desc& desc) noexcept {
+                                  const debug_draw_list_desc& desc = {}) noexcept {
     const auto renderer = owner.native_handle();
     if (valid())
       return result::invalid_argument;
-    const auto value = from_native(granit_debug_draw_list_create(renderer, &desc, &handle_));
-    if (value.ok())
-      renderer_ = renderer;
-    return value;
-  }
-  [[nodiscard]] result initialize(renderer& owner, const debug_draw_list_desc& desc = {}) noexcept {
     const granit_debug_draw_list_desc native{
         .struct_size = GRANIT_DEBUG_DRAW_LIST_DESC_VERSION_1_SIZE,
         .initial_line_capacity = desc.initial_line_capacity,
         .initial_triangle_capacity = desc.initial_triangle_capacity,
         .reserved = {},
     };
-    return initialize(owner.ref(), native);
+    const auto value = from_native(granit_debug_draw_list_create(renderer, &native, &handle_));
+    if (value.ok())
+      renderer_ = renderer;
+    return value;
+  }
+  [[nodiscard]] result initialize(renderer& owner, const debug_draw_list_desc& desc = {}) noexcept {
+    return initialize(owner.ref(), desc);
   }
   [[nodiscard]] result clear() noexcept {
     return from_native(granit_debug_draw_list_clear(renderer_, handle_));
-  }
-  [[nodiscard]] result append_lines(std::span<const granit_debug_draw_line> lines) noexcept {
-    if (lines.size() > std::numeric_limits<uint32_t>::max())
-      return result::invalid_argument;
-    return from_native(granit_debug_draw_list_append_lines(renderer_, handle_, lines.data(),
-                                                           static_cast<uint32_t>(lines.size())));
   }
   [[nodiscard]] result append_lines(std::span<const debug_draw_line> lines) noexcept {
     if (lines.size() > std::numeric_limits<std::uint32_t>::max())
@@ -151,19 +145,13 @@ public:
                           .depth_mode = static_cast<granit_debug_draw_depth_mode>(line.depth_mode),
                           .reserved = 0});
       }
-      return append_lines(native);
+      return from_native(granit_debug_draw_list_append_lines(
+          renderer_, handle_, native.data(), static_cast<std::uint32_t>(native.size())));
     } catch (const std::bad_alloc&) {
       return result::out_of_memory;
     } catch (...) {
       return result::internal;
     }
-  }
-  [[nodiscard]] result
-  append_triangles(std::span<const granit_debug_draw_triangle> triangles) noexcept {
-    if (triangles.size() > std::numeric_limits<uint32_t>::max())
-      return result::invalid_argument;
-    return from_native(granit_debug_draw_list_append_triangles(
-        renderer_, handle_, triangles.data(), static_cast<uint32_t>(triangles.size())));
   }
   [[nodiscard]] result append_triangles(std::span<const debug_draw_triangle> triangles) noexcept {
     if (triangles.size() > std::numeric_limits<std::uint32_t>::max())
@@ -178,32 +166,25 @@ public:
              .depth_mode = static_cast<granit_debug_draw_depth_mode>(triangle.depth_mode),
              .reserved = {}});
       }
-      return append_triangles(native);
+      return from_native(granit_debug_draw_list_append_triangles(
+          renderer_, handle_, native.data(), static_cast<std::uint32_t>(native.size())));
     } catch (const std::bad_alloc&) {
       return result::out_of_memory;
     } catch (...) {
       return result::internal;
     }
   }
-  [[nodiscard]] result get_stats(granit_debug_draw_list_stats& stats) const noexcept {
-    return from_native(granit_debug_draw_list_get_stats(renderer_, handle_, &stats));
-  }
   [[nodiscard]] result get_stats(debug_draw_list_stats& stats) const noexcept {
     granit_debug_draw_list_stats native = GRANIT_DEBUG_DRAW_LIST_STATS_INIT;
-    const auto value = get_stats(native);
+    const auto value =
+        from_native(granit_debug_draw_list_get_stats(renderer_, handle_, &native));
     if (value.ok())
       stats = {.line_count = native.line_count, .triangle_count = native.triangle_count};
     return value;
   }
-  [[nodiscard]] result append_screen_to_canvas(granit_canvas_draw_list canvas) noexcept {
-    return from_native(granit_debug_draw_list_append_screen_to_canvas(renderer_, handle_, canvas));
-  }
   [[nodiscard]] result append_screen_to_canvas(canvas_draw_list_ref canvas) noexcept {
-    return append_screen_to_canvas(canvas.native_handle());
-  }
-  [[nodiscard]] result record_world(granit_command_recorder recorder,
-                                    const granit_debug_draw_record_desc& desc) noexcept {
-    return from_native(granit_debug_draw_list_record_world(renderer_, recorder, handle_, &desc));
+    return from_native(granit_debug_draw_list_append_screen_to_canvas(
+        renderer_, handle_, canvas.native_handle()));
   }
   [[nodiscard]] result record_world(command_recorder& recorder,
                                     const debug_draw_record_desc& desc) noexcept {
@@ -223,7 +204,8 @@ public:
         .encode_srgb = desc.encode_srgb ? 1U : 0U,
         .reserved = {},
     };
-    return record_world(recorder.native_handle(), native);
+    return from_native(granit_debug_draw_list_record_world(
+        renderer_, recorder.native_handle(), handle_, &native));
   }
   [[nodiscard]] result destroy() noexcept {
     if (!valid())
