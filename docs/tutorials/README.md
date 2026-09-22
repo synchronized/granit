@@ -7,7 +7,7 @@
 了解 Vulkan、WebGPU 或平台原生窗口 API；教程只使用 Granit 公共 C++ 接口和 HLSL-first 资产流程。
 
 > 状态：01 Window 已提供桌面与浏览器自动验证；02 Triangle、03 Texture、04 Depth/Camera 和
-> 05 Mesh 和 06 Material/Lighting 已提供桌面源码和自动验证。07～08 已确定教学主线，配套源码将按
+> 05 Mesh、06 Material/Lighting 和 07 Render Pipeline 已提供桌面源码和自动验证。08 的配套源码将按
 > [S-48 计划](../plans/S-48-0.28.0-linear-tutorial-series.md)逐章落地；对应目标加入构建前，这些章节
 > 只作为后续内容预览。
 

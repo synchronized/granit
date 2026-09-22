@@ -14,4 +14,5 @@ if(GRANIT_HAS_NATIVE_TOOLS AND GRANIT_SHADER_TOOLCHAIN_ROOT AND GRANIT_DXC_EXECU
   add_subdirectory(04_depth_and_camera)
   add_subdirectory(05_mesh)
   add_subdirectory(06_material_and_lighting)
+  add_subdirectory(07_render_pipeline)
 endif()
