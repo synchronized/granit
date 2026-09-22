@@ -15,8 +15,8 @@ inline constexpr ImTextureID imgui_font_texture_id = 1;
 inline constexpr ImTextureID imgui_checker_texture_id = 2;
 
 struct imgui_texture_binding {
-  granit_texture_view view{GRANIT_NULL_HANDLE};
-  granit_sampler sampler{GRANIT_NULL_HANDLE};
+  texture_view_ref view;
+  sampler_ref sampler;
 };
 
 struct imgui_sample_texture_bindings {

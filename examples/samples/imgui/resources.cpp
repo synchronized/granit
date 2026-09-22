@@ -25,8 +25,8 @@ result resolve_imgui_sample_texture(ImTextureID texture, granit_canvas_draw_stat
                  static_cast<unsigned long long>(texture));
     return result::invalid_argument;
   }
-  state.texture = binding->view;
-  state.sampler = binding->sampler;
+  state.texture = binding->view.native_handle();
+  state.sampler = binding->sampler.native_handle();
   return result::success;
 }
 
@@ -115,15 +115,14 @@ result record_imgui_sample_canvas(command_recorder& recorder, canvas_draw_list& 
     return record_result;
   }
 
-  granit_canvas_record_desc record = GRANIT_CANVAS_RECORD_DESC_INIT;
-  record.color = target.native_handle();
-  record.color_format = static_cast<granit_texture_format>(info.format);
-  record.width = info.width;
-  record.height = info.height;
-  record.load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_CLEAR;
-  record.encode_srgb = imgui_target_needs_srgb_encoding(info.format) ? 1U : 0U;
-  record.frame_slot = frame_slot;
-  return canvas.record(recorder.native_handle(), record);
+  const canvas_record_desc record{.color = target,
+                                  .color_format = info.format,
+                                  .width = info.width,
+                                  .height = info.height,
+                                  .load_operation = attachment_load_operation::clear,
+                                  .encode_srgb = imgui_target_needs_srgb_encoding(info.format),
+                                  .frame_slot = frame_slot};
+  return canvas.record(recorder, record);
 }
 
 } // namespace granit::example

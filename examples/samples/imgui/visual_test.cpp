@@ -46,8 +46,8 @@ TEST_CASE("ImGui 固定画面在 Vulkan 的字体纹理裁剪与 DPI 验收", "[
   granit::canvas_draw_list canvas;
   REQUIRE(canvas.initialize(renderer) == granit::result::success);
   granit::example::imgui_sample_texture_bindings bindings{
-      .font = {font_view.native_handle(), sampler.native_handle()},
-      .checker = {checker_view.native_handle(), sampler.native_handle()}};
+      .font = {font_view.ref(), sampler.ref()},
+      .checker = {checker_view.ref(), sampler.ref()}};
   granit::example::imgui_sample_state state;
   // 先建立窗口，再通过真实 ImGui 输入队列点击，检查内容状态与输出同步变化。
   auto frame = [&] {

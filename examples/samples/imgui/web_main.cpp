@@ -82,8 +82,7 @@ granit::result initialize_gpu_resources() {
   auto result = query_canvas_size(width, height);
   if (result.failed())
     return result;
-  result = granit::integration::sdl3::create_surface(state.renderer.native_handle(), state.window,
-                                                     state.surface);
+  result = granit::integration::sdl3::create_surface(state.renderer, state.window, state.surface);
 
   if (result.ok()) {
     result = state.swapchain.initialize(state.renderer, state.surface,
@@ -111,8 +110,8 @@ granit::result initialize_gpu_resources() {
   }
   if (result.ok()) {
     state.bindings = {
-        .font = {state.font_view.native_handle(), state.sampler.native_handle()},
-        .checker = {state.checker_view.native_handle(), state.sampler.native_handle()}};
+        .font = {state.font_view.ref(), state.sampler.ref()},
+        .checker = {state.checker_view.ref(), state.sampler.ref()}};
   }
   return result;
 }

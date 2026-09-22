@@ -183,12 +183,11 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
   const auto first_query = slot_index * 2;
   if (result.ok() && timestamps_enabled) {
     operation = "timestamps.reset";
-    result = recorder.reset_timestamp_queries(timestamps.native_handle(), first_query, 2);
+    result = recorder.reset_timestamp_queries(timestamps.ref(), first_query, 2);
   }
   if (result.ok() && timestamps_enabled) {
     operation = "timestamps.begin";
-    result = recorder.write_timestamp(timestamps.native_handle(), GRANIT_TIMESTAMP_STAGE_TOP,
-                                      first_query);
+    result = recorder.write_timestamp(timestamps.ref(), granit::timestamp_stage::top, first_query);
   }
   if (result.ok()) {
     operation = "canvas.record";
@@ -201,8 +200,8 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
   }
   if (result.ok() && timestamps_enabled) {
     operation = "timestamps.end";
-    result = recorder.write_timestamp(timestamps.native_handle(), GRANIT_TIMESTAMP_STAGE_BOTTOM,
-                                      first_query + 1);
+    result =
+        recorder.write_timestamp(timestamps.ref(), granit::timestamp_stage::bottom, first_query + 1);
   }
   if (result.ok()) {
     operation = "frame_context.submit";
@@ -320,8 +319,7 @@ int main(int argc, char** argv) {
                            .frames_in_flight = static_cast<std::uint32_t>(frame_slot_count)});
   granit::surface surface;
   if (result.ok()) {
-    result =
-        granit::integration::sdl3::create_surface(renderer.native_handle(), window.get(), surface);
+    result = granit::integration::sdl3::create_surface(renderer, window.get(), surface);
   }
 
   int pixel_width = 0;
@@ -368,8 +366,8 @@ int main(int argc, char** argv) {
   if (result.failed())
     std::cerr << "SDL3 + ImGui 初始化失败，Granit 结果码：" << static_cast<int>(result) << '\n';
   granit::example::imgui_sample_texture_bindings bindings{
-      .font = {font_view.native_handle(), font_sampler.native_handle()},
-      .checker = {checker_view.native_handle(), font_sampler.native_handle()}};
+      .font = {font_view.ref(), font_sampler.ref()},
+      .checker = {checker_view.ref(), font_sampler.ref()}};
 
   bool running = result.ok();
   bool recreate = false;
