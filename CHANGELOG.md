@@ -8,6 +8,21 @@
 
 ## Unreleased
 
+### 新增
+
+- 新增 02 Triangle、03 Texture、04 Depth/Camera、05 Mesh、06 Material/Lighting、07 Render
+  Pipeline 和 08 ImGui 线性教程；每章都有独立可运行源码和桌面 Smoke，完整学习路径从窗口清屏
+  延伸到 PBR 场景与交互式工具界面。
+- Tutorial 08 复用统一 Window Loop、输入事件和 Canvas 路径验证浏览器 WebGPU，覆盖 Font Atlas、
+  自定义 Texture ID、多帧渲染、指针输入与 Resize。
+- C++ Mesh 包装新增接受 `command_recorder&` 的 `bind` 和 `draw`，低层自定义绘制无需提取
+  Mesh 或 Recorder 的 C ABI 句柄。
+
+### 变更
+
+- 教程和 Model Viewer 的普通 C++ 路径统一使用 RAII 对象、`renderer_ref` 及 Mesh、Material、
+  Scene、Texture View、Canvas 等强类型引用；原始句柄转换集中保留在 C 回调和 Web C 平台壳边界。
+
 ## 0.28.1 - 2026-09-23
 
 ### 修复
