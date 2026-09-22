@@ -917,9 +917,8 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
     const auto material_index =
         draw.material == gltf::invalid_index ? source.materials.size() : draw.material;
     draw_bindings_.push_back({.payload = draw.payload,
-                              .mesh = meshes_[draw.primitive].native_handle(),
-                              .material = materials_[material_index].native_handle(),
-                              .reserved = 0});
+                              .mesh = meshes_[draw.primitive].ref(),
+                              .material = materials_[material_index].ref()});
   }
   renderer_ = renderer;
   return granit::result::success;

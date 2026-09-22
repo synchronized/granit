@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <limits>
 #include <memory>
 #include <new>
 #include <span>
@@ -543,9 +544,60 @@ granit::result execute_web_frame(granit::example::model_viewer::frame_packet&& p
     result = granit_swapchain_get_backbuffer(state.renderer, state.swapchain, image_index,
                                              &backbuffer, &backbuffer_view);
   }
+  if (result == GRANIT_SUCCESS &&
+      packet.draw_bindings.size() > std::numeric_limits<std::uint32_t>::max()) {
+    result = GRANIT_ERROR_INVALID_ARGUMENT;
+  }
   if (result == GRANIT_SUCCESS) {
-    const auto render = packet.render_desc(backbuffer_view, context.swapchain_info->format, frame);
-    result = granit_render_pipeline_render(state.renderer, state.pipeline, &render);
+    try {
+      std::vector<granit_render_pipeline_draw_binding> bindings;
+      bindings.reserve(packet.draw_bindings.size());
+      for (const auto& binding : packet.draw_bindings) {
+        bindings.push_back({.payload = binding.payload,
+                            .mesh = binding.mesh.native_handle(),
+                            .material = binding.material.native_handle(),
+                            .reserved = 0});
+      }
+      const granit_render_pipeline_environment environment{
+          .struct_size = GRANIT_RENDER_PIPELINE_ENVIRONMENT_VERSION_1_SIZE,
+          .reserved = 0,
+          .irradiance = packet.environment.irradiance.native_handle(),
+          .prefiltered_environment = packet.environment.prefiltered_environment.native_handle(),
+          .brdf_lut = packet.environment.brdf_lut.native_handle(),
+          .rotation_radians = packet.environment.rotation_radians,
+          .intensity = packet.environment.intensity,
+          .prefiltered_max_mip = packet.environment.prefiltered_max_mip,
+          .reserved_tail = 0,
+      };
+      const granit_render_pipeline_render_desc render{
+          .struct_size = GRANIT_RENDER_PIPELINE_RENDER_DESC_VERSION_1_SIZE,
+          .reserved = 0,
+          .scene = packet.snapshot.native_handle(),
+          .output = backbuffer_view,
+          .output_format = context.swapchain_info->format,
+          .width = packet.width,
+          .height = packet.height,
+          .first_view = 0,
+          .view_count = 1,
+          .exposure_ev = packet.exposure_ev,
+          .draw_binding_count = static_cast<std::uint32_t>(bindings.size()),
+          .draw_bindings = bindings.data(),
+          .output_count = 0,
+          .outputs = nullptr,
+          .frame = frame,
+          .reserved_tail = 0,
+          .canvas = GRANIT_NULL_HANDLE,
+          .debug_draw = GRANIT_NULL_HANDLE,
+          .clear_color = {packet.clear_color.red, packet.clear_color.green, packet.clear_color.blue,
+                          packet.clear_color.alpha},
+          .environment = &environment,
+      };
+      result = granit_render_pipeline_render(state.renderer, state.pipeline, &render);
+    } catch (const std::bad_alloc&) {
+      result = GRANIT_ERROR_OUT_OF_MEMORY;
+    } catch (...) {
+      result = GRANIT_ERROR_INTERNAL;
+    }
   }
   if (result != GRANIT_SUCCESS) {
     if (frame != GRANIT_NULL_HANDLE) {

@@ -41,18 +41,18 @@ struct application_tick_input {
 struct frame_packet {
   imgui::frame_canvas_data canvas;
   granit::scene_snapshot snapshot;
-  granit_render_pipeline_environment environment = GRANIT_RENDER_PIPELINE_ENVIRONMENT_INIT;
-  std::vector<granit_render_pipeline_draw_binding> draw_bindings;
+  granit::render_pipeline_environment environment;
+  std::vector<granit::render_pipeline_draw_binding> draw_bindings;
   std::uint32_t width{};
   std::uint32_t height{};
   float exposure_ev{};
-  granit_clear_color_value clear_color{0.0F, 0.0F, 0.0F, 1.0F};
+  granit::clear_color_value clear_color{0.0F, 0.0F, 0.0F, 1.0F};
 
   /** 在消费线程生成只借用当前提交包的渲染描述。 */
-  [[nodiscard]] granit_render_pipeline_render_desc
-  render_desc(granit_texture_view output, granit_texture_format output_format,
-              granit_frame frame = GRANIT_NULL_HANDLE,
-              granit_canvas_draw_list canvas_list = GRANIT_NULL_HANDLE) const noexcept;
+  [[nodiscard]] granit::render_pipeline_render_desc
+  render_desc(granit::texture_view_ref output, granit::texture_format output_format,
+              const granit::acquired_frame* frame = nullptr,
+              granit::canvas_draw_list_ref canvas_list = {}) const noexcept;
 };
 
 class application_core {

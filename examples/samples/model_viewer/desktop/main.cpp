@@ -578,7 +578,7 @@ granit::result execute_desktop_frame(granit::example::model_viewer::frame_packet
   granit::swapchain_backbuffer backbuffer;
   result = context.swapchain->backbuffer(frame, backbuffer);
   if (result.ok()) {
-    granit_canvas_draw_list canvas = GRANIT_NULL_HANDLE;
+    granit::canvas_draw_list_ref canvas;
     if (!packet.canvas.empty()) {
       auto& canvas_slot = (*context.canvases)[context.next_canvas];
       context.next_canvas = (context.next_canvas + 1) % context.canvases->size();
@@ -586,18 +586,15 @@ granit::result execute_desktop_frame(granit::example::model_viewer::frame_packet
       if (result.ok())
         result = packet.canvas.append_to(canvas_slot);
       if (result.ok())
-        canvas = canvas_slot.native_handle();
+        canvas = canvas_slot.ref();
     }
     if (result.failed()) {
       static_cast<void>(context.swapchain->cancel(frame));
       return result;
     }
-    const auto render = packet.render_desc(
-        backbuffer.view.native_handle(),
-        static_cast<granit_texture_format>(context.swapchain_info->format), frame.native_handle(),
-        canvas);
-    result = granit::from_native(granit_render_pipeline_render(
-        context.pipeline->owner().native_handle(), context.pipeline->native_handle(), &render));
+    const auto render =
+        packet.render_desc(backbuffer.view, context.swapchain_info->format, &frame, canvas);
+    result = context.pipeline->render(render);
   }
   if (result.failed()) {
     const auto frame_result = result;

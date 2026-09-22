@@ -10,7 +10,7 @@
 #include <granit/core/result.hpp>
 #include <granit/pipeline/material.hpp>
 #include <granit/pipeline/mesh.hpp>
-#include <granit/pipeline/render_pipeline.h>
+#include <granit/pipeline/render_pipeline.hpp>
 #include <granit/pipeline/scene.hpp>
 #include <granit/renderer/buffer.hpp>
 #include <granit/renderer/pipeline_warmup.hpp>
@@ -162,7 +162,7 @@ public:
   [[nodiscard]] const std::vector<granit::material_instance>& materials() const noexcept {
     return materials_;
   }
-  [[nodiscard]] const std::vector<granit_render_pipeline_draw_binding>&
+  [[nodiscard]] const std::vector<granit::render_pipeline_draw_binding>&
   draw_bindings() const noexcept {
     return draw_bindings_;
   }
@@ -212,7 +212,7 @@ private:
   granit::sampler default_sampler_;
   granit::shader_library shader_library_;
   std::vector<granit::material_instance> materials_;
-  std::vector<granit_render_pipeline_draw_binding> draw_bindings_;
+  std::vector<granit::render_pipeline_draw_binding> draw_bindings_;
 };
 
 } // namespace granit::example::model_viewer

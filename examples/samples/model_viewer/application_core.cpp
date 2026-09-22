@@ -39,18 +39,18 @@ camera_bounds scene_bounds(const gpu_scene_plan& plan, std::uint32_t selected_no
 
 } // namespace
 
-granit_render_pipeline_render_desc
-frame_packet::render_desc(granit_texture_view output, granit_texture_format output_format,
-                          granit_frame frame, granit_canvas_draw_list canvas_list) const noexcept {
-  granit_render_pipeline_render_desc desc = GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT;
-  desc.scene = snapshot.native_handle();
+granit::render_pipeline_render_desc
+frame_packet::render_desc(granit::texture_view_ref output, granit::texture_format output_format,
+                          const granit::acquired_frame* frame,
+                          granit::canvas_draw_list_ref canvas_list) const noexcept {
+  granit::render_pipeline_render_desc desc;
+  desc.scene = snapshot.ref();
   desc.output = output;
   desc.output_format = output_format;
   desc.width = width;
   desc.height = height;
   desc.exposure_ev = exposure_ev;
-  desc.draw_binding_count = static_cast<std::uint32_t>(draw_bindings.size());
-  desc.draw_bindings = draw_bindings.data();
+  desc.draw_bindings = draw_bindings;
   desc.frame = frame;
   desc.canvas = canvas_list;
   desc.clear_color = clear_color;
@@ -226,15 +226,12 @@ granit::result application_core::tick(const application_tick_input& input, frame
   const auto background = state_.background_color();
   candidate.clear_color = {background.x, background.y, background.z, 1.0F};
   candidate.environment = {
-      sizeof(granit_render_pipeline_environment),
-      0,
-      environment_info_.environment.irradiance.native_handle(),
-      environment_info_.environment.prefiltered_environment.native_handle(),
-      environment_info_.environment.brdf_lut.native_handle(),
-      environment_info_.environment.rotation_radians,
-      environment_info_.environment.intensity,
-      environment_info_.environment.prefiltered_max_mip,
-      0,
+      .irradiance = environment_info_.environment.irradiance,
+      .prefiltered_environment = environment_info_.environment.prefiltered_environment,
+      .brdf_lut = environment_info_.environment.brdf_lut,
+      .rotation_radians = environment_info_.environment.rotation_radians,
+      .intensity = environment_info_.environment.intensity,
+      .prefiltered_max_mip = environment_info_.environment.prefiltered_max_mip,
   };
   candidate.environment.intensity = state_.environment_intensity();
   candidate.environment.rotation_radians = state_.environment_rotation_radians();

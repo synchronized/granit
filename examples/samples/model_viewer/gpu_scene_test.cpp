@@ -193,8 +193,10 @@ TEST_CASE("GPU Scene 事务式创建合并 Buffer 与 Mesh", "[example][model-vi
   CHECK(scene.materials().size() == 2);
   REQUIRE(scene.draw_bindings().size() == 1);
   CHECK(scene.draw_bindings().front().payload == 1);
-  CHECK(scene.draw_bindings().front().mesh == scene.meshes().front().native_handle());
-  CHECK(scene.draw_bindings().front().material == scene.materials().front().native_handle());
+  CHECK(scene.draw_bindings().front().mesh.native_handle() ==
+        scene.meshes().front().native_handle());
+  CHECK(scene.draw_bindings().front().material.native_handle() ==
+        scene.materials().front().native_handle());
   REQUIRE(scene.renderables().size() == 1);
   CHECK(scene.renderables().front().payload == scene.draw_bindings().front().payload);
   const auto original_mesh = scene.meshes().front().native_handle();

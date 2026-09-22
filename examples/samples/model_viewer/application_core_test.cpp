@@ -96,23 +96,25 @@ TEST_CASE("模型查看器 Core 生成后端无关单帧描述", "[example][mode
   input.performance = sample;
   REQUIRE(core.tick(input, output) == granit::result::success);
   CHECK(output.snapshot.valid());
-  const auto render = output.render_desc(11, GRANIT_TEXTURE_FORMAT_RGBA8_UNORM, 12, 13);
-  CHECK(render.scene == output.snapshot.native_handle());
-  CHECK(render.output == 11);
-  CHECK(render.frame == 12);
-  CHECK(render.canvas == 13);
+  const auto render = output.render_desc(granit::texture_view_ref::from_native(11),
+                                         granit::texture_format::rgba8_unorm, nullptr,
+                                         granit::canvas_draw_list_ref::from_native(13));
+  CHECK(render.scene.native_handle() == output.snapshot.native_handle());
+  CHECK(render.output.native_handle() == 11);
+  CHECK(render.frame == nullptr);
+  CHECK(render.canvas.native_handle() == 13);
   CHECK(render.width == 640);
   CHECK(render.height == 480);
   CHECK(render.clear_color.red == Catch::Approx(0.025F));
   CHECK(render.clear_color.green == Catch::Approx(0.04F));
   CHECK(render.clear_color.blue == Catch::Approx(0.065F));
-  CHECK(render.draw_binding_count == 1);
-  CHECK(render.draw_bindings == output.draw_bindings.data());
-  CHECK(render.draw_bindings != core.scene_gpu().draw_bindings().data());
+  CHECK(render.draw_bindings.size() == 1);
+  CHECK(render.draw_bindings.data() == output.draw_bindings.data());
+  CHECK(render.draw_bindings.data() != core.scene_gpu().draw_bindings().data());
   REQUIRE(render.environment == &output.environment);
-  CHECK(render.environment->irradiance != GRANIT_NULL_HANDLE);
-  CHECK(render.environment->prefiltered_environment != GRANIT_NULL_HANDLE);
-  CHECK(render.environment->brdf_lut != GRANIT_NULL_HANDLE);
+  CHECK(render.environment->irradiance.valid());
+  CHECK(render.environment->prefiltered_environment.valid());
+  CHECK(render.environment->brdf_lut.valid());
   CHECK(render.environment->intensity == Catch::Approx(0.12F));
   CHECK(render.environment->rotation_radians == Catch::Approx(0.0F));
   CHECK(core.performance().size() == 1);

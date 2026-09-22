@@ -406,9 +406,8 @@ int main(int argc, char** argv) {
       stage = "渲染离屏帧";
       tick.clear_color = {0.0F, 0.0F, 0.0F, 1.0F};
       const auto render =
-          tick.render_desc(output_view.native_handle(), GRANIT_TEXTURE_FORMAT_RGBA8_UNORM);
-      result = granit::from_native(granit_render_pipeline_render(
-          renderer.native_handle(), pipeline.native_handle(), &render));
+          tick.render_desc(output_view.ref(), granit::texture_format::rgba8_unorm);
+      result = pipeline.render(render);
     }
   }
   if (result.failed()) {
