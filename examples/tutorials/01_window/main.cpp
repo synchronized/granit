@@ -92,10 +92,15 @@ granit::result render_clear_frame(granit::swapchain& swapchain, granit::frame_co
 
 } // namespace
 
-int main() {
+int main(int argument_count, char** arguments) {
+  const bool smoke_test =
+      argument_count == 2 && std::string_view{arguments[1]} == "--smoke-test";
+
   // 创建窗口系统。
   granit::window_system window_system;
   granit::result result = window_system.initialize();
+  if (smoke_test && result == granit::result::backend_unavailable)
+    return 77;
   if (result.failed()) {
     return report_failure("window system initialize", result);
   }
@@ -156,6 +161,8 @@ int main() {
 
   bool running = true;
   bool recreate = false;
+  std::uint32_t rendered_frames = 0;
+  std::uint32_t completed_recreates = 0;
   while (running) {
     if (result = window_system.process_events(); result.failed()) {
       return report_failure("window system process events", result);
@@ -203,6 +210,7 @@ int main() {
         return report_failure("swapchain info query", result);
       }
       recreate = false;
+      ++completed_recreates;
     }
 
     result = render_clear_frame(swapchain, context, swapchain_info, recreate);
@@ -212,5 +220,17 @@ int main() {
     }
     if (result.failed())
       return report_failure("render clear frame", result);
+
+    ++rendered_frames;
+    if (smoke_test && rendered_frames == 1) {
+      recreate = true;
+    } else if (smoke_test && rendered_frames >= 3 && completed_recreates >= 1) {
+      running = false;
+    }
+  }
+
+  if (smoke_test && (rendered_frames < 3 || completed_recreates < 1)) {
+    std::cerr << "tutorial smoke test did not render and recreate the swapchain\n";
+    return 1;
   }
 }

@@ -113,6 +113,9 @@ cmake --build --preset linux-clang-debug --target granit_tutorial_01_window
 请从 preset 对应的 `bin` 目录运行生成程序。共享库构建会把 Granit 动态库输出到同一目录，直接从
 其他目录复制可执行文件可能导致系统找不到 DLL 或共享库。
 
+仓库测试使用 `--smoke-test` 渲染三帧并完成一次 Swapchain 重建后自动退出。该参数用于自动验收，
+正常阅读和运行教程时不需要传入。
+
 ## 6. 验收与排错
 
 - 窗口显示固定清屏颜色，不持续闪烁黑色。
