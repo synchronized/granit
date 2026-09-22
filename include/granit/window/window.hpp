@@ -5,8 +5,8 @@
 #define GRANIT_WINDOW_WINDOW_HPP_
 
 #include <cstdint>
-#include <cstring>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 
 #include <granit/core/result.hpp>
@@ -32,11 +32,23 @@ struct window_system_desc {
   window_backend backend{window_backend::automatic};
 };
 
+enum class window_flag : std::uint32_t {
+  none = 0,
+  visible = GRANIT_WINDOW_VISIBLE_BIT,
+  resizable = GRANIT_WINDOW_RESIZABLE_BIT,
+  high_dpi = GRANIT_WINDOW_HIGH_DPI_BIT,
+};
+
+[[nodiscard]] constexpr window_flag operator|(window_flag left, window_flag right) noexcept {
+  return static_cast<window_flag>(static_cast<std::uint32_t>(left) |
+                                  static_cast<std::uint32_t>(right));
+}
+
 struct window_desc {
   std::string_view title;
   std::uint32_t width{};
   std::uint32_t height{};
-  std::uint32_t flags{GRANIT_WINDOW_VISIBLE_BIT | GRANIT_WINDOW_RESIZABLE_BIT};
+  window_flag flags{window_flag::visible | window_flag::resizable};
 };
 
 enum class window_event_type : std::uint32_t {
@@ -48,14 +60,51 @@ enum class window_event_type : std::uint32_t {
   native_handle_changed = GRANIT_WINDOW_EVENT_NATIVE_HANDLE_CHANGED,
 };
 
+struct window_resize_event {
+  std::uint32_t width{};
+  std::uint32_t height{};
+};
+
+struct window_focus_event {
+  bool focused{};
+};
+
+struct window_scale_event {
+  float horizontal{};
+  float vertical{};
+  std::uint32_t width{};
+  std::uint32_t height{};
+};
+
+struct window_native_handle_event {
+  window_backend backend{window_backend::automatic};
+};
+
+union window_event_data {
+  window_resize_event resized;
+  window_focus_event focus;
+  window_scale_event scale;
+  window_native_handle_event native_handle;
+  std::uint8_t reserved[32]{};
+};
+
 struct window_event {
   window_event_type type{};
   window_ref window;
   std::uint64_t timestamp_ns{};
-  granit_window_event_data data{};
+  window_event_data data{};
 };
 
-using window_state = granit_window_state;
+struct window_state {
+  std::uint32_t width{};
+  std::uint32_t height{};
+  std::uint32_t framebuffer_width{};
+  std::uint32_t framebuffer_height{};
+  float content_scale_horizontal{1.0F};
+  float content_scale_vertical{1.0F};
+};
+
+static_assert(std::is_trivially_copyable_v<window_event_data>);
 
 class window_system {
 public:
@@ -88,7 +137,28 @@ public:
       event.type = static_cast<window_event_type>(native.type);
       event.window = window_ref::from_native(native.window);
       event.timestamp_ns = native.timestamp_ns;
-      std::memcpy(&event.data, &native.data, sizeof(event.data));
+      event.data = {};
+      switch (event.type) {
+      case window_event_type::resized:
+        event.data.resized = {.width = native.data.resized.width,
+                              .height = native.data.resized.height};
+        break;
+      case window_event_type::focus_changed:
+        event.data.focus = {.focused = native.data.focus.focused != 0};
+        break;
+      case window_event_type::scale_changed:
+        event.data.scale = {.horizontal = native.data.scale.horizontal,
+                            .vertical = native.data.scale.vertical,
+                            .width = native.data.scale.width,
+                            .height = native.data.scale.height};
+        break;
+      case window_event_type::native_handle_changed:
+        event.data.native_handle = {
+            .backend = static_cast<window_backend>(native.data.native_handle.backend)};
+        break;
+      default:
+        break;
+      }
     }
     return from_native(value);
   }
@@ -154,7 +224,7 @@ public:
     native_desc.title_length = static_cast<std::uint32_t>(desc.title.size());
     native_desc.width = desc.width;
     native_desc.height = desc.height;
-    native_desc.flags = desc.flags;
+    native_desc.flags = static_cast<std::uint32_t>(desc.flags);
     const auto value = granit_window_create(system.native_handle(), &native_desc, &handle_);
     if (value == GRANIT_SUCCESS)
       system_ = system.native_handle();
@@ -173,8 +243,17 @@ public:
   [[nodiscard]] result create_surface(renderer_ref owner, surface& output) const noexcept;
   [[nodiscard]] result create_surface(renderer& owner, surface& output) const noexcept;
   [[nodiscard]] result get_state(window_state& state) const noexcept {
-    state = GRANIT_WINDOW_STATE_INIT;
-    return from_native(granit_window_get_state(system_, handle_, &state));
+    granit_window_state native = GRANIT_WINDOW_STATE_INIT;
+    const auto value = granit_window_get_state(system_, handle_, &native);
+    if (value == GRANIT_SUCCESS) {
+      state = {.width = native.width,
+               .height = native.height,
+               .framebuffer_width = native.framebuffer_width,
+               .framebuffer_height = native.framebuffer_height,
+               .content_scale_horizontal = native.content_scale_horizontal,
+               .content_scale_vertical = native.content_scale_vertical};
+    }
+    return from_native(value);
   }
 
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }

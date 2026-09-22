@@ -25,7 +25,10 @@ TEST_CASE("Window component 可以连接 Renderer Surface 和 Swapchain", "[wind
   granit::window window;
   REQUIRE(window.initialize(
               window_system,
-              {.title = "Granit Window Renderer Test", .width = 96, .height = 72, .flags = 0}) ==
+              {.title = "Granit Window Renderer Test",
+               .width = 96,
+               .height = 72,
+               .flags = granit::window_flag::none}) ==
           granit::result::success);
 
   granit::renderer renderer;
@@ -70,7 +73,7 @@ TEST_CASE("Wayland Window component 可以连接 Renderer Surface 和 Swapchain"
                             {.title = "Granit Wayland Window Renderer Test",
                              .width = 96,
                              .height = 72,
-                             .flags = 0}) == granit::result::success);
+                             .flags = granit::window_flag::none}) == granit::result::success);
 
   granit::renderer renderer;
   const auto renderer_result =
@@ -117,7 +120,10 @@ TEST_CASE("XCB Window component 可以连接 Renderer Surface 和 Swapchain",
   REQUIRE(
       window.initialize(
           window_system,
-          {.title = "Granit XCB Window Renderer Test", .width = 96, .height = 72, .flags = 0}) ==
+          {.title = "Granit XCB Window Renderer Test",
+           .width = 96,
+           .height = 72,
+           .flags = granit::window_flag::none}) ==
       granit::result::success);
 
   granit::renderer renderer;
