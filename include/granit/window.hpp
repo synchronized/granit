@@ -7,5 +7,6 @@
 #include <granit/window/input.hpp>
 #include <granit/window/presentation.hpp>
 #include <granit/window/window.hpp>
+#include <granit/window/window_loop.hpp>
 
 #endif

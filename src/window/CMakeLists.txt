@@ -10,6 +10,7 @@ add_library(granit::window ALIAS granit_window)
 target_sources(
   granit_window
   PRIVATE system_api.cpp
+          window_loop_api.cpp
           window_api.cpp
           presentation_api.cpp
           registry.cpp
@@ -49,6 +50,8 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/window/presentation.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/window/window.h"
       "${PROJECT_SOURCE_DIR}/include/granit/window/window.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/window/window_loop.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/window/window_loop.hpp"
 )
 target_compile_features(granit_window PUBLIC cxx_std_20)
 target_include_directories(

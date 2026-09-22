@@ -25,7 +25,69 @@ void check_versioned_output(granit_result (*call)(T*), granit_result expected) {
     CHECK(storage[index] == std::byte{0x5a});
 }
 
+struct loop_test_application {
+  std::uint32_t ticks{};
+  std::uint32_t shutdowns{};
+  granit::result shutdown_reason{granit::result::unknown};
+  granit_window_system system{};
+  granit::result destroy_result{granit::result::unknown};
+
+  granit::result tick(granit::window_loop_action& action) noexcept {
+    ++ticks;
+    if (ticks == 1)
+      destroy_result = granit::from_native(granit_window_system_destroy(system));
+    action = ticks >= 3 ? granit::window_loop_action::stop
+                        : granit::window_loop_action::continue_running;
+    return granit::result::success;
+  }
+
+  void shutdown(granit::result reason) noexcept {
+    ++shutdowns;
+    shutdown_reason = reason;
+  }
+};
+
+struct failing_loop_application {
+  std::uint32_t shutdowns{};
+  granit::result shutdown_reason{granit::result::unknown};
+
+  granit::result tick(granit::window_loop_action&) noexcept {
+    return granit::result::cancelled;
+  }
+
+  void shutdown(granit::result reason) noexcept {
+    ++shutdowns;
+    shutdown_reason = reason;
+  }
+};
+
 } // namespace
+
+TEST_CASE("Window Loop 在同一线程推进并且只关闭一次", "[window][loop]") {
+  granit::window_system system;
+  const auto initialize_result = system.initialize();
+  if (initialize_result == granit::result::backend_unavailable)
+    SKIP("当前环境没有可用的 Window 后端");
+  REQUIRE(initialize_result == granit::result::success);
+
+  loop_test_application application{.system = system.native_handle()};
+  CHECK(granit::run_window_loop(system, application) == granit::result::success);
+  CHECK(application.ticks == 3);
+  CHECK(application.shutdowns == 1);
+  CHECK(application.shutdown_reason == granit::result::success);
+  CHECK(application.destroy_result == granit::result::resource_in_use);
+
+  failing_loop_application failing;
+  CHECK(granit::run_window_loop(system, failing) == granit::result::cancelled);
+  CHECK(failing.shutdowns == 1);
+  CHECK(failing.shutdown_reason == granit::result::cancelled);
+}
+
+TEST_CASE("Window Loop 在接受回调前校验描述", "[window][loop][abi]") {
+  granit_window_loop_desc desc = GRANIT_WINDOW_LOOP_DESC_INIT;
+  CHECK(granit_window_system_run_loop(UINT64_MAX, nullptr) == GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(granit_window_system_run_loop(UINT64_MAX, &desc) == GRANIT_ERROR_INVALID_ARGUMENT);
+}
 
 TEST_CASE("C++ Input Event 把 C 事件转换为强类型字段", "[input][cpp]") {
   granit_input_event native = GRANIT_INPUT_EVENT_INIT;

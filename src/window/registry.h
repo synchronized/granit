@@ -80,6 +80,7 @@ struct window_system_record {
   std::unordered_map<granit_window, granit_keyboard_state> keyboards;
   std::unordered_map<granit_window, granit_pointer_state> pointers;
   granit::input::detail::platform_input_adapter input_platform;
+  bool loop_running{};
 #if defined(GRANIT_WINDOW_HAS_XCB)
   xcb_connection_t* connection{};
   xcb_screen_t* screen{};

@@ -6,6 +6,7 @@
 
 #include <granit/granit.h>
 #include <granit/renderer/native_surface.h>
+#include <granit/window.h>
 
 #include "snapshots/0.4.0/core_identity.h"
 
@@ -43,6 +44,13 @@ GRANIT_ABI_ASSERT(granit_abi_d32s8_format, GRANIT_TEXTURE_FORMAT_D32_FLOAT_S8_UI
 
 /* 当前受支持平台为 64 位；含指针的结构在此建立独立数字基线。 */
 #if UINTPTR_MAX == UINT64_MAX
+GRANIT_ABI_ASSERT(granit_abi_window_loop_desc_size, sizeof(granit_window_loop_desc) == 40);
+GRANIT_ABI_ASSERT(granit_abi_window_loop_desc_tick,
+                  offsetof(granit_window_loop_desc, tick) == 8);
+GRANIT_ABI_ASSERT(granit_abi_window_loop_desc_user_data,
+                  offsetof(granit_window_loop_desc, user_data) == 24);
+GRANIT_ABI_ASSERT(granit_abi_window_loop_desc_v1,
+                  GRANIT_WINDOW_LOOP_DESC_VERSION_1_SIZE == 40);
 GRANIT_ABI_ASSERT(granit_abi_renderer_desc_size, sizeof(granit_renderer_desc) == 64);
 GRANIT_ABI_ASSERT(granit_abi_renderer_desc_application_name,
                   offsetof(granit_renderer_desc, application_name) == 8);
