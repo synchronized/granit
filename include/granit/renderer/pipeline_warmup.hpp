@@ -124,7 +124,7 @@ public:
     granit_async_operation native{};
     const auto value = granit_pipeline_warmup_batch_submit_async(renderer_, handle_, &native);
     if (value == GRANIT_SUCCESS)
-      operation = async_operation{renderer_ref::from_native(renderer_), native};
+      detail::async_operation_access::adopt(operation, renderer_, native);
     return from_native(value);
   }
   [[nodiscard]] result reset() noexcept {
@@ -154,7 +154,8 @@ get_pipeline_warmup_result(const async_operation& operation, std::uint32_t index
                            pipeline_warmup_result_info& info) noexcept {
   granit_pipeline_warmup_result_info native = GRANIT_PIPELINE_WARMUP_RESULT_INFO_INIT;
   const auto value = granit_pipeline_warmup_operation_get_result(
-      operation.native_renderer(), operation.native_handle(), index, &native);
+      detail::async_operation_access::renderer(operation),
+      detail::async_operation_access::handle(operation), index, &native);
   if (value == GRANIT_SUCCESS) {
     info.type = static_cast<pipeline_warmup_type>(native.type);
     info.operation_result = from_native(native.result);

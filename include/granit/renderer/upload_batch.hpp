@@ -100,7 +100,7 @@ public:
     granit_async_operation native = GRANIT_NULL_HANDLE;
     const auto value = granit_upload_batch_submit_async(renderer_, handle_, &native);
     if (value == GRANIT_SUCCESS)
-      operation = async_operation{renderer_ref::from_native(renderer_), native};
+      detail::async_operation_access::adopt(operation, renderer_, native);
     return from_native(value);
   }
   [[nodiscard]] result get_info(upload_batch_info& info) const noexcept {

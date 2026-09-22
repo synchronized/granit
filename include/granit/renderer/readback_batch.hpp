@@ -133,7 +133,7 @@ public:
     granit_async_operation native = GRANIT_NULL_HANDLE;
     const auto value = granit_readback_batch_submit_async(renderer_, handle_, &native);
     if (value == GRANIT_SUCCESS)
-      operation = async_operation{renderer_ref::from_native(renderer_), native};
+      detail::async_operation_access::adopt(operation, renderer_, native);
     return from_native(value);
   }
 
@@ -163,7 +163,8 @@ private:
                                                      readback_result_info& info) noexcept {
   granit_readback_result_info native = GRANIT_READBACK_RESULT_INFO_INIT;
   const auto value = granit_readback_operation_get_result_info(
-      operation.native_renderer(), operation.native_handle(), result_index, &native);
+      detail::async_operation_access::renderer(operation),
+      detail::async_operation_access::handle(operation), result_index, &native);
   if (value == GRANIT_SUCCESS) {
     info = {.type = static_cast<readback_result_type>(native.type),
             .required_size = native.required_size,
@@ -183,9 +184,10 @@ private:
                                                  std::span<std::byte> data,
                                                  std::uint64_t& required_size) noexcept {
   required_size = data.size();
-  return from_native(granit_readback_operation_copy_result(operation.native_renderer(),
-                                                           operation.native_handle(), result_index,
-                                                           data.data(), &required_size));
+  return from_native(granit_readback_operation_copy_result(
+      detail::async_operation_access::renderer(operation),
+      detail::async_operation_access::handle(operation), result_index, data.data(),
+      &required_size));
 }
 
 } // namespace granit

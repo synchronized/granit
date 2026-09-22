@@ -92,13 +92,13 @@ public:
     const auto value =
         granit_timestamp_query_pool_get_results_async(renderer_, handle_, first, count, &handle);
     if (value == GRANIT_SUCCESS)
-      operation = async_operation{renderer_ref::from_native(renderer_), handle};
+      detail::async_operation_access::adopt(operation, renderer_, handle);
     return from_native(value);
   }
   [[nodiscard]] result copy_results(const async_operation& operation,
                                     std::span<std::uint64_t> nanoseconds) noexcept {
     return from_native(granit_timestamp_query_pool_copy_results(
-        renderer_, handle_, operation.native_handle(), nanoseconds.data(),
+        renderer_, handle_, detail::async_operation_access::handle(operation), nanoseconds.data(),
         static_cast<std::uint32_t>(nanoseconds.size())));
   }
   [[nodiscard]] result reset() noexcept {
