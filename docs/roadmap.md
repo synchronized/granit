@@ -42,8 +42,8 @@ Texture、Camera、Mesh、Material/Lighting、Render Pipeline 到 ImGui 的连�
 **状态：实施中，P1。**
 
 [S-49](plans/S-49-0.28.0-window-loop.md)在现有非阻塞 Window 事件泵之上增加可选托管 Loop，让桌面
-和 Emscripten 复用同一个应用 Tick。Window 只负责平台调度和窗口事件，不接管 Renderer、资源或
-引擎任务系统。
+和 Emscripten 复用同一个应用 Tick。Loop 只负责平台调度和窗口事件，不持有或推进 Renderer，也不
+接管资源或引擎任务系统。
 
 ## 最近完成
 
