@@ -50,6 +50,7 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/window/presentation.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/window/window.h"
       "${PROJECT_SOURCE_DIR}/include/granit/window/window.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/window/window_ref.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/window/window_loop.h"
       "${PROJECT_SOURCE_DIR}/include/granit/window/window_loop.hpp"
 )

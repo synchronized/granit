@@ -9,6 +9,7 @@
 #include <type_traits>
 
 #include <granit/window/input.h>
+#include <granit/window/window_ref.hpp>
 
 namespace granit {
 
@@ -177,7 +178,7 @@ union input_event_data {
 
 struct input_event {
   input_event_type type{};
-  granit_window window{GRANIT_NULL_HANDLE};
+  window_ref window;
   std::uint64_t timestamp_ns{};
   input_event_data data{};
 };
@@ -196,7 +197,7 @@ namespace detail {
 
 [[nodiscard]] inline input_event from_native(const granit_input_event& native) noexcept {
   input_event event{.type = static_cast<input_event_type>(native.type),
-                    .window = native.window,
+                    .window = window_ref::from_native(native.window),
                     .timestamp_ns = native.timestamp_ns};
   switch (event.type) {
   case input_event_type::key:

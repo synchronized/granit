@@ -199,7 +199,7 @@ TEST_CASE("C++ Input Event 把 C 事件转换为强类型字段", "[input][cpp]"
 
   const auto event = granit::detail::from_native(native);
   CHECK(event.type == granit::input_event_type::key);
-  CHECK(event.window == native.window);
+  CHECK(event.window.native_handle() == native.window);
   CHECK(event.timestamp_ns == native.timestamp_ns);
   CHECK(event.data.key.physical == granit::physical_key::escape);
   CHECK(event.data.key.logical == granit::logical_key::escape);

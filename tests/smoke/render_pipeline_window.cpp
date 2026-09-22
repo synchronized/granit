@@ -220,7 +220,7 @@ int main(int argument_count, char** arguments) {
     result = window_system.process_events();
     granit::window_event event{};
     while (result.ok() && (result = window_system.poll(event)).ok()) {
-      if (event.window != window.native_handle())
+      if (event.window != window.ref())
         continue;
       if (event.type == granit::window_event_type::close_requested)
         running = false;

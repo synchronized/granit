@@ -12,6 +12,7 @@
 #include <granit/core/result.hpp>
 #include <granit/window/input.hpp>
 #include <granit/window/window.h>
+#include <granit/window/window_ref.hpp>
 
 namespace granit {
 
@@ -48,7 +49,7 @@ enum class window_event_type : std::uint32_t {
 
 struct window_event {
   window_event_type type{};
-  granit_window window{GRANIT_NULL_HANDLE};
+  window_ref window;
   std::uint64_t timestamp_ns{};
   granit_window_event_data data{};
 };
@@ -84,7 +85,7 @@ public:
     const auto value = granit_window_poll_event(handle_, &native);
     if (value == GRANIT_SUCCESS) {
       event.type = static_cast<window_event_type>(native.type);
-      event.window = native.window;
+      event.window = window_ref::from_native(native.window);
       event.timestamp_ns = native.timestamp_ns;
       std::memcpy(&event.data, &native.data, sizeof(event.data));
     }
@@ -100,13 +101,15 @@ public:
       event = detail::from_native(native);
     return from_native(value);
   }
-  [[nodiscard]] result keyboard(granit_window window, keyboard_state& state) const noexcept {
+  [[nodiscard]] result keyboard(window_ref window, keyboard_state& state) const noexcept {
     state = GRANIT_KEYBOARD_STATE_INIT;
-    return from_native(granit_window_get_keyboard_state(handle_, window, &state));
+    return from_native(
+        granit_window_get_keyboard_state(handle_, window.native_handle(), &state));
   }
-  [[nodiscard]] result pointer(granit_window window, pointer_state& state) const noexcept {
+  [[nodiscard]] result pointer(window_ref window, pointer_state& state) const noexcept {
     state = GRANIT_POINTER_STATE_INIT;
-    return from_native(granit_window_get_pointer_state(handle_, window, &state));
+    return from_native(
+        granit_window_get_pointer_state(handle_, window.native_handle(), &state));
   }
   [[nodiscard]] result reset() noexcept {
     if (!valid())
@@ -173,6 +176,7 @@ public:
   }
 
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr window_ref ref() const noexcept { return window_ref{handle_}; }
   [[nodiscard]] granit_window native_handle() const noexcept { return handle_; }
 
 private:

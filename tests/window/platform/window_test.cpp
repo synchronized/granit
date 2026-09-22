@@ -189,7 +189,7 @@ TEST_CASE("C++ Window 原生快照直接接收 RAII 对象", "[window][native][c
           granit::result::success);
 
   granit::window_native_win32 native{};
-  REQUIRE(granit::get_native(system, window, native) == granit::result::success);
+  REQUIRE(granit::get_native(system, window.ref(), native) == granit::result::success);
   CHECK(native.instance != nullptr);
   CHECK(native.window != nullptr);
 }
