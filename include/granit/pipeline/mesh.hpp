@@ -81,7 +81,8 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result initialize(granit_renderer renderer, const granit_mesh_desc& desc) noexcept {
+  [[nodiscard]] result initialize(renderer_ref owner, const granit_mesh_desc& desc) noexcept {
+    const auto renderer = owner.native_handle();
     if (valid())
       return result::invalid_argument;
     const auto value = from_native(granit_mesh_create(renderer, &desc, &handle_));
@@ -136,7 +137,7 @@ public:
           .first_instance = desc.first_instance,
           .reserved = 0,
       };
-      return initialize(owner.native_handle(), native);
+      return initialize(owner.ref(), native);
     } catch (const std::bad_alloc&) {
       return result::out_of_memory;
     } catch (...) {

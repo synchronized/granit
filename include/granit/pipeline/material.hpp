@@ -139,8 +139,9 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result initialize(granit_renderer renderer,
+  [[nodiscard]] result initialize(renderer_ref owner,
                                   const granit_material_desc& desc) noexcept {
+    const auto renderer = owner.native_handle();
     if (valid())
       return result::invalid_argument;
     const auto value = from_native(granit_material_create(renderer, &desc, &handle_));
@@ -167,7 +168,7 @@ public:
           .shader_library = desc.shader_library.native_handle(),
           .reserved_2 = 0,
       };
-      return initialize(owner.native_handle(), native);
+      return initialize(owner.ref(), native);
     } catch (const std::bad_alloc&) {
       return result::out_of_memory;
     } catch (...) {

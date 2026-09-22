@@ -72,8 +72,9 @@ public:
     return *this;
   }
 
-  [[nodiscard]] result initialize(granit_renderer renderer,
+  [[nodiscard]] result initialize(renderer_ref owner,
                                   const granit_scene_snapshot_desc& desc) noexcept {
+    const auto renderer = owner.native_handle();
     if (valid())
       return result::invalid_argument;
     const auto value = from_native(granit_scene_snapshot_create(renderer, &desc, &handle_));
@@ -103,7 +104,7 @@ public:
         .spot_lights = desc.spot_lights.data(),
         .spot_light_count = static_cast<std::uint32_t>(desc.spot_lights.size()),
     };
-    return initialize(owner.native_handle(), native);
+    return initialize(owner.ref(), native);
   }
   [[nodiscard]] result reset() noexcept {
     if (!valid())

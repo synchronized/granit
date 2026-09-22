@@ -238,7 +238,7 @@ granit::result create_material(granit_renderer renderer, const gltf::material& s
   desc.initial_updates = updates.data();
   desc.initial_update_count = static_cast<std::uint32_t>(updates.size());
   desc.shader_library = shader_library;
-  return output.initialize(renderer, desc);
+  return output.initialize(granit::renderer_ref::from_native(renderer), desc);
 }
 
 math::float3 transform_point(const math::matrix4& matrix, const math::float3& point) {
@@ -593,7 +593,7 @@ gpu_scene::create_snapshot(std::span<const granit_scene_view> views,
   desc.point_light_count = static_cast<std::uint32_t>(point_lights.size());
   desc.spot_lights = spot_lights.data();
   desc.spot_light_count = static_cast<std::uint32_t>(spot_lights.size());
-  return output.initialize(renderer_, desc);
+  return output.initialize(granit::renderer_ref::from_native(renderer_), desc);
 }
 
 granit::result gpu_scene::update_material_factors(gltf::scene& source, std::uint32_t material_index,
@@ -884,7 +884,7 @@ granit::result gpu_scene::create(granit_renderer renderer, const gltf::scene& so
     desc.vertex_count = primitive.vertex_count;
     desc.index_count = primitive.index_count;
     meshes_.emplace_back();
-    if (const auto result = meshes_.back().initialize(renderer, desc); result.failed())
+    if (const auto result = meshes_.back().initialize(renderer_view, desc); result.failed())
       return result;
     if (!report(gpu_scene_upload_stage::meshes, primitive_index + 1, plan_.primitives.size()))
       return granit::result::cancelled;

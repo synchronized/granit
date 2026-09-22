@@ -212,7 +212,8 @@ void initialize_test_mesh(granit_renderer renderer, granit::buffer& vertex_buffe
   desc.vertex_buffers = &vertex;
   desc.vertex_buffer_count = 1;
   desc.vertex_count = 3;
-  REQUIRE(mesh.initialize(renderer, desc) == granit::result::success);
+  REQUIRE(mesh.initialize(granit::renderer_ref::from_native(renderer), desc) ==
+          granit::result::success);
 }
 
 } // namespace
@@ -391,7 +392,7 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   scene_desc.directional_lights = directional_lights.data();
   scene_desc.directional_light_count = static_cast<std::uint32_t>(directional_lights.size());
   granit::scene_snapshot scene;
-  REQUIRE(scene.initialize(renderer.native_handle(), scene_desc) == granit::result::success);
+  REQUIRE(scene.initialize(renderer.ref(), scene_desc) == granit::result::success);
 
   const auto archive = build_material_archive();
   std::vector<std::byte> shader_library_bytes;
@@ -403,7 +404,7 @@ TEST_CASE("统一Render Pipeline按固定阶段消费Scene Snapshot") {
   material_desc.archive_size = archive.size();
   material_desc.shader_library = shader_library.native_handle();
   granit::material_instance material;
-  REQUIRE(material.initialize(renderer.native_handle(), material_desc) == granit::result::success);
+  REQUIRE(material.initialize(renderer.ref(), material_desc) == granit::result::success);
   CHECK(shader_library.reset() == granit::result::resource_in_use);
 
   granit::buffer vertex_buffer;
@@ -707,7 +708,7 @@ TEST_CASE("Render Pipeline在没有可见物体时仍清屏并执行覆盖层") 
   scene_desc.views = &view;
   scene_desc.view_count = 1;
   granit::scene_snapshot empty_scene;
-  REQUIRE(empty_scene.initialize(renderer.native_handle(), scene_desc) == granit::result::success);
+  REQUIRE(empty_scene.initialize(renderer.ref(), scene_desc) == granit::result::success);
 
   granit::render_pipeline_render_desc render_desc{
       .scene = empty_scene.ref(),
@@ -736,7 +737,7 @@ TEST_CASE("Render Pipeline在没有可见物体时仍清屏并执行覆盖层") 
   scene_desc.renderables = &culled;
   scene_desc.renderable_count = 1;
   granit::scene_snapshot culled_scene;
-  REQUIRE(culled_scene.initialize(renderer.native_handle(), scene_desc) == granit::result::success);
+  REQUIRE(culled_scene.initialize(renderer.ref(), scene_desc) == granit::result::success);
   callback_state callback;
   callback.renderer = renderer.native_handle();
   granit::render_pipeline callback_pipeline;

@@ -104,7 +104,7 @@ int main() {
   granit_scene_snapshot_desc scene_desc = GRANIT_SCENE_SNAPSHOT_DESC_INIT;
   scene_desc.views = &view;
   scene_desc.view_count = 1;
-  if ((scene.initialize(renderer.native_handle(), scene_desc)).failed())
+  if ((scene.initialize(renderer.ref(), scene_desc)).failed())
     return 7;
 
   granit_render_pipeline_render_desc render_desc = GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT;
