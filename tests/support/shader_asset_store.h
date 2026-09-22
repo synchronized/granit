@@ -86,6 +86,11 @@ public:
     return build_library(bytes) && library.initialize(renderer, bytes).ok();
   }
 
+  bool initialize_library(granit::renderer& renderer, std::vector<std::byte>& bytes,
+                          granit::shader_library& library) const {
+    return build_library(bytes) && library.initialize(renderer, bytes).ok();
+  }
+
 private:
   struct entry {
     std::filesystem::path path;

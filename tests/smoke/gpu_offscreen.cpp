@@ -95,8 +95,8 @@ int main(int argc, char** argv) {
     result = granit::result::invalid_argument;
   std::vector<std::byte> shader_library_bytes;
   granit::shader_library shader_library;
-  if (result.ok() && !shader_assets.initialize_library(renderer.native_handle(),
-                                                       shader_library_bytes, shader_library)) {
+  if (result.ok() &&
+      !shader_assets.initialize_library(renderer, shader_library_bytes, shader_library)) {
     result = granit::result::invalid_argument;
   }
   const auto vertex_reference = shader_assets.reference(vertex_path);
@@ -108,11 +108,11 @@ int main(int argc, char** argv) {
 
   granit::pipeline_layout layout;
   if (result.ok())
-    result = layout.initialize(renderer.native_handle());
+    result = layout.initialize(renderer);
   constexpr granit::texture_format format = granit::texture_format::rgba8_unorm;
   granit::graphics_pipeline pipeline;
   if (result.ok()) {
-    result = pipeline.initialize(renderer.native_handle(),
+    result = pipeline.initialize(renderer,
                                  {
                                      .layout = layout.ref(),
                                      .vertex_shader = vertex.ref(),
@@ -131,7 +131,7 @@ int main(int argc, char** argv) {
   granit::texture texture;
   if (result.ok()) {
     result = texture.initialize(
-        renderer.native_handle(),
+        renderer,
         {.format = format,
          .usage = granit::texture_usage::color_attachment | granit::texture_usage::transfer_source,
          .width = k_width,
@@ -139,11 +139,11 @@ int main(int argc, char** argv) {
   }
   granit::texture_view view;
   if (result.ok())
-    result = view.initialize(renderer.native_handle(), texture.native_handle());
+    result = view.initialize(renderer, texture);
 
   granit::command_recorder recorder;
   if (result.ok())
-    result = recorder.initialize(renderer.native_handle());
+    result = recorder.initialize(renderer);
   if (result.ok())
     result = recorder.begin();
   if (result.ok())

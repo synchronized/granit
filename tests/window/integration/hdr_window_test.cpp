@@ -192,7 +192,7 @@ int main(int argument_count, char** arguments) {
     return 77;
   granit::window window;
   if (result.ok()) {
-    result = window.initialize(window_system.native_handle(),
+    result = window.initialize(window_system,
                                {.title = "Granit HDR Tone Mapping", .width = 800, .height = 600});
   }
   granit::window_state window_state{};
@@ -211,7 +211,7 @@ int main(int argument_count, char** arguments) {
   granit::swapchain swapchain;
   if (result.ok()) {
     result = swapchain.initialize(
-        renderer.native_handle(), surface.native_handle(),
+        renderer, surface,
         {.width = window_state.framebuffer_width, .height = window_state.framebuffer_height});
   }
   granit::swapchain_info info;
@@ -227,7 +227,7 @@ int main(int argument_count, char** arguments) {
   std::vector<std::byte> shader_library_bytes;
   granit::shader_library shader_library;
   if (result.ok() &&
-      !assets.initialize_library(renderer.native_handle(), shader_library_bytes, shader_library))
+      !assets.initialize_library(renderer, shader_library_bytes, shader_library))
     result = granit::result::initialization_failed;
   if (result.ok() && !tone_shaders.initialize(renderer.native_handle()))
     result = granit::result::initialization_failed;
@@ -280,7 +280,7 @@ int main(int argument_count, char** arguments) {
   }
   granit::frame_context frame_context;
   if (result.ok())
-    result = frame_context.initialize(renderer.native_handle());
+    result = frame_context.initialize(renderer);
   if (result.ok()) {
     std::cout << "Swapchain 格式=" << static_cast<std::uint32_t>(info.format)
               << (shader_encodes_srgb(info.format) ? "，Shader 执行 sRGB 编码\n"

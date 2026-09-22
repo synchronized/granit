@@ -143,11 +143,11 @@ TEST_CASE("Wayland Surface 可以完成 Swapchain 清屏和 Present", "[swapchai
   REQUIRE(renderer_result == granit::result::success);
 
   granit::surface surface;
-  REQUIRE(surface.initialize(renderer.native_handle(),
+  REQUIRE(surface.initialize(renderer,
                              granit::surface_desc::wayland(window.display(), window.surface())) ==
           granit::result::success);
   granit::swapchain swapchain;
-  REQUIRE(swapchain.initialize(renderer.native_handle(), surface.native_handle(),
+  REQUIRE(swapchain.initialize(renderer, surface,
                                {.width = 96, .height = 72}) == granit::result::success);
   granit::swapchain_info info;
   REQUIRE(swapchain.query_info(info) == granit::result::success);
@@ -157,7 +157,7 @@ TEST_CASE("Wayland Surface 可以完成 Swapchain 清屏和 Present", "[swapchai
   granit::swapchain_backbuffer backbuffer;
   REQUIRE(swapchain.backbuffer(frame, backbuffer) == granit::result::success);
   granit::command_recorder recorder;
-  REQUIRE(recorder.initialize(renderer.native_handle()) == granit::result::success);
+  REQUIRE(recorder.initialize(renderer) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
   const granit::color_attachment_desc color{
       .view = backbuffer.view,

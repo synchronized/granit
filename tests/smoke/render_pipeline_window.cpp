@@ -88,7 +88,7 @@ int main(int argument_count, char** arguments) {
     return 77;
   granit::window window;
   if (result.ok()) {
-    result = window.initialize(window_system.native_handle(),
+    result = window.initialize(window_system,
                                {.title = "Granit Render Pipeline", .width = 800, .height = 600});
   }
   granit::window_state window_state{};
@@ -103,8 +103,8 @@ int main(int argument_count, char** arguments) {
   }
   std::vector<std::byte> shader_library_bytes;
   granit::shader_library shader_library;
-  if (result.ok() && !shader_assets().initialize_library(renderer.native_handle(),
-                                                         shader_library_bytes, shader_library))
+  if (result.ok() &&
+      !shader_assets().initialize_library(renderer, shader_library_bytes, shader_library))
     result = granit::result::initialization_failed;
   granit::surface surface;
   if (result.ok())
@@ -112,7 +112,7 @@ int main(int argument_count, char** arguments) {
   granit::swapchain swapchain;
   if (result.ok()) {
     result = swapchain.initialize(
-        renderer.native_handle(), surface.native_handle(),
+        renderer, surface,
         {.width = window_state.framebuffer_width, .height = window_state.framebuffer_height});
   }
   granit::swapchain_info info;
@@ -125,7 +125,7 @@ int main(int argument_count, char** arguments) {
   granit::canvas_draw_list canvas;
   if (result.ok()) {
     result = canvas_texture.initialize(
-        renderer.native_handle(),
+        renderer,
         {.format = granit::texture_format::rgba8_unorm,
          .usage = granit::texture_usage::sampled | granit::texture_usage::transfer_destination,
          .width = 1,
@@ -135,11 +135,11 @@ int main(int argument_count, char** arguments) {
   if (result.ok())
     result = canvas_texture.write(std::as_bytes(std::span{canvas_pixel}), {}, {});
   if (result.ok())
-    result = canvas_view.initialize(renderer.native_handle(), canvas_texture.native_handle());
+    result = canvas_view.initialize(renderer, canvas_texture);
   if (result.ok())
-    result = canvas_sampler.initialize(renderer.native_handle(), {});
+    result = canvas_sampler.initialize(renderer, {});
   if (result.ok())
-    result = canvas.initialize(renderer.native_handle(), GRANIT_CANVAS_DRAW_LIST_DESC_INIT);
+    result = canvas.initialize(renderer);
   granit_canvas_rect_desc canvas_rect = GRANIT_CANVAS_RECT_DESC_INIT;
   canvas_rect.x = 12;
   canvas_rect.y = 12;
@@ -154,10 +154,9 @@ int main(int argument_count, char** arguments) {
                                            0.5F,   0.0F,   0.65F, 0.5F};
   granit::buffer vertex_buffer;
   if (result.ok()) {
-    result =
-        vertex_buffer.initialize(renderer.native_handle(),
-                                 {.size = sizeof(positions), .usage = granit::buffer_usage::vertex},
-                                 std::as_bytes(std::span{positions}));
+    result = vertex_buffer.initialize(
+        renderer, {.size = sizeof(positions), .usage = granit::buffer_usage::vertex},
+        std::as_bytes(std::span{positions}));
   }
   const granit_vertex_attribute attribute{0, GRANIT_VERTEX_FORMAT_FLOAT32X3, 0, 0};
   const granit_mesh_vertex_buffer vertex{
