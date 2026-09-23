@@ -143,8 +143,8 @@ Windows 共享验证不会把 DLL 复制到 Consumer 目录，而是从安装前
 | Linux x64 | GCC | 共享、静态 | C11、C++20、RenderPipeline、Window（含输入） | Release CI 已通过 |
 
 该矩阵描述当前持续验证范围，不等同于 API 或 ABI 稳定承诺。Windows Clang/clang-cl preset 可用于
-开发，但尚未进入安装 Consumer 的必过矩阵。2026-08-18 的跨平台验收结果见
-[CI 验证记录](../records/2026-08-18-cross-platform-ci-validation.md)。
+开发，但尚未进入安装 Consumer 的必过矩阵。工作流职责和当前必过矩阵见
+[CI 与验证](ci.md)。
 
 ## 安装故障排查
 

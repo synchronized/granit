@@ -120,8 +120,8 @@ Scene Graph、Camera、Light、Mesh、Material 或资产数据库。高级套件
 
 PBR 质量体系主要参考 Filament；底层资源组织和高层组件分离主要参考 Diligent/DiligentFX。项目
 不兼容它们的 API、对象模型、Shader、材质包或资产格式，也不复制 COM 引用计数或整体 Engine
-所有权。具体实施条件见 [H-07 计划](../plans/H-07-reference-render-pipeline.md)；无光照、2D 与 UI
-路径见 [H-06 计划](../plans/H-06-unlit-2d-ui.md)。
+所有权。当前高级渲染边界见 [Render Pipeline](../reference/render-pipeline.md)，2D 与 UI 路径见
+[Canvas Draw List](../reference/canvas-draw-list.md)。
 
 ## 分层
 

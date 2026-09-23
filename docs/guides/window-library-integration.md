@@ -20,8 +20,7 @@
 | Wayland | `wl_display*`、`wl_surface*` | `surface_desc::wayland` | 无 |
 
 这些代码是平台直连示意，不属于稳定的第三方 Integration API。可选组件的当前接口见
-[SDL3 与 ImGui Integration](../reference/third-party-integrations.md)，后续阶段见
-[S-08 计划](../plans/S-08-third-party-integrations.md)。
+[SDL3 与 ImGui Integration](../reference/third-party-integrations.md)。
 
 ## 通用顺序
 

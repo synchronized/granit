@@ -38,8 +38,8 @@
 1. [开发规范](guides/development.md)
 2. [项目文档规范](../DOCUMENTATION_GUIDE.md)
 3. [路线图](roadmap.md)
-4. [0.29.0 发布验收记录](records/2026-09-23-v0.29.0-release-acceptance.md)
-5. [开发计划与完成历史](plans/README.md)
+4. [开发计划与完成历史](plans/README.md)
+5. [实施记录](records/README.md)
 6. [第三方依赖](../3rd/README.md)
 
 ## 操作指南

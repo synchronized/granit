@@ -81,8 +81,8 @@ ID，也不可保存到文件或跨进程使用。不同结果的查询仍可并
   查询。两种句柄由不同句柄表校验，不能混用。
 - Library Builder 在启动编译器前校验输入、编译上下文和 Object 摘要；命中时从私有 sidecar
   恢复所需产物，未命中时编译并原子更新缓存。Object 写入和缓存恢复不属于公共 API。
-- 当前 sidecar 分别代表 WebGPU portable WGSL 和 Vulkan portable SPIR-V。资产按后端打包裁剪和
-  多能力档位选择属于 [S-20](../plans/S-20-shader-asset-variants.md)。
+- 当前 sidecar 分别代表 WebGPU portable WGSL 和 Vulkan portable SPIR-V；Library 同时携带两个
+  后端载荷，尚不支持按目标后端裁剪或选择多能力档位。
 - `.grshlib` 是 Core 的公共运行时资产；`.grshaderobj` 的链接、裁剪、去重和原子写入只由
   Library Builder 在工具内部执行。
 - `granit_asset_tools_shader_build_library_from_manifest` 是 HLSL-first 的高层构建入口。它读取
