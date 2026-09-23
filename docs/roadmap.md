@@ -31,10 +31,11 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 
 ### S-54：0.30.0 特性教程与 Example Application
 
-**状态：实施中，P1。**
+**状态：实施完成，等待远端验收，P1。**
 
 [S-54](plans/S-54-0.30.0-feature-tutorial-framework.md) 将以仓库私有 Application 统一示例生命周期，
 把线性教程压缩为 Cube 与 PBR Assets 两个特性入口，并把 Model Loading/Viewer 移回 Samples。
+Windows、Emscripten 与浏览器本地验收已经通过，等待远端 Linux 与 Release 矩阵。
 
 ### S-53：0.30.0 文档、教程与发布面收敛
 
