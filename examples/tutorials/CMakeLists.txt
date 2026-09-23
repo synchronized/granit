@@ -20,6 +20,10 @@ if(GRANIT_HAS_NATIVE_TOOLS AND GRANIT_SHADER_TOOLCHAIN_ROOT AND GRANIT_DXC_EXECU
   endif()
 endif()
 
+if(GRANIT_HAS_NATIVE_WINDOW)
+  add_subdirectory(09_model_loading)
+endif()
+
 if(EMSCRIPTEN AND TARGET granit::integration_imgui)
   add_subdirectory(08_imgui)
 endif()

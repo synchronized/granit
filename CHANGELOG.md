@@ -15,6 +15,8 @@
   延伸到 PBR 场景与交互式工具界面。
 - Tutorial 08 复用统一 Window Loop、输入事件和 Canvas 路径验证浏览器 WebGPU，覆盖 Font Atlas、
   自定义 Texture ID、多帧渲染、指针输入与 Resize。
+- 新增 09 Model Loading 教程，使用离线 glTF 与外部 Buffer 演示 CPU Scene 解析、GPU Mesh、完整
+  PBR Material、节点变换、自动相机取景和 Render Pipeline 提交。
 - C++ Mesh 包装新增接受 `command_recorder&` 的 `bind` 和 `draw`，低层自定义绘制无需提取
   Mesh 或 Recorder 的 C ABI 句柄。
 

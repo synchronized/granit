@@ -20,6 +20,7 @@
 7. [添加材质与光照](tutorials/06-material-and-lighting.md)
 8. [迁移到 Render Pipeline](tutorials/07-render-pipeline.md)
 9. [接入 ImGui 调试界面](tutorials/08-imgui.md)
+10. [加载 glTF 模型](tutorials/09-model-loading.md)
 
 ### 使用核心 Renderer
 
@@ -67,7 +68,7 @@
 
 ## 教程
 
-教程从窗口清屏开始，逐章扩展同一个应用；每章只增加一种主要能力。01～08 均已提供配套源码与
+教程从窗口清屏开始，逐章扩展同一个应用；每章只增加一种主要能力。01～09 均已提供配套源码与
 自动验证，01 与 08 还覆盖浏览器 WebGPU。API 细节以对应 Reference 为准。
 
 - [教程系列说明](tutorials/README.md)
@@ -79,6 +80,7 @@
 - [06：添加材质与光照](tutorials/06-material-and-lighting.md)
 - [07：迁移到 Render Pipeline](tutorials/07-render-pipeline.md)
 - [08：接入 ImGui 调试界面](tutorials/08-imgui.md)
+- [09：加载 glTF 模型](tutorials/09-model-loading.md)
 
 ## API 与行为参考
 

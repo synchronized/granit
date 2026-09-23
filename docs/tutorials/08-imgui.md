@@ -138,4 +138,4 @@ Shader Library 或 Canvas 资源。
 - Vulkan 与浏览器 WebGPU 都能持续提交包含 Canvas 的帧。
 - 关闭时没有 Draw Data 转换失败或用户资源残留诊断。
 
-[上一章：使用 Render Pipeline](07-render-pipeline.md) · [返回教程目录](README.md)
+[上一章：使用 Render Pipeline](07-render-pipeline.md) · [下一章：加载 glTF 模型](09-model-loading.md)
