@@ -700,7 +700,11 @@ TEST_CASE("Render Pipeline在没有可见物体时仍清屏并执行覆盖层") 
   view.viewport_width = size;
   view.viewport_height = size;
   view.layer_mask = UINT64_C(2);
-  granit::scene_snapshot_desc scene_desc{.views = std::span{&view, 1}};
+  const granit::scene_directional_light directional_light{.direction_to_light = {0.0F, 0.0F, 1.0F},
+                                                          .radiance = {1.0F, 1.0F, 1.0F},
+                                                          .layer_mask = UINT64_C(2)};
+  granit::scene_snapshot_desc scene_desc{.views = std::span{&view, 1},
+                                         .directional_lights = std::span{&directional_light, 1}};
   granit::scene_snapshot empty_scene;
   REQUIRE(empty_scene.initialize(renderer.ref(), scene_desc) == granit::result::success);
 
@@ -745,6 +749,7 @@ TEST_CASE("Render Pipeline在没有可见物体时仍清屏并执行覆盖层") 
         std::vector<granit_render_pipeline_stage>{GRANIT_RENDER_PIPELINE_STAGE_OPAQUE,
                                                   GRANIT_RENDER_PIPELINE_STAGE_OVERLAY});
   CHECK(callback.payloads.empty());
+  CHECK(callback.opaque_has_shadow);
 
   for (const auto samples : {granit::sample_count::one, granit::sample_count::four}) {
     granit::render_pipeline pipeline;
@@ -841,6 +846,19 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   granit_scene_snapshot scene = GRANIT_NULL_HANDLE;
   REQUIRE(granit_scene_snapshot_create(renderer.native_handle(), &scene_desc, &scene) ==
           GRANIT_SUCCESS);
+
+  auto distant_view = view;
+  distant_view.projection = {{0.025F, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}};
+  distant_view.view_projection = distant_view.projection;
+  auto distant_renderable = renderable;
+  distant_renderable.model.elements[12] = 30.0F;
+  distant_renderable.bounds_center = {30.0F, 0.0F, 0.0F};
+  auto distant_scene_desc = scene_desc;
+  distant_scene_desc.views = &distant_view;
+  distant_scene_desc.renderables = &distant_renderable;
+  granit_scene_snapshot distant_scene = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_scene_snapshot_create(renderer.native_handle(), &distant_scene_desc,
+                                       &distant_scene) == GRANIT_SUCCESS);
 
   const auto archive = build_material_archive();
   std::vector<std::byte> shader_library_bytes;
@@ -940,6 +958,25 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   CHECK(pixel[3] == 255);
   REQUIRE(readback.unmap() == granit::result::success);
 
+  callback.stages.clear();
+  callback.payloads.clear();
+  callback.meshes.clear();
+  callback.materials.clear();
+  callback.view_indices.clear();
+  callback.opaque_has_shadow = false;
+  callback.overlay_uses_same_output = true;
+  callback.overlay_encode_srgb.clear();
+  callback.ibl_groups.clear();
+  render_desc.scene = distant_scene;
+  REQUIRE(granit_render_pipeline_render(renderer.native_handle(), pipeline, &render_desc) ==
+          GRANIT_SUCCESS);
+  CHECK(callback.stages ==
+        std::vector<granit_render_pipeline_stage>{GRANIT_RENDER_PIPELINE_STAGE_OPAQUE,
+                                                  GRANIT_RENDER_PIPELINE_STAGE_OVERLAY});
+  CHECK(callback.payloads == std::vector<uint64_t>{91});
+  CHECK(callback.opaque_has_shadow);
+  render_desc.scene = scene;
+
   REQUIRE(granit_render_pipeline_destroy(renderer.native_handle(), pipeline) == GRANIT_SUCCESS);
   REQUIRE(granit_material_destroy(renderer.native_handle(), material) == GRANIT_SUCCESS);
 
@@ -982,6 +1019,13 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
     CHECK(metrics.total_gpu_ns >= metrics.opaque_gpu_ns);
     CHECK(metrics.total_gpu_ns >= metrics.tone_mapping_gpu_ns);
   }
+  // 物体仍在相机视锥内，但位于固定阴影体积之外；中间帧必须清除旧阴影并正常提交。
+  render_desc.scene = distant_scene;
+  REQUIRE(granit_render_pipeline_render(renderer.native_handle(), pipeline, &render_desc) ==
+          GRANIT_SUCCESS);
+  render_desc.scene = scene;
+  REQUIRE(granit_render_pipeline_render(renderer.native_handle(), pipeline, &render_desc) ==
+          GRANIT_SUCCESS);
 
   REQUIRE(recorder.begin() == granit::result::success);
   REQUIRE(recorder.copy_texture_to_buffer(granit::texture_ref::from_native(output_texture),
@@ -1094,6 +1138,7 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   REQUIRE(granit_render_pipeline_destroy(renderer.native_handle(), pipeline) == GRANIT_SUCCESS);
   REQUIRE(granit_mesh_destroy(renderer.native_handle(), mesh) == GRANIT_SUCCESS);
   REQUIRE(granit_buffer_destroy(renderer.native_handle(), vertex_buffer) == GRANIT_SUCCESS);
+  REQUIRE(granit_scene_snapshot_destroy(renderer.native_handle(), distant_scene) == GRANIT_SUCCESS);
   REQUIRE(granit_scene_snapshot_destroy(renderer.native_handle(), scene) == GRANIT_SUCCESS);
   REQUIRE(granit_texture_view_destroy(renderer.native_handle(), output_view) == GRANIT_SUCCESS);
   REQUIRE(granit_texture_destroy(renderer.native_handle(), output_texture) == GRANIT_SUCCESS);

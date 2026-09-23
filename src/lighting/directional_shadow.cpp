@@ -68,13 +68,15 @@ directional_shadow_error build_directional_shadow_pass_desc(
     return directional_shadow_error::invalid_frustum;
   if (visibility != scene::visibility_error::none)
     return directional_shadow_error::out_of_memory;
-  if (visible.indices().empty())
-    return directional_shadow_error::no_casters;
 
+  directional_shadow_pass_desc candidate;
+  candidate.depth = depth;
+  candidate.frame.light_view_projection = view_projection;
+  if (visible.indices().empty()) {
+    output = std::move(candidate);
+    return directional_shadow_error::no_casters;
+  }
   try {
-    directional_shadow_pass_desc candidate;
-    candidate.depth = depth;
-    candidate.frame.light_view_projection = view_projection;
     candidate.casters.reserve(visible.indices().size());
     for (const auto index : visible.indices()) {
       const auto& renderable = snapshot.renderables()[index];
@@ -94,7 +96,7 @@ render_graph::pass_id add_directional_shadow_graph_pass(render_graph::serial_gra
                                                         directional_shadow_pass_desc desc,
                                                         directional_shadow_record_callback callback,
                                                         std::string name) {
-  if (desc.depth == render_graph::invalid_resource_id || desc.casters.empty() || !callback)
+  if (desc.depth == render_graph::invalid_resource_id || !callback)
     return render_graph::invalid_pass_id;
   render_graph::pass_desc pass{.side_effect = true,
                                .accesses = {{desc.depth, render_graph::access_type::write}}};

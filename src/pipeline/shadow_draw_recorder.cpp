@@ -75,6 +75,15 @@ granit_result record_shadow_draws(render_pipeline_state& state, granit_command_r
   rendering.depth_stencil_attachment = &depth_attachment;
   rendering.area = {0, 0, 1024, 1024};
   auto result = GRANIT_SUCCESS;
+  if (casters.empty()) {
+    result = trim_draw_binding_cache(state.shadow_draw_bindings, 0);
+    if (result != GRANIT_SUCCESS)
+      return result;
+    result = granit_command_recorder_begin_rendering(state.renderer, recorder, &rendering);
+    if (result == GRANIT_SUCCESS)
+      result = granit_command_recorder_end_rendering(state.renderer, recorder);
+    return result;
+  }
   const granit_viewport viewport{0, 0, 1024, 1024, 0, 1};
   const granit_scissor scissor{0, 0, 1024, 1024};
   const granit::material::pbr_frame_constants unused_frame{};

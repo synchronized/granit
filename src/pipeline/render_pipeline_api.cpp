@@ -218,16 +218,12 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
         shadow_result != granit::lighting::directional_shadow_error::no_casters) {
       return GRANIT_ERROR_INVALID_ARGUMENT;
     }
-    if (shadow_result == granit::lighting::directional_shadow_error::none) {
-      shadow_constants = {.light_view_projection = shadow_pass.frame.light_view_projection,
-                          .depth_bias = 0.001F,
-                          .normal_bias = 0.0F,
-                          .texel_size = {1.0F / 1024.0F, 1.0F / 1024.0F}};
-      graph_desc.pbr.shadow = *shadow;
-      graph_desc.shadow = std::move(shadow_pass);
-    } else {
-      shadow.reset();
-    }
+    shadow_constants = {.light_view_projection = shadow_pass.frame.light_view_projection,
+                        .depth_bias = 0.001F,
+                        .normal_bias = 0.0F,
+                        .texel_size = {1.0F / 1024.0F, 1.0F / 1024.0F}};
+    graph_desc.pbr.shadow = *shadow;
+    graph_desc.shadow = std::move(shadow_pass);
   }
   graph_desc.tone_mapping.hdr_color = hdr;
   graph_desc.tone_mapping.output = output;
@@ -334,6 +330,11 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
               state, context.recorder(), context.texture_view(*shadow), frame, casters,
               shadow_bindings, use_uniform_arena);
           return shadow_result;
+        }
+        // 没有投射物时由 Granit 清除持久阴影图，避免把清除责任泄漏给自定义录制回调。
+        if (casters.empty()) {
+          return granit::pipeline::detail::record_shadow_draws(
+              state, context.recorder(), context.texture_view(*shadow), frame, {}, {}, false);
         }
         const granit_render_pipeline_record_info info{
             .struct_size = sizeof(granit_render_pipeline_record_info),

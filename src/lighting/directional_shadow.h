@@ -59,7 +59,8 @@ enum class directional_shadow_error : std::uint8_t {
 };
 
 /**
- * 使用显式方向光和正交体，从全部场景 Renderable 构建阴影投影者；失败时不修改 output。
+ * 使用显式方向光和正交体，从全部场景 Renderable 构建阴影投影者。没有投射物时返回
+ * no_casters 和可用于清除深度的空描述；其他失败不修改 output。
  */
 [[nodiscard]] directional_shadow_error build_directional_shadow_pass_desc(
     const scene::multi_view_snapshot& snapshot, std::size_t view_index,
@@ -69,7 +70,7 @@ enum class directional_shadow_error : std::uint8_t {
 using directional_shadow_record_callback = std::function<granit_result(
     render_graph::pass_context&, const shadow_frame_constants&, std::span<const shadow_caster>)>;
 
-/** 添加只写深度资源的方向光 Shadow Pass；描述与回调由 Graph 持有。 */
+/** 添加只写深度资源的方向光 Shadow Pass；空投射物列表表示仅清除深度。 */
 [[nodiscard]] render_graph::pass_id add_directional_shadow_graph_pass(
     render_graph::serial_graph& graph, directional_shadow_pass_desc desc,
     directional_shadow_record_callback callback, std::string name = "Directional Shadow");
