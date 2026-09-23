@@ -21,6 +21,7 @@
 
 ## 稳定化与跨平台
 
+- [2026-09-23 S-53 文档、教程与发布面本地验收](2026-09-23-s53-documentation-tutorial-release-acceptance.md)
 - [2026-09-23 Granit 0.29.0 发布验收](2026-09-23-v0.29.0-release-acceptance.md)
 - [2026-09-23 S-52 0.29.0 本地验收](2026-09-23-s52-0.29-local-acceptance.md)
 - [2026-09-23 S-50 Model Viewer 教程迁移验收](2026-09-23-s50-model-viewer-tutorial-acceptance.md)
