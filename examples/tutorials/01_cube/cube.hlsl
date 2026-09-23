@@ -6,8 +6,8 @@ struct mesh_uniforms {
 };
 
 [[vk::binding(0, 0)]] ConstantBuffer<mesh_uniforms> camera;
-[[vk::binding(1, 0)]] Texture2D<float4> checker_texture;
-[[vk::binding(2, 0)]] SamplerState checker_sampler;
+[[vk::binding(1, 0)]] Texture2D<float4> crate_texture;
+[[vk::binding(2, 0)]] SamplerState crate_sampler;
 
 struct vertex_input {
   float3 position : POSITION;
@@ -27,5 +27,5 @@ vertex_output vertex_main(vertex_input input) {
 }
 
 float4 fragment_main(vertex_output input) : SV_Target0 {
-  return checker_texture.Sample(checker_sampler, input.uv);
+  return crate_texture.Sample(crate_sampler, input.uv);
 }

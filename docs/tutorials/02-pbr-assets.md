@@ -22,7 +22,7 @@ Scene Snapshot、阴影、HDR、Tone Mapping、FXAA 和 Canvas 合成。完整�
 每帧创建只描述当前可见内容的 Scene Snapshot：
 
 - 一个相机 View；
-- 立方体和地面 Renderable；
+- 带法线、切线和 UV 的 Sphere，以及由同一 Mesh 缩放得到的平台 Renderable；
 - 一盏投射阴影的方向光；
 - Payload 到 Mesh/Material 的 Draw Binding。
 

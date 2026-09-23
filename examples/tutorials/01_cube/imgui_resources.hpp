@@ -11,7 +11,7 @@
 namespace tutorial_imgui {
 
 inline constexpr ImTextureID font_texture_id = 1;
-inline constexpr ImTextureID checker_texture_id = 2;
+inline constexpr ImTextureID crate_texture_id = 2;
 
 struct texture_binding {
   granit::texture_view_ref view;
@@ -20,7 +20,7 @@ struct texture_binding {
 
 struct texture_bindings {
   texture_binding font;
-  texture_binding checker;
+  texture_binding crate;
 };
 
 [[nodiscard]] granit::result resolve_texture(ImTextureID id, granit::canvas_draw_state& state,
@@ -28,9 +28,6 @@ struct texture_bindings {
 [[nodiscard]] granit::result upload_font_atlas(granit::renderer& renderer, granit::texture& texture,
                                                granit::texture_view& view,
                                                granit::sampler& sampler);
-[[nodiscard]] granit::result upload_checker(granit::renderer& renderer, granit::texture& texture,
-                                            granit::texture_view& view);
-
 } // namespace tutorial_imgui
 
 #endif

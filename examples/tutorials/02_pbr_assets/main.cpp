@@ -196,26 +196,27 @@ private:
   }
 
   granit::result initialize_geometry() noexcept {
+    model_ = tutorial_model::make_uv_sphere();
     auto result = vertex_buffer_.initialize(
         renderer_owner(),
-        {.size = sizeof(tutorial_model::vertices),
+        {.size = model_.vertices.size() * sizeof(tutorial_model::vertex),
          .usage = granit::buffer_usage::vertex | granit::buffer_usage::transfer_destination});
     if (result.ok()) {
       result = index_buffer_.initialize(
           renderer_owner(),
-          {.size = sizeof(tutorial_model::indices),
+          {.size = model_.indices.size() * sizeof(std::uint16_t),
            .usage = granit::buffer_usage::index | granit::buffer_usage::transfer_destination});
     }
     granit::upload_batch upload;
     if (result.ok())
       result = upload.initialize(renderer_owner());
     if (result.ok()) {
-      result = upload.write_buffer(vertex_buffer_.ref(), 0,
-                                   std::as_bytes(std::span{tutorial_model::vertices}));
+      result =
+          upload.write_buffer(vertex_buffer_.ref(), 0, std::as_bytes(std::span{model_.vertices}));
     }
     if (result.ok())
-      result = upload.write_buffer(index_buffer_.ref(), 0,
-                                   std::as_bytes(std::span{tutorial_model::indices}));
+      result =
+          upload.write_buffer(index_buffer_.ref(), 0, std::as_bytes(std::span{model_.indices}));
     if (result.ok())
       result = upload.submit();
 
@@ -234,13 +235,12 @@ private:
         .layout = {.stride = sizeof(tutorial_model::vertex), .attributes = attributes},
     };
     if (result.ok()) {
-      result = mesh_.initialize(
-          renderer_owner(),
-          {.topology = granit::primitive_topology::triangle_list,
-           .vertex_buffers = std::span{&binding, 1},
-           .index_buffer = index_buffer_.ref(),
-           .index_format = granit::index_type::uint16,
-           .index_count = static_cast<std::uint32_t>(tutorial_model::indices.size())});
+      result = mesh_.initialize(renderer_owner(),
+                                {.topology = granit::primitive_topology::triangle_list,
+                                 .vertex_buffers = std::span{&binding, 1},
+                                 .index_buffer = index_buffer_.ref(),
+                                 .index_format = granit::index_type::uint16,
+                                 .index_count = static_cast<std::uint32_t>(model_.indices.size())});
     }
     return result;
   }
@@ -337,7 +337,7 @@ private:
         granit::scene_renderable{.model = cube_model,
                                  .normal_matrix = cube_model,
                                  .bounds_center = {0, 0, 0},
-                                 .bounds_radius = 1.7320508F,
+                                 .bounds_radius = 1.0F,
                                  .layer_mask = UINT64_MAX,
                                  .sort_key = 0,
                                  .payload = 1,
@@ -456,6 +456,7 @@ private:
 
   std::vector<std::byte> shader_archive_;
   std::vector<std::byte> material_archive_;
+  tutorial_model::mesh_data model_;
   granit::shader_library shader_library_;
   std::array<granit::texture, 5> material_textures_;
   std::array<granit::texture_view, 5> material_views_;

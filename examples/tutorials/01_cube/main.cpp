@@ -131,7 +131,7 @@ private:
                                                  font_sampler_);
     }
     imgui_bindings_ = {.font = {font_view_.ref(), font_sampler_.ref()},
-                       .checker = {checker_view_.ref(), checker_sampler_.ref()}};
+                       .crate = {crate_view_.ref(), crate_sampler_.ref()}};
     return result;
   }
 
@@ -162,9 +162,9 @@ private:
     static_cast<void>(mesh_.reset());
     static_cast<void>(index_buffer_.reset());
     static_cast<void>(vertex_buffer_.reset());
-    static_cast<void>(checker_sampler_.reset());
-    static_cast<void>(checker_view_.reset());
-    static_cast<void>(checker_texture_.reset());
+    static_cast<void>(crate_sampler_.reset());
+    static_cast<void>(crate_view_.reset());
+    static_cast<void>(crate_texture_.reset());
     static_cast<void>(font_sampler_.reset());
     static_cast<void>(font_view_.reset());
     static_cast<void>(font_texture_.reset());
@@ -181,19 +181,19 @@ private:
   }
 
   granit::result initialize_texture_resources() noexcept {
-    auto result = checker_texture_.initialize(
+    auto result = crate_texture_.initialize(
         renderer_owner(),
         {.format = granit::texture_format::rgba8_unorm,
          .usage = granit::texture_usage::sampled | granit::texture_usage::transfer_destination,
-         .width = 2,
-         .height = 2});
+         .width = tutorial_model::crate_texture_extent,
+         .height = tutorial_model::crate_texture_extent});
     if (result.ok())
-      result = checker_view_.initialize(renderer_owner(), checker_texture_);
+      result = crate_view_.initialize(renderer_owner(), crate_texture_);
     if (result.ok()) {
-      result = checker_sampler_.initialize(renderer_owner(),
-                                           {.mag_filter = granit::filter::nearest,
-                                            .min_filter = granit::filter::nearest,
-                                            .mip_filter = granit::mipmap_filter::nearest});
+      result = crate_sampler_.initialize(renderer_owner(),
+                                         {.mag_filter = granit::filter::nearest,
+                                          .min_filter = granit::filter::nearest,
+                                          .mip_filter = granit::mipmap_filter::nearest});
     }
     if (result.ok()) {
       result = vertex_buffer_.initialize(
@@ -218,16 +218,16 @@ private:
            .usage = granit::buffer_usage::uniform | granit::buffer_usage::transfer_destination});
     }
 
-    constexpr std::array<std::uint8_t, 16> pixels{
-        255, 80, 80, 255, 80, 220, 120, 255, 80, 140, 255, 255, 245, 220, 80, 255,
-    };
+    constexpr auto pixels = tutorial_model::make_crate_pixels();
     granit::upload_batch upload;
     if (result.ok())
       result = upload.initialize(renderer_owner());
     if (result.ok()) {
-      result = upload.write_texture(checker_texture_.ref(), std::as_bytes(std::span{pixels}),
-                                    {.bytes_per_row = 8, .rows_per_image = 2},
-                                    {.width = 2, .height = 2});
+      result = upload.write_texture(crate_texture_.ref(), std::as_bytes(std::span{pixels}),
+                                    {.bytes_per_row = tutorial_model::crate_texture_extent * 4,
+                                     .rows_per_image = tutorial_model::crate_texture_extent},
+                                    {.width = tutorial_model::crate_texture_extent,
+                                     .height = tutorial_model::crate_texture_extent});
     }
     if (result.ok())
       result = upload.write_buffer(vertex_buffer_.ref(), 0,
@@ -289,8 +289,8 @@ private:
     const std::array resources{
         granit::bind_group_entry{
             .binding = 0, .resource = uniform_buffer_.ref(), .size = sizeof(matrix4)},
-        granit::bind_group_entry{.binding = 1, .resource = checker_view_.ref()},
-        granit::bind_group_entry{.binding = 2, .resource = checker_sampler_.ref()},
+        granit::bind_group_entry{.binding = 1, .resource = crate_view_.ref()},
+        granit::bind_group_entry{.binding = 2, .resource = crate_sampler_.ref()},
     };
     if (result.ok())
       result = resource_group_.initialize(renderer_owner(), resource_layout_, resources);
@@ -351,7 +351,7 @@ private:
       ImGui::Begin("Granit Cube");
       ImGui::TextUnformatted("Low-level Renderer + Mesh + Canvas");
       ImGui::Checkbox("Rotate", &rotate_);
-      ImGui::Image(ImTextureRef{tutorial_imgui::checker_texture_id}, {64, 64});
+      ImGui::Image(ImTextureRef{tutorial_imgui::crate_texture_id}, {64, 64});
       ImGui::Text("Frame: %u", rendered_frames());
       ImGui::End();
       ImGui::Render();
@@ -435,9 +435,9 @@ private:
   granit::shader_library shader_library_;
   granit::shader vertex_shader_;
   granit::shader fragment_shader_;
-  granit::texture checker_texture_;
-  granit::texture_view checker_view_;
-  granit::sampler checker_sampler_;
+  granit::texture crate_texture_;
+  granit::texture_view crate_view_;
+  granit::sampler crate_sampler_;
   granit::buffer vertex_buffer_;
   granit::buffer index_buffer_;
   granit::mesh mesh_;
