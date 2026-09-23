@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+## 0.29.0 - 2026-09-23
+
 ### 新增
 
 - 新增 02 Triangle、03 Texture、04 Depth/Camera、05 Mesh、06 Material/Lighting、07 Render
