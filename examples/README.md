@@ -13,7 +13,7 @@
 | 入口 | 位置 | 目标 | 用途 |
 |---|---|---|---|
 | ImGui | `samples/imgui` | `granit_sdl3_imgui_example`、`granit_imgui_web` | 验证 SDL3、ImGui 和 Canvas 集成 |
-| Model Viewer | `tutorials/10_model_viewer` | `granit_tutorial_10_model_viewer`、Web 目标 | 展示完整跨后端 PBR 工具 |
+| Model Viewer | `samples/model_viewer` | `granit_sample_model_viewer`、Web 目标 | 展示完整跨后端 PBR 工具 |
 
 从窗口创建到第一个三角形等渐进内容位于 `tutorials`，其中 01 Window 和 02 Triangle 已取代旧的
 Minimal Renderer 与离屏 Triangle 示例。
@@ -39,7 +39,7 @@ examples/
 `common` 只保存被至少一个示例复用的能力；只有被两个真实下游共同需要、所有权和线程语义稳定的
 能力，才应另行设计为 Granit 公共 API。
 
-Model Viewer 的内容、Core、工具和验收程序均位于 `tutorials/10_model_viewer`。桌面入口与 SDL3
+Model Viewer 的内容、Core、工具和验收程序均位于 `samples/model_viewer`。桌面入口与 SDL3
 平台壳层位于其 `model_viewer/desktop` 子目录，浏览器入口和输入适配位于 `model_viewer/web`；
 跨教程复用的 GPU Scene 位于 `common/model_viewer`，浏览器资源支撑位于 `common/web`。
 

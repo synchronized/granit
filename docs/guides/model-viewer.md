@@ -11,7 +11,7 @@ Emscripten WebGPU 上显示 glTF 2.0 模型。桌面目标叠加 ImGui 调试面
 ## 构建桌面查看器
 
 桌面目标依赖 SDL3 和 ImGui。当前 CMake 只在显式启用模型查看器、两个 Integration，并允许获取
-锁定集成依赖时生成 `granit_tutorial_10_model_viewer`：
+锁定集成依赖时生成 `granit_sample_model_viewer`：
 
 ```powershell
 cmake -S . -B build/model-viewer -G Ninja `
@@ -19,7 +19,7 @@ cmake -S . -B build/model-viewer -G Ninja `
   -DGRANIT_BUILD_INTEGRATION_SDL3=ON `
   -DGRANIT_BUILD_INTEGRATION_IMGUI=ON `
   -DGRANIT_DEPENDENCY_POLICY=auto
-cmake --build build/model-viewer --target granit_tutorial_10_model_viewer
+cmake --build build/model-viewer --target granit_sample_model_viewer
 ```
 
 ## 获取验收模型
@@ -96,7 +96,7 @@ GPU 资源创建仍由拥有 Renderer 的线程执行，但纹理和几何数据
 使用 Vulkan：
 
 ```powershell
-build/model-viewer/bin/granit_tutorial_10_model_viewer.exe `
+build/model-viewer/bin/granit_sample_model_viewer.exe `
   --asset build/assets/FlightHelmet/glTF/FlightHelmet.gltf `
   --environment assets/generated/installed/environments/studio_small_03.grenv `
   --backend=vulkan --validation
@@ -123,7 +123,7 @@ Sampler 和材质绑定；创建失败时保留原配置。
 
 `--smoke-test` 与 `--profile-output` 用途不同，不能同时使用。
 
-离屏验收程序 `granit_tutorial_10_model_viewer_offscreen_acceptance` 额外接受 `--msaa=1|4`、
+离屏验收程序 `granit_sample_model_viewer_offscreen_acceptance` 额外接受 `--msaa=1|4`、
 `--fxaa=on|off`、`--specular-aa=on|off` 和 `--anisotropy=1|2|4|8|16`。它会通过公开的
 Renderer Limits 严格校验请求，不支持的配置直接失败而不会静默回退。桌面 Vulkan 与浏览器
 WebGPU 使用相同的公共配置语义。
@@ -135,7 +135,7 @@ Release、关闭 Validation，并分别采集 UI 开/关及 Immediate/FIFO。以
 Immediate、无 UI 的基线：
 
 ```powershell
-build/model-viewer/bin/granit_tutorial_10_model_viewer.exe `
+build/model-viewer/bin/granit_sample_model_viewer.exe `
   --asset build/assets/FlightHelmet/glTF/FlightHelmet.gltf `
   --backend=vulkan --present-mode=immediate --no-ui `
   --profile-output build/results/vulkan-immediate-no-ui.json
@@ -155,7 +155,7 @@ JSON 记录资产、实际后端、Adapter、呈现模式、UI 和 Validation �
 原始像素写入文件：
 
 ```powershell
-build/model-viewer/bin/granit_tutorial_10_model_viewer_offscreen_acceptance.exe `
+build/model-viewer/bin/granit_sample_model_viewer_offscreen_acceptance.exe `
   --asset build/assets/FlightHelmet/glTF/FlightHelmet.gltf `
   --environment assets/generated/installed/environments/studio_small_03.grenv `
   --output build/acceptance/flight-helmet-vulkan.rgba `
@@ -171,7 +171,7 @@ Adapter、资产路径及量化统计，供 Actions 一并上传。`.rgba` 文�
 
 ## 浏览器运行与验证
 
-Emscripten 构建生成面向使用者的 `granit_tutorial_10_model_viewer_web.html`，默认通过网络加载 Khronos
+Emscripten 构建生成面向使用者的 `granit_sample_model_viewer_web.html`，默认通过网络加载 Khronos
 Flight Helmet；`?model=<URL>` 可以覆盖模型地址。它与桌面目标复用同一个 Application Core、
 CPU/GPU Scene、PBR 和 Environment Map。详细构建及 URL 用法见
 [浏览器 WebGPU 示例](webgpu-browser-example.md)。该指南负责浏览器构建和通用验证；本页只保留

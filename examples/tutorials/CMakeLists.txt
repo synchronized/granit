@@ -11,9 +11,3 @@ if(EMSCRIPTEN AND TARGET granit::integration_imgui)
   add_subdirectory(01_cube)
   add_subdirectory(02_pbr_assets)
 endif()
-
-if(GRANIT_HAS_NATIVE_WINDOW)
-  add_subdirectory(09_model_loading)
-endif()
-
-add_subdirectory(10_model_viewer)

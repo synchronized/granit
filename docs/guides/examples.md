@@ -48,7 +48,7 @@ Canvas 绘制，不是 DOM/CSS 仿制界面，因此可用于核对桌面与 Web
 
 ## Tutorial 10 Model Viewer
 
-`granit_tutorial_10_model_viewer` 是教程的最终跨后端应用。它复用同一应用核心，在桌面 Vulkan 和
+`granit_sample_model_viewer` 是教程的最终跨后端应用。它复用同一应用核心，在桌面 Vulkan 和
 浏览器 Emscripten WebGPU 中加载 glTF/GLB、上传 GPU Scene 并显示 PBR 模型；桌面目标还提供
 编辑器式面板。该目标需要显式启用模型查看器及对应 Integration。
 

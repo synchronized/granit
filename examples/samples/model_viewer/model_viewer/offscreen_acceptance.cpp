@@ -44,7 +44,7 @@ struct options {
 };
 
 void print_usage() {
-  std::cerr << "用法：granit_tutorial_10_model_viewer_offscreen_acceptance --asset <文件> --output <文件.rgba> "
+  std::cerr << "用法：granit_sample_model_viewer_offscreen_acceptance --asset <文件> --output <文件.rgba> "
                "[--environment <文件.grenv>] [--expected <文件.rgba>] "
                "[--debug-display=shaded|base-color|normals|metallic|roughness|"
                "geometric-normals|sampled-normals|vertex-normals|vertex-tangents] "

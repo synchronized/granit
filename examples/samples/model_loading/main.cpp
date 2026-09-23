@@ -21,8 +21,8 @@
 #include <string_view>
 #include <vector>
 
-#ifndef GRANIT_TUTORIAL_09_MODEL
-#error "GRANIT_TUTORIAL_09_MODEL must point to the tutorial glTF asset"
+#ifndef GRANIT_SAMPLE_MODEL
+#error "GRANIT_SAMPLE_MODEL must point to the tutorial glTF asset"
 #endif
 
 namespace {
@@ -377,7 +377,7 @@ tutorial_application application;
 
 int main(int argument_count, char** arguments) {
   bool smoke_test = false;
-  std::filesystem::path asset_path{GRANIT_TUTORIAL_09_MODEL};
+  std::filesystem::path asset_path{GRANIT_SAMPLE_MODEL};
   for (int index = 1; index < argument_count; ++index) {
     const std::string_view argument{arguments[index]};
     if (argument == "--smoke-test")
