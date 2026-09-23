@@ -3,6 +3,9 @@
 
 #include "application/application.h"
 #include "gltf/image_decoder.h"
+#include "imgui/imgui_font_atlas.h"
+#include "imgui/imgui_input.h"
+#include "imgui/imgui_texture_registry.h"
 
 #include <granit/integrations/imgui/renderer.hpp>
 #include <granit/pipeline/canvas_draw_list.hpp>
@@ -23,8 +26,6 @@
 #include <emscripten/emscripten.h>
 #endif
 
-#include "imgui_input.hpp"
-#include "imgui_resources.hpp"
 #include "model_data.hpp"
 
 #ifndef GRANIT_TUTORIAL_01_SHADER_LIBRARY
@@ -131,11 +132,13 @@ private:
     if (result.ok())
       result = canvas_.initialize(renderer());
     if (result.ok()) {
-      result = tutorial_imgui::upload_font_atlas(renderer_owner(), font_texture_, font_view_,
-                                                 font_sampler_);
+      result = granit::example::imgui::initialize_font_atlas(
+          renderer_owner(), imgui_textures_, font_texture_, font_view_, font_sampler_);
     }
-    imgui_bindings_ = {.font = {font_view_.ref(), font_sampler_.ref()},
-                       .crate = {crate_view_.ref(), crate_sampler_.ref()}};
+    if (result.ok()) {
+      result = imgui_textures_.register_texture(crate_view_.ref(), crate_sampler_.ref(),
+                                                crate_texture_id_);
+    }
     return result;
   }
 
@@ -147,16 +150,17 @@ private:
   }
 
   granit::result on_window_event(const granit::window_event& event) noexcept override {
-    tutorial_imgui::process_window_event(event);
+    granit::example::imgui::process_window_event(event);
     return granit::result::success;
   }
 
   granit::result on_input_event(const granit::input_event& event) noexcept override {
-    tutorial_imgui::process_input_event(event);
+    granit::example::imgui::process_input_event(event);
     return granit::result::success;
   }
 
   void on_shutdown(granit::result) noexcept override {
+    imgui_textures_.clear();
     static_cast<void>(pipeline_.reset());
     static_cast<void>(canvas_.destroy());
     static_cast<void>(resource_group_.reset());
@@ -358,11 +362,11 @@ private:
     granit::window_state window_state;
     auto result = app_window().get_state(window_state);
     if (result.ok()) {
-      tutorial_imgui::begin_frame(window_state, frame.delta_seconds);
+      granit::example::imgui::begin_frame(window_state, frame.delta_seconds);
       ImGui::Begin("Granit Cube");
       ImGui::TextUnformatted("Low-level Renderer + Mesh + Canvas");
       ImGui::Checkbox("Rotate", &rotate_);
-      ImGui::Image(ImTextureRef{tutorial_imgui::crate_texture_id}, {64, 64});
+      ImGui::Image(ImTextureRef{crate_texture_id_}, {64, 64});
       ImGui::Text("Frame: %u", rendered_frames());
       ImGui::End();
       ImGui::Render();
@@ -370,7 +374,8 @@ private:
     }
     if (result.ok()) {
       result = granit::integration::imgui::append_draw_data(
-          ImGui::GetDrawData(), canvas_, tutorial_imgui::resolve_texture, &imgui_bindings_);
+          ImGui::GetDrawData(), canvas_, granit::example::imgui::texture_registry::resolver,
+          &imgui_textures_);
     }
     granit::canvas_draw_list_stats canvas_stats{};
     if (result.ok())
@@ -463,7 +468,8 @@ private:
   granit::texture_view font_view_;
   granit::sampler font_sampler_;
   granit::canvas_draw_list canvas_;
-  tutorial_imgui::texture_bindings imgui_bindings_;
+  granit::example::imgui::texture_registry imgui_textures_;
+  ImTextureID crate_texture_id_{ImTextureID_Invalid};
   granit::texture_format pipeline_format_{granit::texture_format::undefined};
   std::uint64_t uniform_stride_{};
   float rotation_{};

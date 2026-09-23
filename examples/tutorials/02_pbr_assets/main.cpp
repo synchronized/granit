@@ -3,6 +3,9 @@
 
 #include "application/application.h"
 #include "gltf/loader.h"
+#include "imgui/imgui_font_atlas.h"
+#include "imgui/imgui_input.h"
+#include "imgui/imgui_texture_registry.h"
 #include "model_viewer/gpu_scene.h"
 
 #include <granit/integrations/imgui/renderer.hpp>
@@ -22,9 +25,6 @@
 #include <span>
 #include <string_view>
 #include <vector>
-
-#include "imgui_input.hpp"
-#include "imgui_resources.hpp"
 
 #if defined(__EMSCRIPTEN__)
 #include <emscripten/emscripten.h>
@@ -124,29 +124,28 @@ private:
     }
     if (result.ok()) {
       last_operation_ = "uploading ImGui font";
-      result = tutorial_imgui::upload_font_atlas(renderer_owner(), font_texture_, font_view_,
-                                                 font_sampler_);
+      result = granit::example::imgui::initialize_font_atlas(
+          renderer_owner(), imgui_textures_, font_texture_, font_view_, font_sampler_);
     }
     if (result.ok()) {
       granit::texture_view_ref preview_view;
       granit::sampler_ref preview_sampler;
       result = model_gpu_.texture_binding(model_scene_.materials.front().base_color_texture, true,
                                           preview_view, preview_sampler);
-      if (result.failed())
-        return result;
-      imgui_bindings_ = {.font = {font_view_.ref(), font_sampler_.ref()},
-                         .preview = {preview_view, preview_sampler}};
+      if (result.ok())
+        result =
+            imgui_textures_.register_texture(preview_view, preview_sampler, preview_texture_id_);
     }
     return result;
   }
 
   granit::result on_window_event(const granit::window_event& event) noexcept override {
-    tutorial_imgui::process_window_event(event);
+    granit::example::imgui::process_window_event(event);
     return granit::result::success;
   }
 
   granit::result on_input_event(const granit::input_event& event) noexcept override {
-    tutorial_imgui::process_input_event(event);
+    granit::example::imgui::process_input_event(event);
     if (event.type == granit::input_event_type::pointer_moved ||
         event.type == granit::input_event_type::pointer_button ||
         event.type == granit::input_event_type::pointer_wheel) {
@@ -160,6 +159,7 @@ private:
     if (reason.failed())
       std::cerr << "window loop stopped during " << last_operation_ << ": " << reason.message()
                 << '\n';
+    imgui_textures_.clear();
     static_cast<void>(scene_.reset());
     static_cast<void>(pipeline_.reset());
     static_cast<void>(canvas_.destroy());
@@ -247,7 +247,7 @@ private:
     auto result = app_window().get_state(window_state);
     if (result.failed())
       return result;
-    tutorial_imgui::begin_frame(window_state, delta_seconds);
+    granit::example::imgui::begin_frame(window_state, delta_seconds);
 
     ImGui::SetNextWindowPos({20, 20}, ImGuiCond_FirstUseEver);
     ImGui::Begin("Granit PBR Assets");
@@ -260,7 +260,7 @@ private:
     material_changed =
         ImGui::SliderFloat("Roughness", &model_roughness_, 0.04F, 1.0F) || material_changed;
     ImGui::TextUnformatted("Suzanne base color texture:");
-    ImGui::Image(ImTextureRef{tutorial_imgui::preview_texture_id}, {64, 64});
+    ImGui::Image(ImTextureRef{preview_texture_id_}, {64, 64});
     ImGui::End();
     ImGui::Render();
 
@@ -269,7 +269,8 @@ private:
       result = canvas_.clear();
     if (result.ok()) {
       result = granit::integration::imgui::append_draw_data(
-          ImGui::GetDrawData(), canvas_, tutorial_imgui::resolve_texture, &imgui_bindings_);
+          ImGui::GetDrawData(), canvas_, granit::example::imgui::texture_registry::resolver,
+          &imgui_textures_);
     }
     granit::canvas_draw_list_stats stats{};
     if (result.ok())
@@ -315,7 +316,8 @@ private:
   granit::texture font_texture_;
   granit::texture_view font_view_;
   granit::sampler font_sampler_;
-  tutorial_imgui::texture_bindings imgui_bindings_;
+  granit::example::imgui::texture_registry imgui_textures_;
+  ImTextureID preview_texture_id_{ImTextureID_Invalid};
   granit::math::float4 model_base_color_{1.0F, 1.0F, 1.0F, 1.0F};
   float model_metallic_{1.0F};
   float model_roughness_{1.0F};

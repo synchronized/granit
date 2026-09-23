@@ -1,33 +1,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "imgui_resources.hpp"
+#include "imgui/imgui_font_atlas.h"
 
-#include <array>
 #include <cstddef>
 #include <cstdint>
-#include <span>
 #include <vector>
 
-namespace tutorial_imgui {
+namespace granit::example::imgui {
 
-granit::result resolve_texture(ImTextureID id, granit::canvas_draw_state& state,
-                               void* user_data) noexcept {
-  if (user_data == nullptr)
-    return granit::result::invalid_argument;
-  const auto& bindings = *static_cast<const texture_bindings*>(user_data);
-  const auto* binding = id == font_texture_id      ? &bindings.font
-                        : id == preview_texture_id ? &bindings.preview
-                                                   : nullptr;
-  if (binding == nullptr)
-    return granit::result::invalid_argument;
-  state.texture = binding->view;
-  state.sampler = binding->sampler;
-  return granit::result::success;
-}
-
-granit::result upload_font_atlas(granit::renderer& renderer, granit::texture& texture,
-                                 granit::texture_view& view, granit::sampler& sampler) {
+granit::result initialize_font_atlas(granit::renderer& renderer, texture_registry& registry,
+                                     granit::texture& texture, granit::texture_view& view,
+                                     granit::sampler& sampler) {
   unsigned char* source{};
   int width{};
   int height{};
@@ -65,29 +49,14 @@ granit::result upload_font_atlas(granit::renderer& renderer, granit::texture& te
                                            .address_v = granit::address_mode::clamp_to_edge,
                                            .address_w = granit::address_mode::clamp_to_edge});
   }
+  ImTextureID texture_id = ImTextureID_Invalid;
+  if (result.ok())
+    result = registry.register_texture(view.ref(), sampler.ref(), texture_id);
   if (result.ok()) {
-    ImGui::GetIO().Fonts->SetTexID(font_texture_id);
+    ImGui::GetIO().Fonts->SetTexID(texture_id);
     ImGui::GetIO().Fonts->TexRef._TexData->SetStatus(ImTextureStatus_OK);
   }
   return result;
 }
 
-granit::result upload_checker(granit::renderer& renderer, granit::texture& texture,
-                              granit::texture_view& view) {
-  constexpr std::array<std::uint8_t, 16> pixels{238, 194, 255, 255, 35,  31, 52,  255,
-                                                35,  31,  52,  255, 104, 87, 204, 255};
-  auto result = texture.initialize(renderer, {.format = granit::texture_format::rgba8_unorm,
-                                              .usage = granit::texture_usage::sampled |
-                                                       granit::texture_usage::transfer_destination,
-                                              .width = 2,
-                                              .height = 2});
-  if (result.ok()) {
-    result = texture.write(std::as_bytes(std::span{pixels}),
-                           {.bytes_per_row = 8, .rows_per_image = 2}, {.width = 2, .height = 2});
-  }
-  if (result.ok())
-    result = view.initialize(renderer, texture);
-  return result;
-}
-
-} // namespace tutorial_imgui
+} // namespace granit::example::imgui

@@ -26,10 +26,6 @@ add_executable(
   granit_tutorial_01_cube
   main.cpp
   model_data.hpp
-  imgui_input.cpp
-  imgui_input.hpp
-  imgui_resources.cpp
-  imgui_resources.hpp
 )
 if(NOT EMSCRIPTEN)
   add_dependencies(granit_tutorial_01_cube granit_tutorial_01_shader_library)
@@ -46,8 +42,8 @@ target_link_libraries(
   PRIVATE
     granit_example_application
     granit_example_gltf_support
+    granit_example_imgui
     granit::render_pipeline
-    granit::integration_imgui
 )
 granit_target_compile_warnings(granit_tutorial_01_cube)
 granit_target_output_directories(granit_tutorial_01_cube)

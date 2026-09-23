@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "imgui_input.hpp"
+#include "imgui/imgui_input.h"
+
+#include <imgui.h>
 
 #include <algorithm>
 #include <array>
 #include <cfloat>
 #include <cstdint>
 
-namespace tutorial_imgui {
+namespace granit::example::imgui {
 namespace {
 
 ImGuiKey map_key(granit::physical_key key) noexcept {
@@ -171,4 +173,4 @@ void begin_frame(const granit::window_state& state, float delta_seconds) noexcep
   ImGui::NewFrame();
 }
 
-} // namespace tutorial_imgui
+} // namespace granit::example::imgui

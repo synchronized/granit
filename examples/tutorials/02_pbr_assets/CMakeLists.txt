@@ -12,10 +12,6 @@ endif()
 add_executable(
   granit_tutorial_02_pbr_assets
   main.cpp
-  imgui_input.cpp
-  imgui_input.hpp
-  imgui_resources.cpp
-  imgui_resources.hpp
 )
 target_compile_definitions(
   granit_tutorial_02_pbr_assets
@@ -26,9 +22,9 @@ target_link_libraries(
   granit_tutorial_02_pbr_assets
   PRIVATE
     granit_example_application
+    granit_example_imgui
     granit_example_model_scene
     granit::render_pipeline
-    granit::integration_imgui
 )
 granit_target_compile_warnings(granit_tutorial_02_pbr_assets)
 granit_target_output_directories(granit_tutorial_02_pbr_assets)
