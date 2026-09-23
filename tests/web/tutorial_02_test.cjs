@@ -17,7 +17,7 @@ const contentTypes = new Map([
 
 const server = http.createServer((request, response) => {
   const requestPath = new URL(request.url, "http://127.0.0.1").pathname;
-  const relativePath = requestPath === "/" ? "granit_tutorial_08_imgui.html" : requestPath.slice(1);
+  const relativePath = requestPath === "/" ? "granit_tutorial_02_pbr_assets.html" : requestPath.slice(1);
   const filePath = path.resolve(outputDirectory, relativePath);
   if (!filePath.startsWith(`${outputDirectory}${path.sep}`)) {
     response.writeHead(403).end();
@@ -54,45 +54,45 @@ async function main() {
     if (message.type() === "error") errors.push(message.text());
   });
   try {
-    await page.goto(`http://127.0.0.1:${address.port}/granit_tutorial_08_imgui.html`);
+    await page.goto(`http://127.0.0.1:${address.port}/granit_tutorial_02_pbr_assets.html`);
     try {
       await page.waitForFunction(
         () =>
           Module.runtimeReady === true &&
-          typeof Module._granit_tutorial_08_ready === "function" &&
-          Module._granit_tutorial_08_ready() === 1 &&
-          Module._granit_tutorial_08_rendered_frames() >= 3 &&
-          Module._granit_tutorial_08_canvas_items() > 0,
+          typeof Module._granit_tutorial_02_ready === "function" &&
+          Module._granit_tutorial_02_ready() === 1 &&
+          Module._granit_tutorial_02_rendered_frames() >= 3 &&
+          Module._granit_tutorial_02_canvas_items() > 0,
         undefined,
         { timeout: 30_000 },
       );
     } catch (error) {
       const state = await page.evaluate(() => ({
         runtimeReady: Module.runtimeReady,
-        hasReady: typeof Module._granit_tutorial_08_ready === "function",
-        ready: Module._granit_tutorial_08_ready?.(),
-        frames: Module._granit_tutorial_08_rendered_frames?.(),
-        canvasItems: Module._granit_tutorial_08_canvas_items?.(),
-        shutdownReason: Module._granit_tutorial_08_shutdown_reason?.(),
+        hasReady: typeof Module._granit_tutorial_02_ready === "function",
+        ready: Module._granit_tutorial_02_ready?.(),
+        frames: Module._granit_tutorial_02_rendered_frames?.(),
+        canvasItems: Module._granit_tutorial_02_canvas_items?.(),
+        shutdownReason: Module._granit_tutorial_02_shutdown_reason?.(),
       }));
       throw new Error(`${error.message}; state=${JSON.stringify(state)}; errors=${errors.join(" | ")}`);
     }
 
     const canvas = page.locator("#canvas");
     const box = await canvas.boundingBox();
-    if (box === null) throw new Error("Tutorial 08 Canvas 不可见");
+    if (box === null) throw new Error("Tutorial 02 PBR Assets Canvas 不可见");
     await page.mouse.move(box.x + 64, box.y + 64);
     await page.mouse.down({ button: "left" });
     await page.mouse.move(box.x + 120, box.y + 80);
     await page.mouse.up({ button: "left" });
     await page.mouse.wheel(0, -80);
     await page.waitForFunction(
-      () => Module._granit_tutorial_08_pointer_events() >= 4,
+      () => Module._granit_tutorial_02_pointer_events() >= 4,
       undefined,
       { timeout: 10_000 },
     );
 
-    const before = await page.evaluate(() => Module._granit_tutorial_08_rendered_frames());
+    const before = await page.evaluate(() => Module._granit_tutorial_02_rendered_frames());
     await page.evaluate(() => {
       const canvas = document.querySelector("#canvas");
       canvas.style.width = "800px";
@@ -103,23 +103,23 @@ async function main() {
     try {
       await page.waitForFunction(
         (previous) =>
-          Module._granit_tutorial_08_recreate_count() >= 1 &&
-          Module._granit_tutorial_08_rendered_frames() > previous,
+          Module._granit_tutorial_02_recreate_count() >= 1 &&
+          Module._granit_tutorial_02_rendered_frames() > previous,
         before,
         { timeout: 10_000 },
       );
     } catch (error) {
       const state = await page.evaluate(() => ({
-        ready: Module._granit_tutorial_08_ready?.(),
-        frames: Module._granit_tutorial_08_rendered_frames?.(),
-        recreates: Module._granit_tutorial_08_recreate_count?.(),
-        shutdownReason: Module._granit_tutorial_08_shutdown_reason?.(),
+        ready: Module._granit_tutorial_02_ready?.(),
+        frames: Module._granit_tutorial_02_rendered_frames?.(),
+        recreates: Module._granit_tutorial_02_recreate_count?.(),
+        shutdownReason: Module._granit_tutorial_02_shutdown_reason?.(),
       }));
       throw new Error(`${error.message}; resize state=${JSON.stringify(state)}; errors=${errors.join(" | ")}`);
     }
     if (errors.length !== 0)
-      throw new Error(`Tutorial 08 浏览器错误：\n${errors.join("\n")}`);
-    console.log("Tutorial 08 WebGPU 多帧、Canvas、统一输入与 Resize 验证通过");
+      throw new Error(`Tutorial 02 PBR Assets 浏览器错误：\n${errors.join("\n")}`);
+    console.log("Tutorial 02 PBR Assets WebGPU 多帧、Canvas、统一输入与 Resize 验证通过");
   } finally {
     await browser.close();
     await new Promise((resolve) => server.close(resolve));

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_TUTORIAL_06_MODEL_DATA_HPP_
-#define GRANIT_TUTORIAL_06_MODEL_DATA_HPP_
+#ifndef GRANIT_TUTORIAL_02_MODEL_DATA_HPP_
+#define GRANIT_TUTORIAL_02_MODEL_DATA_HPP_
 
 #include <array>
 #include <cstdint>

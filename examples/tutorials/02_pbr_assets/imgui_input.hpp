@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_TUTORIAL_08_IMGUI_INPUT_HPP_
-#define GRANIT_TUTORIAL_08_IMGUI_INPUT_HPP_
+#ifndef GRANIT_TUTORIAL_02_IMGUI_INPUT_HPP_
+#define GRANIT_TUTORIAL_02_IMGUI_INPUT_HPP_
 
 #include <granit/window.hpp>
 #include <imgui.h>
