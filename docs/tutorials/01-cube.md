@@ -13,7 +13,7 @@
 
 1. Application 创建 Window、Renderer、Surface 和 Swapchain。
 2. 教程加载构建期生成的 Shader Library，并按逻辑名称创建顶点和片元 Shader。
-3. 生成木箱风格 RGBA，创建纹理、Sampler、顶点/索引 Buffer、Mesh、动态 Uniform Buffer 和
+3. 解码仓库内的木箱 PNG，创建纹理、Sampler、顶点/索引 Buffer、Mesh、动态 Uniform Buffer 和
    Graphics Pipeline。
 4. 创建与 Swapchain 尺寸一致的深度纹理，以及用于 ImGui 的 Canvas Draw List 和字体纹理。
 
@@ -37,8 +37,9 @@ Graphics Pipeline。窗口最小化产生零尺寸 framebuffer 时暂停 Acquire
 
 Bind Group 0 包含动态相机 Uniform、采样纹理和 Sampler。每个 Frame Slot 使用不同的 Uniform
 偏移，避免 CPU 覆盖仍由 GPU 读取的数据。Mesh 保存 Buffer、顶点布局和索引 Draw 参数，Pipeline
-保存 Shader、目标格式、深度状态和资源布局。木箱纹理由确定性 C++ 函数生成并上传，教程不依赖
-运行时图片解码器或外部下载。
+保存 Shader、目标格式、深度状态和资源布局。木箱 PNG 通过仓库私有图片解码器转换为 RGBA8 后
+上传；原创资产、生成说明、许可和摘要见
+[`assets/README.md`](../../examples/tutorials/01_cube/assets/README.md)。
 
 ## ImGui 与 Canvas
 

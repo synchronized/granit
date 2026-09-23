@@ -2,11 +2,11 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "application/application.h"
+#include "gltf/loader.h"
+#include "model_viewer/gpu_scene.h"
 
 #include <granit/integrations/imgui/renderer.hpp>
 #include <granit/pipeline/canvas_draw_list.hpp>
-#include <granit/pipeline/material.hpp>
-#include <granit/pipeline/mesh.hpp>
 #include <granit/pipeline/render_pipeline.hpp>
 #include <granit/pipeline/scene.hpp>
 #include <imgui.h>
@@ -15,6 +15,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <limits>
@@ -28,13 +29,8 @@
 #if defined(__EMSCRIPTEN__)
 #include <emscripten/emscripten.h>
 #endif
-#include "model_data.hpp"
-
-#ifndef GRANIT_TUTORIAL_02_SHADER_LIBRARY
-#error "GRANIT_TUTORIAL_02_SHADER_LIBRARY must point to the generated Shader Library"
-#endif
-#ifndef GRANIT_TUTORIAL_02_MATERIAL
-#error "GRANIT_TUTORIAL_02_MATERIAL must point to the generated Material archive"
+#ifndef GRANIT_TUTORIAL_02_MODEL
+#error "GRANIT_TUTORIAL_02_MODEL must point to the Suzanne glTF document"
 #endif
 
 namespace {
@@ -50,16 +46,6 @@ matrix4 multiply(const matrix4& left, const matrix4& right) {
     }
   }
   return output;
-}
-
-matrix4 rotation_y(float angle) {
-  const float cosine = std::cos(angle);
-  const float sine = std::sin(angle);
-  return {{cosine, 0, -sine, 0, 0, 1, 0, 0, sine, 0, cosine, 0, 0, 0, 0, 1}};
-}
-
-matrix4 scale_and_translate(float x, float y, float z, float translation_y) {
-  return {{x, 0, 0, 0, 0, y, 0, 0, 0, 0, z, 0, 0, translation_y, 0, 1}};
 }
 
 matrix4 view_matrix() { return {{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, -4, 1}}; }
@@ -96,6 +82,23 @@ std::vector<std::byte> read_file(const char* path) {
   return stream ? bytes : std::vector<std::byte>{};
 }
 
+class file_resolver final : public granit::example::gltf::resource_resolver {
+public:
+  explicit file_resolver(std::filesystem::path root) : root_(std::move(root)) {}
+
+  [[nodiscard]] bool resolve(std::string_view path, std::vector<std::byte>& output) const override {
+    const auto absolute = root_ / std::filesystem::path{path};
+    auto bytes = read_file(absolute.string().c_str());
+    if (bytes.empty())
+      return false;
+    output = std::move(bytes);
+    return true;
+  }
+
+private:
+  std::filesystem::path root_;
+};
+
 class tutorial_application final : public granit::example::application {
 public:
   [[nodiscard]] std::uint32_t pointer_events() const noexcept { return pointer_events_; }
@@ -104,28 +107,13 @@ public:
 
 private:
   granit::result on_initialize() noexcept override {
-    shader_archive_ = read_file(GRANIT_TUTORIAL_02_SHADER_LIBRARY);
-    material_archive_ = read_file(GRANIT_TUTORIAL_02_MATERIAL);
-    if (shader_archive_.empty() || material_archive_.empty()) {
-      std::cerr << "Failed to read generated Shader Library or Material archive\n";
-      return granit::result::invalid_argument;
-    }
-
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui::GetIO().IniFilename = nullptr;
     imgui_initialized_ = true;
 
-    last_operation_ = "loading shader library";
-    auto result = shader_library_.initialize(renderer(), shader_archive_);
-    if (result.ok()) {
-      last_operation_ = "creating geometry";
-      result = initialize_geometry();
-    }
-    if (result.ok()) {
-      last_operation_ = "creating materials";
-      result = initialize_materials();
-    }
+    last_operation_ = "loading Suzanne glTF";
+    auto result = initialize_model();
     if (result.ok()) {
       last_operation_ = "creating render pipeline";
       result = pipeline_.initialize(renderer(), {.enable_fxaa = true, .enable_specular_aa = true});
@@ -140,12 +128,14 @@ private:
                                                  font_sampler_);
     }
     if (result.ok()) {
-      last_operation_ = "uploading checker texture";
-      result = tutorial_imgui::upload_checker(renderer_owner(), checker_texture_, checker_view_);
-    }
-    if (result.ok()) {
+      granit::texture_view_ref preview_view;
+      granit::sampler_ref preview_sampler;
+      result = model_gpu_.texture_binding(model_scene_.materials.front().base_color_texture, true,
+                                          preview_view, preview_sampler);
+      if (result.failed())
+        return result;
       imgui_bindings_ = {.font = {font_view_.ref(), font_sampler_.ref()},
-                         .checker = {checker_view_.ref(), font_sampler_.ref()}};
+                         .preview = {preview_view, preview_sampler}};
     }
     return result;
   }
@@ -173,143 +163,41 @@ private:
     static_cast<void>(scene_.reset());
     static_cast<void>(pipeline_.reset());
     static_cast<void>(canvas_.destroy());
-    static_cast<void>(floor_material_.reset());
-    static_cast<void>(cube_material_.reset());
-    static_cast<void>(mesh_.reset());
-    static_cast<void>(index_buffer_.reset());
-    static_cast<void>(vertex_buffer_.reset());
-    static_cast<void>(material_sampler_.reset());
-    static_cast<void>(checker_view_.reset());
-    static_cast<void>(checker_texture_.reset());
+    model_gpu_.reset();
     static_cast<void>(font_view_.reset());
     static_cast<void>(font_texture_.reset());
     static_cast<void>(font_sampler_.reset());
-    for (auto& view : material_views_)
-      static_cast<void>(view.reset());
-    for (auto& texture : material_textures_)
-      static_cast<void>(texture.reset());
-    static_cast<void>(shader_library_.reset());
     if (imgui_initialized_) {
       ImGui::DestroyContext();
       imgui_initialized_ = false;
     }
   }
 
-  granit::result initialize_geometry() noexcept {
-    model_ = tutorial_model::make_uv_sphere();
-    auto result = vertex_buffer_.initialize(
-        renderer_owner(),
-        {.size = model_.vertices.size() * sizeof(tutorial_model::vertex),
-         .usage = granit::buffer_usage::vertex | granit::buffer_usage::transfer_destination});
-    if (result.ok()) {
-      result = index_buffer_.initialize(
-          renderer_owner(),
-          {.size = model_.indices.size() * sizeof(std::uint16_t),
-           .usage = granit::buffer_usage::index | granit::buffer_usage::transfer_destination});
+  granit::result initialize_model() noexcept {
+    const std::filesystem::path document_path{GRANIT_TUTORIAL_02_MODEL};
+    const auto document = read_file(document_path.string().c_str());
+    if (document.empty()) {
+      std::cerr << "Failed to read Suzanne model: " << GRANIT_TUTORIAL_02_MODEL << '\n';
+      return granit::result::invalid_argument;
     }
-    granit::upload_batch upload;
-    if (result.ok())
-      result = upload.initialize(renderer_owner());
-    if (result.ok()) {
-      result =
-          upload.write_buffer(vertex_buffer_.ref(), 0, std::as_bytes(std::span{model_.vertices}));
-    }
-    if (result.ok())
-      result =
-          upload.write_buffer(index_buffer_.ref(), 0, std::as_bytes(std::span{model_.indices}));
-    if (result.ok())
-      result = upload.submit();
 
-    const std::array attributes{
-        granit::vertex_attribute{.location = 0, .format = granit::vertex_format::float32x3},
-        granit::vertex_attribute{
-            .location = 1, .format = granit::vertex_format::float32x3, .offset = sizeof(float) * 3},
-        granit::vertex_attribute{
-            .location = 2, .format = granit::vertex_format::float32x4, .offset = sizeof(float) * 6},
-        granit::vertex_attribute{.location = 3,
-                                 .format = granit::vertex_format::float32x2,
-                                 .offset = sizeof(float) * 10},
-    };
-    const granit::mesh_vertex_buffer binding{
-        .buffer = vertex_buffer_.ref(),
-        .layout = {.stride = sizeof(tutorial_model::vertex), .attributes = attributes},
-    };
-    if (result.ok()) {
-      result = mesh_.initialize(renderer_owner(),
-                                {.topology = granit::primitive_topology::triangle_list,
-                                 .vertex_buffers = std::span{&binding, 1},
-                                 .index_buffer = index_buffer_.ref(),
-                                 .index_format = granit::index_type::uint16,
-                                 .index_count = static_cast<std::uint32_t>(model_.indices.size())});
+    file_resolver resolver{document_path.parent_path()};
+    const auto loaded = granit::example::gltf::load(document, &resolver, model_scene_);
+    if (!loaded) {
+      std::cerr << "Failed to load Suzanne model: " << loaded.diagnostic << '\n';
+      return granit::result::invalid_argument;
     }
-    return result;
+    if (model_scene_.materials.empty()) {
+      std::cerr << "Suzanne model does not contain a PBR material\n";
+      return granit::result::invalid_argument;
+    }
+
+    const auto& material = model_scene_.materials.front();
+    model_base_color_ = material.base_color;
+    model_metallic_ = material.metallic;
+    model_roughness_ = material.roughness;
+    return model_gpu_.initialize(renderer_owner(), model_scene_);
   }
-
-  granit::result initialize_materials() noexcept {
-    constexpr std::array<std::array<std::uint8_t, 4>, 5> pixels{{
-        {255, 255, 255, 255},
-        {0, 128, 64, 255},
-        {128, 128, 255, 255},
-        {255, 255, 255, 255},
-        {0, 0, 0, 255},
-    }};
-    auto result = granit::result::success;
-    for (std::size_t index = 0; index < material_textures_.size() && result.ok(); ++index) {
-      result = material_textures_[index].initialize(
-          renderer_owner(),
-          {.format = granit::texture_format::rgba8_unorm,
-           .usage = granit::texture_usage::sampled | granit::texture_usage::transfer_destination,
-           .width = 1,
-           .height = 1});
-      if (result.ok())
-        result = material_textures_[index].write(std::as_bytes(std::span{pixels[index]}), {}, {});
-      if (result.ok())
-        result = material_views_[index].initialize(renderer_owner(), material_textures_[index]);
-    }
-    if (result.ok())
-      result = material_sampler_.initialize(renderer_owner(), {});
-
-    if (result.ok()) {
-      result =
-          initialize_material(cube_material_, cube_base_color_, cube_metallic_, cube_roughness_);
-    }
-    if (result.ok()) {
-      result = initialize_material(floor_material_, {0.18F, 0.22F, 0.28F, 1.0F}, 0.0F, 0.82F);
-    }
-    return result;
-  }
-
-  granit::result initialize_material(granit::material_instance& material,
-                                     const granit::math::float4& base_color, float metallic,
-                                     float roughness) noexcept {
-    const std::array updates{
-        granit::material_parameter_update::value(granit::material_parameter_id("base_color"),
-                                                 granit::material_parameter_type::float4,
-                                                 std::as_bytes(std::span{&base_color, 1})),
-        granit::material_parameter_update::value(granit::material_parameter_id("metallic"),
-                                                 granit::material_parameter_type::float32,
-                                                 std::as_bytes(std::span{&metallic, 1})),
-        granit::material_parameter_update::value(
-            granit::material_parameter_id("perceptual_roughness"),
-            granit::material_parameter_type::float32, std::as_bytes(std::span{&roughness, 1})),
-        granit::material_parameter_update::texture_binding(
-            granit::material_parameter_id("base_color_texture"), material_views_[0].ref()),
-        granit::material_parameter_update::texture_binding(
-            granit::material_parameter_id("metallic_roughness_texture"), material_views_[1].ref()),
-        granit::material_parameter_update::texture_binding(
-            granit::material_parameter_id("normal_texture"), material_views_[2].ref()),
-        granit::material_parameter_update::texture_binding(
-            granit::material_parameter_id("occlusion_texture"), material_views_[3].ref()),
-        granit::material_parameter_update::texture_binding(
-            granit::material_parameter_id("emissive_texture"), material_views_[4].ref()),
-        granit::material_parameter_update::sampler_binding(
-            granit::material_parameter_id("pbr_sampler"), material_sampler_.ref()),
-    };
-    return material.initialize(renderer_owner(), {.archive = material_archive_,
-                                                  .initial_updates = updates,
-                                                  .shader_library = shader_library_.ref()});
-  }
-
   granit::result update_scene(bool with_renderables) noexcept {
     auto result = scene_.reset();
     if (result.failed())
@@ -317,9 +205,6 @@ private:
 
     const auto aspect = static_cast<float>(presentation_info().width) /
                         static_cast<float>(presentation_info().height);
-    const auto cube_model = rotation_y(static_cast<float>(rendered_frames()) * 0.02F);
-    const auto floor_model = scale_and_translate(3.2F, 0.1F, 3.2F, -1.55F);
-    const auto floor_normal = scale_and_translate(1.0F / 3.2F, 10.0F, 1.0F / 3.2F, 0.0F);
     const auto view = view_matrix();
     const auto projection = projection_matrix(aspect);
     const granit::scene_view scene_view{
@@ -333,56 +218,30 @@ private:
         .viewport_height = static_cast<float>(presentation_info().height),
         .layer_mask = UINT64_MAX,
     };
-    const std::array renderables{
-        granit::scene_renderable{.model = cube_model,
-                                 .normal_matrix = cube_model,
-                                 .bounds_center = {0, 0, 0},
-                                 .bounds_radius = 1.0F,
-                                 .layer_mask = UINT64_MAX,
-                                 .sort_key = 0,
-                                 .payload = 1,
-                                 .object_id = 1,
-                                 .reserved = 0},
-        granit::scene_renderable{.model = floor_model,
-                                 .normal_matrix = floor_normal,
-                                 .bounds_center = {0, -1.55F, 0},
-                                 .bounds_radius = 4.53F,
-                                 .layer_mask = UINT64_MAX,
-                                 .sort_key = 1,
-                                 .payload = 2,
-                                 .object_id = 2,
-                                 .reserved = 0},
-    };
     const granit::scene_directional_light light{
         .direction_to_light = {0.365148F, 0.912871F, 0.182574F},
         .radiance = {4.0F, 3.8F, 3.4F},
         .layer_mask = UINT64_MAX,
     };
-    const auto visible =
-        with_renderables ? std::span{renderables} : std::span<const granit::scene_renderable>{};
-    const auto lights = with_renderables ? std::span{&light, 1}
-                                         : std::span<const granit::scene_directional_light>{};
-    return scene_.initialize(
-        renderer_owner(),
-        {.views = std::span{&scene_view, 1}, .renderables = visible, .directional_lights = lights});
+    if (with_renderables) {
+      return model_gpu_.create_snapshot(std::span{&scene_view, 1}, std::span{&light, 1}, {}, {},
+                                        scene_);
+    }
+    return scene_.initialize(renderer_owner(), {.views = std::span{&scene_view, 1}});
   }
 
-  granit::result update_cube_material() noexcept {
-    const std::array updates{
-        granit::material_parameter_update::value(granit::material_parameter_id("base_color"),
-                                                 granit::material_parameter_type::float4,
-                                                 std::as_bytes(std::span{&cube_base_color_, 1})),
-        granit::material_parameter_update::value(granit::material_parameter_id("metallic"),
-                                                 granit::material_parameter_type::float32,
-                                                 std::as_bytes(std::span{&cube_metallic_, 1})),
-        granit::material_parameter_update::value(
-            granit::material_parameter_id("perceptual_roughness"),
-            granit::material_parameter_type::float32,
-            std::as_bytes(std::span{&cube_roughness_, 1})),
+  granit::result update_model_material() noexcept {
+    const auto& material = model_scene_.materials.front();
+    const granit::example::model_viewer::material_factor_edit edit{
+        .base_color = model_base_color_,
+        .metallic = model_metallic_,
+        .roughness = model_roughness_,
+        .normal_scale = material.normal_scale,
+        .occlusion_strength = material.occlusion_strength,
+        .emissive = material.emissive,
     };
-    return cube_material_.update(updates);
+    return model_gpu_.update_material_factors(model_scene_, 0, edit);
   }
-
   granit::result build_imgui_frame(float delta_seconds) noexcept {
     granit::window_state window_state;
     auto result = app_window().get_state(window_state);
@@ -395,17 +254,17 @@ private:
     ImGui::Text("Framebuffer: %u x %u", presentation_info().width, presentation_info().height);
     ImGui::TextUnformatted("Render Pipeline -> Tone Mapping -> ImGui Canvas");
     ImGui::Separator();
-    bool material_changed = ImGui::ColorEdit3("Base color", &cube_base_color_.x);
+    bool material_changed = ImGui::ColorEdit3("Base color", &model_base_color_.x);
     material_changed =
-        ImGui::SliderFloat("Metallic", &cube_metallic_, 0.0F, 1.0F) || material_changed;
+        ImGui::SliderFloat("Metallic", &model_metallic_, 0.0F, 1.0F) || material_changed;
     material_changed =
-        ImGui::SliderFloat("Roughness", &cube_roughness_, 0.04F, 1.0F) || material_changed;
-    ImGui::TextUnformatted("Custom Texture ID:");
-    ImGui::Image(ImTextureRef{tutorial_imgui::checker_texture_id}, {64, 64});
+        ImGui::SliderFloat("Roughness", &model_roughness_, 0.04F, 1.0F) || material_changed;
+    ImGui::TextUnformatted("Suzanne base color texture:");
+    ImGui::Image(ImTextureRef{tutorial_imgui::preview_texture_id}, {64, 64});
     ImGui::End();
     ImGui::Render();
 
-    result = material_changed ? update_cube_material() : granit::result::success;
+    result = material_changed ? update_model_material() : granit::result::success;
     if (result.ok())
       result = canvas_.clear();
     if (result.ok()) {
@@ -430,12 +289,6 @@ private:
       return result;
 
     last_operation_ = "rendering frame";
-    const std::array bindings{
-        granit::render_pipeline_draw_binding{
-            .payload = 1, .mesh = mesh_.ref(), .material = cube_material_.ref()},
-        granit::render_pipeline_draw_binding{
-            .payload = 2, .mesh = mesh_.ref(), .material = floor_material_.ref()},
-    };
     if (result.ok()) {
       granit::render_pipeline_render_desc render_desc{};
       render_desc.scene = scene_.ref();
@@ -445,7 +298,7 @@ private:
       render_desc.height = frame.swapchain.height;
       render_desc.draw_bindings = empty_frame
                                       ? std::span<const granit::render_pipeline_draw_binding>{}
-                                      : std::span{bindings};
+                                      : std::span{model_gpu_.draw_bindings()};
       render_desc.frame = &frame.acquired;
       render_desc.canvas = canvas_.ref();
       render_desc.clear_color = {0.025F, 0.03F, 0.045F, 1.0F};
@@ -454,30 +307,18 @@ private:
     return result;
   }
 
-  std::vector<std::byte> shader_archive_;
-  std::vector<std::byte> material_archive_;
-  tutorial_model::mesh_data model_;
-  granit::shader_library shader_library_;
-  std::array<granit::texture, 5> material_textures_;
-  std::array<granit::texture_view, 5> material_views_;
-  granit::sampler material_sampler_;
-  granit::buffer vertex_buffer_;
-  granit::buffer index_buffer_;
-  granit::mesh mesh_;
-  granit::material_instance cube_material_;
-  granit::material_instance floor_material_;
+  granit::example::gltf::scene model_scene_;
+  granit::example::model_viewer::gpu_scene model_gpu_;
   granit::render_pipeline pipeline_;
   granit::scene_snapshot scene_;
   granit::canvas_draw_list canvas_;
   granit::texture font_texture_;
   granit::texture_view font_view_;
   granit::sampler font_sampler_;
-  granit::texture checker_texture_;
-  granit::texture_view checker_view_;
   tutorial_imgui::texture_bindings imgui_bindings_;
-  granit::math::float4 cube_base_color_{0.82F, 0.24F, 0.08F, 1.0F};
-  float cube_metallic_{0.25F};
-  float cube_roughness_{0.38F};
+  granit::math::float4 model_base_color_{1.0F, 1.0F, 1.0F, 1.0F};
+  float model_metallic_{1.0F};
+  float model_roughness_{1.0F};
   bool imgui_initialized_{};
   std::uint32_t pointer_events_{};
   std::uint32_t canvas_items_{};

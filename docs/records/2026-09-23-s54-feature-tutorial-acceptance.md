@@ -12,10 +12,10 @@
 
 - 新增 `examples/common/application`，统一 Window、Renderer、Surface、Swapchain、事件、Resize、
   Acquire、Present、取消与恢复；内容层仍自行选择 Frame Context 或 Render Pipeline。
-- 将原 01～05 与 ImGui 内容收敛为 `01_cube`，以确定性木箱纹理展示低层 Renderer、Mesh、Depth、
-  Camera、Frame Context 和 Canvas。
-- 将 Material、Lighting 与 Render Pipeline 内容收敛为 `02_pbr_assets`，以带完整 PBR 顶点属性的
-  Sphere 展示 Material、Scene、Shadow、HDR、后处理和空场景首帧。
+- 将原 01～05 与 ImGui 内容收敛为 `01_cube`，以原创 CC0 木箱 PNG 展示图片解码、低层 Renderer、
+  Mesh、Depth、Camera、Frame Context 和 Canvas。
+- 将 Material、Lighting 与 Render Pipeline 内容收敛为 `02_pbr_assets`，以 Khronos CC0 Suzanne
+  glTF、真实几何和 PBR 纹理展示 Material、Scene、Shadow、HDR、后处理和空场景首帧。
 - 将 Model Viewer 移入 `examples/samples` 并消除重复目录层级；删除已由 Viewer 与支持代码测试
   覆盖的最小 Model Loading 应用，同步更新测试、浏览器产物、工作流和文档入口。
 - Example Application 保持仓库私有，不进入安装导出，也不向教程传播 ImGui、glTF 或 Render

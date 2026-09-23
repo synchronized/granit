@@ -17,7 +17,7 @@ granit::result resolve_texture(ImTextureID id, granit::canvas_draw_state& state,
     return granit::result::invalid_argument;
   const auto& bindings = *static_cast<const texture_bindings*>(user_data);
   const auto* binding = id == font_texture_id      ? &bindings.font
-                        : id == checker_texture_id ? &bindings.checker
+                        : id == preview_texture_id ? &bindings.preview
                                                    : nullptr;
   if (binding == nullptr)
     return granit::result::invalid_argument;

@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "application/application.h"
+#include "gltf/image_decoder.h"
 
 #include <granit/integrations/imgui/renderer.hpp>
 #include <granit/pipeline/canvas_draw_list.hpp>
@@ -28,6 +29,9 @@
 
 #ifndef GRANIT_TUTORIAL_01_SHADER_LIBRARY
 #error "GRANIT_TUTORIAL_01_SHADER_LIBRARY must point to the generated Shader Library"
+#endif
+#ifndef GRANIT_TUTORIAL_01_CRATE_TEXTURE
+#error "GRANIT_TUTORIAL_01_CRATE_TEXTURE must point to the wooden crate texture"
 #endif
 
 namespace {
@@ -181,18 +185,28 @@ private:
   }
 
   granit::result initialize_texture_resources() noexcept {
+    const auto encoded_texture = read_file(GRANIT_TUTORIAL_01_CRATE_TEXTURE);
+    granit::example::gltf::image decoded_texture;
+    if (encoded_texture.empty() ||
+        granit::example::gltf::decode_image(encoded_texture, decoded_texture) !=
+            granit::example::gltf::image_decode_error::none ||
+        decoded_texture.mips.size() != 1) {
+      std::cerr << "Failed to decode crate texture: " << GRANIT_TUTORIAL_01_CRATE_TEXTURE << '\n';
+      return granit::result::invalid_argument;
+    }
+    const auto& mip = decoded_texture.mips.front();
     auto result = crate_texture_.initialize(
         renderer_owner(),
-        {.format = granit::texture_format::rgba8_unorm,
+        {.format = granit::texture_format::rgba8_srgb,
          .usage = granit::texture_usage::sampled | granit::texture_usage::transfer_destination,
-         .width = tutorial_model::crate_texture_extent,
-         .height = tutorial_model::crate_texture_extent});
+         .width = mip.width,
+         .height = mip.height});
     if (result.ok())
       result = crate_view_.initialize(renderer_owner(), crate_texture_);
     if (result.ok()) {
       result = crate_sampler_.initialize(renderer_owner(),
-                                         {.mag_filter = granit::filter::nearest,
-                                          .min_filter = granit::filter::nearest,
+                                         {.mag_filter = granit::filter::linear,
+                                          .min_filter = granit::filter::linear,
                                           .mip_filter = granit::mipmap_filter::nearest});
     }
     if (result.ok()) {
@@ -218,16 +232,13 @@ private:
            .usage = granit::buffer_usage::uniform | granit::buffer_usage::transfer_destination});
     }
 
-    constexpr auto pixels = tutorial_model::make_crate_pixels();
     granit::upload_batch upload;
     if (result.ok())
       result = upload.initialize(renderer_owner());
     if (result.ok()) {
-      result = upload.write_texture(crate_texture_.ref(), std::as_bytes(std::span{pixels}),
-                                    {.bytes_per_row = tutorial_model::crate_texture_extent * 4,
-                                     .rows_per_image = tutorial_model::crate_texture_extent},
-                                    {.width = tutorial_model::crate_texture_extent,
-                                     .height = tutorial_model::crate_texture_extent});
+      result = upload.write_texture(crate_texture_.ref(), decoded_texture.rgba8_pixels,
+                                    {.bytes_per_row = mip.width * 4, .rows_per_image = mip.height},
+                                    {.width = mip.width, .height = mip.height});
     }
     if (result.ok())
       result = upload.write_buffer(vertex_buffer_.ref(), 0,

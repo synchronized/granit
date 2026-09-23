@@ -11,7 +11,7 @@
 namespace tutorial_imgui {
 
 inline constexpr ImTextureID font_texture_id = 1;
-inline constexpr ImTextureID checker_texture_id = 2;
+inline constexpr ImTextureID preview_texture_id = 2;
 
 struct texture_binding {
   granit::texture_view_ref view;
@@ -20,7 +20,7 @@ struct texture_binding {
 
 struct texture_bindings {
   texture_binding font;
-  texture_binding checker;
+  texture_binding preview;
 };
 
 [[nodiscard]] granit::result resolve_texture(ImTextureID id, granit::canvas_draw_state& state,

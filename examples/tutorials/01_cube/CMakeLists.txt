@@ -2,13 +2,16 @@
 # Copyright (c) 2026 Granit contributors
 
 set(tutorial_generated_dir "${CMAKE_CURRENT_BINARY_DIR}/generated")
+set(tutorial_crate_texture "${CMAKE_CURRENT_SOURCE_DIR}/assets/wooden_crate.png")
 
 if(EMSCRIPTEN)
   set(tutorial_shader_library "${CMAKE_CURRENT_SOURCE_DIR}/cube.grshlib")
   set(tutorial_runtime_shader_library "/assets/cube.grshlib")
+  set(tutorial_runtime_crate_texture "/assets/wooden_crate.png")
 else()
   set(tutorial_shader_library "${tutorial_generated_dir}/cube.grshlib")
   set(tutorial_runtime_shader_library "${tutorial_shader_library}")
+  set(tutorial_runtime_crate_texture "${tutorial_crate_texture}")
   granit_add_hlsl_shader_library(
     NAME tutorial_01_cube
     MANIFEST "${CMAKE_CURRENT_SOURCE_DIR}/cube.grshlib.json"
@@ -33,12 +36,18 @@ if(NOT EMSCRIPTEN)
 endif()
 target_compile_definitions(
   granit_tutorial_01_cube
-  PRIVATE GRANIT_TUTORIAL_01_SHADER_LIBRARY="${tutorial_runtime_shader_library}"
+  PRIVATE
+    GRANIT_TUTORIAL_01_SHADER_LIBRARY="${tutorial_runtime_shader_library}"
+    GRANIT_TUTORIAL_01_CRATE_TEXTURE="${tutorial_runtime_crate_texture}"
 )
 target_compile_features(granit_tutorial_01_cube PRIVATE cxx_std_20)
 target_link_libraries(
   granit_tutorial_01_cube
-  PRIVATE granit_example_application granit::render_pipeline granit::integration_imgui
+  PRIVATE
+    granit_example_application
+    granit_example_gltf_support
+    granit::render_pipeline
+    granit::integration_imgui
 )
 granit_target_compile_warnings(granit_tutorial_01_cube)
 granit_target_output_directories(granit_tutorial_01_cube)
@@ -48,7 +57,9 @@ if(EMSCRIPTEN)
   granit_target_webgpu(granit_tutorial_01_cube)
   target_link_options(
     granit_tutorial_01_cube
-    PRIVATE "--preload-file=${tutorial_shader_library}@/assets/cube.grshlib"
+    PRIVATE
+      "--preload-file=${tutorial_shader_library}@/assets/cube.grshlib"
+      "--preload-file=${tutorial_crate_texture}@/assets/wooden_crate.png"
   )
   granit_target_web_page(granit_tutorial_01_cube "${CMAKE_CURRENT_LIST_DIR}/web_shell.html")
 elseif(BUILD_TESTING)
