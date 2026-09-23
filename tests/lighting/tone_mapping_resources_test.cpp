@@ -137,25 +137,29 @@ TEST_CASE("Tone Mapping GPU输出与CPU参考一致") {
 
   granit::texture hdr_texture;
   granit::texture_view hdr_view;
-  REQUIRE(hdr_texture.initialize(renderer.ref(),
-                                 {.format = granit::texture_format::rgba16_float,
-                                  .usage = granit::texture_usage::sampled |
-                                           granit::texture_usage::transfer_destination}) ==
-          granit::result::success);
-  constexpr std::array<std::uint16_t, 4> hdr_pixel{0x4400, 0x3c00, 0x3400, 0x3c00};
   REQUIRE(
-      hdr_texture.write({reinterpret_cast<const std::byte*>(hdr_pixel.data()), sizeof(hdr_pixel)},
-                        {.bytes_per_row = 8}, {}) == granit::result::success);
-  REQUIRE(hdr_view.initialize(renderer.ref(), hdr_texture.ref()) ==
-          granit::result::success);
+      hdr_texture.initialize(renderer.ref(), {.format = granit::texture_format::rgba16_float,
+                                              .usage = granit::texture_usage::sampled |
+                                                       granit::texture_usage::transfer_destination,
+                                              .width = 1,
+                                              .height = 4}) == granit::result::success);
+  constexpr std::array<std::uint16_t, 16> hdr_pixels{0x4400, 0x3c00, 0x3400, 0x3c00, 0x4400, 0x3c00,
+                                                     0x3400, 0x3c00, 0x3400, 0x3c00, 0x4400, 0x3c00,
+                                                     0x3400, 0x3c00, 0x4400, 0x3c00};
+  const granit::texture_write_region hdr_region{.width = 1, .height = 4};
+  REQUIRE(
+      hdr_texture.write({reinterpret_cast<const std::byte*>(hdr_pixels.data()), sizeof(hdr_pixels)},
+                        {.bytes_per_row = 8}, hdr_region) == granit::result::success);
+  REQUIRE(hdr_view.initialize(renderer.ref(), hdr_texture.ref()) == granit::result::success);
   granit::tests::tone_mapping_shader_library shaders;
   REQUIRE(shaders.initialize(renderer));
 
   granit::lighting::tone_mapping_resources resources;
   REQUIRE(resources.initialize(renderer.native_handle(), hdr_view.native_handle(),
                                granit::texture_format::rgba8_unorm,
-                               {.exposure_scale = 2.0F, .encode_srgb = 1}, shaders.library(),
-                               shaders.vertex_id(), shaders.fragment_id()) == GRANIT_SUCCESS);
+                               {.exposure_scale = 2.0F, .encode_srgb = 1, .enable_fxaa = 1},
+                               shaders.library(), shaders.vertex_id(),
+                               shaders.fragment_id()) == GRANIT_SUCCESS);
   granit_texture output_texture = GRANIT_NULL_HANDLE;
   granit_texture_view output_view = GRANIT_NULL_HANDLE;
   granit_texture_desc output_desc = GRANIT_TEXTURE_DESC_INIT;
@@ -174,9 +178,8 @@ TEST_CASE("Tone Mapping GPU输出与CPU参考一致") {
   granit::command_recorder recorder;
   REQUIRE(recorder.initialize(renderer) == granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
-  REQUIRE(recorder.bind_graphics_pipeline(
-              granit::graphics_pipeline_ref::from_native(resources.pipeline())) ==
-          granit::result::success);
+  REQUIRE(recorder.bind_graphics_pipeline(granit::graphics_pipeline_ref::from_native(
+              resources.pipeline())) == granit::result::success);
   const auto group = resources.group();
   const std::array groups{granit::bind_group_ref::from_native(group)};
   REQUIRE(recorder.bind_graphics_groups(
@@ -196,29 +199,40 @@ TEST_CASE("Tone Mapping GPU输出与CPU参考一致") {
   const granit::texture_data_layout copy_layout{};
   const granit::texture_write_region copy_region{.width = 16, .height = 16};
   REQUIRE(recorder.copy_texture_to_buffer(granit::texture_ref::from_native(output_texture),
-                                          readback.ref(), copy_layout, copy_region) ==
-          granit::result::success);
+                                          readback.ref(), copy_layout,
+                                          copy_region) == granit::result::success);
   REQUIRE(recorder.end() == granit::result::success);
   REQUIRE(recorder.submit() == granit::result::success);
   // submit 是异步的；reset 等待该 Recorder 完成后才可安全读取 Readback Buffer。
   REQUIRE(recorder.reset() == granit::result::success);
 
   granit::math::float3 expected{};
+  granit::math::float3 expected_lower{};
   REQUIRE(granit::lighting::evaluate_tone_mapping(
               {4.0F, 1.0F, 0.25F},
               {.exposure_ev = 1.0F,
                .output_transfer = granit::lighting::tone_mapping_output_transfer::shader_srgb},
               expected) == granit::lighting::tone_mapping_error::none);
+  REQUIRE(granit::lighting::evaluate_tone_mapping(
+              {0.25F, 1.0F, 4.0F},
+              {.exposure_ev = 1.0F,
+               .output_transfer = granit::lighting::tone_mapping_output_transfer::shader_srgb},
+              expected_lower) == granit::lighting::tone_mapping_error::none);
   void* mapped = nullptr;
   REQUIRE(readback.map(0, 16 * 16 * 4, &mapped) == granit::result::success);
-  const auto* pixel = static_cast<const std::uint8_t*>(mapped) + (8 * 16 + 8) * 4;
+  const auto* upper_pixel = static_cast<const std::uint8_t*>(mapped) + (4 * 16 + 8) * 4;
+  const auto* lower_pixel = static_cast<const std::uint8_t*>(mapped) + (12 * 16 + 8) * 4;
   const auto quantize = [](float value) {
     return static_cast<std::uint8_t>(std::lround(value * 255.0F));
   };
-  CHECK(pixel[0] == Catch::Approx(quantize(expected.x)).margin(1));
-  CHECK(pixel[1] == Catch::Approx(quantize(expected.y)).margin(1));
-  CHECK(pixel[2] == Catch::Approx(quantize(expected.z)).margin(1));
-  CHECK(pixel[3] == 255);
+  CHECK(upper_pixel[0] == Catch::Approx(quantize(expected.x)).margin(1));
+  CHECK(upper_pixel[1] == Catch::Approx(quantize(expected.y)).margin(1));
+  CHECK(upper_pixel[2] == Catch::Approx(quantize(expected.z)).margin(1));
+  CHECK(upper_pixel[3] == 255);
+  CHECK(lower_pixel[0] == Catch::Approx(quantize(expected_lower.x)).margin(1));
+  CHECK(lower_pixel[1] == Catch::Approx(quantize(expected_lower.y)).margin(1));
+  CHECK(lower_pixel[2] == Catch::Approx(quantize(expected_lower.z)).margin(1));
+  CHECK(lower_pixel[3] == 255);
   REQUIRE(readback.unmap() == granit::result::success);
   REQUIRE(granit_texture_view_destroy(renderer.native_handle(), output_view) == GRANIT_SUCCESS);
   REQUIRE(granit_texture_destroy(renderer.native_handle(), output_texture) == GRANIT_SUCCESS);

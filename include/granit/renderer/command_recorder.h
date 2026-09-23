@@ -55,6 +55,10 @@ typedef struct granit_texture_mipmap_range {
   uint32_t array_layer_count;
 } granit_texture_mipmap_range;
 
+/**
+ * Viewport 使用左上原点的像素坐标，width/height 为正；逻辑裁剪空间 +Y 指向屏幕上方。
+ * 后端负责转换原生 Viewport 方向，调用方不得按 Renderer backend 翻转 Y。
+ */
 typedef struct granit_viewport {
   float x;
   float y;

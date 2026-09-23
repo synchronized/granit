@@ -220,7 +220,7 @@ WGPUVertexFormat to_vertex_format(webgpu_vertex_format format) noexcept {
 }
 
 WGPUFrontFace to_native_front_face(webgpu_front_face front_face) noexcept {
-  // Granit 的正面绕序以 Vulkan 正高度 Viewport 为基准；WebGPU 窗口映射的 Y 方向相反。
+  // WebGPU 的窗口坐标 Y 向下；转换后保持 Granit 逻辑裁剪空间中的正面绕序。
   return front_face == GRANIT_WEBGPU_FRONT_FACE_COUNTER_CLOCKWISE ? WGPUFrontFace_CW
                                                                   : WGPUFrontFace_CCW;
 }

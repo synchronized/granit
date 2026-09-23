@@ -62,8 +62,9 @@ Graphics 与 Compute 的 Bind Group 绑定函数接收 `granit_bind_groups_desc`
 数组顺序排列，并在每组内按 Layout 的 `binding` 升序排列。Offset 数量必须精确匹配动态 Binding
 数量，并满足设备对齐；基础 Offset、动态 Offset 与 Range 的和不得越过 Buffer，计算也不得溢出。
 
-Viewport 与 Scissor 支持批量设置。Vertex/Index Buffer 在 Dynamic Rendering 开始前绑定，以便
-自动屏障在渲染区域外完成；Draw 和 Draw Indexed 只能在渲染区域内录制。
+Viewport 与 Scissor 支持批量设置，并遵循统一的[坐标系统约定](coordinates.md)。Vertex/Index
+Buffer 在 Dynamic Rendering 开始前绑定，以便自动屏障在渲染区域外完成；Draw 和 Draw Indexed
+只能在渲染区域内录制。
 
 ## C++20
 

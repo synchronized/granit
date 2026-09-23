@@ -88,13 +88,9 @@ Render Pipeline 内部的 Tone Mapping、Shadow、Canvas 和 Debug Draw 也使�
 
 ## 坐标约定
 
-RenderPipeline 的 View 和 Material 使用同一逻辑裁剪空间，深度范围为 `0..1`。调用方提交的
-View Projection 不需要根据 Renderer backend 修改，后端适配层负责保持公开的正面绕序语义。
-Canvas 像素坐标以左上角为原点且 Y 向下，其内部投影会按后端窗口映射方向转换；这个差异不进入
-Material、场景或应用接口。
-
-纹理 UV 与裁剪空间是两个独立契约。普通二维纹理使用左上原点的 `0..1` UV；图片解码、外部纹理
-或 Render Target 若需要方向转换，应在对应上传或采样路径处理，不能通过修改相机投影补偿。
+RenderPipeline、低层 Renderer、Canvas 和纹理统一遵循[坐标系统约定](coordinates.md)。调用方提交的
+View Projection 不需要根据 Renderer backend 修改；后端负责 Viewport 方向和正面绕序转换。图片
+解码或外部纹理需要转换时应在上传路径处理，不能通过修改相机投影补偿。
 
 ## 线程安全
 

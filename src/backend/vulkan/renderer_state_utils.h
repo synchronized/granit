@@ -38,6 +38,16 @@ VkAttachmentLoadOp map_attachment_load(granit_attachment_load_operation value) n
 VkAttachmentStoreOp map_attachment_store(granit_attachment_store_operation value) noexcept;
 VkComponentSwizzle map_component_swizzle(granit_component_swizzle swizzle) noexcept;
 VkImageUsageFlags map_texture_usage(granit_texture_usage usage) noexcept;
+/** 将公开的 Y 向上裁剪空间映射到 Vulkan 正高度坐标的等价负高度 Viewport。 */
+inline VkViewport map_viewport(granit_viewport viewport) noexcept {
+  return {viewport.x,       viewport.y + viewport.height, viewport.width,
+          -viewport.height, viewport.min_depth,           viewport.max_depth};
+}
+/** Viewport 的 Y 翻转会反转绕序；这里保持公开 Front Face 语义不变。 */
+inline VkFrontFace map_front_face(granit_front_face front_face) noexcept {
+  return front_face == GRANIT_FRONT_FACE_COUNTER_CLOCKWISE ? VK_FRONT_FACE_CLOCKWISE
+                                                           : VK_FRONT_FACE_COUNTER_CLOCKWISE;
+}
 
 } // namespace granit::detail
 

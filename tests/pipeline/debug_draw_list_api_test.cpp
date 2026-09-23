@@ -163,6 +163,13 @@ TEST_CASE("世界Debug Draw可录制到颜色附件") {
   std::array<uint8_t, 4> center{};
   std::memcpy(center.data(), static_cast<const std::byte*>(mapped) + (8 * size + 8) * 4, 4);
   CHECK(center == std::array<uint8_t, 4>{255, 0, 0, 255});
+  const auto pixel = [&](std::uint32_t x, std::uint32_t y) {
+    std::array<std::uint8_t, 4> result{};
+    std::memcpy(result.data(), static_cast<const std::byte*>(mapped) + (y * size + x) * 4, 4);
+    return result;
+  };
+  CHECK(pixel(3, 3) == std::array<uint8_t, 4>{0, 0, 0, 0});
+  CHECK(pixel(3, 12) == std::array<uint8_t, 4>{255, 0, 0, 255});
   REQUIRE(readback.unmap() == granit::result::success);
 
   auto depth_triangle = triangles[0];

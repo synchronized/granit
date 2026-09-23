@@ -235,13 +235,12 @@ granit_result vulkan_renderer_state::create_native_graphics_pipeline(
                                      VK_POLYGON_MODE_POINT};
   constexpr std::array cull_modes{VK_CULL_MODE_NONE, VK_CULL_MODE_FRONT_BIT, VK_CULL_MODE_BACK_BIT,
                                   VK_CULL_MODE_FRONT_AND_BACK};
-  constexpr std::array front_faces{VK_FRONT_FACE_COUNTER_CLOCKWISE, VK_FRONT_FACE_CLOCKWISE};
   if (primitive.polygon_mode != GRANIT_POLYGON_MODE_FILL &&
       !device_.fill_mode_non_solid_supported())
     return GRANIT_ERROR_UNSUPPORTED;
   rasterization.polygonMode = polygon_modes[primitive.polygon_mode - GRANIT_POLYGON_MODE_FILL];
   rasterization.cullMode = cull_modes[primitive.cull_mode - GRANIT_CULL_MODE_NONE];
-  rasterization.frontFace = front_faces[primitive.front_face - GRANIT_FRONT_FACE_COUNTER_CLOCKWISE];
+  rasterization.frontFace = map_front_face(primitive.front_face);
   rasterization.lineWidth = 1.0F;
   if (depth_bias) {
     rasterization.depthBiasEnable = VK_TRUE;

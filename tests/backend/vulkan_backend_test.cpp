@@ -7,6 +7,7 @@
 #include "backend/vulkan/loader.h"
 #include "backend/vulkan/memory_allocator.h"
 #include "backend/vulkan/physical_device.h"
+#include "backend/vulkan/renderer_state_utils.h"
 #include "backend/vulkan/result.h"
 #include "backend/vulkan/swapchain.h"
 #include "backend/vulkan/timestamp_query.h"
@@ -22,6 +23,8 @@ using granit::detail::format_supports_linear_blit;
 using granit::detail::initialize_vulkan_loader;
 using granit::detail::is_better_candidate;
 using granit::detail::is_suitable;
+using granit::detail::map_front_face;
+using granit::detail::map_viewport;
 using granit::detail::map_vulkan_result;
 using granit::detail::physical_device_candidate;
 using granit::detail::physical_device_kind;
@@ -50,6 +53,19 @@ TEST_CASE("Vulkan 结果映射为后端无关错误", "[vulkan][result]") {
   CHECK(map_vulkan_result(VK_NOT_READY) == GRANIT_ERROR_NOT_READY);
   CHECK(map_vulkan_result(VK_TIMEOUT) == GRANIT_ERROR_NOT_READY);
   CHECK(map_vulkan_result(VK_ERROR_UNKNOWN) == GRANIT_ERROR_UNKNOWN);
+}
+
+TEST_CASE("Vulkan 后端保持公开裁剪空间和正面绕序", "[vulkan][coordinates]") {
+  constexpr granit_viewport logical{10.0F, 20.0F, 640.0F, 480.0F, 0.25F, 0.75F};
+  const auto native = map_viewport(logical);
+  CHECK(native.x == 10.0F);
+  CHECK(native.y == 500.0F);
+  CHECK(native.width == 640.0F);
+  CHECK(native.height == -480.0F);
+  CHECK(native.minDepth == 0.25F);
+  CHECK(native.maxDepth == 0.75F);
+  CHECK(map_front_face(GRANIT_FRONT_FACE_COUNTER_CLOCKWISE) == VK_FRONT_FACE_CLOCKWISE);
+  CHECK(map_front_face(GRANIT_FRONT_FACE_CLOCKWISE) == VK_FRONT_FACE_COUNTER_CLOCKWISE);
 }
 
 TEST_CASE("线性 Blit 要求完整的格式能力组合", "[vulkan][format]") {

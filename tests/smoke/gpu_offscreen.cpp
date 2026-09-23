@@ -67,6 +67,15 @@ struct rgba8 {
     std::cerr << "三角形内像素与预期插值颜色不一致\n";
     return false;
   }
+
+  // Shader 中绿色/蓝色顶点位于逻辑 +Y（屏幕上方），红色顶点位于逻辑 -Y（屏幕下方）。
+  const auto upper = pixel_at(pixels, info.bytes_per_row, k_width / 2U, k_height / 4U);
+  const auto lower = pixel_at(pixels, info.bytes_per_row, k_width / 2U, k_height * 3U / 4U);
+  if (!(upper.green > upper.red && upper.blue > upper.red && lower.red > lower.green &&
+        lower.red > lower.blue)) {
+    std::cerr << "公开裁剪空间的 +Y 未映射到回读图像上方\n";
+    return false;
+  }
   return true;
 }
 

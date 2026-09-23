@@ -354,8 +354,7 @@ vulkan_renderer_state::set_viewports(backend_command_recorder_resource& recorder
     std::vector<VkViewport> native;
     native.reserve(viewports.size());
     for (const auto& value : viewports)
-      native.push_back(
-          {value.x, value.y, value.width, value.height, value.min_depth, value.max_depth});
+      native.push_back(map_viewport(value));
     return recorder.set_viewports(device_, first, native);
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;

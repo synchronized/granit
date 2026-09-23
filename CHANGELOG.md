@@ -8,6 +8,12 @@
 
 ## Unreleased
 
+### 修复
+
+- Vulkan 后端现在把公开的 Y 向上逻辑裁剪空间转换为负高度原生 Viewport，并同步转换 Front Face；
+  RenderPipeline 主场景、Tone Mapping、Debug Draw 与 Canvas 因此保持相同方向，调用方无需按后端
+  修改相机或 UV。
+
 ## 0.28.0 - 2026-09-23
 
 ### 新增
