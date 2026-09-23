@@ -29,15 +29,16 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 
 ## 当前计划
 
-### S-50：0.29.0 Model Viewer 教程迁移
-
-**状态：实施中，P1。**
-
-[S-50](plans/S-50-0.29.0-model-viewer-tutorial-migration.md) 将真实 glTF/GLB 加载拆为 09 Model
-Loading，并把现有跨后端 Model Viewer 收敛为最终综合教程。旧 Sample 只在桌面、Web、离屏和
-文档验证全部由新入口接管后删除。
+当前没有正在实施的计划。新增任务前应先确认真实 Consumer 需求、边界和验收条件。
 
 ## 最近完成
+
+### S-50：0.29.0 Model Viewer 教程迁移
+
+**状态：已完成，P1。**
+
+[S-50](plans/S-50-0.29.0-model-viewer-tutorial-migration.md) 已新增 09 Model Loading，并把跨后端
+Model Viewer 收敛为 Tutorial 10。桌面、Web 与离屏入口已经切换，重复 Sample 已删除。
 
 ### S-48：线性入门教程与配套示例
 

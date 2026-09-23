@@ -111,3 +111,4 @@
 - [S-47：Window 跨平台入口](S-47-window-platform-convergence.md)
 - [S-49：0.28.0 Window 跨平台可选主循环](S-49-0.28.0-window-loop.md)
 - [S-48：线性入门教程与配套示例](S-48-0.28.0-linear-tutorial-series.md)
+- [S-50：0.29.0 Model Viewer 教程迁移](S-50-0.29.0-model-viewer-tutorial-migration.md)

@@ -9,11 +9,12 @@
 
 ## 当前计划
 
-- [S-50：0.29.0 Model Viewer 教程迁移](S-50-0.29.0-model-viewer-tutorial-migration.md)——新增
-  09 Model Loading 与 10 Model Viewer，在完整接管桌面/Web 行为后删除重复 Sample。
+当前没有正在实施的计划。
 
 ## 最近完成
 
+- [S-50：0.29.0 Model Viewer 教程迁移](S-50-0.29.0-model-viewer-tutorial-migration.md)——新增
+  09 Model Loading，将跨后端 Model Viewer 收敛为 Tutorial 10，并删除重复 Sample。
 - [S-48：线性入门教程与配套示例](S-48-0.28.0-linear-tutorial-series.md)——完成从 Window 到
   ImGui 的八章连续教程、强类型 C++ 使用面审计和桌面/浏览器自动验证。
 - [S-49：0.28.0 Window 跨平台可选主循环](S-49-0.28.0-window-loop.md)——以可选托管 Loop 统一

@@ -125,4 +125,4 @@ Renderer 与 Window。GPU Scene 内部按 Material、Mesh、Buffer 和 Texture �
 本章刻意不加入 UI 和异步加载。下一章将现有跨后端 Model Viewer 迁入教程，增加轨道相机、完整
 PBR 纹理、环境光、节点与材质检查器、桌面异步文件加载和浏览器 Fetch。
 
-[上一章：接入 ImGui](08-imgui.md)
+[上一章：接入 ImGui](08-imgui.md) · [下一章：完成 Model Viewer](10-model-viewer.md)

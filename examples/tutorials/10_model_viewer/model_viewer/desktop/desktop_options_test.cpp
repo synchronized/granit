@@ -7,7 +7,7 @@
 
 #include <array>
 
-TEST_CASE("模型查看器桌面参数显式选择 Vulkan 后端", "[example][model-viewer][desktop]") {
+TEST_CASE("模型查看器桌面参数显式选择 Vulkan 后端", "[tutorial][model-viewer][desktop]") {
   using namespace granit::example::model_viewer::desktop;
   const std::array arguments{
       std::string_view{"--backend=vulkan"},  std::string_view{"--asset"},
@@ -27,7 +27,7 @@ TEST_CASE("模型查看器桌面参数显式选择 Vulkan 后端", "[example][mo
   CHECK(parsed.profile_output_path == "profile.json");
 }
 
-TEST_CASE("模型查看器桌面参数拒绝未知呈现模式和空性能路径", "[example][model-viewer][desktop]") {
+TEST_CASE("模型查看器桌面参数拒绝未知呈现模式和空性能路径", "[tutorial][model-viewer][desktop]") {
   using namespace granit::example::model_viewer::desktop;
   options parsed;
   const std::array invalid_mode{std::string_view{"--asset"}, std::string_view{"model.glb"},
@@ -45,7 +45,7 @@ TEST_CASE("模型查看器桌面参数拒绝未知呈现模式和空性能路径
   CHECK(parse_options(conflicting_modes, parsed) == granit::result::invalid_argument);
 }
 
-TEST_CASE("模型查看器默认使用 Mailbox 并支持显式选择", "[example][model-viewer][desktop]") {
+TEST_CASE("模型查看器默认使用 Mailbox 并支持显式选择", "[tutorial][model-viewer][desktop]") {
   using namespace granit::example::model_viewer::desktop;
   options parsed;
   const std::array defaults{std::string_view{"--asset"}, std::string_view{"model.glb"}};
@@ -58,7 +58,7 @@ TEST_CASE("模型查看器默认使用 Mailbox 并支持显式选择", "[example
   CHECK(parsed.presentation == granit::present_mode::mailbox);
 }
 
-TEST_CASE("模型查看器桌面参数拒绝未知后端且不修改输出", "[example][model-viewer][desktop]") {
+TEST_CASE("模型查看器桌面参数拒绝未知后端且不修改输出", "[tutorial][model-viewer][desktop]") {
   using namespace granit::example::model_viewer::desktop;
   options parsed;
   parsed.asset_path = "保留.glb";
@@ -72,7 +72,7 @@ TEST_CASE("模型查看器桌面参数拒绝未知后端且不修改输出", "[e
   CHECK(parsed.asset_path == "保留.glb");
 }
 
-TEST_CASE("模型查看器桌面参数支持自动与 Vulkan 后端", "[example][model-viewer][desktop]") {
+TEST_CASE("模型查看器桌面参数支持自动与 Vulkan 后端", "[tutorial][model-viewer][desktop]") {
   using namespace granit::example::model_viewer::desktop;
   options parsed;
   const std::array automatic{std::string_view{"--backend=auto"}, std::string_view{"--asset"},

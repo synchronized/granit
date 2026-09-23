@@ -9,7 +9,7 @@
 
 using namespace granit::example;
 
-TEST_CASE("查看器状态集中管理选择和可见性", "[example][model-viewer][state]") {
+TEST_CASE("查看器状态集中管理选择和可见性", "[tutorial][model-viewer][state]") {
   gltf::scene scene;
   scene.nodes.resize(2);
   scene.materials.resize(1);
@@ -32,7 +32,7 @@ TEST_CASE("查看器状态集中管理选择和可见性", "[example][model-view
   CHECK(state.directional_light().radiance.x == 1.2F);
 }
 
-TEST_CASE("查看器状态拒绝无效批次且保留旧状态", "[example][model-viewer][state]") {
+TEST_CASE("查看器状态拒绝无效批次且保留旧状态", "[tutorial][model-viewer][state]") {
   gltf::scene scene;
   scene.nodes.resize(1);
   model_viewer::viewer_state state;
@@ -69,7 +69,7 @@ TEST_CASE("查看器状态拒绝无效批次且保留旧状态", "[example][mode
         model_viewer::viewer_state_error::invalid_selection);
 }
 
-TEST_CASE("查看器状态校验灯光、调试模式和成对可见性参数", "[example][model-viewer][state]") {
+TEST_CASE("查看器状态校验灯光、调试模式和成对可见性参数", "[tutorial][model-viewer][state]") {
   gltf::scene scene;
   scene.nodes.resize(1);
   model_viewer::viewer_state state;
@@ -96,7 +96,7 @@ TEST_CASE("查看器状态校验灯光、调试模式和成对可见性参数", 
         model_viewer::viewer_state_error::invalid_debug_display);
 }
 
-TEST_CASE("查看器状态在 Scene 替换后收敛旧引用", "[example][model-viewer][state]") {
+TEST_CASE("查看器状态在 Scene 替换后收敛旧引用", "[tutorial][model-viewer][state]") {
   gltf::scene first;
   first.nodes.resize(2);
   first.materials.resize(2);

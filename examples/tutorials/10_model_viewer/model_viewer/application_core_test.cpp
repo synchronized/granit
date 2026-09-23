@@ -8,7 +8,7 @@
 
 #include <array>
 
-TEST_CASE("模型查看器 Core 严格执行启动状态机", "[example][model-viewer][core]") {
+TEST_CASE("模型查看器 Core 严格执行启动状态机", "[tutorial][model-viewer][core]") {
   using namespace granit::example::model_viewer;
   application_core core;
   CHECK(core.phase() == application_phase::platform_ready);
@@ -26,7 +26,7 @@ TEST_CASE("模型查看器 Core 严格执行启动状态机", "[example][model-v
   CHECK(core.phase() == application_phase::platform_ready);
 }
 
-TEST_CASE("模型查看器 Core 保留资产解析诊断", "[example][model-viewer][core]") {
+TEST_CASE("模型查看器 Core 保留资产解析诊断", "[tutorial][model-viewer][core]") {
   using namespace granit::example::model_viewer;
   application_core core;
   REQUIRE(core.begin_renderer() == granit::result::success);
@@ -37,7 +37,7 @@ TEST_CASE("模型查看器 Core 保留资产解析诊断", "[example][model-view
   CHECK_FALSE(core.diagnostic().empty());
 }
 
-TEST_CASE("模型查看器 Core 拒绝无效环境包", "[example][model-viewer][core][gpu]") {
+TEST_CASE("模型查看器 Core 拒绝无效环境包", "[tutorial][model-viewer][core][gpu]") {
   using namespace granit::example::model_viewer;
   granit::renderer renderer;
   const auto renderer_result = renderer.initialize({.application_name = "Environment Test"});
@@ -56,7 +56,7 @@ TEST_CASE("模型查看器 Core 拒绝无效环境包", "[example][model-viewer]
   CHECK_FALSE(core.diagnostic().empty());
 }
 
-TEST_CASE("模型查看器 Core 生成后端无关单帧描述", "[example][model-viewer][core][gpu]") {
+TEST_CASE("模型查看器 Core 生成后端无关单帧描述", "[tutorial][model-viewer][core][gpu]") {
   using namespace granit::example::model_viewer;
   granit::renderer renderer;
   const auto renderer_result = renderer.initialize({.application_name = "Model Viewer Core Test"});

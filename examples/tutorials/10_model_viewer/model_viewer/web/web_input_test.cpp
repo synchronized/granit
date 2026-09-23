@@ -7,7 +7,7 @@
 
 namespace web = granit::example::model_viewer::web;
 
-TEST_CASE("浏览器输入按帧累积指针、滚轮和捕获状态", "[example][model-viewer][web]") {
+TEST_CASE("浏览器输入按帧累积指针、滚轮和捕获状态", "[tutorial][model-viewer][web]") {
   web::web_input adapter;
   adapter.begin_frame();
   adapter.pointer_button_changed(web::pointer_button::secondary, true);
@@ -28,7 +28,7 @@ TEST_CASE("浏览器输入按帧累积指针、滚轮和捕获状态", "[example
   CHECK(input.wheel_delta == 0.0F);
 }
 
-TEST_CASE("浏览器输入处理快捷键和拖动终止", "[example][model-viewer][web]") {
+TEST_CASE("浏览器输入处理快捷键和拖动终止", "[tutorial][model-viewer][web]") {
   web::web_input adapter;
   adapter.key_pressed(web::shortcut_key::focus, false);
   adapter.key_pressed(web::shortcut_key::home, false);

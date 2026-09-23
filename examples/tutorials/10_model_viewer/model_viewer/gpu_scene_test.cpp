@@ -27,7 +27,7 @@ bool record_upload_progress(
 
 } // namespace
 
-TEST_CASE("GPU Scene 计划合并 Primitive 并记录字节 Offset", "[example][model-viewer]") {
+TEST_CASE("GPU Scene 计划合并 Primitive 并记录字节 Offset", "[tutorial][model-viewer]") {
   granit::example::gltf::scene source;
   auto& first = source.meshes.emplace_back().primitives.emplace_back();
   first.positions = {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}};
@@ -51,7 +51,7 @@ TEST_CASE("GPU Scene 计划合并 Primitive 并记录字节 Offset", "[example][
   CHECK(plan.indices == std::vector<std::uint32_t>{0, 1, 2, 2, 1, 0});
 }
 
-TEST_CASE("GPU Scene 计划按颜色空间拆分并去重纹理", "[example][model-viewer]") {
+TEST_CASE("GPU Scene 计划按颜色空间拆分并去重纹理", "[tutorial][model-viewer]") {
   granit::example::gltf::scene source;
   source.images.resize(2);
   auto& first = source.materials.emplace_back();
@@ -69,7 +69,7 @@ TEST_CASE("GPU Scene 计划按颜色空间拆分并去重纹理", "[example][mod
                              {0, true}, {0, false}, {1, false}});
 }
 
-TEST_CASE("GPU Scene 计划规范化并去重 Sampler", "[example][model-viewer]") {
+TEST_CASE("GPU Scene 计划规范化并去重 Sampler", "[tutorial][model-viewer]") {
   granit::example::gltf::scene source;
   source.samplers = {{.mag_filter = 9729, .min_filter = 9987, .wrap_u = 10497, .wrap_v = 33071},
                      {.mag_filter = 9729, .min_filter = 9987, .wrap_u = 10497, .wrap_v = 33071},
@@ -84,7 +84,7 @@ TEST_CASE("GPU Scene 计划规范化并去重 Sampler", "[example][model-viewer]
   CHECK(plan.samplers[1].address_u == granit::address_mode::mirrored_repeat);
 }
 
-TEST_CASE("GPU Scene 计划按 Node 稳定展开 Primitive Payload", "[example][model-viewer]") {
+TEST_CASE("GPU Scene 计划按 Node 稳定展开 Primitive Payload", "[tutorial][model-viewer]") {
   granit::example::gltf::scene source;
   source.materials.resize(2);
   source.meshes.resize(2);
@@ -118,7 +118,7 @@ TEST_CASE("GPU Scene 计划按 Node 稳定展开 Primitive Payload", "[example][
   CHECK(plan.renderables[0].layer_mask == std::numeric_limits<std::uint64_t>::max());
 }
 
-TEST_CASE("GPU Scene 计划拒绝越界 Node 与 Material 引用", "[example][model-viewer]") {
+TEST_CASE("GPU Scene 计划拒绝越界 Node 与 Material 引用", "[tutorial][model-viewer]") {
   granit::example::gltf::scene source;
   source.meshes.resize(1);
   source.meshes.front().primitives.resize(1);
@@ -134,7 +134,7 @@ TEST_CASE("GPU Scene 计划拒绝越界 Node 与 Material 引用", "[example][mo
         granit::example::model_viewer::gpu_scene_plan_error::invalid_scene);
 }
 
-TEST_CASE("GPU Scene 计划计算世界 Bounds 与法线矩阵", "[example][model-viewer]") {
+TEST_CASE("GPU Scene 计划计算世界 Bounds 与法线矩阵", "[tutorial][model-viewer]") {
   granit::example::gltf::scene source;
   auto& primitive = source.meshes.emplace_back().primitives.emplace_back();
   primitive.local_bounds = {.minimum = {-1, -1, -1}, .maximum = {1, 1, 1}, .valid = true};
@@ -154,7 +154,7 @@ TEST_CASE("GPU Scene 计划计算世界 Bounds 与法线矩阵", "[example][mode
   CHECK(plan.draws.front().bounds_radius == Catch::Approx(std::sqrt(12.0F)));
 }
 
-TEST_CASE("GPU Scene 计划失败时保持输出不变", "[example][model-viewer]") {
+TEST_CASE("GPU Scene 计划失败时保持输出不变", "[tutorial][model-viewer]") {
   granit::example::gltf::scene source;
   auto& primitive = source.meshes.emplace_back().primitives.emplace_back();
   primitive.positions.resize(2);
@@ -166,7 +166,7 @@ TEST_CASE("GPU Scene 计划失败时保持输出不变", "[example][model-viewer
   CHECK(plan.indices == std::vector<std::uint32_t>{42});
 }
 
-TEST_CASE("GPU Scene 事务式创建合并 Buffer 与 Mesh", "[example][model-viewer][gpu]") {
+TEST_CASE("GPU Scene 事务式创建合并 Buffer 与 Mesh", "[tutorial][model-viewer][gpu]") {
   granit::renderer renderer;
   const auto renderer_result = renderer.initialize({.application_name = "Model Viewer GPU Test"});
   if (renderer_result.failed())
@@ -248,7 +248,7 @@ TEST_CASE("GPU Scene 事务式创建合并 Buffer 与 Mesh", "[example][model-vi
   CHECK_FALSE(scene.valid());
 }
 
-TEST_CASE("GPU Scene 创建失败时保留原 Scene", "[example][model-viewer][transaction]") {
+TEST_CASE("GPU Scene 创建失败时保留原 Scene", "[tutorial][model-viewer][transaction]") {
   granit::example::model_viewer::gpu_scene scene;
   granit::example::gltf::scene source;
   CHECK(scene.initialize(granit::renderer_ref{}, source) == granit::result::invalid_handle);
@@ -260,7 +260,7 @@ TEST_CASE("GPU Scene 创建失败时保留原 Scene", "[example][model-viewer][t
   CHECK_FALSE(sampler);
 }
 
-TEST_CASE("材质 GPU 更新失败时保留 CPU Factor", "[example][model-viewer][transaction]") {
+TEST_CASE("材质 GPU 更新失败时保留 CPU Factor", "[tutorial][model-viewer][transaction]") {
   granit::example::model_viewer::gpu_scene gpu;
   granit::example::gltf::scene source;
   source.materials.emplace_back().roughness = 0.4F;

@@ -15,7 +15,7 @@ bool close(float left, float right, float epsilon = 0.0001F) {
 
 } // namespace
 
-TEST_CASE("轨道相机根据 Bounds 和宽高比自动聚焦", "[example][model-viewer][camera]") {
+TEST_CASE("轨道相机根据 Bounds 和宽高比自动聚焦", "[tutorial][model-viewer][camera]") {
   granit::example::model_viewer::orbit_camera camera;
   REQUIRE(camera.focus({.center = {1, 2, 3}, .radius = 2}, 800, 600));
   CHECK(camera.target() == granit::math::float3{1, 2, 3});
@@ -31,7 +31,7 @@ TEST_CASE("轨道相机根据 Bounds 和宽高比自动聚焦", "[example][model
   CHECK(granit::math::is_finite(matrices.view_projection));
 }
 
-TEST_CASE("轨道相机输出后端无关的投影方向", "[example][model-viewer][camera]") {
+TEST_CASE("轨道相机输出后端无关的投影方向", "[tutorial][model-viewer][camera]") {
   granit::example::model_viewer::orbit_camera camera;
   granit::example::model_viewer::camera_matrices matrices;
   REQUIRE(camera.matrices(800, 600, matrices));
@@ -42,7 +42,7 @@ TEST_CASE("轨道相机输出后端无关的投影方向", "[example][model-view
   CHECK(projected_up.y > 0.0F);
 }
 
-TEST_CASE("轨道相机限制 Pitch 和缩放距离", "[example][model-viewer][camera]") {
+TEST_CASE("轨道相机限制 Pitch 和缩放距离", "[tutorial][model-viewer][camera]") {
   granit::example::model_viewer::orbit_camera camera;
   REQUIRE(camera.focus({.radius = 1}, 800, 600));
   const granit::example::model_viewer::viewer_input input{
@@ -52,7 +52,7 @@ TEST_CASE("轨道相机限制 Pitch 和缩放距离", "[example][model-viewer][c
   CHECK(camera.distance() > camera.near_plane());
 }
 
-TEST_CASE("轨道相机使用帧缓冲高度归一化拖动", "[example][model-viewer][camera]") {
+TEST_CASE("轨道相机使用帧缓冲高度归一化拖动", "[tutorial][model-viewer][camera]") {
   granit::example::model_viewer::orbit_camera first;
   granit::example::model_viewer::orbit_camera second;
   REQUIRE(
@@ -63,7 +63,7 @@ TEST_CASE("轨道相机使用帧缓冲高度归一化拖动", "[example][model-v
   CHECK(close(first.pitch(), second.pitch()));
 }
 
-TEST_CASE("轨道相机的视角跟随右键拖拽方向", "[example][model-viewer][camera]") {
+TEST_CASE("轨道相机的视角跟随右键拖拽方向", "[tutorial][model-viewer][camera]") {
   granit::example::model_viewer::orbit_camera camera;
   REQUIRE(camera.update(
       {.pointer_delta_x = 100, .pointer_delta_y = 50, .orbiting = true}, 800, 1000));
@@ -71,7 +71,7 @@ TEST_CASE("轨道相机的视角跟随右键拖拽方向", "[example][model-view
   CHECK(camera.pitch() > 0.0F);
 }
 
-TEST_CASE("轨道相机尊重 UI 捕获、失焦和 Home", "[example][model-viewer][camera]") {
+TEST_CASE("轨道相机尊重 UI 捕获、失焦和 Home", "[tutorial][model-viewer][camera]") {
   granit::example::model_viewer::orbit_camera camera;
   REQUIRE(camera.focus({.center = {2, 0, 0}, .radius = 1}, 640, 480));
   const auto home_distance = camera.distance();
@@ -87,7 +87,7 @@ TEST_CASE("轨道相机尊重 UI 捕获、失焦和 Home", "[example][model-view
   CHECK(close(camera.distance(), home_distance));
 }
 
-TEST_CASE("轨道相机零尺寸暂停且恢复时不累积移动", "[example][model-viewer][camera]") {
+TEST_CASE("轨道相机零尺寸暂停且恢复时不累积移动", "[tutorial][model-viewer][camera]") {
   granit::example::model_viewer::orbit_camera camera;
   CHECK_FALSE(camera.update({.pointer_delta_x = 500, .orbiting = true}, 0, 0));
   CHECK(camera.yaw() == 0.0F);
@@ -100,7 +100,7 @@ TEST_CASE("轨道相机零尺寸暂停且恢复时不累积移动", "[example][m
 }
 
 TEST_CASE("轨道相机为空场景提供有限默认状态并支持平移后重新聚焦",
-          "[example][model-viewer][camera]") {
+          "[tutorial][model-viewer][camera]") {
   granit::example::model_viewer::orbit_camera camera;
   granit::example::model_viewer::camera_matrices defaults;
   REQUIRE(camera.matrices(1280, 720, defaults));

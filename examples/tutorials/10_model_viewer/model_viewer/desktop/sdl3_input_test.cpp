@@ -5,7 +5,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("SDL3 输入累积鼠标操作并在帧边界清空增量", "[example][model-viewer][sdl3]") {
+TEST_CASE("SDL3 输入累积鼠标操作并在帧边界清空增量", "[tutorial][model-viewer][sdl3]") {
   using granit::example::model_viewer::desktop::sdl3_input;
   sdl3_input adapter;
   adapter.begin_frame();
@@ -36,7 +36,7 @@ TEST_CASE("SDL3 输入累积鼠标操作并在帧边界清空增量", "[example]
   CHECK_FALSE(input.mouse_captured);
 }
 
-TEST_CASE("SDL3 输入处理快捷键、滚轮方向与焦点丢失", "[example][model-viewer][sdl3]") {
+TEST_CASE("SDL3 输入处理快捷键、滚轮方向与焦点丢失", "[tutorial][model-viewer][sdl3]") {
   using granit::example::model_viewer::desktop::sdl3_input;
   sdl3_input adapter;
   adapter.begin_frame();
@@ -68,7 +68,7 @@ TEST_CASE("SDL3 输入处理快捷键、滚轮方向与焦点丢失", "[example]
   CHECK_FALSE(input.panning);
 }
 
-TEST_CASE("SDL3 输入在指针离开窗口时终止拖动", "[example][model-viewer][sdl3]") {
+TEST_CASE("SDL3 输入在指针离开窗口时终止拖动", "[tutorial][model-viewer][sdl3]") {
   using granit::example::model_viewer::desktop::sdl3_input;
   sdl3_input adapter;
   SDL_Event event{};
@@ -82,7 +82,7 @@ TEST_CASE("SDL3 输入在指针离开窗口时终止拖动", "[example][model-vi
   CHECK_FALSE(input.orbiting);
 }
 
-TEST_CASE("SDL3 输入跨过帧构造背压后才被消费", "[example][model-viewer][sdl3]") {
+TEST_CASE("SDL3 输入跨过帧构造背压后才被消费", "[tutorial][model-viewer][sdl3]") {
   using granit::example::model_viewer::desktop::sdl3_input;
   sdl3_input adapter;
   // 第一帧按下并拖动。
@@ -115,7 +115,7 @@ TEST_CASE("SDL3 输入跨过帧构造背压后才被消费", "[example][model-vi
   CHECK(adapter.merged_input_frames() == 2);
 }
 
-TEST_CASE("SDL3 输入按照按钮按下位置锁定拖动所有权", "[example][model-viewer][sdl3]") {
+TEST_CASE("SDL3 输入按照按钮按下位置锁定拖动所有权", "[tutorial][model-viewer][sdl3]") {
   using granit::example::model_viewer::desktop::sdl3_input;
   sdl3_input adapter;
   SDL_Event event{};

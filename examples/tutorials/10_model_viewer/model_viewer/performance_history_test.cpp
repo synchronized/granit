@@ -5,7 +5,7 @@
 
 #include <catch2/catch_all.hpp>
 
-TEST_CASE("性能历史限制为 240 帧并计算分位数", "[example][model-viewer][performance]") {
+TEST_CASE("性能历史限制为 240 帧并计算分位数", "[tutorial][model-viewer][performance]") {
   granit::example::model_viewer::performance_history history;
   for (int value = 1; value <= 300; ++value)
     history.push({.frames_per_second = static_cast<float>(value),
@@ -24,7 +24,7 @@ TEST_CASE("性能历史限制为 240 帧并计算分位数", "[example][model-vi
   CHECK(summary.gpu_frame_ms.maximum == 300.0F);
 }
 
-TEST_CASE("性能历史不使用不可用 GPU 零值", "[example][model-viewer][performance]") {
+TEST_CASE("性能历史不使用不可用 GPU 零值", "[tutorial][model-viewer][performance]") {
   granit::example::model_viewer::performance_history history;
   history.push({.cpu_frame_ms = 2.0F});
   const auto summary = history.summarize();

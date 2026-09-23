@@ -224,7 +224,7 @@ bool write_profile(const std::filesystem::path& path, const granit::renderer_inf
 }
 
 void print_usage() {
-  std::cerr << "用法：granit_model_viewer_example --asset <文件> "
+  std::cerr << "用法：granit_tutorial_10_model_viewer --asset <文件> "
                "[--environment <文件.grenv>] "
                "[--backend=auto|vulkan] "
                "[--validation] [--smoke-test] [--no-ui] "

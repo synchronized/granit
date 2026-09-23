@@ -7,7 +7,7 @@
 
 namespace desktop = granit::example::model_viewer::desktop;
 
-TEST_CASE("桌面显示结果映射到明确恢复策略", "[example][model-viewer][desktop]") {
+TEST_CASE("桌面显示结果映射到明确恢复策略", "[tutorial][model-viewer][desktop]") {
   CHECK(desktop::classify_presentation_result(granit::result::success) ==
         desktop::presentation_action::proceed);
   CHECK(desktop::classify_presentation_result(granit::result::not_ready) ==

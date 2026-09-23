@@ -24,8 +24,10 @@
 
 - 教程和 Model Viewer 的普通 C++ 路径统一使用 RAII 对象、`renderer_ref` 及 Mesh、Material、
   Scene、Texture View、Canvas 等强类型引用；原始句柄转换集中保留在 C 回调和 Web C 平台壳边界。
-- `examples/samples` 只保留 ImGui 与 Model Viewer 综合应用；删除已由 Tutorial 01/02 和自动测试
-  覆盖的 Minimal Renderer 与离屏 Triangle 重复示例。
+- Model Viewer 已迁移为 Tutorial 10，并由 `granit_tutorial_10_model_viewer`、
+  `granit_tutorial_10_model_viewer_web` 和 `granit_tutorial_10_model_viewer_offscreen_acceptance`
+  接管桌面、浏览器与离屏入口；`examples/samples` 只保留独立的 ImGui 集成示例。
+- 删除已由 Tutorial 01/02 和自动测试覆盖的 Minimal Renderer 与离屏 Triangle 重复示例。
 
 ## 0.28.1 - 2026-09-23
 

@@ -9,18 +9,18 @@ add_library(
   "${CMAKE_CURRENT_LIST_DIR}/application.h"
   "${PROJECT_SOURCE_DIR}/examples/common/web/fetch.cpp"
   "${PROJECT_SOURCE_DIR}/examples/common/web/fetch.h"
-  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/web/web_input.cpp"
-  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/web/web_input.h"
+  "${PROJECT_SOURCE_DIR}/examples/tutorials/10_model_viewer/model_viewer/web/web_input.cpp"
+  "${PROJECT_SOURCE_DIR}/examples/tutorials/10_model_viewer/model_viewer/web/web_input.h"
 )
 target_compile_features(granit_web_model_viewer_platform PUBLIC cxx_std_20)
 target_include_directories(
   granit_web_model_viewer_platform
-  PUBLIC "${PROJECT_SOURCE_DIR}/examples/samples"
+  PUBLIC "${PROJECT_SOURCE_DIR}/examples/tutorials/10_model_viewer"
          "${PROJECT_SOURCE_DIR}/examples/common"
 )
 target_link_libraries(
   granit_web_model_viewer_platform
-  PUBLIC granit::granit granit::window granit_example_model_viewer_support granit_example_web
+  PUBLIC granit::granit granit::window granit_tutorial_10_model_viewer_support granit_example_web
 )
 granit_target_webgpu(granit_web_model_viewer_platform)
 granit_target_compile_warnings(granit_web_model_viewer_platform)
@@ -31,16 +31,18 @@ target_link_options(
 )
 
 # 面向使用者的浏览器模型查看器默认加载 Khronos Flight Helmet；`?model=<URL>` 可覆盖资产。
-add_executable(granit_model_viewer_web "${CMAKE_CURRENT_LIST_DIR}/main.cpp")
-target_compile_features(granit_model_viewer_web PRIVATE cxx_std_20)
+add_executable(granit_tutorial_10_model_viewer_web "${CMAKE_CURRENT_LIST_DIR}/main.cpp")
+target_compile_features(granit_tutorial_10_model_viewer_web PRIVATE cxx_std_20)
 target_link_libraries(
-  granit_model_viewer_web PRIVATE granit::granit granit_web_model_viewer_platform
+  granit_tutorial_10_model_viewer_web PRIVATE granit::granit granit_web_model_viewer_platform
 )
 
 set_target_properties(
-  granit_model_viewer_web
-  PROPERTIES OUTPUT_NAME granit_model_viewer_web FOLDER "Examples"
+  granit_tutorial_10_model_viewer_web
+  PROPERTIES OUTPUT_NAME granit_tutorial_10_model_viewer_web FOLDER "Examples/Tutorials"
 )
-granit_target_compile_warnings(granit_model_viewer_web)
+granit_target_compile_warnings(granit_tutorial_10_model_viewer_web)
 
-granit_target_web_page(granit_model_viewer_web "${CMAKE_CURRENT_LIST_DIR}/model_viewer_shell.html")
+granit_target_web_page(
+  granit_tutorial_10_model_viewer_web "${CMAKE_CURRENT_LIST_DIR}/model_viewer_shell.html"
+)

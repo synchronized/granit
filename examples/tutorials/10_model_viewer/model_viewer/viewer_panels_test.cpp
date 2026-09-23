@@ -17,7 +17,7 @@ struct imgui_context {
 
 } // namespace
 
-TEST_CASE("材质缩略图按 Image 与颜色空间查找", "[example][model-viewer][imgui][texture]") {
+TEST_CASE("材质缩略图按 Image 与颜色空间查找", "[tutorial][model-viewer][imgui][texture]") {
   using namespace granit::example;
   const std::array previews{
       model_viewer::texture_preview{.image = 2, .sampler = 4, .srgb = true, .texture = 11},
@@ -33,7 +33,7 @@ TEST_CASE("材质缩略图按 Image 与颜色空间查找", "[example][model-vie
   CHECK(texture == ImTextureID_Invalid);
 }
 
-TEST_CASE("查看器 ImGui 面板可在无平台后端上下文中构建", "[example][model-viewer][imgui]") {
+TEST_CASE("查看器 ImGui 面板可在无平台后端上下文中构建", "[tutorial][model-viewer][imgui]") {
   imgui_context context;
   auto& io = ImGui::GetIO();
   io.IniFilename = nullptr;

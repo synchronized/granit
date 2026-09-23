@@ -21,6 +21,7 @@
 
 ## 稳定化与跨平台
 
+- [2026-09-23 S-50 Model Viewer 教程迁移验收](2026-09-23-s50-model-viewer-tutorial-acceptance.md)
 - [2026-09-23 S-48 线性教程本地验收](2026-09-23-s48-linear-tutorial-acceptance.md)
 - [2026-09-16 S-45 文档一致性基线](2026-09-16-s45-documentation-baseline.md)
 - [2026-09-16 Granit 0.25.0 发布验收](2026-09-16-v0.25.0-release-acceptance.md)

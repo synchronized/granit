@@ -5,7 +5,7 @@
 
 本文负责 Emscripten 构建、浏览器服务、安装 Consumer 和通用自动化验证。模型查看器的资产准备、
 桌面运行和性能验收见[跨后端模型查看器指南](model-viewer.md)。浏览器构建同时提供正式的
-`granit_model_viewer_web` 和自动化
+`granit_tutorial_10_model_viewer_web` 和自动化
 `granit_web_platform_smoke`。两者复用同一个 Model Viewer Core；正式目标默认从 Khronos 加载
 Flight Helmet，Smoke 使用仓库内的小型确定性 Fixture。动态 Uniform、纹理传输和帧生命周期的
 测试图形只会由 Smoke 目标呈现，正式 Model Viewer 不会在模型出现前显示测试方块。浏览器端不会
@@ -26,7 +26,7 @@ Windows 已安装但尚未导入 emsdk 环境时，先执行：
 ## 构建与运行
 
 核心库由 `src/CMakeLists.txt` 统一定义，浏览器后端由 `src/backend/webgpu/CMakeLists.txt` 配置。
-模型查看器入口与共享运行层位于 `examples/samples/model_viewer/web/`，平台验证和浏览器测试驱动
+模型查看器入口与共享运行层位于 `examples/tutorials/10_model_viewer/model_viewer/web/`，平台验证和浏览器测试驱动
 位于 `tests/web/`。
 正式示例和测试使用独立入口，测试通过启动回调复用模型加载、输入和渲染循环。
 
@@ -43,13 +43,13 @@ python -m http.server 8000 --directory build/emscripten-release/web
 查看正式模型：
 
 ```text
-http://127.0.0.1:8000/granit_model_viewer_web.html
+http://127.0.0.1:8000/granit_tutorial_10_model_viewer_web.html
 ```
 
 可用 `model` 查询参数加载另一份 glTF/GLB。相对资源 URI 会以模型 URL 所在目录为基准解析：
 
 ```text
-http://127.0.0.1:8000/granit_model_viewer_web.html?model=https%3A%2F%2Fexample.com%2Fmodel.gltf
+http://127.0.0.1:8000/granit_tutorial_10_model_viewer_web.html?model=https%3A%2F%2Fexample.com%2Fmodel.gltf
 ```
 
 远程服务器必须允许跨域访问模型及其外部 Buffer、纹理。页面必须通过 HTTP 服务打开，不能直接
@@ -86,7 +86,7 @@ npm test -- ../../build/emscripten-release/web
 启用测试构建后，共用产物目录中会部署本地 Fixture，正式目标也可使用它做快速回归：
 
 ```powershell
-npm test -- ../../build/emscripten-release/web granit_model_viewer_web.html `
+npm test -- ../../build/emscripten-release/web granit_tutorial_10_model_viewer_web.html `
   model_viewer_fixture.gltf
 ```
 

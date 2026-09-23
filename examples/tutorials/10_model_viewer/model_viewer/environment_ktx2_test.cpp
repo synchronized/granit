@@ -46,7 +46,7 @@ std::vector<std::byte> valid_ktx2() {
 
 } // namespace
 
-TEST_CASE("环境工具只接受未压缩RGBA16F KTX2 Cube", "[example][model-viewer][environment]") {
+TEST_CASE("环境工具只接受未压缩RGBA16F KTX2 Cube", "[tutorial][model-viewer][environment]") {
   using namespace granit::example::model_viewer;
   auto bytes = valid_ktx2();
   environment_ktx2_cube cube;
