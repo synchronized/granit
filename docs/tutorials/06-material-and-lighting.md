@@ -11,12 +11,12 @@ Material 是参考 Render Pipeline 的输入，低层 Command Recorder 不公开
 
 ## 1. 在构建期生成资产
 
-Shader 源仍然是 HLSL。CMake 先从 `pbr_standard.grshlib.json` 构建跨后端 Shader Library 和索引，
-再用索引解析材质清单中的稳定 Shader Content ID，生成 `.grmat`：
+Shader 源仍然是 HLSL。CMake 先从 `pbr_standard.grshlib.json` 构建带逻辑名称表的跨后端 Shader
+Library，再从 Library 解析材质清单中的稳定 Shader Content ID，生成 `.grmat`：
 
 ```text
-pbr_standard.hlsl + .grshlib.json → .grshlib + .grshidx.json
-.grmat.json + .grshidx.json       → .grmat
+pbr_standard.hlsl + .grshlib.json → .grshlib
+.grmat.json + .grshlib            → .grmat
 ```
 
 运行时只读取 `.grshlib` 和 `.grmat`，不会调用 DXC、Tint 或解析工具侧 JSON。完整构建规则见

@@ -18,8 +18,6 @@ int main(int argc, char** argv) {
     return build_shader_fixture_object(argc, argv);
   if (argc >= 2 && std::string_view{argv[1]} == "library")
     return link_shader_fixture_library(argc, argv);
-  if (argc >= 2 && std::string_view{argv[1]} == "object-ids")
-    return emit_shader_fixture_object_ids(argc, argv);
   print_usage();
   return 2;
 }

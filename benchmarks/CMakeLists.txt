@@ -202,12 +202,12 @@ add_custom_command(
   COMMAND
     granit_asset_tool material build
     "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit_canvas.grmat.json"
-    --output "${granit_canvas_benchmark_package}" --shader-index
-    "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/canvas.grshidx.json"
+    --output "${granit_canvas_benchmark_package}" --shader-library
+    "${PROJECT_SOURCE_DIR}/assets/generated/embedded/pipeline/unlit_canvas.grshlib"
   DEPENDS
     granit_asset_tool
     "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit_canvas.grmat.json"
-    "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/canvas.grshidx.json"
+    "${PROJECT_SOURCE_DIR}/assets/generated/embedded/pipeline/unlit_canvas.grshlib"
   VERBATIM
 )
 add_executable(granit_canvas_gpu_benchmarks canvas_gpu_main.cpp "${granit_canvas_benchmark_package}")
@@ -290,12 +290,12 @@ add_custom_command(
   COMMAND
     granit_asset_tool material build
     "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/render_pipeline_workload.grmat.json"
-    --output "${granit_render_pipeline_benchmark_package}" --shader-index
-    "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/pbr.grshidx.json"
+    --output "${granit_render_pipeline_benchmark_package}" --shader-library
+    "${GRANIT_PBR_TEST_SHADER_LIBRARY}"
   DEPENDS
     granit_asset_tool
     "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/render_pipeline_workload.grmat.json"
-    "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/pbr.grshidx.json"
+    "${GRANIT_PBR_TEST_SHADER_LIBRARY}"
   VERBATIM
 )
 add_executable(

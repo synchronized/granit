@@ -72,15 +72,21 @@ GRANIT_API granit_result granit_shader_library_get_info(granit_renderer renderer
                                                         granit_shader_library library,
                                                         granit_shader_library_info* info);
 /**
- * 按内容 ID 选择当前 Renderer 支持的变体并取得 Shader。
+ * 按 Library 内的逻辑名称选择当前 Renderer 支持的变体并取得 Shader。
  *
  * 成功返回的 Shader 由调用者通过 granit_shader_destroy 销毁。相同 Library 与内容 ID 复用同一个
  * 后端 Shader。Shader 或引用它的 Pipeline 存活期间，销毁 Library 返回
  * GRANIT_ERROR_RESOURCE_IN_USE。
  */
-GRANIT_API granit_result
-granit_shader_create_from_library(granit_renderer renderer, granit_shader_library library,
-                                  const granit_shader_content_id content_id, granit_shader* shader);
+GRANIT_API granit_result granit_shader_create_from_library_name(granit_renderer renderer,
+                                                                granit_shader_library library,
+                                                                const char* logical_name,
+                                                                uint64_t logical_name_length,
+                                                                granit_shader* shader);
+/** 按内容 ID 创建 Shader，供资产系统和缓存等高级用法使用。 */
+GRANIT_API granit_result granit_shader_create_from_library_content_id(
+    granit_renderer renderer, granit_shader_library library,
+    const granit_shader_content_id content_id, granit_shader* shader);
 /** 销毁 Shader Library 并立即使公开句柄失效。 */
 GRANIT_API granit_result granit_shader_library_destroy(granit_renderer renderer,
                                                        granit_shader_library library);

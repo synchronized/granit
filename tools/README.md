@@ -40,7 +40,7 @@ granit_asset_tool shader compile --toolchain path/to/granit-shader-toolchain `
   --define GRANIT_PBR_TEXTURE_MASK=31 --define GRANIT_PBR_LIGHTS=1 `
   --spirv-output shader.spv --wgsl-output shader.wgsl
 granit_asset_tool material build material.grmat.json --output material.grmat `
-  --shader-index library.grshidx.json
+  --shader-library library.grshlib
 granit_asset_tool material inspect material.grmat --json
 granit_asset_tool texture build --output texture.grtex --payload-output texture.bin `
   --dimension 2d --width 1024 --height 1024 --depth 1 --layers 1 --mips 11 `

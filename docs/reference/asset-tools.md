@@ -5,9 +5,9 @@
 
 AssetTools 是供编辑器、资产构建器和命令行工具直接链接的可选组件。Shader 领域通过 Compiler
 调用锁定版本的 DXC 与 Tint，将 HLSL 编译为离线 Shader 产物，并检查 SPIR-V 的入口点、阶段和
-反射。Material 领域从源 JSON 与 Shader 逻辑索引构建和检查 `.grmat`。Texture 领域从已经编码的
-GPU 格式变体生成 Manifest 与合并负载。Environment 领域从预处理 RGBA16F 像素构建和检查
-`.grenv`。AssetTools 不进入核心渲染库的传递依赖。
+反射。Material 领域从源 JSON 与包含逻辑名称表的 `.grshlib` 构建和检查 `.grmat`。Texture 领域从
+已经编码的 GPU 格式变体生成 Manifest 与合并负载。Environment 领域从预处理 RGBA16F 像素构建
+和检查 `.grenv`。AssetTools 不进入核心渲染库的传递依赖。
 
 ## 构建与链接
 
@@ -86,14 +86,12 @@ ID，也不可保存到文件或跨进程使用。不同结果的查询仍可并
 - `.grshlib` 是 Core 的公共运行时资产；`.grshaderobj` 的链接、裁剪、去重和原子写入只由
   Library Builder 在工具内部执行。
 - `granit_asset_tools_shader_build_library_from_manifest` 是 HLSL-first 的高层构建入口。它读取
-  `.grshlib.json`，按逻辑名称和变体编译 HLSL，管理私有 `.grshaderobj` 缓存，并一次写出
-  `.grshlib` 与 `.grshidx.json`。C++ 包装使用 `source_library_desc`；CLI 对应 `build-library`。
-  `cache_hit` 只在全部 Object、Library 和索引均未变化时为真。
-- CMake 的 `granit_add_hlsl_shader_library` 接收 `MANIFEST`、`SOURCES`、`OUTPUT`、`INDEX` 和
-  `CACHE_DIR`。`SOURCES` 只声明构建依赖；清单解析、变体规范化、缓存身份和资产编码仍由
-  AssetTools 处理。可选的 `REFERENCE` 与 `INDEX_REFERENCE` 用于逐字节校验发布快照。
-- CLI 的 `index-ids` 从 `.grshidx.json` 按逻辑名称生成 C++ 内容 ID 常量，供内嵌资产代码使用；
-  它不读取或暴露私有 `.grshaderobj` 缓存路径。
+  `.grshlib.json`，按逻辑名称和变体编译 HLSL，管理私有 `.grshaderobj` 缓存，并写出包含名称表的
+  `.grshlib`。C++ 包装使用 `source_library_desc`；CLI 对应 `build-library`。`cache_hit` 只在全部
+  Object 和 Library 均未变化时为真。
+- CMake 的 `granit_add_hlsl_shader_library` 接收 `MANIFEST`、`SOURCES`、`OUTPUT` 和 `CACHE_DIR`。
+  `SOURCES` 只声明构建依赖；清单解析、变体规范化、缓存身份和资产编码仍由 AssetTools 处理。
+  可选的 `REFERENCE` 用于逐字节校验发布快照。
 - HLSL portable 路径让 DXC 直接生成最终 Vulkan 1.3 SPIR-V；另行生成临时 Vulkan 1.1 /
   SPIR-V 1.3 中间文件供锁定 Tint 的 SPIR-V Reader 转换 WGSL，并要求两份 SPIR-V 的反射契约
   一致。临时文件不会进入资产。DXC 或 Tint 拒绝源代码及其能力时，调用返回
@@ -110,8 +108,6 @@ ID，也不可保存到文件或跨进程使用。不同结果的查询仍可并
   CLI 的 `targets` 列出目标，`capabilities --target <name>` 查询对应能力。当前提供
   `vulkan-portable` 和 `webgpu-portable`，二者均不声明额外可选特性。
 - Library Builder 将目标后端和必需特性纳入缓存键与变体记录。
-- `granit_asset_tools_shader_index_find_content_id` 从内存中的 `.grshidx.json` 查询逻辑 Shader 名称，
-  供 CLI 和上游资产管线生成稳定内容 ID 引用，无需访问 SDK 私有 JSON 类型。
 - `granit_asset_tools_shader_reflection_get_binding_count` 和
   `granit_asset_tools_shader_reflection_get_binding` 按
   Group、Binding 数字顺序返回结构化绑定。记录包含资源类型、访问模式、数组数量和 Buffer
@@ -143,9 +139,9 @@ ID，也不可保存到文件或跨进程使用。不同结果的查询仍可并
 
 - C11 入口位于 `<granit/asset_tools/material_builder.h>`，C++20 包装位于对应 `.hpp`，命名空间为
   `granit::asset_tools::material`。
-- `granit_asset_tools_material_build` 接收 Material 源 JSON 和一个或多个内存中的
-  `.grshidx.json`，在 SDK 内将逻辑 Shader 名称解析为内容 ID，并生成确定性的 `.grmat` 与稳定
-  调试 JSON。最终资产不保存索引路径。
+- `granit_asset_tools_material_build` 接收 Material 源 JSON 和一个或多个内存中的 `.grshlib`，在
+  SDK 内从 Library 自带的名称表解析内容 ID，并生成确定性的 `.grmat` 与稳定调试 JSON。最终资产
+  不保存逻辑名称或 Library 路径。
 - `granit_asset_tools_material_inspect` 从内存检查已有 `.grmat`，使用与 Runtime 相同的格式实现。
   build 和 inspect 均返回移动独占的结果句柄；Archive、调试 JSON 和诊断视图在句柄销毁前有效。
 - 描述结构无效时不创建结果；输入内容或资产语义无效时返回 `invalid_argument`，并尽量返回包含

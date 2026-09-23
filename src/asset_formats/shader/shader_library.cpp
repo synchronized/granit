@@ -17,12 +17,13 @@ namespace {
 
 constexpr std::array magic{std::byte{'G'}, std::byte{'R'}, std::byte{'N'}, std::byte{'S'},
                            std::byte{'H'}, std::byte{'L'}, std::byte{'B'}, std::byte{0}};
-constexpr std::uint32_t schema = 1;
+constexpr std::uint32_t schema = 2;
 // 固定表位于文件头之后，字符串区和八字节对齐的载荷区依次排列。
-constexpr std::size_t header_size = 128;
+constexpr std::size_t header_size = 160;
 constexpr std::size_t shader_record_size = 112;
 constexpr std::size_t variant_record_size = 64;
 constexpr std::size_t payload_record_size = 64;
+constexpr std::size_t name_record_size = 24;
 constexpr std::size_t digest_offset = 80;
 
 std::uint32_t read_u32(std::span<const std::byte> bytes, std::size_t offset) noexcept {
@@ -110,6 +111,11 @@ struct encoded_payload {
   std::vector<std::byte> bytes;
 };
 
+struct encoded_name {
+  std::string name;
+  shader_content_id content_id{};
+};
+
 bool same_shader(const encoded_shader& left, const encoded_shader& right) noexcept {
   return left.content_id == right.content_id && left.cache_key == right.cache_key &&
          left.stage == right.stage && left.entry_point == right.entry_point &&
@@ -136,15 +142,19 @@ std::span<const std::byte> source_payload(const shader_library_object_source& so
 shader_library_error encode_shader_library(const shader_library_encode_desc& desc,
                                            std::vector<std::byte>& output) noexcept {
   output.clear();
-  if (desc.objects.empty() || desc.backend_mask == 0 ||
+  if (desc.objects.empty() || desc.library_name.empty() || desc.backend_mask == 0 ||
       (desc.backend_mask & ~GRANIT_SHADER_BACKEND_ALL_BITS) != 0) {
     return shader_library_error::invalid_argument;
   }
   try {
     std::vector<encoded_shader> shaders;
+    std::vector<encoded_name> names;
     std::vector<encoded_payload> payloads;
     shaders.reserve(desc.objects.size());
+    names.reserve(desc.objects.size());
     for (const auto& source : desc.objects) {
+      if (source.logical_name.empty())
+        return shader_library_error::invalid_argument;
       shader_object_view object;
       if (decode_shader_object(source.manifest, object) != shader_object_error::success)
         return shader_library_error::invalid_shader_object;
@@ -176,6 +186,7 @@ shader_library_error encode_shader_library(const shader_library_encode_desc& des
         shader.variants.push_back(library_variant);
       }
       std::ranges::sort(shader.variants, {}, &shader_library_variant::backend);
+      names.push_back({std::string{source.logical_name}, shader.content_id});
       shaders.push_back(std::move(shader));
     }
     // 内容身份决定记录顺序，使输入枚举顺序不影响最终 Library。
@@ -187,11 +198,22 @@ shader_library_error encode_shader_library(const shader_library_encode_desc& des
       }
     }
     shaders.erase(std::unique(shaders.begin(), shaders.end(), same_shader), shaders.end());
+    std::ranges::sort(names, {}, &encoded_name::name);
+    for (std::size_t index = 1; index < names.size(); ++index) {
+      if (names[index - 1].name == names[index].name &&
+          names[index - 1].content_id != names[index].content_id)
+        return shader_library_error::conflicting_shader;
+    }
+    names.erase(std::unique(names.begin(), names.end(),
+                            [](const auto& left, const auto& right) {
+                              return left.name == right.name && left.content_id == right.content_id;
+                            }),
+                names.end());
     std::ranges::sort(payloads, {}, &encoded_payload::digest);
-    if (shaders.size() > UINT32_MAX || payloads.size() > UINT32_MAX)
+    if (shaders.size() > UINT32_MAX || names.size() > UINT32_MAX || payloads.size() > UINT32_MAX)
       return shader_library_error::invalid_argument;
     std::size_t variant_count = 0;
-    std::size_t string_size = 0;
+    std::size_t string_size = desc.library_name.size();
     for (const auto& shader : shaders) {
       if (!checked_add(variant_count, shader.variants.size(), variant_count) ||
           !checked_add(string_size, shader.reflection_json.size(), string_size) ||
@@ -199,15 +221,21 @@ shader_library_error encode_shader_library(const shader_library_encode_desc& des
         return shader_library_error::invalid_argument;
       }
     }
+    for (const auto& name : names) {
+      if (!checked_add(string_size, name.name.size(), string_size))
+        return shader_library_error::invalid_argument;
+    }
     if (variant_count > UINT32_MAX)
       return shader_library_error::invalid_argument;
     std::size_t variant_offset = 0;
     std::size_t payload_offset = 0;
+    std::size_t name_offset = 0;
     std::size_t string_offset = 0;
     std::size_t payload_data_offset = 0;
     if (!checked_table(header_size, shaders.size(), shader_record_size, variant_offset) ||
         !checked_table(variant_offset, variant_count, variant_record_size, payload_offset) ||
-        !checked_table(payload_offset, payloads.size(), payload_record_size, string_offset) ||
+        !checked_table(payload_offset, payloads.size(), payload_record_size, name_offset) ||
+        !checked_table(name_offset, names.size(), name_record_size, string_offset) ||
         !checked_add(string_offset, string_size, payload_data_offset) ||
         !align_eight(payload_data_offset, payload_data_offset)) {
       return shader_library_error::invalid_argument;
@@ -231,11 +259,17 @@ shader_library_error encode_shader_library(const shader_library_encode_desc& des
     write_u64(output, 40, header_size);
     write_u64(output, 48, variant_offset);
     write_u64(output, 56, payload_offset);
-    write_u64(output, 64, string_offset);
-    write_u64(output, 72, payload_data_offset);
+    write_u64(output, 64, name_offset);
+    write_u64(output, 72, string_offset);
+    write_u64(output, 112, payload_data_offset);
+    write_u64(output, 120, string_offset);
+    write_u64(output, 128, desc.library_name.size());
+    write_u32(output, 136, static_cast<std::uint32_t>(names.size()));
 
     std::size_t next_variant = 0;
     std::size_t next_string = string_offset;
+    std::memcpy(output.data() + next_string, desc.library_name.data(), desc.library_name.size());
+    next_string += desc.library_name.size();
     for (std::size_t shader_index = 0; shader_index < shaders.size(); ++shader_index) {
       const auto& shader = shaders[shader_index];
       const auto record = header_size + shader_index * shader_record_size;
@@ -271,6 +305,20 @@ shader_library_error encode_shader_library(const shader_library_encode_desc& des
                           output.begin() + static_cast<std::ptrdiff_t>(variant_record + 32));
         ++next_variant;
       }
+    }
+
+    for (std::size_t index = 0; index < names.size(); ++index) {
+      const auto& name = names[index];
+      const auto shader =
+          std::ranges::lower_bound(shaders, name.content_id, {}, &encoded_shader::content_id);
+      if (shader == shaders.end() || shader->content_id != name.content_id)
+        return shader_library_error::invalid_argument;
+      const auto record = name_offset + index * name_record_size;
+      write_u64(output, record, next_string);
+      write_u64(output, record + 8, name.name.size());
+      write_u32(output, record + 16, static_cast<std::uint32_t>(shader - shaders.begin()));
+      std::memcpy(output.data() + next_string, name.name.data(), name.name.size());
+      next_string += name.name.size();
     }
 
     std::size_t next_payload = payload_data_offset;
@@ -310,23 +358,32 @@ shader_library_error decode_shader_library(std::span<const std::byte> bytes,
   const auto shader_offset = read_u64(bytes, 40);
   const auto variant_offset = read_u64(bytes, 48);
   const auto payload_offset = read_u64(bytes, 56);
-  const auto string_offset = read_u64(bytes, 64);
-  const auto payload_data_offset = read_u64(bytes, 72);
+  const auto name_offset = read_u64(bytes, 64);
+  const auto string_offset = read_u64(bytes, 72);
+  const auto payload_data_offset = read_u64(bytes, 112);
+  const auto library_name_offset = read_u64(bytes, 120);
+  const auto library_name_size = read_u64(bytes, 128);
+  const auto name_count = read_u32(bytes, 136);
   if (read_u32(bytes, 12) != header_size || read_u64(bytes, 16) != bytes.size() ||
-      shader_count == 0 || variant_count == 0 || payload_count == 0 || backend_mask == 0 ||
+      shader_count == 0 || variant_count == 0 || payload_count == 0 || name_count == 0 ||
+      library_name_size == 0 || backend_mask == 0 ||
       (backend_mask & ~GRANIT_SHADER_BACKEND_ALL_BITS) != 0 || shader_offset != header_size ||
-      !zero_range(bytes.subspan(112, 16))) {
+      !zero_range(bytes.subspan(140, 20))) {
     return shader_library_error::invalid_layout;
   }
   std::size_t expected_variant = 0;
   std::size_t expected_payload = 0;
+  std::size_t expected_name = 0;
   std::size_t expected_string = 0;
   if (!checked_table(header_size, shader_count, shader_record_size, expected_variant) ||
       !checked_table(expected_variant, variant_count, variant_record_size, expected_payload) ||
-      !checked_table(expected_payload, payload_count, payload_record_size, expected_string) ||
+      !checked_table(expected_payload, payload_count, payload_record_size, expected_name) ||
+      !checked_table(expected_name, name_count, name_record_size, expected_string) ||
       variant_offset != expected_variant || payload_offset != expected_payload ||
-      string_offset != expected_string || payload_data_offset < string_offset ||
-      payload_data_offset > bytes.size() || payload_data_offset % 8 != 0) {
+      name_offset != expected_name || string_offset != expected_string ||
+      payload_data_offset < string_offset || payload_data_offset > bytes.size() ||
+      payload_data_offset % 8 != 0 || library_name_offset != string_offset ||
+      !valid_range(library_name_offset, library_name_size, string_offset, payload_data_offset)) {
     return shader_library_error::invalid_layout;
   }
   const auto expected_digest = sha256_bytes_with_zeroed_range(bytes, digest_offset, 32);
@@ -336,10 +393,13 @@ shader_library_error decode_shader_library(std::span<const std::byte> bytes,
     shader_library_view parsed;
     parsed.content_digest = expected_digest;
     parsed.backend_mask = backend_mask;
+    parsed.name = {reinterpret_cast<const char*>(bytes.data() + library_name_offset),
+                   static_cast<std::size_t>(library_name_size)};
     parsed.shaders.reserve(shader_count);
+    parsed.names.reserve(name_count);
     parsed.payloads.reserve(payload_count);
     std::size_t next_variant = 0;
-    std::uint64_t next_string = string_offset;
+    std::uint64_t next_string = library_name_offset + library_name_size;
     shader_content_id previous_shader{};
     for (std::size_t shader_index = 0; shader_index < shader_count; ++shader_index) {
       const auto record =
@@ -397,6 +457,24 @@ shader_library_error decode_shader_library(std::span<const std::byte> bytes,
       next_variant += shader_variant_count;
       previous_shader = shader.content_id;
       parsed.shaders.push_back(std::move(shader));
+    }
+    std::string_view previous_name;
+    for (std::size_t index = 0; index < name_count; ++index) {
+      const auto record = static_cast<std::size_t>(name_offset) + index * name_record_size;
+      const auto offset = read_u64(bytes, record);
+      const auto size = read_u64(bytes, record + 8);
+      const auto shader_index = read_u32(bytes, record + 16);
+      if (size == 0 || offset != next_string ||
+          !valid_range(offset, size, string_offset, payload_data_offset) ||
+          shader_index >= shader_count || read_u32(bytes, record + 20) != 0)
+        return shader_library_error::invalid_layout;
+      const std::string_view name{reinterpret_cast<const char*>(bytes.data() + offset),
+                                  static_cast<std::size_t>(size)};
+      if (index != 0 && !(previous_name < name))
+        return shader_library_error::invalid_layout;
+      parsed.names.push_back({name, parsed.shaders[shader_index].content_id});
+      previous_name = name;
+      next_string = offset + size;
     }
     if (next_variant != variant_count || next_string > payload_data_offset ||
         !zero_range(bytes.subspan(static_cast<std::size_t>(next_string),
@@ -456,6 +534,15 @@ find_shader_library_shader(const shader_library_view& library,
   const auto found =
       std::ranges::lower_bound(library.shaders, content_id, {}, &shader_library_shader::content_id);
   return found != library.shaders.end() && found->content_id == content_id ? &*found : nullptr;
+}
+
+const shader_library_shader* find_shader_library_shader(const shader_library_view& library,
+                                                        std::string_view logical_name) noexcept {
+  const auto found =
+      std::ranges::lower_bound(library.names, logical_name, {}, &shader_library_name::name);
+  return found == library.names.end() || found->name != logical_name
+             ? nullptr
+             : find_shader_library_shader(library, found->content_id);
 }
 
 } // namespace granit::detail::shader_format

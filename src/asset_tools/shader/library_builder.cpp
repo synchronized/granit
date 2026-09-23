@@ -91,11 +91,14 @@ struct owned_object {
 namespace granit::asset_tools::detail {
 
 granit_result link_shader_library(std::span<const std::filesystem::path> object_paths,
+                                  std::span<const std::string> logical_names,
+                                  std::string_view library_name,
                                   granit_shader_backend_flags target_backends,
                                   const std::filesystem::path& output_path,
                                   bool& cache_hit) noexcept {
   cache_hit = false;
-  if (object_paths.empty() || output_path.empty() || target_backends == 0 ||
+  if (object_paths.empty() || object_paths.size() != logical_names.size() || library_name.empty() ||
+      output_path.empty() || target_backends == 0 ||
       (target_backends & ~GRANIT_SHADER_BACKEND_ALL_BITS) != 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
@@ -121,10 +124,13 @@ granit_result link_shader_library(std::span<const std::filesystem::path> object_
     }
     std::vector<granit::detail::shader_format::shader_library_object_source> sources;
     sources.reserve(owned.size());
-    for (const auto& object : owned)
-      sources.push_back({object.manifest, object.wgsl, object.spirv});
+    for (std::size_t index = 0; index < owned.size(); ++index) {
+      const auto& object = owned[index];
+      sources.push_back({object.manifest, object.wgsl, object.spirv, logical_names[index]});
+    }
     std::vector<std::byte> library;
-    if (granit::detail::shader_format::encode_shader_library({sources, target_backends}, library) !=
+    if (granit::detail::shader_format::encode_shader_library(
+            {sources, target_backends, library_name}, library) !=
         granit::detail::shader_format::shader_library_error::success)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     if (std::ranges::equal(read_file(output_path), library)) {

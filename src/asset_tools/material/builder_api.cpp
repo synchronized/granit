@@ -4,9 +4,9 @@
 #include <granit/asset_tools/material_builder.h>
 
 #include "asset_formats/material/material_package_archive.h"
+#include "asset_formats/shader/shader_library.h"
 #include "asset_tools/material/debug_json.h"
 #include "asset_tools/material/source_json.h"
-#include "asset_tools/shader/library_source_manifest.h"
 #include "core/shared_handle_table.h"
 
 #include <algorithm>
@@ -63,35 +63,40 @@ granit_result granit_asset_tools_material_build(const granit_asset_tools_materia
   *result = 0;
   if (desc == nullptr || desc->struct_size < sizeof(*desc) || desc->reserved != 0 ||
       desc->reserved2 != 0 || !valid_bytes(desc->source_json, desc->source_json_length) ||
-      desc->source_json_length == 0 || desc->shader_index_count == 0 ||
-      desc->shader_index_count > 1024 || desc->shader_indices == nullptr)
+      desc->source_json_length == 0 || desc->shader_library_count == 0 ||
+      desc->shader_library_count > 1024 || desc->shader_libraries == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   try {
     auto value = std::make_shared<stored_material_result>();
     std::vector<granit::material::material_shader_reference> references;
     std::vector<std::string> libraries;
-    for (uint32_t index = 0; index < desc->shader_index_count; ++index) {
-      const auto& source = desc->shader_indices[index];
+    for (uint32_t index = 0; index < desc->shader_library_count; ++index) {
+      const auto& source = desc->shader_libraries[index];
       if (source.struct_size < sizeof(source) || source.reserved != 0 ||
-          !valid_bytes(source.json, source.json_length) || source.json_length == 0)
+          !valid_bytes(source.archive, source.archive_size) || source.archive_size == 0)
         return GRANIT_ERROR_INVALID_ARGUMENT;
-      granit::asset_tools::detail::shader_library_index shader_index;
-      const std::string_view json{source.json, static_cast<std::size_t>(source.json_length)};
-      if (granit::asset_tools::detail::parse_shader_library_index_json(json, shader_index) !=
-              granit::asset_tools::detail::shader_library_source_error::none ||
-          std::ranges::find(libraries, shader_index.library) != libraries.end()) {
-        return fail_with_result(std::move(value), "Shader Library 索引无效或 Library 名称重复\n",
+      granit::detail::shader_format::shader_library_view shader_library;
+      const auto archive = std::span{static_cast<const std::byte*>(source.archive),
+                                     static_cast<std::size_t>(source.archive_size)};
+      if (granit::detail::shader_format::decode_shader_library(archive, shader_library) !=
+              granit::detail::shader_format::shader_library_error::success ||
+          std::ranges::find(libraries, shader_library.name) != libraries.end()) {
+        return fail_with_result(std::move(value), "Shader Library 无效或 Library 名称重复\n",
                                 result);
       }
-      libraries.push_back(shader_index.library);
-      for (const auto& shader : shader_index.shaders) {
-        if (shader.stage == granit::shader_stage::compute)
+      libraries.emplace_back(shader_library.name);
+      for (const auto& name : shader_library.names) {
+        const auto* shader = granit::detail::shader_format::find_shader_library_shader(
+            shader_library, name.content_id);
+        if (shader == nullptr)
+          return GRANIT_ERROR_INTERNAL;
+        if (shader->stage == granit::shader_stage::compute)
           continue;
-        const auto stage = shader.stage == granit::shader_stage::vertex
+        const auto stage = shader->stage == granit::shader_stage::vertex
                                ? granit::material::package_shader_stage::vertex
                                : granit::material::package_shader_stage::fragment;
-        references.push_back(
-            {shader_index.library, shader.name, shader.content_id, stage, shader.entry_point});
+        references.push_back({std::string{shader_library.name}, std::string{name.name},
+                              shader->content_id, stage, std::string{shader->entry_point}});
       }
     }
 

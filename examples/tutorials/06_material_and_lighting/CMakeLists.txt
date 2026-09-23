@@ -3,7 +3,6 @@
 
 set(tutorial_generated_dir "${CMAKE_CURRENT_BINARY_DIR}/generated")
 set(tutorial_shader_library "${tutorial_generated_dir}/pbr_standard.grshlib")
-set(tutorial_shader_index "${tutorial_generated_dir}/pbr_standard.grshidx.json")
 set(tutorial_material "${tutorial_generated_dir}/pbr_standard.grmat")
 
 set(tutorial_pbr_source_dir "${PROJECT_SOURCE_DIR}/assets/sources/shaders/pbr")
@@ -11,7 +10,6 @@ granit_add_hlsl_shader_library(
   NAME tutorial_06_pbr
   MANIFEST "${tutorial_pbr_source_dir}/pbr_standard.grshlib.json"
   OUTPUT "${tutorial_shader_library}"
-  INDEX "${tutorial_shader_index}"
   CACHE_DIR "${tutorial_generated_dir}/cache"
   TARGET granit_tutorial_06_shader_library
   SOURCES "${tutorial_pbr_source_dir}/pbr_standard.hlsl"
@@ -23,11 +21,11 @@ add_custom_command(
   COMMAND "$<TARGET_FILE:granit_asset_tool>" material build
           "${PROJECT_SOURCE_DIR}/assets/sources/materials/pbr_standard.grmat.json"
           --output "${tutorial_material}"
-          --shader-index "${tutorial_shader_index}"
+          --shader-library "${tutorial_shader_library}"
   DEPENDS
     granit_asset_tool
     granit_tutorial_06_shader_library
-    "${tutorial_shader_index}"
+    "${tutorial_shader_library}"
     "${PROJECT_SOURCE_DIR}/assets/sources/materials/pbr_standard.grmat.json"
   VERBATIM
 )

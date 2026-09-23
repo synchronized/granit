@@ -15,7 +15,6 @@
 #include <string_view>
 #include <vector>
 
-#include "mesh_shader_ids.inc"
 #include "model_data.hpp"
 
 #ifndef GRANIT_TUTORIAL_05_SHADER_LIBRARY
@@ -273,9 +272,9 @@ private:
     if (result.ok())
       result = shader_library_.initialize(renderer_, shader_archive_);
     if (result.ok())
-      result = shader_library_.create_shader(mesh_vertex_id, vertex_shader_);
+      result = shader_library_.create_shader("mesh.vertex", vertex_shader_);
     if (result.ok())
-      result = shader_library_.create_shader(mesh_fragment_id, fragment_shader_);
+      result = shader_library_.create_shader("mesh.fragment", fragment_shader_);
     if (result.ok())
       result = initialize_texture_resources();
     if (result.ok())

@@ -44,9 +44,9 @@ RenderPipeline 资产根目录下的 `materials/pbr_standard.grmat` 是对应的
   `material`、`object`、`lighting`；前两组必需，使用 `lighting` 时也必须包含 `object`。Unlit 通常
   使用前三组，标准 PBR 使用全部四组。
 - v6 源 JSON 的每个 Shader 引用声明 `library`、`shader` 和可选的 `variant` 逻辑名称。Material
-  Tool 必须通过一个或多个 `--shader-index <file.grshidx.json>` 参数读取 Shader Library Builder
-  生成的索引，并在打包时解析为内容 ID、阶段和入口点。未知名称、重复 Library 或无效阶段组合会
-  使构建失败；最终 v5 归档不保存逻辑名称或索引路径。
+  Tool 必须通过一个或多个 `--shader-library <file.grshlib>` 参数读取 Shader Library，并在打包时
+  解析为内容 ID、阶段和入口点。未知名称、重复 Library 或无效阶段组合会使构建失败；最终 v5
+  归档不保存逻辑名称或 Library 路径。
 - `initial_updates` 在创建时整体应用；任何一步失败都不会产生 Material 句柄。
 - `granit_material_update` 批量更新参数。整批更新具有事务性：失败时保留原状态。
 - 空更新批次合法，可用于显式刷新或保持统一调用路径。

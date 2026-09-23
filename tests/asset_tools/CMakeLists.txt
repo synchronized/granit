@@ -34,7 +34,7 @@ if(GRANIT_TESTING_ENABLED)
     COMMAND
       granit_asset_tools_material_test
       "${granit_test_material_fixture_dir}/material_package_fixture.grmat.json"
-      "${granit_test_shader_fixture_dir}/material_fixture.grshidx.json"
+      "${granit_test_shader_fixture_dir}/material_fixture.grshlib"
   )
 
   add_executable(
@@ -51,7 +51,7 @@ if(GRANIT_TESTING_ENABLED)
     COMMAND
       granit_asset_tools_material_c_test
       "${granit_test_material_fixture_dir}/material_package_fixture.grmat.json"
-      "${granit_test_shader_fixture_dir}/material_fixture.grshidx.json"
+      "${granit_test_shader_fixture_dir}/material_fixture.grshlib"
   )
 
   add_executable(
@@ -267,39 +267,13 @@ if(GRANIT_TESTING_ENABLED)
     COMMAND granit_asset_tool inspect
   )
   set_tests_properties(granit.asset_tools.shader.reject_ungrouped_command PROPERTIES WILL_FAIL TRUE)
-  set(granit_shader_object_id_output
-      "${CMAKE_CURRENT_BINARY_DIR}/object-id-test/minimal_shader_ids.inc")
-  add_test(
-    NAME granit.asset_tools.shader.fixture.object_ids
-    COMMAND granit_shader_fixture_tool object-ids
-            --object
-            "minimal_vertex_id=${granit_shader_fixture_object_dir}/minimal.vert.grshaderobj"
-            --output "${granit_shader_object_id_output}"
-  )
-  add_test(
-    NAME granit.asset_tools.shader.fixture.object_ids_compare
-    COMMAND "${CMAKE_COMMAND}" -E compare_files "${granit_shader_object_id_output}"
-            "${granit_test_shader_fixture_dir}/minimal_shader_ids.inc"
-  )
-  set_tests_properties(
-    granit.asset_tools.shader.fixture.object_ids_compare
-    PROPERTIES DEPENDS granit.asset_tools.shader.fixture.object_ids
-  )
-  set(granit_shader_index_id_output
-      "${CMAKE_CURRENT_BINARY_DIR}/index-id-test/material_shader_ids.inc")
-  add_test(
-    NAME granit.asset_tools.shader.index_ids
-    COMMAND granit_asset_tool shader index-ids
-            --index "${granit_test_shader_fixture_dir}/material_fixture.grshidx.json"
-            --shader material_fragment_id=main.fragment
-            --output "${granit_shader_index_id_output}"
-  )
   add_test(
     NAME granit.asset_tools.shader.fixture.library
     COMMAND
       granit_shader_fixture_tool library
-      --object "${granit_shader_fixture_object_dir}/minimal.vert.grshaderobj"
-      --object "${granit_shader_fixture_object_dir}/minimal.frag.grshaderobj"
+      --name minimal
+      --object "minimal.vertex=${granit_shader_fixture_object_dir}/minimal.vert.grshaderobj"
+      --object "minimal.fragment=${granit_shader_fixture_object_dir}/minimal.frag.grshaderobj"
       --target all
       --output "${CMAKE_CURRENT_BINARY_DIR}/library-test/minimal.grshlib"
   )
@@ -400,8 +374,8 @@ if(GRANIT_TESTING_ENABLED)
     COMMAND
       granit_asset_tool material build
       "${granit_test_material_fixture_dir}/material_package_fixture.grmat.json"
-      --output "${GRANIT_MATERIAL_PACKAGE_FIXTURE}" --shader-index
-      "${granit_test_shader_fixture_dir}/material_fixture.grshidx.json" --emit-debug-json
+      --output "${GRANIT_MATERIAL_PACKAGE_FIXTURE}" --shader-library
+      "${granit_test_shader_fixture_dir}/material_fixture.grshlib" --emit-debug-json
   )
   set_tests_properties(granit.asset_tools.material.build PROPERTIES FIXTURES_SETUP granit_material_package)
   add_test(
@@ -420,8 +394,8 @@ if(GRANIT_TESTING_ENABLED)
     NAME granit.asset_tools.material.unlit_build
     COMMAND
       granit_asset_tool material build "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit.grmat.json"
-      --output "${GRANIT_UNLIT_PACKAGE_FIXTURE}" --shader-index
-      "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit.grshidx.json"
+      --output "${GRANIT_UNLIT_PACKAGE_FIXTURE}" --shader-library
+      "${GRANIT_UNLIT_TEST_SHADER_LIBRARY}"
   )
   set_tests_properties(granit.asset_tools.material.unlit_build PROPERTIES FIXTURES_SETUP granit_unlit)
   add_test(
@@ -593,8 +567,7 @@ if(GRANIT_TESTING_ENABLED)
         "${granit_test_shader_fixture_dir}/material_fixture.grshlib.json" --toolchain
         "${GRANIT_SHADER_TOOLCHAIN_ROOT}" --cache
         "${CMAKE_CURRENT_BINARY_DIR}/source-library-cli/objects" --output
-        "${CMAKE_CURRENT_BINARY_DIR}/source-library-cli/fixture.grshlib" --index
-        "${CMAKE_CURRENT_BINARY_DIR}/source-library-cli/fixture.grshidx.json"
+        "${CMAKE_CURRENT_BINARY_DIR}/source-library-cli/fixture.grshlib"
     )
   endif()
 endif()

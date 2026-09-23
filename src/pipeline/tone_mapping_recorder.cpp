@@ -22,7 +22,7 @@ record_tone_mapping(lighting::tone_mapping_pipeline_resources& pipeline, granit_
   if (!pipeline.initialized()) {
     const auto initialize = pipeline.initialize(
         renderer, static_cast<granit::texture_format>(output_format), shader_library,
-        tone_mapping_vertex_shader_id(), tone_mapping_fragment_shader_id());
+        tone_mapping_vertex_shader_name(), tone_mapping_fragment_shader_name());
     if (initialize != GRANIT_SUCCESS)
       return initialize;
   }

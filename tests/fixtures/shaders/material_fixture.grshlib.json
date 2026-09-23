@@ -1,18 +1,20 @@
 {
   "format_version": 1,
-  "name": "material_fixture",
+  "name": "fixture",
   "target_profile": "portable",
   "target_backends": ["vulkan", "webgpu"],
   "shaders": [
     {
-      "name": "material.fragment",
+      "name": "main.vertex",
+      "source": "material_fixture.hlsl",
+      "stage": "vertex",
+      "entry_point": "vertex_main"
+    },
+    {
+      "name": "main.fragment",
       "source": "material_fixture.hlsl",
       "stage": "fragment",
-      "entry_point": "fragment_main",
-      "variants": [
-        {"name": "default", "defines": {"GRANIT_FIXTURE_VARIANT": "0"}},
-        {"name": "alternate", "defines": {"GRANIT_FIXTURE_VARIANT": "1"}}
-      ]
+      "entry_point": "fragment_main"
     }
   ]
 }

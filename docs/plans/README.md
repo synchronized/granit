@@ -13,6 +13,8 @@
 
 ## 最近完成
 
+- [S-51：0.29.0 Shader Library 逻辑名称](S-51-0.29.0-shader-library-logical-names.md)——把
+  清单逻辑名称写入 `.grshlib`，统一运行时与 Material 工具入口，并删除独立 Shader 索引和生成 ID。
 - [S-50：0.29.0 Model Viewer 教程迁移](S-50-0.29.0-model-viewer-tutorial-migration.md)——新增
   09 Model Loading，将跨后端 Model Viewer 收敛为 Tutorial 10，并删除重复 Sample。
 - [S-48：线性入门教程与配套示例](S-48-0.28.0-linear-tutorial-series.md)——完成从 Window 到

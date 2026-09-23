@@ -8,18 +8,19 @@
 
 #include <cstddef>
 #include <span>
+#include <string_view>
 
 namespace granit::pipeline::detail {
 
 [[nodiscard]] std::span<const std::byte> render_pipeline_shader_library() noexcept;
-[[nodiscard]] const shader_content_id& tone_mapping_vertex_shader_id() noexcept;
-[[nodiscard]] const shader_content_id& tone_mapping_fragment_shader_id() noexcept;
-[[nodiscard]] const shader_content_id& shadow_depth_vertex_shader_id() noexcept;
-[[nodiscard]] const shader_content_id& shadow_depth_fragment_shader_id() noexcept;
+[[nodiscard]] std::string_view tone_mapping_vertex_shader_name() noexcept;
+[[nodiscard]] std::string_view tone_mapping_fragment_shader_name() noexcept;
+[[nodiscard]] std::string_view shadow_depth_vertex_shader_name() noexcept;
+[[nodiscard]] std::string_view shadow_depth_fragment_shader_name() noexcept;
 
 [[nodiscard]] std::span<const std::byte> debug_draw_shader_library() noexcept;
-[[nodiscard]] const shader_content_id& debug_world_vertex_shader_id() noexcept;
-[[nodiscard]] const shader_content_id& debug_world_fragment_shader_id(bool encode_srgb) noexcept;
+[[nodiscard]] std::string_view debug_world_vertex_shader_name() noexcept;
+[[nodiscard]] std::string_view debug_world_fragment_shader_name(bool encode_srgb) noexcept;
 
 [[nodiscard]] std::span<const std::byte> canvas_material_package() noexcept;
 [[nodiscard]] std::span<const std::byte> canvas_shader_library() noexcept;

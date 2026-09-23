@@ -49,28 +49,9 @@ struct shader_library_source_manifest {
   std::vector<shader_library_source_shader> shaders;
 };
 
-struct shader_library_index_entry {
-  std::string name;
-  shader_content_id content_id{};
-  shader_stage stage{shader_stage::vertex};
-  std::string entry_point;
-};
-
-struct shader_library_index {
-  std::string library;
-  content_digest library_digest{};
-  std::vector<shader_library_index_entry> shaders;
-};
-
 [[nodiscard]] shader_library_source_error
 parse_shader_library_source_manifest(std::string_view json,
                                      shader_library_source_manifest& manifest) noexcept;
-
-[[nodiscard]] shader_library_source_error
-encode_shader_library_index_json(const shader_library_index& index, std::string& json) noexcept;
-
-[[nodiscard]] shader_library_source_error
-parse_shader_library_index_json(std::string_view json, shader_library_index& index) noexcept;
 
 } // namespace granit::asset_tools::detail
 

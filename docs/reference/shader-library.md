@@ -6,8 +6,9 @@
 ## 定位
 
 Shader Library 是供运行时加载的确定性 `.grshlib` 容器。一个 Library 可以保存 Vulkan SPIR-V、
-WebGPU WGSL 或两者，并按 Shader 内容 ID 组织阶段、入口、反射、能力要求和去重后的载荷。应用负责
-读取或映射整个归档，Core 负责格式与摘要校验，不执行文件 I/O 或运行时源码编译。
+WebGPU WGSL 或两者，并保存 Library 名称、Shader 逻辑名称、内容 ID、阶段、入口、反射、能力要求
+和去重后的载荷。应用负责读取或映射整个归档，Core 负责格式与摘要校验，不执行文件 I/O 或
+运行时源码编译。
 
 `.grshaderobj` 及其 sidecar 只作为离线链接器的中间输入，不属于安装或运行时资产。Material 只接收
 Library 句柄，不再接收 Renderer 后端信息或 Shader resolver。RenderPipeline component 安装的
@@ -49,18 +50,23 @@ granit_result result =
 
 ## Shader 选择与缓存
 
-调用方使用内容 ID 请求 Shader，Renderer 根据真实后端、Profile 和能力位选择兼容载荷：
+普通调用方使用清单中的逻辑名称请求 Shader，Renderer 根据真实后端、Profile 和能力位选择兼容
+载荷：
 
 ```c
 granit_shader shader = GRANIT_NULL_HANDLE;
-granit_result result =
-    granit_shader_create_from_library(renderer, library, content_id, &shader);
+granit_result result = granit_shader_create_from_library_name(
+    renderer, library, "tone_mapping.vertex", 19, &shader);
 ```
 
 Core 会在使用前再次校验所选载荷摘要。Library 内按内容 ID 缓存后端 Shader；重复请求返回不同的
 公开 Shader 句柄，但共享同一个后端对象。每个返回句柄均由调用者通过 `granit_shader_destroy()`
-释放。找不到内容 ID 返回 `GRANIT_ERROR_NOT_READY`，没有兼容后端变体或能力不足返回
+释放。找不到逻辑名称返回 `GRANIT_ERROR_NOT_READY`，没有兼容后端变体或能力不足返回
 `GRANIT_ERROR_UNSUPPORTED`。
+
+资产系统、缓存和 Material 等已经持有内容身份的高级代码可使用
+`granit_shader_create_from_library_content_id()`。逻辑名称属于 Library 内的稳定作者接口；内容 ID
+由 Shader 内容计算，不应生成到普通应用源码中。
 
 有效的 Shader 句柄及 Pipeline 会保留缓存对象。任一公开句柄尚未释放时，
 `granit_shader_library_destroy()` 返回 `GRANIT_ERROR_RESOURCE_IN_USE`，Library 句柄仍然有效，调用方
@@ -81,13 +87,15 @@ if (result.ok())
   library.get_info(info);
 
 granit::shader shader;
-library.create_shader(content_id, shader);
+library.create_shader("tone_mapping.vertex", shader);
 ```
 
 `granit::shader_library` 不可复制、可以移动，析构时自动销毁。它沿用 C API 的借用规则，不复制或
 拥有归档字节。`create_shader()` 创建的 Shader 仍在使用 Library，必须先销毁这些 Shader，才能销毁
 Library。需要把 Library 借给 Material 等其他 C++ 组件时使用 `library.ref()`；裸句柄入口只用于
-显式 C/C++ 互操作。需要在创建前离线检查时可使用 `granit::inspect_shader_library()`。
+显式 C/C++ 互操作。高级内容身份路径使用 `create_shader_by_content_id()`。需要在创建前离线检查时
+可使用 `granit::inspect_shader_library()`。
 
-格式和架构决策见 [S-37](../plans/S-37-0.21.0-shader-library-and-material-boundary.md) 与
+格式和架构决策见 [S-51](../plans/S-51-0.29.0-shader-library-logical-names.md)、
+[S-37](../plans/S-37-0.21.0-shader-library-and-material-boundary.md) 与
 [ADR-006](../decisions/ADR-006-shader-library-runtime-asset.md)。

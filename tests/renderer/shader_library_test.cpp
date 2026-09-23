@@ -31,9 +31,10 @@ std::vector<std::byte> make_library() {
   REQUIRE(encode_shader_object(
               {wgsl, spirv, reflection, cache_key, 3, 0, granit::shader_stage::compute, "main"},
               manifest) == shader_object_error::success);
-  const std::array sources{shader_library_object_source{manifest, wgsl_bytes, spirv}};
+  const std::array sources{
+      shader_library_object_source{manifest, wgsl_bytes, spirv, "main.compute"}};
   std::vector<std::byte> archive;
-  REQUIRE(encode_shader_library({sources, GRANIT_SHADER_BACKEND_ALL_BITS}, archive) ==
+  REQUIRE(encode_shader_library({sources, GRANIT_SHADER_BACKEND_ALL_BITS, "test"}, archive) ==
           shader_library_error::success);
   return archive;
 }
@@ -59,9 +60,9 @@ std::vector<std::byte> make_runtime_library(granit::shader_cache_key& content_id
   shader_object_view asset;
   REQUIRE(decode_shader_object(manifest, asset) == shader_object_error::success);
   content_id = asset.content_id;
-  const std::array sources{shader_library_object_source{manifest, wgsl, spirv}};
+  const std::array sources{shader_library_object_source{manifest, wgsl, spirv, "minimal.vertex"}};
   std::vector<std::byte> archive;
-  REQUIRE(encode_shader_library({sources, GRANIT_SHADER_BACKEND_ALL_BITS}, archive) ==
+  REQUIRE(encode_shader_library({sources, GRANIT_SHADER_BACKEND_ALL_BITS, "runtime"}, archive) ==
           shader_library_error::success);
   return archive;
 }
@@ -94,7 +95,7 @@ TEST_CASE("Shader Library 检查返回稳定摘要", "[shader_library][inspect]"
   CHECK(granit_shader_library_inspect(corrupted.data(), corrupted.size(), &native) ==
         GRANIT_ERROR_INVALID_ARGUMENT);
   auto unsupported = archive;
-  unsupported[8] = std::byte{2};
+  unsupported[8] = std::byte{3};
   CHECK(granit_shader_library_inspect(unsupported.data(), unsupported.size(), &native) ==
         GRANIT_ERROR_UNSUPPORTED);
 }
@@ -148,12 +149,12 @@ TEST_CASE("Shader Library 由 Renderer 选择载荷并共享后端 Shader", "[sh
 
   granit::shader_library library;
   granit::shader first;
-  CHECK(library.create_shader(content_id, first) == granit::result::invalid_handle);
+  CHECK(library.create_shader_by_content_id(content_id, first) == granit::result::invalid_handle);
   REQUIRE(library.initialize(renderer, archive) == granit::result::success);
   granit::shader second;
-  REQUIRE(library.create_shader(content_id, first) == granit::result::success);
-  CHECK(library.create_shader(content_id, first) == granit::result::invalid_argument);
-  REQUIRE(library.create_shader(content_id, second) == granit::result::success);
+  REQUIRE(library.create_shader("minimal.vertex", first) == granit::result::success);
+  CHECK(library.create_shader("minimal.vertex", first) == granit::result::invalid_argument);
+  REQUIRE(library.create_shader_by_content_id(content_id, second) == granit::result::success);
   CHECK(first.native_handle() != second.native_handle());
   CHECK(library.reset() == granit::result::resource_in_use);
   REQUIRE(first.reset() == granit::result::success);
@@ -162,11 +163,9 @@ TEST_CASE("Shader Library 由 Renderer 选择载荷并共享后端 Shader", "[sh
   REQUIRE(library.reset() == granit::result::success);
 
   REQUIRE(library.initialize(renderer, archive) == granit::result::success);
-  auto missing = content_id;
-  missing[0] ^= std::byte{1};
-  CHECK(library.create_shader(missing, first) == granit::result::not_ready);
+  CHECK(library.create_shader("missing.vertex", first) == granit::result::not_ready);
   archive.back() ^= std::byte{1};
-  CHECK(library.create_shader(content_id, first) == granit::result::invalid_argument);
+  CHECK(library.create_shader_by_content_id(content_id, first) == granit::result::invalid_argument);
 }
 
 } // namespace

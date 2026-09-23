@@ -17,11 +17,14 @@
   自定义 Texture ID、多帧渲染、指针输入与 Resize。
 - 新增 09 Model Loading 教程，使用离线 glTF 与外部 Buffer 演示 CPU Scene 解析、GPU Mesh、完整
   PBR Material、节点变换、自动相机取景和 Render Pipeline 提交。
-- C++ Mesh 包装新增接受 `command_recorder&` 的 `bind` 和 `draw`，低层自定义绘制无需提取
-  Mesh 或 Recorder 的 C ABI 句柄。
+- Mesh API 新增命令录制期间使用的 `bind` 和 `draw`；C++ 包装直接接受 `command_recorder&`，
+  低层自定义绘制无需提取 Mesh 或 Recorder 的 C ABI 句柄。
 
 ### 变更
 
+- Shader Library 归档现在直接保存 Library 与 Shader 逻辑名称；运行时可按名称创建 Shader，
+  Material Builder 直接读取 `.grshlib`。独立 `.grshidx.json`、`index-ids` 和生成 Shader ID include
+  已删除，内容 ID 只保留为缓存、Material 包与高级接口的内容身份。
 - 教程和 Model Viewer 的普通 C++ 路径统一使用 RAII 对象、`renderer_ref` 及 Mesh、Material、
   Scene、Texture View、Canvas 等强类型引用；原始句柄转换集中保留在 C 回调和 Web C 平台壳边界。
 - Model Viewer 已迁移为 Tutorial 10，并由 `granit_tutorial_10_model_viewer`、

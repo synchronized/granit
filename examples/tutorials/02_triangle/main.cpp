@@ -12,8 +12,6 @@
 #include <string_view>
 #include <vector>
 
-#include "triangle_shader_ids.inc"
-
 #ifndef GRANIT_TUTORIAL_02_SHADER_LIBRARY
 #error "GRANIT_TUTORIAL_02_SHADER_LIBRARY must point to the generated Shader Library"
 #endif
@@ -209,9 +207,9 @@ private:
     if (result.ok())
       result = shader_library_.initialize(renderer_, shader_archive_);
     if (result.ok())
-      result = shader_library_.create_shader(triangle_vertex_id, vertex_shader_);
+      result = shader_library_.create_shader("triangle.vertex", vertex_shader_);
     if (result.ok())
-      result = shader_library_.create_shader(triangle_fragment_id, fragment_shader_);
+      result = shader_library_.create_shader("triangle.fragment", fragment_shader_);
     if (result.ok())
       result = layout_.initialize(renderer_);
     if (result.ok())

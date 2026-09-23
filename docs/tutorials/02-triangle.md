@@ -26,10 +26,9 @@
 }
 ```
 
-AssetTools 在构建期生成 `.grshlib`、索引和 Content ID。运行时只加载归档，不依赖 Shader 编译器。
-完整清单和 HLSL 位于
-[`examples/tutorials/02_triangle`](../../examples/tutorials/02_triangle)。项目通过生成的
-`triangle_shader_ids.inc` 使用 Content ID，因此运行时代码不需要硬编码摘要。
+AssetTools 在构建期生成包含逻辑名称表的 `.grshlib`。运行时只加载归档，不依赖 Shader 编译器，
+也不需要包含构建后生成的 Content ID。完整清单和 HLSL 位于
+[`examples/tutorials/02_triangle`](../../examples/tutorials/02_triangle)。
 
 ## 2. 创建 Shader 与 Pipeline
 
@@ -39,8 +38,8 @@ check(library.initialize(renderer, archive));
 
 granit::shader vertex_shader;
 granit::shader fragment_shader;
-check(library.create_shader(triangle_vertex_id, vertex_shader));
-check(library.create_shader(triangle_fragment_id, fragment_shader));
+check(library.create_shader("triangle.vertex", vertex_shader));
+check(library.create_shader("triangle.fragment", fragment_shader));
 
 granit::pipeline_layout layout;
 check(layout.initialize(renderer));

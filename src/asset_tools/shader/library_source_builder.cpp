@@ -71,25 +71,6 @@ std::string read_text(const std::filesystem::path& path) {
   return {reinterpret_cast<const char*>(bytes.data()), bytes.size()};
 }
 
-bool write_text_if_changed(const std::filesystem::path& path, std::string_view text,
-                           bool& cache_hit) {
-  const auto current = read_bytes(path);
-  const auto bytes = std::as_bytes(std::span{text});
-  if (std::ranges::equal(current, bytes)) {
-    cache_hit = true;
-    return true;
-  }
-  cache_hit = false;
-  std::error_code error;
-  if (!path.parent_path().empty())
-    std::filesystem::create_directories(path.parent_path(), error);
-  if (error)
-    return false;
-  std::ofstream stream{path, std::ios::binary | std::ios::trunc};
-  stream.write(text.data(), static_cast<std::streamsize>(text.size()));
-  return static_cast<bool>(stream);
-}
-
 granit_result source_error(granit::asset_tools::detail::shader_library_source_error error) {
   using enum granit::asset_tools::detail::shader_library_source_error;
   switch (error) {
@@ -170,9 +151,8 @@ extern "C" granit_result granit_asset_tools_shader_build_library_from_manifest(
       !valid_string(desc->toolchain_root, desc->toolchain_root_length) ||
       !valid_string(desc->cache_path, desc->cache_path_length) ||
       !valid_string(desc->output_path, desc->output_path_length) ||
-      !valid_string(desc->index_path, desc->index_path_length) || desc->manifest_path_length == 0 ||
-      desc->toolchain_root_length == 0 || desc->cache_path_length == 0 ||
-      desc->output_path_length == 0 || desc->index_path_length == 0)
+      desc->manifest_path_length == 0 || desc->toolchain_root_length == 0 ||
+      desc->cache_path_length == 0 || desc->output_path_length == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
 
   try {
@@ -226,9 +206,9 @@ extern "C" granit_result granit_asset_tools_shader_build_library_from_manifest(
     std::ranges::sort(expanded, {}, &expanded_shader::name);
 
     std::vector<std::filesystem::path> object_paths;
+    std::vector<std::string> logical_names;
     object_paths.reserve(expanded.size());
-    granit::asset_tools::detail::shader_library_index index{
-        .library = manifest.name, .library_digest = {}, .shaders = {}};
+    logical_names.reserve(expanded.size());
     bool all_objects_hit = true;
     const std::vector<granit::asset_tools::detail::shader_library_source_define> no_defines;
     for (const auto& item : expanded) {
@@ -304,64 +284,19 @@ extern "C" granit_result granit_asset_tools_shader_build_library_from_manifest(
       if (granit::detail::shader_format::decode_shader_object(object_bytes, object_view) !=
           granit::detail::shader_format::shader_object_error::success)
         return GRANIT_ERROR_INTERNAL;
-      index.shaders.push_back(
-          {item.name, object_view.content_id, item.shader->stage, item.shader->entry_point});
       object_paths.push_back(object);
+      logical_names.push_back(item.name);
     }
 
     bool library_hit = false;
     status = granit::asset_tools::detail::link_shader_library(
-        object_paths, static_cast<granit_shader_backend_flags>(manifest.target_backends),
+        object_paths, logical_names, manifest.name,
+        static_cast<granit_shader_backend_flags>(manifest.target_backends),
         copy_path(desc->output_path, desc->output_path_length), library_hit);
     if (status != GRANIT_SUCCESS)
       return status;
 
-    granit::detail::shader_format::shader_library_view library;
-    if (granit::detail::shader_format::decode_shader_library(
-            read_bytes(copy_path(desc->output_path, desc->output_path_length)), library) !=
-        granit::detail::shader_format::shader_library_error::success)
-      return GRANIT_ERROR_INTERNAL;
-    index.library_digest = library.content_digest;
-    std::string index_json;
-    const auto encode_result =
-        granit::asset_tools::detail::encode_shader_library_index_json(index, index_json);
-    if (encode_result != granit::asset_tools::detail::shader_library_source_error::none)
-      return source_error(encode_result);
-    bool index_hit = false;
-    if (!write_text_if_changed(copy_path(desc->index_path, desc->index_path_length), index_json,
-                               index_hit))
-      return GRANIT_ERROR_INITIALIZATION_FAILED;
-    *cache_hit = all_objects_hit && library_hit && index_hit ? 1U : 0U;
-    return GRANIT_SUCCESS;
-  } catch (const std::bad_alloc&) {
-    return GRANIT_ERROR_OUT_OF_MEMORY;
-  } catch (...) {
-    return GRANIT_ERROR_INTERNAL;
-  }
-}
-
-extern "C" granit_result granit_asset_tools_shader_index_find_content_id(
-    const char* index_json, std::uint64_t index_json_length, const char* logical_name,
-    std::uint64_t logical_name_length, granit_shader_content_id content_id) {
-  if (content_id == nullptr)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  std::memset(content_id, 0, sizeof(granit_shader_content_id));
-  if (!valid_string(index_json, index_json_length) || index_json_length == 0 ||
-      !valid_string(logical_name, logical_name_length) || logical_name_length == 0)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-
-  try {
-    granit::asset_tools::detail::shader_library_index index;
-    const std::string_view json{index_json, static_cast<std::size_t>(index_json_length)};
-    if (granit::asset_tools::detail::parse_shader_library_index_json(json, index) !=
-        granit::asset_tools::detail::shader_library_source_error::none)
-      return GRANIT_ERROR_INVALID_ARGUMENT;
-    const std::string_view name{logical_name, static_cast<std::size_t>(logical_name_length)};
-    const auto found = std::ranges::find(
-        index.shaders, name, &granit::asset_tools::detail::shader_library_index_entry::name);
-    if (found == index.shaders.end())
-      return GRANIT_ERROR_INVALID_ARGUMENT;
-    std::memcpy(content_id, found->content_id.data(), found->content_id.size());
+    *cache_hit = all_objects_hit && library_hit ? 1U : 0U;
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;

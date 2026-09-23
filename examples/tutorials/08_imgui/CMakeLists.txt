@@ -16,7 +16,6 @@ if(EMSCRIPTEN)
   set(tutorial_runtime_material "/assets/pbr_standard.grmat")
 else()
   set(tutorial_shader_library "${tutorial_generated_dir}/pbr_standard.grshlib")
-  set(tutorial_shader_index "${tutorial_generated_dir}/pbr_standard.grshidx.json")
   set(tutorial_material "${tutorial_generated_dir}/pbr_standard.grmat")
   set(tutorial_runtime_shader_library "${tutorial_shader_library}")
   set(tutorial_runtime_material "${tutorial_material}")
@@ -26,7 +25,6 @@ else()
     NAME tutorial_08_pbr
     MANIFEST "${tutorial_pbr_source_dir}/pbr_standard.grshlib.json"
     OUTPUT "${tutorial_shader_library}"
-    INDEX "${tutorial_shader_index}"
     CACHE_DIR "${tutorial_generated_dir}/cache"
     TARGET granit_tutorial_08_shader_library
     SOURCES "${tutorial_pbr_source_dir}/pbr_standard.hlsl"
@@ -38,11 +36,11 @@ else()
     COMMAND "$<TARGET_FILE:granit_asset_tool>" material build
             "${PROJECT_SOURCE_DIR}/assets/sources/materials/pbr_standard.grmat.json"
             --output "${tutorial_material}"
-            --shader-index "${tutorial_shader_index}"
+            --shader-library "${tutorial_shader_library}"
     DEPENDS
       granit_asset_tool
       granit_tutorial_08_shader_library
-      "${tutorial_shader_index}"
+      "${tutorial_shader_library}"
       "${PROJECT_SOURCE_DIR}/assets/sources/materials/pbr_standard.grmat.json"
     VERBATIM
   )

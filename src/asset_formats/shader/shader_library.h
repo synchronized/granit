@@ -31,11 +31,13 @@ struct shader_library_object_source {
   std::span<const std::byte> manifest;
   std::span<const std::byte> wgsl;
   std::span<const std::byte> spirv;
+  std::string_view logical_name;
 };
 
 struct shader_library_encode_desc {
   std::span<const shader_library_object_source> objects;
   granit_shader_backend_flags backend_mask = GRANIT_SHADER_BACKEND_ALL_BITS;
+  std::string_view library_name;
 };
 
 struct shader_library_variant {
@@ -63,10 +65,17 @@ struct shader_library_payload {
   std::span<const std::byte> bytes;
 };
 
+struct shader_library_name {
+  std::string_view name;
+  shader_content_id content_id{};
+};
+
 struct shader_library_view {
   ::granit::content_digest content_digest{};
   granit_shader_backend_flags backend_mask = 0;
+  std::string_view name;
   std::vector<shader_library_shader> shaders;
+  std::vector<shader_library_name> names;
   std::vector<shader_library_payload> payloads;
 };
 
@@ -77,6 +86,9 @@ struct shader_library_view {
 [[nodiscard]] const shader_library_shader*
 find_shader_library_shader(const shader_library_view& library,
                            const shader_content_id& content_id) noexcept;
+[[nodiscard]] const shader_library_shader*
+find_shader_library_shader(const shader_library_view& library,
+                           std::string_view logical_name) noexcept;
 
 } // namespace granit::detail::shader_format
 

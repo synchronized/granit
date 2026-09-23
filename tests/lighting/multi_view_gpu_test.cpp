@@ -161,8 +161,8 @@ TEST_CASE("两个View执行独立PBR与Tone Mapping") {
     REQUIRE(tone_mapping[index].initialize(
                 renderer.native_handle(), color_views[index].native_handle(),
                 granit::texture_format::rgba8_unorm, {.exposure_scale = 1.0F, .encode_srgb = 1},
-                tone_shaders.library(), tone_shaders.vertex_id(),
-                tone_shaders.fragment_id()) == GRANIT_SUCCESS);
+                tone_shaders.library(), tone_shaders.vertex_name(),
+                tone_shaders.fragment_name()) == GRANIT_SUCCESS);
     CHECK(tone_mapping[index].group() != GRANIT_NULL_HANDLE);
   }
   CHECK(tone_mapping[0].group() != tone_mapping[1].group());
@@ -173,15 +173,13 @@ TEST_CASE("两个View执行独立PBR与Tone Mapping") {
   const granit::viewport viewport{0, 0, 32, 32, 0, 1};
   const granit::scissor scissor{0, 0, 32, 32};
   for (std::size_t index = 0; index < colors.size(); ++index) {
-    REQUIRE(recorder.bind_graphics_pipeline(
-                granit::graphics_pipeline_ref::from_native(pipelines[index])) ==
-            granit::result::success);
+    REQUIRE(recorder.bind_graphics_pipeline(granit::graphics_pipeline_ref::from_native(
+                pipelines[index])) == granit::result::success);
     const auto material_group = instances[index].bind_group();
     const std::array material_groups{granit::bind_group_ref::from_native(material_group)};
     REQUIRE(recorder.bind_graphics_groups(
                 granit::pipeline_layout_ref::from_native(materials[index].pipeline_layout()), 1,
-                material_groups) ==
-            granit::result::success);
+                material_groups) == granit::result::success);
     const auto light_group = lights[index].group();
     const std::array light_groups{granit::bind_group_ref::from_native(light_group)};
     REQUIRE(recorder.bind_graphics_groups(
@@ -198,14 +196,13 @@ TEST_CASE("两个View执行独立PBR与Tone Mapping") {
     REQUIRE(recorder.begin_rendering(rendering) == granit::result::success);
     REQUIRE(recorder.draw(3) == granit::result::success);
     REQUIRE(recorder.end_rendering() == granit::result::success);
-    REQUIRE(recorder.bind_graphics_pipeline(
-                granit::graphics_pipeline_ref::from_native(tone_mapping[index].pipeline())) ==
-            granit::result::success);
+    REQUIRE(recorder.bind_graphics_pipeline(granit::graphics_pipeline_ref::from_native(
+                tone_mapping[index].pipeline())) == granit::result::success);
     const auto tone_group = tone_mapping[index].group();
     const std::array tone_groups{granit::bind_group_ref::from_native(tone_group)};
     REQUIRE(recorder.bind_graphics_groups(
-                granit::pipeline_layout_ref::from_native(tone_mapping[index].pipeline_layout()),
-                0, tone_groups) == granit::result::success);
+                granit::pipeline_layout_ref::from_native(tone_mapping[index].pipeline_layout()), 0,
+                tone_groups) == granit::result::success);
     const granit::color_attachment_desc output{.view = output_views[index].ref(),
                                                .resolve_view = {}};
     const granit::rendering_desc tone_rendering{.color_attachments = std::span{&output, 1},
@@ -215,8 +212,7 @@ TEST_CASE("两个View执行独立PBR与Tone Mapping") {
     REQUIRE(recorder.end_rendering() == granit::result::success);
     const granit::texture_data_layout layout{};
     const granit::texture_write_region region{.width = 32, .height = 32};
-    REQUIRE(recorder.copy_texture_to_buffer(outputs[index].ref(),
-                                            readbacks[index].ref(), layout,
+    REQUIRE(recorder.copy_texture_to_buffer(outputs[index].ref(), readbacks[index].ref(), layout,
                                             region) == granit::result::success);
   }
   REQUIRE(recorder.end() == granit::result::success);

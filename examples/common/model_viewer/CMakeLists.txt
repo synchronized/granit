@@ -35,8 +35,8 @@ else()
     COMMAND
       granit_asset_tool material build
       "${granit_asset_sources_dir}/materials/pbr_standard.grmat.json"
-      --output "${granit_model_scene_material_package}" --shader-index
-      "${granit_installed_asset_snapshot_dir}/materials/pbr_standard.grshidx.json"
+      --output "${granit_model_scene_material_package}" --shader-library
+      "${granit_installed_asset_snapshot_dir}/libraries/pbr_standard.grshlib"
     COMMAND
       "${CMAKE_COMMAND}" -E compare_files
       "${granit_model_scene_material_package}"
@@ -44,7 +44,7 @@ else()
     DEPENDS
       granit_asset_tool
       "${granit_asset_sources_dir}/materials/pbr_standard.grmat.json"
-      "${granit_installed_asset_snapshot_dir}/materials/pbr_standard.grshidx.json"
+      "${granit_installed_asset_snapshot_dir}/libraries/pbr_standard.grshlib"
       "${granit_installed_asset_snapshot_dir}/materials/pbr_standard.grmat"
     COMMENT "生成示例 PBR 材质归档"
     VERBATIM

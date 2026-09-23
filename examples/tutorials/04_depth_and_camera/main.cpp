@@ -14,8 +14,6 @@
 #include <string_view>
 #include <vector>
 
-#include "camera_shader_ids.inc"
-
 #ifndef GRANIT_TUTORIAL_04_SHADER_LIBRARY
 #error "GRANIT_TUTORIAL_04_SHADER_LIBRARY must point to the generated Shader Library"
 #endif
@@ -289,9 +287,9 @@ private:
     if (result.ok())
       result = shader_library_.initialize(renderer_, shader_archive_);
     if (result.ok())
-      result = shader_library_.create_shader(camera_vertex_id, vertex_shader_);
+      result = shader_library_.create_shader("camera.vertex", vertex_shader_);
     if (result.ok())
-      result = shader_library_.create_shader(camera_fragment_id, fragment_shader_);
+      result = shader_library_.create_shader("camera.fragment", fragment_shader_);
     if (result.ok())
       result = initialize_texture_resources();
     if (result.ok())

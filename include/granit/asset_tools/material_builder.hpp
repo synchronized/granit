@@ -4,8 +4,8 @@
 #ifndef GRANIT_MATERIAL_BUILDER_HPP_
 #define GRANIT_MATERIAL_BUILDER_HPP_
 
-#include <granit/core/result.hpp>
 #include <granit/asset_tools/material_builder.h>
+#include <granit/core/result.hpp>
 
 #include <cstddef>
 #include <new>
@@ -18,7 +18,7 @@ namespace granit::asset_tools::material {
 
 struct build_desc {
   std::string_view source_json;
-  std::span<const std::string_view> shader_indices;
+  std::span<const std::span<const std::byte>> shader_libraries;
 };
 
 class result {
@@ -88,19 +88,19 @@ inline void result::reset() noexcept {
 
 inline std::pair<::granit::result, result> build(const build_desc& desc) noexcept {
   try {
-    std::vector<granit_asset_tools_material_shader_index> indices;
-    indices.reserve(desc.shader_indices.size());
-    for (const auto json : desc.shader_indices) {
-      indices.push_back(
-          {sizeof(granit_asset_tools_material_shader_index), 0, json.data(), json.size()});
+    std::vector<granit_asset_tools_material_shader_library> libraries;
+    libraries.reserve(desc.shader_libraries.size());
+    for (const auto archive : desc.shader_libraries) {
+      libraries.push_back(
+          {sizeof(granit_asset_tools_material_shader_library), 0, archive.data(), archive.size()});
     }
     const granit_asset_tools_material_build_desc native{
         sizeof(granit_asset_tools_material_build_desc),
         0,
         desc.source_json.data(),
         desc.source_json.size(),
-        indices.data(),
-        static_cast<uint32_t>(indices.size()),
+        libraries.data(),
+        static_cast<uint32_t>(libraries.size()),
         0};
     granit_asset_tools_material_result handle = 0;
     const auto status = granit_asset_tools_material_build(&native, &handle);

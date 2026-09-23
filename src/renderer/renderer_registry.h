@@ -22,6 +22,7 @@
 #include <granit/renderer/buffer.h>
 #include <granit/renderer/command_recorder.h>
 #include <granit/renderer/frame_context.h>
+#include <granit/renderer/native_surface.h>
 #include <granit/renderer/pipeline.h>
 #include <granit/renderer/pipeline_warmup.h>
 #include <granit/renderer/readback_batch.h>
@@ -29,7 +30,6 @@
 #include <granit/renderer/sampler.h>
 #include <granit/renderer/shader.h>
 #include <granit/renderer/shader_library.h>
-#include <granit/renderer/native_surface.h>
 #include <granit/renderer/swapchain.h>
 #include <granit/renderer/texture.h>
 #include <granit/renderer/timestamp_query.h>
@@ -193,9 +193,14 @@ public:
   [[nodiscard]] granit_result get_shader_library_info(granit_renderer renderer,
                                                       granit_shader_library library,
                                                       granit_shader_library_info& info);
+  [[nodiscard]] granit_result create_shader_from_library_name(granit_renderer renderer,
+                                                              granit_shader_library library,
+                                                              std::string_view logical_name,
+                                                              granit_shader& shader);
   [[nodiscard]] granit_result
-  create_shader_from_library(granit_renderer renderer, granit_shader_library library,
-                             const granit::shader_content_id& content_id, granit_shader& shader);
+  create_shader_from_library_content_id(granit_renderer renderer, granit_shader_library library,
+                                        const granit::shader_content_id& content_id,
+                                        granit_shader& shader);
   [[nodiscard]] granit_result destroy_shader_library(granit_renderer renderer,
                                                      granit_shader_library library);
   [[nodiscard]] granit_result
