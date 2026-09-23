@@ -9,7 +9,8 @@
 
 ## 当前计划
 
-当前没有正在实施的计划；下一项工作应根据真实使用反馈重新排定。
+- [S-53：0.30.0 文档、教程与发布面收敛](S-53-0.30.0-documentation-tutorial-release.md)——建立
+  Frame 与命令录制分层 Concept，整理教程学习路径，并把正式 Release 收敛为 shared SDK。
 
 ## 最近完成
 

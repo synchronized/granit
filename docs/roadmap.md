@@ -29,7 +29,13 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 
 ## 当前计划
 
-当前没有正在实施的计划。下一项工作根据真实使用反馈重新排定，不预先承诺版本范围。
+### S-53：0.30.0 文档、教程与发布面收敛
+
+**状态：实施中，P1。**
+
+[S-53](plans/S-53-0.30.0-documentation-tutorial-release.md) 将明确 Frame Context 与 Command Recorder
+的分层，收敛文档和十章教程入口，并让正式 Release 只提供推荐的 shared SDK。静态源码构建和 CI
+验证继续保留。
 
 ## 最近完成
 
