@@ -9,11 +9,12 @@
 
 ## 当前计划
 
-- [S-52：0.29.0 版本收口与发布验收](S-52-0.29.0-release-acceptance.md)——停止扩展功能，补齐
-  迁移说明、跨平台矩阵、候选包和正式发布证据。
+当前没有正在实施的计划；下一项工作应根据真实使用反馈重新排定。
 
 ## 最近完成
 
+- [S-52：0.29.0 版本收口与发布验收](S-52-0.29.0-release-acceptance.md)——完成迁移说明、
+  跨平台矩阵、四套 SDK 候选包、校验和与正式发布复验。
 - [S-51：0.29.0 Shader Library 逻辑名称](S-51-0.29.0-shader-library-logical-names.md)——把
   清单逻辑名称写入 `.grshlib`，统一运行时与 Material 工具入口，并删除独立 Shader 索引和生成 ID。
 - [S-50：0.29.0 Model Viewer 教程迁移](S-50-0.29.0-model-viewer-tutorial-migration.md)——新增

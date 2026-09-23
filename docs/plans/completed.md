@@ -113,3 +113,4 @@
 - [S-48：线性入门教程与配套示例](S-48-0.28.0-linear-tutorial-series.md)
 - [S-50：0.29.0 Model Viewer 教程迁移](S-50-0.29.0-model-viewer-tutorial-migration.md)
 - [S-51：0.29.0 Shader Library 逻辑名称](S-51-0.29.0-shader-library-logical-names.md)
+- [S-52：0.29.0 版本收口与发布验收](S-52-0.29.0-release-acceptance.md)
