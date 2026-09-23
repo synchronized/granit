@@ -8,6 +8,12 @@
 
 ## Unreleased
 
+### 修复
+
+- Render Pipeline 在方向光阴影体积内没有投射物时会清除并继续使用有效阴影图，场景清屏、可见
+  物体、后处理、Debug Draw 与 Canvas/UI 可以继续提交和呈现，不再持续返回
+  `GRANIT_ERROR_NOT_READY`。
+
 ## 0.29.0 - 2026-09-23
 
 ### 新增

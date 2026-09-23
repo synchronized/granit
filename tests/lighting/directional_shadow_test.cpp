@@ -11,7 +11,8 @@
 
 namespace {
 
-granit::scene::multi_view_snapshot make_shadow_snapshot(std::uint64_t light_layer = 1) {
+granit::scene::multi_view_snapshot make_shadow_snapshot(std::uint64_t light_layer = 1,
+                                                        bool include_renderables = true) {
   const auto identity = granit::math::identity_matrix4;
   granit::scene::view_input view{.view = identity,
                                  .projection = identity,
@@ -35,15 +36,28 @@ granit::scene::multi_view_snapshot make_shadow_snapshot(std::uint64_t light_laye
                                                          .object_id = 44}};
   const std::array lights{
       granit::scene::directional_light_input{{0, 0, 1}, {1, 1, 1}, light_layer}};
+  const auto selected_renderables =
+      include_renderables ? std::span<const granit::scene::renderable_input>{renderables}
+                          : std::span<const granit::scene::renderable_input>{};
   granit::scene::multi_view_snapshot snapshot;
   REQUIRE(granit::scene::build_multi_view_snapshot({.views = std::span{&view, 1},
-                                                    .renderables = renderables,
+                                                    .renderables = selected_renderables,
                                                     .directional_lights = lights,
                                                     .point_lights = {},
                                                     .spot_lights = {}},
                                                    snapshot) ==
           granit::scene::multi_view_error::none);
   return snapshot;
+}
+
+TEST_CASE("方向光阴影保留无投射物帧的清除描述") {
+  const auto snapshot = make_shadow_snapshot(1, false);
+  granit::lighting::directional_shadow_pass_desc desc;
+  REQUIRE(granit::lighting::build_directional_shadow_pass_desc(snapshot, 0, 0, {}, 7, desc) ==
+          granit::lighting::directional_shadow_error::no_casters);
+  CHECK(desc.depth == 7);
+  CHECK(desc.casters.empty());
+  CHECK(granit::math::is_finite(desc.frame.light_view_projection));
 }
 
 bool environment_unavailable(granit::result value) {
@@ -139,4 +153,35 @@ TEST_CASE("方向光Shadow Pass拒绝不完整描述") {
   granit::render_graph::serial_graph graph;
   CHECK(granit::lighting::add_directional_shadow_graph_pass(graph, {}, {}) ==
         granit::render_graph::invalid_pass_id);
+}
+
+TEST_CASE("方向光Shadow Pass允许无投射物清除") {
+  granit::render_graph::serial_graph graph;
+  const auto depth = graph.import_texture_view(123, true, "Shadow Depth");
+  granit::lighting::directional_shadow_pass_desc desc;
+  desc.depth = depth;
+  bool called = false;
+  const auto pass = granit::lighting::add_directional_shadow_graph_pass(
+      graph, std::move(desc),
+      [&](granit::render_graph::pass_context& context,
+          const granit::lighting::shadow_frame_constants&,
+          std::span<const granit::lighting::shadow_caster> casters) {
+        called = true;
+        CHECK(context.texture_view(depth) == 123);
+        CHECK(casters.empty());
+        return GRANIT_SUCCESS;
+      });
+  REQUIRE(pass != granit::render_graph::invalid_pass_id);
+  CHECK(graph.diagnostics().compilation.succeeded());
+
+  granit::renderer renderer;
+  const auto initialized = renderer.initialize({.application_name = "granit-empty-shadow-pass"});
+  if (environment_unavailable(initialized))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(initialized == granit::result::success);
+  const auto result = graph.execute(renderer.native_handle());
+  REQUIRE(result.succeeded());
+  CHECK(called);
+  REQUIRE(granit_command_recorder_destroy(renderer.native_handle(), result.recorder) ==
+          GRANIT_SUCCESS);
 }
