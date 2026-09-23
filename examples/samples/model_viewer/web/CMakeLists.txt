@@ -12,7 +12,7 @@ add_library(granit_sample_model_viewer_web_shell STATIC web_input.cpp web_input.
 target_compile_features(granit_sample_model_viewer_web_shell PUBLIC cxx_std_20)
 target_include_directories(
   granit_sample_model_viewer_web_shell
-  PUBLIC "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer"
+  PUBLIC "${PROJECT_SOURCE_DIR}/examples/samples"
 )
 target_link_libraries(
   granit_sample_model_viewer_web_shell PUBLIC granit_sample_model_viewer_core

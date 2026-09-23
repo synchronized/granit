@@ -13,7 +13,6 @@
 | 入口 | 位置 | 目标 | 用途 |
 |---|---|---|---|
 | ImGui | `samples/imgui` | `granit_sdl3_imgui_example`、`granit_imgui_web` | 验证 SDL3、ImGui 和 Canvas 集成 |
-| Model Loading | `samples/model_loading` | `granit_sample_model_loading` | 展示最小同步 glTF 加载 |
 | Model Viewer | `samples/model_viewer` | `granit_sample_model_viewer`、Web 目标 | 展示完整跨后端 PBR 工具 |
 
 低层纹理立方体和 PBR 资产路径位于 `tutorials`，公共应用生命周期位于 `common/application`。
@@ -33,7 +32,6 @@ examples/
 │  └─ web/       浏览器资源请求、资源包与批量 Fetch
 ├─ samples/      综合应用内容、平台入口及自身目标声明
 │  ├─ imgui/      SDL3 + ImGui 完整集成
-│  ├─ model_loading/ 最小同步模型加载
 │  └─ model_viewer/ 完整跨后端模型查看器
 └─ tutorials/    编号特性教程源码
 ```
@@ -43,7 +41,7 @@ examples/
 能力，才应另行设计为 Granit 公共 API。
 
 Model Viewer 的内容、Core、工具和验收程序均位于 `samples/model_viewer`。桌面入口与 SDL3
-平台壳层位于其 `model_viewer/desktop` 子目录，浏览器入口和输入适配位于 `model_viewer/web`；
+平台壳层位于其 `desktop` 子目录，浏览器入口和输入适配位于 `web`；
 跨教程复用的 GPU Scene 位于 `common/model_viewer`，浏览器资源支撑位于 `common/web`。
 
 ## 新增综合示例

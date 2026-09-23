@@ -10,8 +10,8 @@
 ## 当前计划
 
 - [S-54：0.30.0 特性教程与 Example Application](S-54-0.30.0-feature-tutorial-framework.md)——抽取
-  跨平台示例应用壳，将教程压缩为 Cube 与 PBR Assets，并把 Model Loading/Viewer 移回 Samples；
-  本地实施与浏览器验证已完成，等待远端矩阵。
+  跨平台示例应用壳，将教程压缩为 Cube 与 PBR Assets，将完整 Model Viewer 移回 Samples，并删除
+  重复的最小加载应用；本地实施与浏览器验证已完成，等待远端矩阵。
 - [S-53：0.30.0 文档、教程与发布面收敛](S-53-0.30.0-documentation-tutorial-release.md)——建立
   Frame 与命令录制分层 Concept，整理教程学习路径，并把正式 Release 收敛为 shared SDK；本地
   实施与浏览器验证已完成，等待远端矩阵。

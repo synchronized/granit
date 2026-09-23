@@ -5,7 +5,7 @@
 
 ## 验收范围
 
-本次验收覆盖仓库私有 Example Application、两个编号特性教程、Model Loading/Viewer 的 Sample
+本次验收覆盖仓库私有 Example Application、两个编号特性教程、Model Viewer 的 Sample
 迁移，以及桌面和浏览器构建入口。公共 API、ABI 和 SDK 安装内容没有变化。
 
 ## 已完成结果
@@ -16,15 +16,15 @@
   Camera、Frame Context 和 Canvas。
 - 将 Material、Lighting 与 Render Pipeline 内容收敛为 `02_pbr_assets`，以带完整 PBR 顶点属性的
   Sphere 展示 Material、Scene、Shadow、HDR、后处理和空场景首帧。
-- 将 Model Loading 与 Model Viewer 移入 `examples/samples`，同步更新目标名、测试、浏览器产物、
-  工作流和文档入口。
+- 将 Model Viewer 移入 `examples/samples` 并消除重复目录层级；删除已由 Viewer 与支持代码测试
+  覆盖的最小 Model Loading 应用，同步更新测试、浏览器产物、工作流和文档入口。
 - Example Application 保持仓库私有，不进入安装导出，也不向教程传播 ImGui、glTF 或 Render
   Pipeline 依赖。
 
 ## 本地验证
 
-- Windows Clang Debug：完整 `ctest` 共 93 项全部通过；两个教程及迁移后的 Model Loading/Viewer
-  目标和行为测试通过。
+- Windows Clang Debug：目录收敛后完整 `ctest` 共 92 项全部通过；两个教程以及 Model Viewer 的
+  桌面、Core、ImGui、平台壳与离屏目标构建通过。
 - Emscripten Debug：`01_cube`、`02_pbr_assets` 和 Model Viewer Web 目标构建通过。
 - Chrome WebGPU：两个教程和 Model Viewer 的多帧、输入、Resize、资产加载与资源释放行为测试通过。
 - `actionlint`、Documentation 链接检查和 `git diff --check` 通过。

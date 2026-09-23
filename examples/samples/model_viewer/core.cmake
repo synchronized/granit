@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
-# Model Viewer 私有 Core、工具和验收目标；由教程最终项目的目标编排包含。
+# Model Viewer 私有 Core、工具和验收目标；由 Sample 目标编排包含。
 
 add_library(
   granit_sample_model_viewer_core STATIC
@@ -23,7 +23,7 @@ add_library(granit_sample_model_viewer_support ALIAS granit_sample_model_viewer_
 target_compile_features(granit_sample_model_viewer_core PUBLIC cxx_std_20)
 target_include_directories(
   granit_sample_model_viewer_core
-  PUBLIC "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer"
+  PUBLIC "${PROJECT_SOURCE_DIR}/examples/samples"
          "${PROJECT_SOURCE_DIR}/examples/common"
   PRIVATE "${PROJECT_SOURCE_DIR}/src"
 )
@@ -89,7 +89,7 @@ if(TARGET granit::integration_imgui)
   target_compile_features(granit_sample_model_viewer_imgui PUBLIC cxx_std_20)
   target_include_directories(
     granit_sample_model_viewer_imgui
-    PUBLIC "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer"
+    PUBLIC "${PROJECT_SOURCE_DIR}/examples/samples"
   )
   target_link_libraries(
     granit_sample_model_viewer_imgui

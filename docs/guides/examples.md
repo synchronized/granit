@@ -4,7 +4,7 @@
 # 示例程序
 
 本文是综合示例目录和运行入口，不重复维护具体示例的完整构建参数。Granit 保留独立 ImGui 示例、
-Model Loading 和 Model Viewer；完整学习路径见[教程系列](../tutorials/README.md)。版本
+Model Viewer；完整学习路径见[教程系列](../tutorials/README.md)。版本
 查询、离屏清屏、纹理回读和平台窗口等单能力验证位于 `tests/smoke`，由构建与 CTest 覆盖，不再
 作为示例发布。
 
@@ -46,9 +46,8 @@ python -m http.server 8000 --directory build/emscripten-release/web
 `http://localhost:8000/granit_imgui_web.html`。页面使用 SDL3 处理浏览器事件，ImGui 仍通过 Granit
 Canvas 绘制，不是 DOM/CSS 仿制界面，因此可用于核对桌面与 Web 的字体、纹理、裁剪和输入一致性。
 
-## Model Loading 与 Model Viewer
+## Model Viewer
 
-`granit_sample_model_loading` 展示最小同步 glTF 加载与 GPU Scene 创建。
 `granit_sample_model_viewer` 是完整跨后端应用，它复用同一应用核心，在桌面 Vulkan 和
 浏览器 Emscripten WebGPU 中加载 glTF/GLB、上传 GPU Scene 并显示 PBR 模型；桌面目标还提供
 编辑器式面板。该目标需要显式启用模型查看器及对应 Integration。

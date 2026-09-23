@@ -46,7 +46,7 @@ granit_target_output_directories(granit_sample_model_viewer)
 target_compile_features(granit_sample_model_viewer_desktop_shell PUBLIC cxx_std_20)
 target_include_directories(
   granit_sample_model_viewer_desktop_shell
-  PUBLIC "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer"
+  PUBLIC "${PROJECT_SOURCE_DIR}/examples/samples"
 )
 target_link_libraries(
   granit_sample_model_viewer_desktop_shell PUBLIC granit_sample_model_viewer_core

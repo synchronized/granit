@@ -48,7 +48,7 @@ jobs:
           suite="${REQUESTED_SUITE:-auto}"
           if [[ "$suite" == auto ]]; then
             web_paths='^(tests/web/|examples/common/web/|'
-            web_paths+='examples/samples/model_viewer/model_viewer/web/|'
+            web_paths+='examples/samples/model_viewer/web/|'
             web_paths+='examples/samples/imgui/(web\.cmake|web_main\.cpp)|'
             web_paths+='cmake/(granit_web|granit_platform)\.cmake$|src/backend/webgpu/|'
             web_paths+='\.github/workflows/emscripten\.yml$)'
