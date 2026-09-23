@@ -130,6 +130,7 @@ typedef uint32_t granit_primitive_topology;
 #define GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST UINT32_C(4)
 #define GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP UINT32_C(5)
 
+/** 正面绕序使用 Granit 逻辑裁剪空间；后端 Viewport 转换不会改变该语义。 */
 typedef uint32_t granit_front_face;
 #define GRANIT_FRONT_FACE_COUNTER_CLOCKWISE UINT32_C(1)
 #define GRANIT_FRONT_FACE_CLOCKWISE UINT32_C(2)

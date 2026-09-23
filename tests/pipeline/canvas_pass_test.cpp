@@ -97,15 +97,15 @@ TEST_CASE("Canvas Pass按Batch录制顶点色与Scissor") {
           granit::result::success);
   REQUIRE(recorder.begin() == granit::result::success);
   const granit::texture_write_region region{.mip_level = 0,
-                                           .base_array_layer = 0,
-                                           .array_layer_count = 1,
-                                           .aspect = granit::texture_aspect::color,
-                                           .x = 0,
-                                           .y = 0,
-                                           .z = 0,
-                                           .width = size,
-                                           .height = size,
-                                           .depth = 1};
+                                            .base_array_layer = 0,
+                                            .array_layer_count = 1,
+                                            .aspect = granit::texture_aspect::color,
+                                            .x = 0,
+                                            .y = 0,
+                                            .z = 0,
+                                            .width = size,
+                                            .height = size,
+                                            .depth = 1};
   REQUIRE(recorder.copy_texture_to_buffer(color.ref(), readback.ref(), {}, region) ==
           granit::result::success);
   REQUIRE(recorder.end() == granit::result::success);
@@ -113,13 +113,16 @@ TEST_CASE("Canvas Pass按Batch录制顶点色与Scissor") {
   REQUIRE(recorder.reset() == granit::result::success);
   void* mapped = nullptr;
   REQUIRE(readback.map(0, size * size * 4, &mapped) == granit::result::success);
-  const auto pixel = [&](std::uint32_t x) {
+  const auto pixel = [&](std::uint32_t x, std::uint32_t y = 16) {
     std::array<std::uint8_t, 4> result{};
-    std::memcpy(result.data(), static_cast<const std::byte*>(mapped) + (16 * size + x) * 4, 4);
+    std::memcpy(result.data(), static_cast<const std::byte*>(mapped) + (y * size + x) * 4, 4);
     return result;
   };
   CHECK(pixel(14) == std::array<std::uint8_t, 4>{128, 0, 64, 192});
   CHECK(pixel(20) == std::array<std::uint8_t, 4>{0, 0, 128, 128});
+  CHECK(pixel(16, 5)[3] != 0);
+  CHECK(pixel(4, 5) == std::array<std::uint8_t, 4>{0, 0, 0, 0});
+  CHECK(pixel(4, 27)[3] != 0);
   REQUIRE(readback.unmap() == granit::result::success);
 
   record_desc.encode_srgb = true;
