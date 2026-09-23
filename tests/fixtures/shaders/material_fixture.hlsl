@@ -5,6 +5,23 @@ struct fragment_input {
   float2 uv : TEXCOORD0;
 };
 
+struct vertex_input {
+  float3 position : POSITION;
+  float3 normal : NORMAL;
+};
+
+struct vertex_output {
+  float4 position : SV_Position;
+  float2 uv : TEXCOORD0;
+};
+
+vertex_output vertex_main(vertex_input input) {
+  vertex_output output;
+  output.position = float4(input.position, 1.0);
+  output.uv = input.normal.xy;
+  return output;
+}
+
 [[vk::binding(0, 1)]] cbuffer MaterialConstants {
   float4 base_color;
   float roughness;

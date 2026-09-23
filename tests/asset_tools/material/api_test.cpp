@@ -4,11 +4,15 @@
 #include <granit/asset_tools/material_builder.hpp>
 
 #include <algorithm>
+#include <array>
+#include <cstddef>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <span>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace {
 
@@ -17,16 +21,24 @@ std::string read_text(const std::filesystem::path& path) {
   return {std::istreambuf_iterator<char>{stream}, {}};
 }
 
+std::vector<std::byte> read_bytes(const std::filesystem::path& path) {
+  std::ifstream stream{path, std::ios::binary};
+  const std::vector<char> bytes{std::istreambuf_iterator<char>{stream}, {}};
+  std::vector<std::byte> result(bytes.size());
+  std::ranges::copy(std::as_bytes(std::span{bytes}), result.begin());
+  return result;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
   if (argc != 3)
     return 1;
   const auto source = read_text(argv[1]);
-  const auto index = read_text(argv[2]);
-  const std::string_view indices[]{index};
+  const auto library = read_bytes(argv[2]);
+  const std::span<const std::byte> libraries[]{library};
   auto [build_status, built] =
-      granit::asset_tools::material::build({.source_json = source, .shader_indices = indices});
+      granit::asset_tools::material::build({.source_json = source, .shader_libraries = libraries});
   if (build_status.failed() || !built || built.archive().empty() ||
       built.debug_json().find("\"magic\": \"GRMAT\"") == std::string_view::npos ||
       !built.diagnostic().empty())
@@ -38,9 +50,10 @@ int main(int argc, char** argv) {
       inspected.debug_json() != built.debug_json())
     return 3;
 
-  const std::string_view invalid_indices[]{"{}"};
+  const std::array invalid_archive{std::byte{0}};
+  const std::span<const std::byte> invalid_libraries[]{invalid_archive};
   auto [invalid_status, invalid] = granit::asset_tools::material::build(
-      {.source_json = source, .shader_indices = invalid_indices});
+      {.source_json = source, .shader_libraries = invalid_libraries});
   if (invalid_status != granit::result::invalid_argument || !invalid ||
       invalid.diagnostic().empty() || !invalid.archive().empty())
     return 4;

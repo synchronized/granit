@@ -6,22 +6,22 @@
 
 #include <stdint.h>
 
-#include <granit/core/result.h>
 #include <granit/asset_tools/export.h>
+#include <granit/core/result.h>
 
 /** Material 构建或检查结果句柄。零值无效。 */
 typedef uint64_t granit_asset_tools_material_result;
 
-/** 一个 Shader Library 逻辑索引的 UTF-8 JSON。输入只需在调用期间有效。 */
-typedef struct granit_asset_tools_material_shader_index {
+/** 一个包含逻辑名称表的 `.grshlib`。输入只需在调用期间有效。 */
+typedef struct granit_asset_tools_material_shader_library {
   uint32_t struct_size;
   uint32_t reserved;
-  const char* json;
-  uint64_t json_length;
-} granit_asset_tools_material_shader_index;
+  const void* archive;
+  uint64_t archive_size;
+} granit_asset_tools_material_shader_library;
 
-#define GRANIT_ASSET_TOOLS_MATERIAL_SHADER_INDEX_INIT                                              \
-  {(uint32_t)sizeof(granit_asset_tools_material_shader_index), UINT32_C(0), 0, UINT64_C(0)}
+#define GRANIT_ASSET_TOOLS_MATERIAL_SHADER_LIBRARY_INIT                                            \
+  {(uint32_t)sizeof(granit_asset_tools_material_shader_library), UINT32_C(0), 0, UINT64_C(0)}
 
 /** Material 源构建描述。所有输入均在调用期间借用。 */
 typedef struct granit_asset_tools_material_build_desc {
@@ -29,8 +29,8 @@ typedef struct granit_asset_tools_material_build_desc {
   uint32_t reserved;
   const char* source_json;
   uint64_t source_json_length;
-  const granit_asset_tools_material_shader_index* shader_indices;
-  uint32_t shader_index_count;
+  const granit_asset_tools_material_shader_library* shader_libraries;
+  uint32_t shader_library_count;
   uint32_t reserved2;
 } granit_asset_tools_material_build_desc;
 
@@ -47,7 +47,7 @@ typedef struct granit_asset_tools_material_build_desc {
 extern "C" {
 #endif
 
-/** 从源 JSON 和 Shader 索引构建确定性 `.grmat`。失败时仍可能返回带诊断的结果句柄。 */
+/** 从源 JSON 和 Shader Library 构建确定性 `.grmat`。失败时仍可能返回带诊断的结果句柄。 */
 GRANIT_ASSET_TOOLS_API granit_result granit_asset_tools_material_build(
     const granit_asset_tools_material_build_desc* desc, granit_asset_tools_material_result* result);
 

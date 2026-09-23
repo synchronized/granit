@@ -20,10 +20,7 @@ void print_usage() {
                "  granit_asset_tool shader capabilities "
                "--target <vulkan-portable|webgpu-portable>\n"
                "  granit_asset_tool shader build-library --manifest <library.grshlib.json> "
-               "--toolchain <root> --cache <directory> --output <library.grshlib> "
-               "--index <library.grshidx.json>\n"
-               "  granit_asset_tool shader index-ids --index <library.grshidx.json> "
-               "--shader <name=logical-name>... --output <shader-ids.inc>\n"
+               "--toolchain <root> --cache <directory> --output <library.grshlib>\n"
                "  granit_asset_tool shader compile --toolchain <root> "
                "--input <shader.hlsl> --entry <name> --stage <vertex|fragment|compute> "
                "--spirv-output <shader.spv> --wgsl-output <shader.wgsl> "
@@ -62,8 +59,6 @@ int run_shader_command(int argc, char** argv) {
     return compile_shader(argc, argv);
   if (argc >= 2 && std::string_view{argv[1]} == "build-library")
     return build_shader_library(argc, argv);
-  if (argc >= 2 && std::string_view{argv[1]} == "index-ids")
-    return emit_shader_index_ids(argc, argv);
   print_usage();
   return 2;
 }

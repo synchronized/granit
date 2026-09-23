@@ -14,9 +14,9 @@ Granit 当前版本为 0.x，公共 API、C ABI、C++ 包装、CMake component �
 操作时还必须提供迁移指南，不能静默漂移。
 已发布的 Core 0.20.0 和 0.21.0 完整符号快照保持不变；Core 0.22.0 使用新完整快照记录
 Texture 离线编码入口迁出后的导出集合，0.23.0 未改变该导出集合并继续以此快照回归；
-AssetTools 0.22.0 使用独立快照记录四个资产领域；
-RenderPipeline 使用 0.17.0 完整符号快照，覆盖 Shader Asset 检查、标准 PBR Schema 与材质
-Pipeline 预热入口。
+AssetTools 0.29.0 使用完整快照记录删除 Shader 索引 API 后的导出集合；Core 0.29.0 使用完整快照
+记录 Shader Library 按逻辑名称与按内容 ID 创建入口；RenderPipeline 0.29.0 使用完整快照记录新增
+Mesh 命令录制入口后的导出集合。
 Window 在 0.25.0 合并输入生命周期，并使用 0.25.0 完整符号快照。历史快照保持不可变，新版本
 只在 ABI 发生变化时通过新目录记录增量或完整基线。
 

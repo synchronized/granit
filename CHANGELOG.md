@@ -8,6 +8,36 @@
 
 ## Unreleased
 
+### 新增
+
+- 新增 02 Triangle、03 Texture、04 Depth/Camera、05 Mesh、06 Material/Lighting、07 Render
+  Pipeline 和 08 ImGui 线性教程；每章都有独立可运行源码和桌面 Smoke，完整学习路径从窗口清屏
+  延伸到 PBR 场景与交互式工具界面。
+- Tutorial 08 复用统一 Window Loop、输入事件和 Canvas 路径验证浏览器 WebGPU，覆盖 Font Atlas、
+  自定义 Texture ID、多帧渲染、指针输入与 Resize。
+- 新增 09 Model Loading 教程，使用离线 glTF 与外部 Buffer 演示 CPU Scene 解析、GPU Mesh、完整
+  PBR Material、节点变换、自动相机取景和 Render Pipeline 提交。
+- Mesh API 新增命令录制期间使用的 `bind` 和 `draw`；C++ 包装直接接受 `command_recorder&`，
+  低层自定义绘制无需提取 Mesh 或 Recorder 的 C ABI 句柄。
+
+### 变更
+
+- Shader Library 归档现在直接保存 Library 与 Shader 逻辑名称；运行时可按名称创建 Shader，
+  Material Builder 直接读取 `.grshlib`。独立 `.grshidx.json`、`index-ids` 和生成 Shader ID include
+  已删除，内容 ID 只保留为缓存、Material 包与高级接口的内容身份。
+- 教程和 Model Viewer 的普通 C++ 路径统一使用 RAII 对象、`renderer_ref` 及 Mesh、Material、
+  Scene、Texture View、Canvas 等强类型引用；原始句柄转换集中保留在 C 回调和 Web C 平台壳边界。
+- Model Viewer 已迁移为 Tutorial 10，并由 `granit_tutorial_10_model_viewer`、
+  `granit_tutorial_10_model_viewer_web` 和 `granit_tutorial_10_model_viewer_offscreen_acceptance`
+  接管桌面、浏览器与离屏入口；`examples/samples` 只保留独立的 ImGui 集成示例。
+- 删除已由 Tutorial 01/02 和自动测试覆盖的 Minimal Renderer 与离屏 Triangle 重复示例。
+
+### 兼容性与迁移
+
+- `.grshlib` 已升级到 schema 2，旧归档需要重新生成；按内容 ID 创建 Shader 的旧入口、Shader
+  索引 API、`--index` 与 `--shader-index` 参数已经删除或改名。完整步骤见
+  [从 0.28 迁移到 0.29](docs/guides/migrate-0.28-to-0.29.md)。
+
 ## 0.28.1 - 2026-09-23
 
 ### 修复

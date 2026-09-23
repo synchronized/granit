@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <cstring>
 #include <span>
+#include <string_view>
 #include <utility>
 
 #include <granit/core/result.hpp>
@@ -130,14 +131,28 @@ public:
     return value;
   }
 
-  /** 按内容 ID 选择当前 Renderer 支持的变体并创建 Shader。Library 必须比 Shader 更晚销毁。 */
-  [[nodiscard]] result create_shader(const shader_content_id& content_id,
+  /** 按 Library 内的逻辑名称创建 Shader。Library 必须比 Shader 更晚销毁。 */
+  [[nodiscard]] result create_shader(std::string_view logical_name,
                                      shader& destination) const noexcept {
+    if (!valid())
+      return result::invalid_handle;
+    if (destination.valid() || logical_name.empty())
+      return result::invalid_argument;
+    const auto value = from_native(granit_shader_create_from_library_name(
+        renderer_, handle_, logical_name.data(), logical_name.size(), &destination.handle_));
+    if (value.ok())
+      destination.renderer_ = renderer_;
+    return value;
+  }
+
+  /** 按内容 ID 创建 Shader，供资产系统和缓存等高级用法使用。 */
+  [[nodiscard]] result create_shader_by_content_id(const shader_content_id& content_id,
+                                                   shader& destination) const noexcept {
     if (!valid())
       return result::invalid_handle;
     if (destination.valid())
       return result::invalid_argument;
-    const auto value = from_native(granit_shader_create_from_library(
+    const auto value = from_native(granit_shader_create_from_library_content_id(
         renderer_, handle_, reinterpret_cast<const std::uint8_t*>(content_id.data()),
         &destination.handle_));
     if (value.ok())

@@ -3,8 +3,8 @@
 
 #include <granit/renderer/shader_library.h>
 
-#include "renderer/renderer_registry.h"
 #include "asset_formats/shader/shader_library.h"
+#include "renderer/renderer_registry.h"
 
 #include <cstring>
 #include <limits>
@@ -100,10 +100,30 @@ extern "C" granit_result granit_shader_library_get_info(granit_renderer renderer
   }
 }
 
-extern "C" granit_result
-granit_shader_create_from_library(granit_renderer renderer, granit_shader_library library,
-                                  const granit_shader_content_id content_id,
-                                  granit_shader* shader) {
+extern "C" granit_result granit_shader_create_from_library_name(granit_renderer renderer,
+                                                                granit_shader_library library,
+                                                                const char* logical_name,
+                                                                uint64_t logical_name_length,
+                                                                granit_shader* shader) {
+  if (shader == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  *shader = GRANIT_NULL_HANDLE;
+  if (renderer == GRANIT_NULL_HANDLE || library == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (logical_name == nullptr || logical_name_length == 0 ||
+      logical_name_length > std::numeric_limits<std::size_t>::max())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return granit::detail::renderer_registry::instance().create_shader_from_library_name(
+        renderer, library, {logical_name, static_cast<std::size_t>(logical_name_length)}, *shader);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+extern "C" granit_result granit_shader_create_from_library_content_id(
+    granit_renderer renderer, granit_shader_library library,
+    const granit_shader_content_id content_id, granit_shader* shader) {
   if (shader == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   *shader = GRANIT_NULL_HANDLE;
@@ -114,7 +134,7 @@ granit_shader_create_from_library(granit_renderer renderer, granit_shader_librar
   try {
     granit::shader_content_id id{};
     std::memcpy(id.data(), content_id, id.size());
-    return granit::detail::renderer_registry::instance().create_shader_from_library(
+    return granit::detail::renderer_registry::instance().create_shader_from_library_content_id(
         renderer, library, id, *shader);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;

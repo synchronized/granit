@@ -36,7 +36,7 @@ granit_result create_shader(granit_renderer renderer, const material_shader_code
   }
   if (shader_library == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_NOT_READY;
-  return granit_shader_create_from_library(
+  return granit_shader_create_from_library_content_id(
       renderer, shader_library, reinterpret_cast<const std::uint8_t*>(source.asset_id.data()),
       &shader);
 }

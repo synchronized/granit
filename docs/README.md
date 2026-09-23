@@ -20,6 +20,8 @@
 7. [添加材质与光照](tutorials/06-material-and-lighting.md)
 8. [迁移到 Render Pipeline](tutorials/07-render-pipeline.md)
 9. [接入 ImGui 调试界面](tutorials/08-imgui.md)
+10. [加载 glTF 模型](tutorials/09-model-loading.md)
+11. [完成跨后端 Model Viewer](tutorials/10-model-viewer.md)
 
 ### 使用核心 Renderer
 
@@ -43,10 +45,9 @@
 1. [开发规范](guides/development.md)
 2. [项目文档规范](../DOCUMENTATION_GUIDE.md)
 3. [路线图](roadmap.md)
-4. [线性入门教程计划](plans/S-48-0.28.0-linear-tutorial-series.md)
-5. [0.28.0 Window 跨平台 Loop 计划](plans/S-49-0.28.0-window-loop.md)
-6. [开发计划与完成历史](plans/README.md)
-7. [第三方依赖](../3rd/README.md)
+4. [0.29.0 版本收口与发布验收计划](plans/S-52-0.29.0-release-acceptance.md)
+5. [开发计划与完成历史](plans/README.md)
+6. [第三方依赖](../3rd/README.md)
 
 ## 操作指南
 
@@ -57,7 +58,7 @@
 - [CI 与验证](guides/ci.md)
 - [发布验收](guides/release.md)
 - [版本迁移指南索引](guides/migrations.md)
-- [从 0.24 迁移到 0.25](guides/migrate-0.24-to-0.25.md)
+- [从 0.28 迁移到 0.29](guides/migrate-0.28-to-0.29.md)
 - [示例程序及运行方式](guides/examples.md)
 - [运行跨后端模型查看器](guides/model-viewer.md)
 - [运行浏览器 WebGPU 平台 Smoke](guides/webgpu-browser-example.md)
@@ -66,8 +67,8 @@
 
 ## 教程
 
-教程从窗口清屏开始，逐章扩展同一个应用；每章只增加一种主要能力。01 已提供配套源码与自动
-验证，02～08 当前是后续内容预览。API 细节以对应 Reference 为准。
+教程从窗口清屏开始，逐章扩展同一个应用；每章只增加一种主要能力。01～10 均已提供配套源码与
+自动验证，01、08 与 10 还覆盖浏览器 WebGPU。API 细节以对应 Reference 为准。
 
 - [教程系列说明](tutorials/README.md)
 - [01：创建窗口并清屏](tutorials/01-window.md)
@@ -78,6 +79,8 @@
 - [06：添加材质与光照](tutorials/06-material-and-lighting.md)
 - [07：迁移到 Render Pipeline](tutorials/07-render-pipeline.md)
 - [08：接入 ImGui 调试界面](tutorials/08-imgui.md)
+- [09：加载 glTF 模型](tutorials/09-model-loading.md)
+- [10：完成跨后端 Model Viewer](tutorials/10-model-viewer.md)
 
 ## API 与行为参考
 

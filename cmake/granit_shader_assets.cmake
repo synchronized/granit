@@ -97,11 +97,10 @@ endfunction()
 
 function(granit_add_hlsl_shader_library)
   set(options ALL)
-  set(one_value_args NAME MANIFEST OUTPUT INDEX CACHE_DIR TARGET REFERENCE INDEX_REFERENCE)
+  set(one_value_args NAME MANIFEST OUTPUT CACHE_DIR TARGET REFERENCE)
   set(multi_value_args SOURCES)
   cmake_parse_arguments(ARG "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
-  if(NOT ARG_NAME OR NOT ARG_MANIFEST OR NOT ARG_OUTPUT OR NOT ARG_INDEX OR NOT ARG_CACHE_DIR OR
-     NOT ARG_TARGET)
+  if(NOT ARG_NAME OR NOT ARG_MANIFEST OR NOT ARG_OUTPUT OR NOT ARG_CACHE_DIR OR NOT ARG_TARGET)
     message(FATAL_ERROR "granit_add_hlsl_shader_library 缺少必要参数")
   endif()
   if(NOT GRANIT_SHADER_TOOLCHAIN_ROOT OR NOT GRANIT_DXC_EXECUTABLE OR
@@ -110,30 +109,23 @@ function(granit_add_hlsl_shader_library)
   endif()
 
   get_filename_component(output_directory "${ARG_OUTPUT}" DIRECTORY)
-  get_filename_component(index_directory "${ARG_INDEX}" DIRECTORY)
   set(commands
       COMMAND "${CMAKE_COMMAND}" -E make_directory "${ARG_CACHE_DIR}" "${output_directory}"
-              "${index_directory}"
       COMMAND
         "$<TARGET_FILE:granit_asset_tool>" shader build-library --manifest "${ARG_MANIFEST}"
         --toolchain "${GRANIT_SHADER_TOOLCHAIN_ROOT}"
-        --cache "${ARG_CACHE_DIR}" --output "${ARG_OUTPUT}" --index "${ARG_INDEX}")
+        --cache "${ARG_CACHE_DIR}" --output "${ARG_OUTPUT}")
   set(dependencies granit_asset_tool "${ARG_MANIFEST}" ${ARG_SOURCES})
   if(ARG_REFERENCE)
     list(APPEND commands COMMAND "${CMAKE_COMMAND}" -E compare_files "${ARG_OUTPUT}"
                                  "${ARG_REFERENCE}")
     list(APPEND dependencies "${ARG_REFERENCE}")
   endif()
-  if(ARG_INDEX_REFERENCE)
-    list(APPEND commands COMMAND "${CMAKE_COMMAND}" -E compare_files "${ARG_INDEX}"
-                                 "${ARG_INDEX_REFERENCE}")
-    list(APPEND dependencies "${ARG_INDEX_REFERENCE}")
-  endif()
   set(stamp "${ARG_OUTPUT}.verified")
   list(APPEND commands COMMAND "${CMAKE_COMMAND}" -E touch "${stamp}")
   add_custom_command(
     OUTPUT "${stamp}"
-    BYPRODUCTS "${ARG_OUTPUT}" "${ARG_INDEX}"
+    BYPRODUCTS "${ARG_OUTPUT}"
     ${commands}
     DEPENDS ${dependencies}
     COMMENT "从 HLSL 源清单构建 Shader Library ${ARG_NAME}"
@@ -155,10 +147,8 @@ function(granit_prepare_runtime_shader_libraries)
       NAME pbr_standard
       MANIFEST "${granit_asset_sources_dir}/shaders/pbr/pbr_standard.grshlib.json"
       OUTPUT "${output_root}/pbr_standard.grshlib"
-      INDEX "${output_root}/pbr_standard.grshidx.json"
       CACHE_DIR "${object_root}/pbr-standard"
       REFERENCE "${granit_installed_asset_snapshot_dir}/libraries/pbr_standard.grshlib"
-      INDEX_REFERENCE "${granit_installed_asset_snapshot_dir}/materials/pbr_standard.grshidx.json"
       TARGET granit_pbr_shader_library
       SOURCES "${granit_asset_sources_dir}/shaders/pbr/pbr_standard.hlsl"
     )
@@ -167,10 +157,8 @@ function(granit_prepare_runtime_shader_libraries)
       NAME canvas
       MANIFEST "${granit_asset_sources_dir}/shaders/unlit/canvas.grshlib.json"
       OUTPUT "${output_root}/unlit_canvas.grshlib"
-      INDEX "${output_root}/canvas.grshidx.json"
       CACHE_DIR "${object_root}/unlit-canvas"
       REFERENCE "${granit_embedded_asset_snapshot_dir}/pipeline/unlit_canvas.grshlib"
-      INDEX_REFERENCE "${granit_embedded_asset_snapshot_dir}/pipeline/unlit_canvas.grshidx.json"
       TARGET granit_canvas_shader_library
       SOURCES "${granit_asset_sources_dir}/shaders/unlit/unlit.hlsl"
     )
@@ -350,44 +338,51 @@ function(granit_prepare_test_shader_assets)
   )
   list(APPEND outputs ${output})
 
-  add_custom_target(granit_test_shader_assets DEPENDS ${outputs})
-  if(GRANIT_SHADER_TOOLCHAIN_ROOT AND GRANIT_DXC_EXECUTABLE AND GRANIT_TINT_EXECUTABLE)
-    set(test_library_root "${CMAKE_BINARY_DIR}/generated/test-libraries")
-    set(test_cache_root "${CMAKE_BINARY_DIR}/generated/test-library-objects")
-    set(pbr_manifest "${granit_asset_sources_dir}/shaders/pbr/pbr_runtime.grshlib.json")
-    set(pbr_test_manifest "${granit_asset_sources_dir}/shaders/pbr/pbr_test.grshlib.json")
-    set(unlit_manifest "${granit_asset_sources_dir}/shaders/unlit/unlit.grshlib.json")
-    set(smoke_manifest "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/smoke.grshlib.json")
-    set(pbr_sources "${pbr_source}")
-    set(pbr_test_sources "${pbr_source}")
-    set(unlit_sources "${granit_asset_sources_dir}/shaders/unlit/unlit.hlsl")
-    set(
-      smoke_sources
-      "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/triangle.hlsl"
-      "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/compute.hlsl"
-    )
-    foreach(library IN ITEMS pbr pbr_test unlit smoke)
-      granit_add_hlsl_shader_library(
-        NAME "${library}"
-        MANIFEST "${${library}_manifest}"
-        OUTPUT "${test_library_root}/${library}.grshlib"
-        INDEX "${test_library_root}/${library}.grshidx.json"
-        CACHE_DIR "${test_cache_root}/${library}"
-        TARGET "granit_${library}_test_shader_library"
-        SOURCES ${${library}_sources}
-      )
-      add_dependencies(granit_test_shader_assets "granit_${library}_test_shader_library")
-    endforeach()
-    set(pbr_test_index "${test_library_root}/pbr.grshidx.json")
-    set(unlit_test_index "${test_library_root}/unlit.grshidx.json")
-  else()
-    set(pbr_test_index "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/pbr.grshidx.json")
-    set(unlit_test_index "${PROJECT_SOURCE_DIR}/tests/fixtures/smoke/unlit.grshidx.json")
-  endif()
+  set(test_library_root "${CMAKE_BINARY_DIR}/generated/test-libraries")
+  set(pbr_test_library "${test_library_root}/pbr.grshlib")
+  set(unlit_test_library "${test_library_root}/unlit.grshlib")
+  add_custom_command(
+    OUTPUT "${pbr_test_library}"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${test_library_root}"
+    COMMAND
+      "$<TARGET_FILE:granit_shader_fixture_tool>" library --name pbr
+      --object
+      "pbr.vertex/shadow_ibl_lights=${pbr_output}/pbr_shadow_ibl_lights.vert.grshaderobj"
+      --object
+      "pbr.fragment/untextured=${pbr_output}/pbr_shadow_ibl_lights_untextured.frag.grshaderobj"
+      --target all --output "${pbr_test_library}"
+    DEPENDS
+      granit_shader_fixture_tool
+      "${pbr_output}/pbr_shadow_ibl_lights.vert.grshaderobj"
+      "${pbr_output}/pbr_shadow_ibl_lights_untextured.frag.grshaderobj"
+    COMMENT "从测试 Shader Object 链接 PBR Shader Library"
+    VERBATIM
+  )
+  add_custom_command(
+    OUTPUT "${unlit_test_library}"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${test_library_root}"
+    COMMAND
+      "$<TARGET_FILE:granit_shader_fixture_tool>" library --name unlit
+      --object "unlit.vertex=${unlit_output}/unlit.vert.grshaderobj"
+      --object "unlit.fragment/opaque=${unlit_output}/unlit.frag.grshaderobj"
+      --object
+      "unlit.fragment/alpha_cutoff=${unlit_output}/unlit_alpha_cutoff.frag.grshaderobj"
+      --target all --output "${unlit_test_library}"
+    DEPENDS
+      granit_shader_fixture_tool
+      "${unlit_output}/unlit.vert.grshaderobj"
+      "${unlit_output}/unlit.frag.grshaderobj"
+      "${unlit_output}/unlit_alpha_cutoff.frag.grshaderobj"
+    COMMENT "从测试 Shader Object 链接 Unlit Shader Library"
+    VERBATIM
+  )
+  add_custom_target(
+    granit_test_shader_assets DEPENDS ${outputs} "${pbr_test_library}" "${unlit_test_library}"
+  )
   set(GRANIT_PBR_TEST_SHADER_DIR "${pbr_output}" PARENT_SCOPE)
   set(GRANIT_PIPELINE_TEST_SHADER_DIR "${pipeline_output}" PARENT_SCOPE)
   set(GRANIT_SMOKE_TEST_SHADER_DIR "${smoke_output}" PARENT_SCOPE)
   set(GRANIT_UNLIT_TEST_SHADER_DIR "${unlit_output}" PARENT_SCOPE)
-  set(GRANIT_PBR_TEST_SHADER_INDEX "${pbr_test_index}" PARENT_SCOPE)
-  set(GRANIT_UNLIT_TEST_SHADER_INDEX "${unlit_test_index}" PARENT_SCOPE)
+  set(GRANIT_PBR_TEST_SHADER_LIBRARY "${pbr_test_library}" PARENT_SCOPE)
+  set(GRANIT_UNLIT_TEST_SHADER_LIBRARY "${unlit_test_library}" PARENT_SCOPE)
 endfunction()

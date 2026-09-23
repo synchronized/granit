@@ -30,10 +30,11 @@ bool compatible_output(granit::texture_format format,
 
 } // namespace
 
-granit_result tone_mapping_pipeline_resources::initialize(
-    granit_renderer renderer, granit::texture_format output_format,
-    const granit::shader_library& library, const shader_content_id& vertex_id,
-    const shader_content_id& fragment_id) noexcept {
+granit_result tone_mapping_pipeline_resources::initialize(granit_renderer renderer,
+                                                          granit::texture_format output_format,
+                                                          const granit::shader_library& library,
+                                                          std::string_view vertex_name,
+                                                          std::string_view fragment_name) noexcept {
   if (renderer == GRANIT_NULL_HANDLE || initialized() ||
       output_format == granit::texture_format::undefined || !library.valid()) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -65,24 +66,24 @@ granit_result tone_mapping_pipeline_resources::initialize(
   if (result.ok())
     result = pipeline_layout_.initialize(renderer_ref, layouts);
   if (result.ok())
-    result = library.create_shader(vertex_id, vertex_shader_);
+    result = library.create_shader(vertex_name, vertex_shader_);
   if (result.ok())
-    result = library.create_shader(fragment_id, fragment_shader_);
+    result = library.create_shader(fragment_name, fragment_shader_);
   if (result.ok()) {
     result = pipeline_.initialize(
         renderer_ref, {.layout = pipeline_layout_.ref(),
-                   .vertex_shader = vertex_shader_.ref(),
-                   .fragment_shader = fragment_shader_.ref(),
-                   .color_formats = std::span{&output_format, 1},
-                   .depth_stencil_format = granit::texture_format::undefined,
-                   .samples = granit::sample_count::one,
-                   .vertex_buffers = {},
-                   .primitive = {.topology = granit::primitive_topology::triangle_list,
-                                 .front = granit::front_face::clockwise,
-                                 .cull = granit::cull_mode::back},
-                   .depth = std::nullopt,
-                   .color_blends = {},
-                   .depth_bias = std::nullopt});
+                       .vertex_shader = vertex_shader_.ref(),
+                       .fragment_shader = fragment_shader_.ref(),
+                       .color_formats = std::span{&output_format, 1},
+                       .depth_stencil_format = granit::texture_format::undefined,
+                       .samples = granit::sample_count::one,
+                       .vertex_buffers = {},
+                       .primitive = {.topology = granit::primitive_topology::triangle_list,
+                                     .front = granit::front_face::clockwise,
+                                     .cull = granit::cull_mode::back},
+                       .depth = std::nullopt,
+                       .color_blends = {},
+                       .depth_bias = std::nullopt});
   }
   if (result.failed()) {
     static_cast<void>(reset());
@@ -133,9 +134,9 @@ tone_mapping_binding_resources::initialize(const tone_mapping_pipeline_resources
       granit::bind_group_entry{
           .binding = 2, .resource = granit::binding_resource_ref::from_native(pipeline.sampler())}};
   if (result.ok())
-    result = group_.initialize(
-        granit::renderer_ref::from_native(pipeline.renderer()),
-        granit::bind_group_layout_ref::from_native(pipeline.group_layout()), entries);
+    result = group_.initialize(granit::renderer_ref::from_native(pipeline.renderer()),
+                               granit::bind_group_layout_ref::from_native(pipeline.group_layout()),
+                               entries);
   if (result.failed()) {
     static_cast<void>(reset());
     return static_cast<granit_result>(result);
@@ -161,8 +162,8 @@ granit_result tone_mapping_binding_resources::reset() noexcept {
 granit_result tone_mapping_resources::initialize(
     granit_renderer renderer, granit_texture_view hdr_view, granit::texture_format output_format,
     const tone_mapping_constants& values, const granit::shader_library& library,
-    const shader_content_id& vertex_id, const shader_content_id& fragment_id) noexcept {
-  auto result = pipeline_.initialize(renderer, output_format, library, vertex_id, fragment_id);
+    std::string_view vertex_name, std::string_view fragment_name) noexcept {
+  auto result = pipeline_.initialize(renderer, output_format, library, vertex_name, fragment_name);
   if (result == GRANIT_SUCCESS)
     result = binding_.initialize(pipeline_, hdr_view, values);
   if (result != GRANIT_SUCCESS)

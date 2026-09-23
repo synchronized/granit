@@ -11,6 +11,7 @@
 #include <granit/core/types.h>
 #include <granit/pipeline/export.h>
 #include <granit/renderer/buffer.h>
+#include <granit/renderer/command_recorder.h>
 #include <granit/renderer/pipeline.h>
 
 /** 一次不可变 GPU Draw 的 Mesh 句柄。零值无效。 */
@@ -78,6 +79,16 @@ GRANIT_RENDER_PIPELINE_API granit_result granit_mesh_create(granit_renderer rend
 /** 销毁 Mesh 描述，不销毁其借用的 Buffer。 */
 GRANIT_RENDER_PIPELINE_API granit_result granit_mesh_destroy(granit_renderer renderer,
                                                              granit_mesh mesh);
+
+/** 在进入 Rendering 前，把 Mesh 借用的 Vertex/Index Buffer 绑定到 Recorder。 */
+GRANIT_RENDER_PIPELINE_API granit_result granit_mesh_bind(granit_renderer renderer,
+                                                          granit_mesh mesh,
+                                                          granit_command_recorder recorder);
+
+/** 在 Rendering 内按 Mesh 保存的范围录制一次 Draw。 */
+GRANIT_RENDER_PIPELINE_API granit_result granit_mesh_draw(granit_renderer renderer,
+                                                          granit_mesh mesh,
+                                                          granit_command_recorder recorder);
 
 #ifdef __cplusplus
 }

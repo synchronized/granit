@@ -1,6 +1,4 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
-add_subdirectory(model_viewer)
 add_subdirectory(imgui)
-add_subdirectory(minimal_renderer)

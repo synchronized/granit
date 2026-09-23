@@ -5,8 +5,8 @@
 #define GRANIT_TESTS_SUPPORT_SHADER_ASSET_STORE_H_
 
 #include "asset_formats/material/material_package.h"
-#include "shader_asset_file.h"
 #include "asset_formats/shader/shader_library.h"
+#include "shader_asset_file.h"
 
 #include <granit/renderer/shader_library.hpp>
 
@@ -16,13 +16,14 @@
 #include <cstring>
 #include <filesystem>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace granit::tests {
 
 class shader_asset_store {
 public:
-  bool add(const std::filesystem::path& manifest_path) {
+  bool add(const std::filesystem::path& manifest_path, std::string_view logical_name = {}) {
     for (const auto& value : entries_) {
       if (value.path == manifest_path)
         return true;
@@ -41,6 +42,8 @@ public:
       return false;
     value.id = view.content_id;
     value.path = manifest_path;
+    value.logical_name =
+        logical_name.empty() ? manifest_path.stem().string() : std::string{logical_name};
     value.stage = view.stage;
     value.entry_point = std::move(view.entry_point);
     entries_.push_back(std::move(value));
@@ -73,11 +76,12 @@ public:
     try {
       sources.reserve(entries_.size());
       for (const auto& value : entries_)
-        sources.push_back({value.manifest, value.wgsl, value.spirv});
+        sources.push_back({value.manifest, value.wgsl, value.spirv, value.logical_name});
     } catch (...) {
       return false;
     }
-    return granit::detail::shader_format::encode_shader_library({sources, backend_flags}, output) ==
+    return granit::detail::shader_format::encode_shader_library(
+               {sources, backend_flags, "test_library"}, output) ==
            granit::detail::shader_format::shader_library_error::success;
   }
 
@@ -91,6 +95,7 @@ private:
     std::filesystem::path path;
     granit::shader_stage stage{};
     std::string entry_point;
+    std::string logical_name;
     std::array<std::byte, 32> id{};
     std::vector<std::byte> manifest;
     std::vector<std::byte> spirv;

@@ -11,8 +11,8 @@ Shader 是离线生成的阶段入口。跨后端资产同时保存 SPIR-V 与 W
 
 ## C API
 
-发布资产使用 `.grshlib` 和 `granit_shader_create_from_library()`；调用方只提交 Library 与内容 ID，
-由 Renderer 选择后端载荷。Material 同样通过稳定内容 ID 引用 Shader Library。
+发布资产使用 `.grshlib` 和 `granit_shader_create_from_library_name()`；调用方提交 Library 与清单中的
+逻辑名称，由 Renderer 选择后端载荷。Material 在离线构建时从 Library 名称解析为稳定内容 ID。
 
 `granit_shader_create` 用于直接代码输入、底层接口契约测试及少量内部代码。它一次接收一种代码
 格式，不提供跨后端自动选择。`.grshaderobj` 及其 sidecar 属于 AssetTools 私有中间结果，Core

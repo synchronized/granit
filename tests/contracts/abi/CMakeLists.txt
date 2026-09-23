@@ -18,10 +18,10 @@ if(BUILD_SHARED_LIBS)
       GRANIT_ABI_RENDER_PIPELINE_LIBRARY_PATH="$<TARGET_FILE:granit_render_pipeline>"
       GRANIT_ABI_WINDOW_LIBRARY_PATH="$<TARGET_FILE:granit_window>"
       GRANIT_ABI_ASSET_TOOLS_LIBRARY_PATH="$<TARGET_FILE:granit_asset_tools>"
-      GRANIT_ABI_CORE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/snapshots/0.22.0/core_symbols.txt"
-      GRANIT_ABI_RENDER_PIPELINE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/snapshots/0.17.0/render_pipeline_symbols.txt"
+      GRANIT_ABI_CORE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/snapshots/0.29.0/core_symbols.txt"
+      GRANIT_ABI_RENDER_PIPELINE_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/snapshots/0.29.0/render_pipeline_symbols.txt"
       GRANIT_ABI_WINDOW_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/snapshots/0.25.0/window_symbols.txt"
-      GRANIT_ABI_ASSET_TOOLS_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/snapshots/0.22.0/asset_tools_symbols.txt"
+      GRANIT_ABI_ASSET_TOOLS_SYMBOLS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/snapshots/0.29.0/asset_tools_symbols.txt"
   )
   target_include_directories(
     granit_abi_exports_test
@@ -54,13 +54,13 @@ if(BUILD_SHARED_LIBS)
     function(granit_add_abi_export_snapshot_test component target snapshot)
       set(snapshot_version 0.1.0)
       if(component STREQUAL "core")
-        set(snapshot_version 0.22.0)
+        set(snapshot_version 0.29.0)
       endif()
       if(component STREQUAL "render_pipeline")
-        set(snapshot_version 0.17.0)
+        set(snapshot_version 0.29.0)
       endif()
       if(component STREQUAL "asset_tools")
-        set(snapshot_version 0.22.0)
+        set(snapshot_version 0.29.0)
       endif()
       add_test(
         NAME "granit.abi.exports.${component}"

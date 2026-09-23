@@ -3,34 +3,120 @@
 
 # 06：添加材质与光照
 
-本章使用 `.grmat` 材质归档描述 Shader、参数和纹理需求，并增加方向光与基础 PBR。完成后，模型颜色、
-粗糙度和金属度由材质数据驱动，旋转模型时可以观察连续的明暗变化。
+本章把上一章的手写 Shader 绑定替换为 `.grmat` 材质归档，并加入方向光与基础 PBR。完成后，
+旋转立方体的固有色、金属度和粗糙度由 Material 驱动，表面明暗由 Scene 中的相机与光源驱动。
 
-## 1. 构建材质资产
+Material 是参考 Render Pipeline 的输入，低层 Command Recorder 不公开它的内部 Bind Group。因此本章
+同时首次接入 Render Pipeline；下一章会在这个最小用法上展开阴影、HDR、空场景和输出重建。
 
-材质源清单引用 Shader Library 中的稳定 Content ID，声明 `base_color`、`metallic`、`roughness` 和
-纹理槽。AssetTools 在构建期生成 `.grmat`；应用运行时加载归档，不解析 HLSL 或工具专用中间文件。
+## 1. 在构建期生成资产
 
-## 2. 创建 Material
+Shader 源仍然是 HLSL。CMake 先从 `pbr_standard.grshlib.json` 构建带逻辑名称表的跨后端 Shader
+Library，再从 Library 解析材质清单中的稳定 Shader Content ID，生成 `.grmat`：
 
-Material 创建时接收材质归档和对应 Shader Library。归档字节只需在创建调用期间有效；Library 句柄
-必须按公共契约保持有效。参数通过稳定 Parameter ID 更新，类型和字节数必须与材质 Schema 一致。
+```text
+pbr_standard.hlsl + .grshlib.json → .grshlib
+.grmat.json + .grshlib            → .grmat
+```
 
-## 3. 提供光照数据
+运行时只读取 `.grshlib` 和 `.grmat`，不会调用 DXC、Tint 或解析工具侧 JSON。完整构建规则见
+[`CMakeLists.txt`](../../examples/tutorials/06_material_and_lighting/CMakeLists.txt)。
 
-加入一个朝向模型的白色方向光，并为相机提供世界空间位置。法线使用正确的变换矩阵；非均匀缩放时
-不能直接用 Model Matrix 变换法线。
+## 2. 准备 PBR Mesh
 
-本章只使用直接光，先不加入阴影和环境贴图。这样可以区分材质参数、几何法线和高层渲染特性的职责。
+PBR Material 声明了固定的顶点输入：Position、Normal、Tangent 和 UV。Mesh 的 stride、location 和
+格式必须与材质归档一致。本章的立方体按面提供法线和切线，因此硬边不会被错误地平滑。
 
-## 4. 验收
+完整 CPU 模型数据位于
+[`model_data.hpp`](../../examples/tutorials/06_material_and_lighting/model_data.hpp)。上传后的 Vertex 和
+Index Buffer 仍由应用拥有，必须比借用它们的 Mesh 存活更久。
 
-- 修改 `base_color` 会改变固有色。
-- 修改 `roughness` 会改变高光宽度，修改 `metallic` 会改变反射响应。
-- 旋转模型或光源时明暗连续变化。
-- 材质缺少所需 Shader 或参数类型错误时返回明确错误。
+## 3. 创建 Material
 
-资产和运行时规则见 [Material](../reference/material.md)、[Shader Library](../reference/shader-library.md)
-和 [AssetTools](../reference/asset-tools.md)。下一章把手工渲染步骤迁移到参考 Render Pipeline。
+示例用五张 1×1 默认纹理填满 PBR 材质声明的槽位，再提供采样器和数值参数：
+
+```cpp
+const std::array updates{
+    granit::material_parameter_update::value(
+        granit::material_parameter_id("base_color"),
+        granit::material_parameter_type::float4,
+        std::as_bytes(std::span{&base_color, 1})),
+    granit::material_parameter_update::value(
+        granit::material_parameter_id("metallic"),
+        granit::material_parameter_type::float32,
+        std::as_bytes(std::span{&metallic, 1})),
+    granit::material_parameter_update::texture_binding(
+        granit::material_parameter_id("normal_texture"), normal_view.ref()),
+    granit::material_parameter_update::sampler_binding(
+        granit::material_parameter_id("pbr_sampler"), sampler.ref()),
+};
+
+check(material.initialize(renderer, {
+    .archive = material_archive,
+    .initial_updates = updates,
+    .shader_library = shader_library.ref(),
+}));
+```
+
+归档和更新数据只需保持到 `initialize` 返回。Shader Library、Texture View 和 Sampler 是 Material
+使用的 GPU 资源，销毁 Material 前必须保持有效。参数名通过稳定 Parameter ID 查找，类型或字节数
+与 Schema 不一致时创建会失败。
+
+## 4. 提交场景和方向光
+
+Scene Snapshot 复制 View、Renderable 和 Light 数组。Renderable 的 `payload` 是上层关联键；同值的
+Draw Binding 把它映射到真正的 Mesh 和 Material：
+
+```cpp
+const granit::render_pipeline_draw_binding binding{
+    .payload = 1,
+    .mesh = mesh.ref(),
+    .material = material.ref(),
+};
+
+granit::render_pipeline_render_desc render_desc{};
+render_desc.scene = scene.ref();
+render_desc.output = backbuffer.view;
+render_desc.output_format = swapchain_info.format;
+render_desc.width = swapchain_info.width;
+render_desc.height = swapchain_info.height;
+render_desc.draw_bindings = std::span{&binding, 1};
+render_desc.frame = &frame;
+check(pipeline.render(render_desc));
+```
+
+本章只显式提供一盏白色方向光。Render Pipeline 使用内置默认 IBL 资源完成 PBR 必需的环境项，应用
+暂时不加载 `.grenv`。Model Matrix 只有旋转，因此可同时作为 Normal Matrix；加入非均匀缩放后必须
+改用 Model Matrix 左上 3×3 的逆转置。
+
+## 5. 构建并运行
+
+完整源码位于
+[`examples/tutorials/06_material_and_lighting`](../../examples/tutorials/06_material_and_lighting)：
+
+```powershell
+cmake --preset windows-clang-debug -DGRANIT_SHADER_TOOLCHAIN_MODE=auto
+cmake --build --preset windows-clang-debug `
+  --target granit_tutorial_06_material_and_lighting
+.\build\windows-clang-debug\bin\granit_tutorial_06_material_and_lighting.exe
+```
+
+自动验证会绘制三帧并强制走一次 Swapchain Recreate：
+
+```powershell
+ctest --preset windows-clang-debug `
+  -R granit.tutorial.06_material_and_lighting --output-on-failure
+```
+
+## 6. 验收与生命周期
+
+- 立方体显示暖色 PBR 材质，并随旋转呈现连续的直接光照变化。
+- 修改 `base_color`、`metallic` 或 `perceptual_roughness` 后外观相应改变。
+- Resize 后继续绘制，应用无需自行管理深度或 HDR 中间纹理。
+- 退出时依次销毁 Scene、Render Pipeline、Material、Mesh、材质纹理和 Shader Library。
+
+准确契约见 [Material](../reference/material.md)、[Scene Snapshot](../reference/scene-snapshot.md)、
+[Render Pipeline](../reference/render-pipeline.md)和 [Shader Library](../reference/shader-library.md)。下一章
+在当前最小提交路径上解释参考管线提供的完整帧行为。
 
 [上一章：组织 Mesh](05-mesh.md) · [下一章：使用 Render Pipeline](07-render-pipeline.md)

@@ -39,8 +39,8 @@ struct window_hdr_resources {
   granit::result initialize(granit_renderer renderer, std::uint32_t width, std::uint32_t height,
                             granit::texture_format output_format,
                             const granit::shader_library& shader_library,
-                            const granit::shader_content_id& vertex_shader_id,
-                            const granit::shader_content_id& fragment_shader_id) {
+                            std::string_view vertex_shader_name,
+                            std::string_view fragment_shader_name) {
     const auto renderer_view = granit::renderer_ref::from_native(renderer);
     auto result =
         texture.initialize(renderer_view, {.format = granit::texture_format::rgba16_float,
@@ -63,7 +63,7 @@ struct window_hdr_resources {
       result = granit::from_native(tone_mapping.initialize(
           renderer, view.native_handle(), output_format,
           {.exposure_scale = 1.0F, .encode_srgb = shader_encodes_srgb(output_format) ? 1U : 0U},
-          shader_library, vertex_shader_id, fragment_shader_id));
+          shader_library, vertex_shader_name, fragment_shader_name));
     }
     if (result.failed())
       static_cast<void>(reset());
@@ -127,8 +127,8 @@ granit::result render_frame(granit::swapchain& swapchain, granit::frame_context&
                                              .depth_stencil_attachment = &depth,
                                              .area = {0, 0, width, height}};
   if (result.ok())
-    result = recorder.bind_graphics_pipeline(
-        granit::graphics_pipeline_ref::from_native(pbr_pipeline));
+    result =
+        recorder.bind_graphics_pipeline(granit::graphics_pipeline_ref::from_native(pbr_pipeline));
   if (result.ok()) {
     const std::array groups{granit::bind_group_ref::from_native(material_group)};
     result = recorder.bind_graphics_groups(
@@ -282,8 +282,8 @@ int main(int argument_count, char** arguments) {
   window_hdr_resources resources;
   if (result.ok()) {
     result = resources.initialize(renderer.native_handle(), info.width, info.height, info.format,
-                                  tone_shaders.library(), tone_shaders.vertex_id(),
-                                  tone_shaders.fragment_id());
+                                  tone_shaders.library(), tone_shaders.vertex_name(),
+                                  tone_shaders.fragment_name());
   }
   granit::frame_context frame_context;
   if (result.ok())
@@ -338,7 +338,7 @@ int main(int argument_count, char** arguments) {
       if (result.ok()) {
         result = resources.initialize(renderer.native_handle(), next_info.width, next_info.height,
                                       next_info.format, tone_shaders.library(),
-                                      tone_shaders.vertex_id(), tone_shaders.fragment_id());
+                                      tone_shaders.vertex_name(), tone_shaders.fragment_name());
       }
       if (result.failed())
         break;

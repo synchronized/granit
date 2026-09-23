@@ -26,7 +26,9 @@
 }
 ```
 
-AssetTools 在构建期生成 `.grshlib`、索引和 Content ID。运行时只加载归档，不依赖 Shader 编译器。
+AssetTools 在构建期生成包含逻辑名称表的 `.grshlib`。运行时只加载归档，不依赖 Shader 编译器，
+也不需要包含构建后生成的 Content ID。完整清单和 HLSL 位于
+[`examples/tutorials/02_triangle`](../../examples/tutorials/02_triangle)。
 
 ## 2. 创建 Shader 与 Pipeline
 
@@ -36,8 +38,8 @@ check(library.initialize(renderer, archive));
 
 granit::shader vertex_shader;
 granit::shader fragment_shader;
-check(library.create_shader(triangle_vertex_id, vertex_shader));
-check(library.create_shader(triangle_fragment_id, fragment_shader));
+check(library.create_shader("triangle.vertex", vertex_shader));
+check(library.create_shader("triangle.fragment", fragment_shader));
 
 granit::pipeline_layout layout;
 check(layout.initialize(renderer));
@@ -53,7 +55,8 @@ check(pipeline.initialize(renderer,
 ```
 
 Graphics Pipeline 的颜色格式必须与 Swapchain 格式一致。窗口重建后若格式变化，也要重建依赖该格式
-的 Pipeline。
+的 Pipeline。Shader Library 使用传入归档的内存，因此保存归档的 `std::vector<std::byte>` 必须比
+Library 存活更久。
 
 ## 3. 在帧循环中 Draw
 
@@ -68,12 +71,40 @@ check(recorder.draw(3));
 
 Viewport 和 Scissor 使用当前 framebuffer 尺寸。不要把逻辑窗口尺寸直接当成高 DPI framebuffer 尺寸。
 
-## 4. 验收
+## 4. 构建并运行
+
+本章需要完整 Shader Toolchain。`auto` 模式在本机没有匹配的 DXC/Tint 时下载项目锁定包：
+
+```powershell
+cmake --preset windows-clang-debug -DGRANIT_SHADER_TOOLCHAIN_MODE=auto
+cmake --build --preset windows-clang-debug --target granit_tutorial_02_triangle
+.\build\windows-clang-debug\bin\granit_tutorial_02_triangle.exe
+```
+
+Linux 使用对应 preset：
+
+```sh
+cmake --preset linux-clang-debug -DGRANIT_SHADER_TOOLCHAIN_MODE=auto
+cmake --build --preset linux-clang-debug --target granit_tutorial_02_triangle
+./build/linux-clang-debug/bin/granit_tutorial_02_triangle
+```
+
+程序按 Escape 或关闭窗口后退出。自动验证会绘制三帧、执行一次 Swapchain Recreate 并退出：
+
+```powershell
+ctest --preset windows-clang-debug -R granit.tutorial.02_triangle --output-on-failure
+```
+
+## 5. 验收
 
 - 三角形稳定显示在窗口中央。
 - Resize 后比例和裁剪区域正确。
 - Shader Toolchain 只在构建阶段运行。
 - 运行目录缺少 `.grshlib` 时给出明确的文件读取错误。
+
+本章新增资源必须先于 Renderer 销毁，顺序为 Pipeline、Pipeline Layout、Shader、Shader Library、
+Frame Context、Swapchain、Surface、Renderer。完整源码在
+[`main.cpp`](../../examples/tutorials/02_triangle/main.cpp)。
 
 进一步约束见 [Shader Library](../reference/shader-library.md)、[Graphics Pipeline](../reference/pipeline.md)
 和 [Command Recorder](../reference/command-recorder.md)。下一章为图形增加纹理资源和绑定。

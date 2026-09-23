@@ -7,6 +7,7 @@
 #include <granit/core/result.hpp>
 #include <granit/pipeline/mesh.h>
 #include <granit/renderer/buffer.hpp>
+#include <granit/renderer/command_recorder.hpp>
 #include <granit/renderer/pipeline.hpp>
 #include <granit/renderer/renderer.hpp>
 
@@ -144,6 +145,14 @@ public:
     const auto renderer = std::exchange(renderer_, GRANIT_NULL_HANDLE);
     const auto handle = std::exchange(handle_, GRANIT_NULL_HANDLE);
     return from_native(granit_mesh_destroy(renderer, handle));
+  }
+  /** 在进入 Rendering 前绑定 Mesh 的 Vertex/Index Buffer。 */
+  [[nodiscard]] result bind(command_recorder& recorder) const noexcept {
+    return from_native(granit_mesh_bind(renderer_, handle_, recorder.native_handle()));
+  }
+  /** 在 Rendering 内按 Mesh 保存的范围录制一次 Draw。 */
+  [[nodiscard]] result draw(command_recorder& recorder) const noexcept {
+    return from_native(granit_mesh_draw(renderer_, handle_, recorder.native_handle()));
   }
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
   [[nodiscard]] constexpr mesh_ref ref() const noexcept { return mesh_ref{handle_}; }

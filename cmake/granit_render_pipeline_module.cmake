@@ -22,32 +22,24 @@ function(granit_add_render_pipeline_module)
   if(granit_pipeline_generate_shader_libraries)
     set(granit_pipeline_builtin_archive
         "${granit_pipeline_generated_dir}/render_pipeline_builtin.grshlib")
-    set(granit_pipeline_builtin_index
-        "${granit_pipeline_generated_dir}/render_pipeline_builtin.grshidx.json")
     granit_add_hlsl_shader_library(
       NAME render_pipeline_builtin
       MANIFEST
         "${granit_asset_sources_dir}/shaders/pipeline/render_pipeline_builtin.grshlib.json"
       OUTPUT "${granit_pipeline_builtin_archive}"
-      INDEX "${granit_pipeline_builtin_index}"
       CACHE_DIR "${granit_pipeline_generated_dir}/cache/render_pipeline_builtin"
       REFERENCE "${granit_embedded_asset_snapshot_dir}/pipeline/render_pipeline_builtin.grshlib"
-      INDEX_REFERENCE
-        "${granit_embedded_asset_snapshot_dir}/pipeline/render_pipeline_builtin.grshidx.json"
       TARGET granit_pipeline_builtin_shader_library
       SOURCES
         "${granit_asset_sources_dir}/shaders/pipeline/tone_mapping.hlsl"
         "${granit_asset_sources_dir}/shaders/pipeline/shadow_depth.hlsl")
     set(granit_pipeline_debug_archive "${granit_pipeline_generated_dir}/debug_draw.grshlib")
-    set(granit_pipeline_debug_index "${granit_pipeline_generated_dir}/debug_draw.grshidx.json")
     granit_add_hlsl_shader_library(
       NAME debug_draw
       MANIFEST "${granit_asset_sources_dir}/shaders/debug/debug_draw.grshlib.json"
       OUTPUT "${granit_pipeline_debug_archive}"
-      INDEX "${granit_pipeline_debug_index}"
       CACHE_DIR "${granit_pipeline_generated_dir}/cache/debug_draw"
       REFERENCE "${granit_embedded_asset_snapshot_dir}/pipeline/debug_draw.grshlib"
-      INDEX_REFERENCE "${granit_embedded_asset_snapshot_dir}/pipeline/debug_draw.grshidx.json"
       TARGET granit_pipeline_debug_shader_library
       SOURCES "${granit_asset_sources_dir}/shaders/debug/world.hlsl")
     set(granit_pipeline_builtin_library_dependencies granit_pipeline_builtin_shader_library
@@ -79,62 +71,6 @@ function(granit_add_render_pipeline_module)
       VERBATIM)
   endforeach()
 
-  set(granit_pipeline_builtin_shader_ids
-      "${granit_pipeline_generated_dir}/render_pipeline_shader_ids.inc")
-  set(granit_pipeline_debug_shader_ids
-      "${granit_pipeline_generated_dir}/debug_draw_shader_ids.inc")
-  if(granit_pipeline_generate_shader_libraries)
-    add_custom_command(
-      OUTPUT "${granit_pipeline_builtin_shader_ids}"
-      COMMAND "$<TARGET_FILE:granit_asset_tool>" shader index-ids
-              --index "${granit_pipeline_builtin_index}"
-              --shader tone_mapping_vertex_id=tone_mapping.vertex
-              --shader tone_mapping_fragment_id=tone_mapping.fragment
-              --shader shadow_depth_vertex_id=shadow_depth.vertex
-              --shader shadow_depth_fragment_id=shadow_depth.fragment
-              --output "${granit_pipeline_builtin_shader_ids}"
-      COMMAND "${CMAKE_COMMAND}" -E compare_files "${granit_pipeline_builtin_shader_ids}"
-              "${granit_embedded_asset_snapshot_dir}/pipeline/render_pipeline_shader_ids.inc"
-      DEPENDS
-        granit_asset_tool
-        granit_pipeline_builtin_shader_library
-        "${granit_pipeline_builtin_index}"
-        "${granit_embedded_asset_snapshot_dir}/pipeline/render_pipeline_shader_ids.inc"
-      VERBATIM)
-    add_custom_command(
-      OUTPUT "${granit_pipeline_debug_shader_ids}"
-      COMMAND "$<TARGET_FILE:granit_asset_tool>" shader index-ids
-              --index "${granit_pipeline_debug_index}"
-              --shader debug_world_vertex_id=world.vertex
-              --shader debug_world_fragment_id=world.fragment/linear
-              --shader debug_world_srgb_fragment_id=world.fragment/encode_srgb
-              --output "${granit_pipeline_debug_shader_ids}"
-      COMMAND "${CMAKE_COMMAND}" -E compare_files "${granit_pipeline_debug_shader_ids}"
-              "${granit_embedded_asset_snapshot_dir}/pipeline/debug_draw_shader_ids.inc"
-      DEPENDS
-        granit_asset_tool
-        granit_pipeline_debug_shader_library
-        "${granit_pipeline_debug_index}"
-        "${granit_embedded_asset_snapshot_dir}/pipeline/debug_draw_shader_ids.inc"
-      VERBATIM)
-  else()
-    add_custom_command(
-      OUTPUT "${granit_pipeline_builtin_shader_ids}"
-      COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_pipeline_generated_dir}"
-      COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-              "${granit_embedded_asset_snapshot_dir}/pipeline/render_pipeline_shader_ids.inc"
-              "${granit_pipeline_builtin_shader_ids}"
-      DEPENDS "${granit_embedded_asset_snapshot_dir}/pipeline/render_pipeline_shader_ids.inc"
-      VERBATIM)
-    add_custom_command(
-      OUTPUT "${granit_pipeline_debug_shader_ids}"
-      COMMAND "${CMAKE_COMMAND}" -E make_directory "${granit_pipeline_generated_dir}"
-      COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-              "${granit_embedded_asset_snapshot_dir}/pipeline/debug_draw_shader_ids.inc"
-              "${granit_pipeline_debug_shader_ids}"
-      DEPENDS "${granit_embedded_asset_snapshot_dir}/pipeline/debug_draw_shader_ids.inc"
-      VERBATIM)
-  endif()
   set(
     granit_pipeline_canvas_material
     "${granit_pipeline_generated_dir}/granit_pipeline_canvas.grmat.inc"
@@ -172,8 +108,6 @@ function(granit_add_render_pipeline_module)
     PRIVATE
       "${granit_pipeline_builtin_library}"
       "${granit_pipeline_debug_library}"
-      "${granit_pipeline_builtin_shader_ids}"
-      "${granit_pipeline_debug_shader_ids}"
       "${granit_pipeline_canvas_material}"
       "${granit_pipeline_canvas_shader_library}"
       "${PROJECT_SOURCE_DIR}/src/pipeline/embedded_shaders.cpp"

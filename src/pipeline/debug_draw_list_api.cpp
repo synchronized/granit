@@ -189,17 +189,15 @@ granit_result ensure_debug_shaders(list_state& state, bool encode_srgb) {
     result = granit_pipeline_layout_create(state.renderer, &desc, &state.pipeline_layout);
   }
   if (result == GRANIT_SUCCESS && state.vertex_shader == GRANIT_NULL_HANDLE) {
-    const auto& id = granit::pipeline::detail::debug_world_vertex_shader_id();
-    result = granit_shader_create_from_library(state.renderer, state.shader_library,
-                                               reinterpret_cast<const std::uint8_t*>(id.data()),
-                                               &state.vertex_shader);
+    const auto name = granit::pipeline::detail::debug_world_vertex_shader_name();
+    result = granit_shader_create_from_library_name(state.renderer, state.shader_library,
+                                                    name.data(), name.size(), &state.vertex_shader);
   }
   auto& fragment = encode_srgb ? state.srgb_fragment_shader : state.fragment_shader;
   if (result == GRANIT_SUCCESS && fragment == GRANIT_NULL_HANDLE) {
-    const auto& id = granit::pipeline::detail::debug_world_fragment_shader_id(encode_srgb);
-    result = granit_shader_create_from_library(state.renderer, state.shader_library,
-                                               reinterpret_cast<const std::uint8_t*>(id.data()),
-                                               &fragment);
+    const auto name = granit::pipeline::detail::debug_world_fragment_shader_name(encode_srgb);
+    result = granit_shader_create_from_library_name(state.renderer, state.shader_library,
+                                                    name.data(), name.size(), &fragment);
   }
   return result;
 }

@@ -59,8 +59,9 @@ std::string replace_once(std::string text, std::string_view from, std::string_vi
 
 TEST_CASE("Shader Library 源清单解析并规范化 Define") {
   granit::asset_tools::detail::shader_library_source_manifest manifest;
-  REQUIRE(granit::asset_tools::detail::parse_shader_library_source_manifest(valid_manifest, manifest) ==
-          granit::asset_tools::detail::shader_library_source_error::none);
+  REQUIRE(
+      granit::asset_tools::detail::parse_shader_library_source_manifest(valid_manifest, manifest) ==
+      granit::asset_tools::detail::shader_library_source_error::none);
   CHECK(manifest.name == "pbr_standard");
   CHECK(manifest.target_backends == granit::shader_backend::all);
   REQUIRE(manifest.shaders.size() == 2);
@@ -100,45 +101,4 @@ TEST_CASE("Shader Library 源清单严格校验作者输入") {
     CHECK(granit::asset_tools::detail::parse_shader_library_source_manifest(json, manifest) ==
           granit::asset_tools::detail::shader_library_source_error::invalid_schema);
   }
-}
-
-TEST_CASE("Shader Library 索引编码按逻辑名称确定排序") {
-  granit::asset_tools::detail::shader_library_index first{.library = "pbr_standard",
-                                            .library_digest = {},
-                                            .shaders = {{.name = "standard.fragment/textured",
-                                                         .content_id = {},
-                                                         .stage = granit::shader_stage::fragment,
-                                                         .entry_point = "fragment_main"},
-                                                        {.name = "standard.vertex",
-                                                         .content_id = {},
-                                                         .stage = granit::shader_stage::vertex,
-                                                         .entry_point = "vertex_main"}}};
-  auto second = first;
-  std::ranges::reverse(second.shaders);
-  std::string first_json;
-  std::string second_json;
-  REQUIRE(granit::asset_tools::detail::encode_shader_library_index_json(first, first_json) ==
-          granit::asset_tools::detail::shader_library_source_error::none);
-  REQUIRE(granit::asset_tools::detail::encode_shader_library_index_json(second, second_json) ==
-          granit::asset_tools::detail::shader_library_source_error::none);
-  CHECK(first_json == second_json);
-  CHECK(first_json.find("standard.fragment/textured") < first_json.find("standard.vertex"));
-  CHECK(first_json.ends_with("\n"));
-  granit::asset_tools::detail::shader_library_index decoded;
-  REQUIRE(granit::asset_tools::detail::parse_shader_library_index_json(first_json, decoded) ==
-          granit::asset_tools::detail::shader_library_source_error::none);
-  CHECK(decoded.library == first.library);
-  CHECK(decoded.shaders.size() == first.shaders.size());
-  CHECK(decoded.shaders.front().name == "standard.fragment/textured");
-}
-
-TEST_CASE("Shader Library 索引拒绝重复逻辑名称") {
-  granit::asset_tools::detail::shader_library_index index{
-      .library = "duplicate",
-      .library_digest = {},
-      .shaders = {{.name = "main", .content_id = {}, .entry_point = "main"},
-                  {.name = "main", .content_id = {}, .entry_point = "main"}}};
-  std::string json;
-  CHECK(granit::asset_tools::detail::encode_shader_library_index_json(index, json) ==
-        granit::asset_tools::detail::shader_library_source_error::invalid_argument);
 }

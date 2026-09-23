@@ -56,14 +56,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for name in granit_web_platform_smoke granit_model_viewer_web; do
+          for name in granit_web_platform_smoke granit_tutorial_10_model_viewer_web; do
             output="build/emscripten-release/web/${name}"
             test -s "${output}.html"
             test -s "${output}.js"
             test -s "${output}.wasm"
           done
           test -s build/emscripten-release/web/granit_web_platform_smoke.data
-          for name in granit_imgui_web granit_tutorial_01_window; do
+          for name in granit_imgui_web granit_tutorial_01_window granit_tutorial_08_imgui; do
             output="build/emscripten-release/web/${name}"
             test -s "${output}.html"
             test -s "${output}.js"
@@ -77,9 +77,10 @@ jobs:
           name: granit-web-examples
           path: |
             build/emscripten-release/web/granit_web_platform_smoke.*
-            build/emscripten-release/web/granit_model_viewer_web.*
+            build/emscripten-release/web/granit_tutorial_10_model_viewer_web.*
             build/emscripten-release/web/granit_imgui_web.*
             build/emscripten-release/web/granit_tutorial_01_window.*
+            build/emscripten-release/web/granit_tutorial_08_imgui.*
             build/emscripten-release/web/model_viewer_fixture.gltf
             build/emscripten-release/web/model_viewer_fixture.bin
           if-no-files-found: error
@@ -99,7 +100,7 @@ jobs:
           - name: model-viewer
             script: test
             arguments: >-
-              ../../build/emscripten-release/web granit_model_viewer_web.html
+              ../../build/emscripten-release/web granit_tutorial_10_model_viewer_web.html
               model_viewer_fixture.gltf
             expect_software_fallback: "0"
           - name: imgui
@@ -108,6 +109,10 @@ jobs:
             expect_software_fallback: "0"
           - name: tutorial-01
             script: test:tutorial-01
+            arguments: ../../build/emscripten-release/web
+            expect_software_fallback: "0"
+          - name: tutorial-08
+            script: test:tutorial-08
             arguments: ../../build/emscripten-release/web
             expect_software_fallback: "0"
     steps:

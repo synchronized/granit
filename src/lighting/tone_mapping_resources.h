@@ -13,6 +13,8 @@
 #include <granit/renderer/shader_library.hpp>
 #include <granit/renderer/texture.h>
 
+#include <string_view>
+
 namespace granit::lighting {
 
 /** 可跨帧复用的 Tone Mapping Shader、布局、Sampler 和全屏 Pipeline。 */
@@ -21,8 +23,8 @@ public:
   [[nodiscard]] granit_result initialize(granit_renderer renderer,
                                          granit::texture_format output_format,
                                          const granit::shader_library& library,
-                                         const shader_content_id& vertex_id,
-                                         const shader_content_id& fragment_id) noexcept;
+                                         std::string_view vertex_name,
+                                         std::string_view fragment_name) noexcept;
   [[nodiscard]] granit_result reset() noexcept;
   [[nodiscard]] bool initialized() const noexcept { return pipeline_.valid(); }
   [[nodiscard]] granit_graphics_pipeline pipeline() const noexcept {
@@ -72,8 +74,8 @@ public:
                                          granit::texture_format output_format,
                                          const tone_mapping_constants& constants,
                                          const granit::shader_library& library,
-                                         const shader_content_id& vertex_id,
-                                         const shader_content_id& fragment_id) noexcept;
+                                         std::string_view vertex_name,
+                                         std::string_view fragment_name) noexcept;
   [[nodiscard]] granit_result update(const tone_mapping_constants& constants) noexcept;
   [[nodiscard]] granit_result reset() noexcept;
   [[nodiscard]] bool initialized() const noexcept { return pipeline_.initialized(); }

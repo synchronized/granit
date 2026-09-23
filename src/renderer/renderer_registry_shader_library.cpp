@@ -4,8 +4,8 @@
 #include "renderer/renderer_registry.h"
 #include "renderer/renderer_registry_records.h"
 
-#include "core/sha256.h"
 #include "asset_formats/shader/shader_library.h"
+#include "core/sha256.h"
 
 #include <algorithm>
 #include <cstring>
@@ -99,7 +99,32 @@ granit_result renderer_registry::get_shader_library_info(granit_renderer rendere
   return fill_info(*found->second, info);
 }
 
-granit_result renderer_registry::create_shader_from_library(
+granit_result renderer_registry::create_shader_from_library_name(granit_renderer renderer,
+                                                                 granit_shader_library library,
+                                                                 std::string_view logical_name,
+                                                                 granit_shader& shader) {
+  granit::shader_content_id content_id{};
+  {
+    std::lock_guard lock{mutex_};
+    const auto found_renderer = backend_renderers_.find(renderer);
+    if (found_renderer == backend_renderers_.end() ||
+        handles_.find(renderer, resource_type::renderer, 0) == nullptr)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto found = shader_libraries_.find(library);
+    if (found == shader_libraries_.end() || found->second->owner != found_renderer->second ||
+        handles_.find(library, resource_type::shader_library, found_renderer->second->domain()) ==
+            nullptr)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto* source =
+        shader_format::find_shader_library_shader(found->second->view, logical_name);
+    if (source == nullptr)
+      return GRANIT_ERROR_NOT_READY;
+    content_id = source->content_id;
+  }
+  return create_shader_from_library_content_id(renderer, library, content_id, shader);
+}
+
+granit_result renderer_registry::create_shader_from_library_content_id(
     granit_renderer renderer, granit_shader_library library,
     const granit::shader_content_id& content_id, granit_shader& shader) {
   try {
@@ -224,13 +249,13 @@ granit_result renderer_registry::destroy_shader_library(granit_renderer renderer
   // GPU 延迟回收会保留已销毁 Shader 的引用；只检查仍有效的 Shader 与 Pipeline 依赖。
   if (std::ranges::any_of(record->shaders, [&](const auto& cached) {
         const auto* shader = cached.second.get();
-        return std::ranges::any_of(shaders_, [&](const auto& live) {
-                 return live.second.get() == shader;
-               }) ||
-               std::ranges::any_of(graphics_pipelines_, [&](const auto& live) {
-                 return live.second->vertex_shader.get() == shader ||
-                        live.second->fragment_shader.get() == shader;
-               }) ||
+        return std::ranges::any_of(shaders_,
+                                   [&](const auto& live) { return live.second.get() == shader; }) ||
+               std::ranges::any_of(graphics_pipelines_,
+                                   [&](const auto& live) {
+                                     return live.second->vertex_shader.get() == shader ||
+                                            live.second->fragment_shader.get() == shader;
+                                   }) ||
                std::ranges::any_of(compute_pipelines_, [&](const auto& live) {
                  return live.second->compute_shader.get() == shader;
                });

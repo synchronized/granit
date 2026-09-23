@@ -19,7 +19,7 @@ namespace {
 void print_usage() {
   std::cerr << "用法：\n"
                "  granit_asset_tool material build <source.grmat.json> "
-               "--output <package.grmat> --shader-index <library.grshidx.json>... "
+               "--output <package.grmat> --shader-library <library.grshlib>... "
                "[--emit-debug-json [debug.json]]\n"
                "  granit_asset_tool material inspect <package.grmat> --json "
                "[--output <debug.json>]\n";
@@ -59,16 +59,16 @@ int build_package(int argc, char** argv) {
   }
   bool emit_debug_json = false;
   std::filesystem::path debug_path;
-  std::vector<std::string> index_json;
+  std::vector<std::vector<std::byte>> libraries;
   for (int index = 5; index < argc;) {
     const std::string_view option{argv[index]};
-    if (option == "--shader-index" && index + 1 < argc) {
-      auto json = granit::asset_tools::cli::read_text_file(argv[index + 1]);
-      if (json.empty()) {
-        std::cerr << "无法读取 Shader Library 索引\n";
+    if (option == "--shader-library" && index + 1 < argc) {
+      auto archive = granit::asset_tools::cli::read_file(argv[index + 1]);
+      if (archive.empty()) {
+        std::cerr << "无法读取 Shader Library\n";
         return 1;
       }
-      index_json.push_back(std::move(json));
+      libraries.push_back(std::move(archive));
       index += 2;
     } else if (option == "--emit-debug-json") {
       if (emit_debug_json) {
@@ -84,7 +84,7 @@ int build_package(int argc, char** argv) {
       return 2;
     }
   }
-  if (index_json.empty()) {
+  if (libraries.empty()) {
     print_usage();
     return 2;
   }
@@ -93,11 +93,11 @@ int build_package(int argc, char** argv) {
     std::cerr << "无法读取材质源描述\n";
     return 1;
   }
-  std::vector<std::string_view> index_views;
-  index_views.reserve(index_json.size());
-  for (const auto& json : index_json)
-    index_views.push_back(json);
-  auto [status, result] = granit::asset_tools::material::build({source, index_views});
+  std::vector<std::span<const std::byte>> library_views;
+  library_views.reserve(libraries.size());
+  for (const auto& library : libraries)
+    library_views.push_back(library);
+  auto [status, result] = granit::asset_tools::material::build({source, library_views});
   if (status.failed()) {
     std::cerr << result.diagnostic();
     return 1;

@@ -29,15 +29,36 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 
 ## 当前计划
 
-### S-48：线性入门教程与配套示例
+### S-52：0.29.0 版本收口与发布验收
 
 **状态：实施中，P1。**
 
-[S-48](plans/S-48-0.28.0-linear-tutorial-series.md) 将现有主题式教程替换为从 Window、Triangle、
-Texture、Camera、Mesh、Material/Lighting、Render Pipeline 到 ImGui 的连续路径。0.28.0 已完成
-可运行的 Window 章节；其余章节在各自源码和自动验证完成后分阶段交付。
+[S-52](plans/S-52-0.29.0-release-acceptance.md) 停止扩展 0.29 功能，补齐破坏性变化迁移说明、
+跨平台测试、安装包与候选发布证据，再按 release 分支流程发布 0.29.0。
 
 ## 最近完成
+
+### S-51：0.29.0 Shader Library 逻辑名称
+
+**状态：已完成，P1。**
+
+[S-51](plans/S-51-0.29.0-shader-library-logical-names.md) 已把 Library 与 Shader 逻辑名称写入
+`.grshlib`，运行时和 Material Builder 直接消费该归档，并删除独立索引和生成内容 ID include。
+
+### S-50：0.29.0 Model Viewer 教程迁移
+
+**状态：已完成，P1。**
+
+[S-50](plans/S-50-0.29.0-model-viewer-tutorial-migration.md) 已新增 09 Model Loading，并把跨后端
+Model Viewer 收敛为 Tutorial 10。桌面、Web 与离屏入口已经切换，重复 Sample 已删除。
+
+### S-48：线性入门教程与配套示例
+
+**状态：已完成，P1。**
+
+[S-48](plans/S-48-0.28.0-linear-tutorial-series.md) 已交付从 Window、Triangle、Texture、Camera、
+Mesh、Material/Lighting、Render Pipeline 到 ImGui 的八章连续教程。全部章节具有配套源码与桌面
+自动验证，Window 与 ImGui 章节同时覆盖浏览器 WebGPU；普通 C++ 使用路径已完成强类型审计。
 
 ### S-49：0.28.0 Window 跨平台可选主循环
 
@@ -97,7 +118,7 @@ Viewer 不再维护私有 DOM 输入和 Canvas Surface 生命周期。
 ## 历史入口
 
 - [Changelog](../CHANGELOG.md)：面向使用者的逐版本变化和迁移影响。
-- [迁移指南](guides/migrate-0.24-to-0.25.md)：最近一次破坏性版本迁移。
+- [迁移指南](guides/migrate-0.28-to-0.29.md)：最近一次破坏性版本迁移。
 - [计划索引](plans/README.md)：当前与暂缓任务；[完成计划索引](plans/completed.md)保存已验收计划。
 - [实施记录](records/README.md)：跨平台、性能和发布验收证据。
 

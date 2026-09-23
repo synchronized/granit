@@ -523,16 +523,16 @@ extern "C" granit_result granit_render_pipeline_create(granit_renderer renderer,
          .height = 1024});
     if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
-    resource_result =
-        state->shadow_view.initialize(renderer_view, state->shadow_texture.ref());
+    resource_result = state->shadow_view.initialize(renderer_view, state->shadow_texture.ref());
     if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
     resource_result = state->shader_library.create_shader(
-        granit::pipeline::detail::shadow_depth_vertex_shader_id(), state->shadow_vertex_shader);
+        granit::pipeline::detail::shadow_depth_vertex_shader_name(), state->shadow_vertex_shader);
     if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
     resource_result = state->shader_library.create_shader(
-        granit::pipeline::detail::shadow_depth_fragment_shader_id(), state->shadow_fragment_shader);
+        granit::pipeline::detail::shadow_depth_fragment_shader_name(),
+        state->shadow_fragment_shader);
     if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
     resource_result = state->shadow_placeholder_texture.initialize(

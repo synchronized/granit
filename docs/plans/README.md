@@ -7,8 +7,19 @@
 行为以 Reference、Concept 和仓库实现为准。全局优先级见[路线图](../roadmap.md)，执行结果见
 [实施记录](../records/README.md)。
 
+## 当前计划
+
+- [S-52：0.29.0 版本收口与发布验收](S-52-0.29.0-release-acceptance.md)——停止扩展功能，补齐
+  迁移说明、跨平台矩阵、候选包和正式发布证据。
+
 ## 最近完成
 
+- [S-51：0.29.0 Shader Library 逻辑名称](S-51-0.29.0-shader-library-logical-names.md)——把
+  清单逻辑名称写入 `.grshlib`，统一运行时与 Material 工具入口，并删除独立 Shader 索引和生成 ID。
+- [S-50：0.29.0 Model Viewer 教程迁移](S-50-0.29.0-model-viewer-tutorial-migration.md)——新增
+  09 Model Loading，将跨后端 Model Viewer 收敛为 Tutorial 10，并删除重复 Sample。
+- [S-48：线性入门教程与配套示例](S-48-0.28.0-linear-tutorial-series.md)——完成从 Window 到
+  ImGui 的八章连续教程、强类型 C++ 使用面审计和桌面/浏览器自动验证。
 - [S-49：0.28.0 Window 跨平台可选主循环](S-49-0.28.0-window-loop.md)——以可选托管 Loop 统一
   桌面与 Emscripten 的逐帧调度，同时保留引擎自有事件循环。
 - [S-47：Window 跨平台入口收敛](S-47-window-platform-convergence.md)——让 Emscripten 与
@@ -18,11 +29,6 @@
 
 完整的已完成计划见[完成计划索引](completed.md)。计划文件仍保留在本目录中，便于追溯设计目标、
 验收条件和最终差异；当前行为应以 Reference、Concept 和仓库实现为准。
-
-## 进行中
-
-- [S-48：线性入门教程与配套示例](S-48-0.28.0-linear-tutorial-series.md)——从 Window 到 ImGui
-  逐章扩展同一个应用；0.28.0 先交付 Window，后续章节按源码与自动验证的完成情况分阶段发布。
 
 ## 已取代
 

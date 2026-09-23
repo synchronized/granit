@@ -3,20 +3,10 @@
 
 # 示例程序
 
-本文是示例目录和运行入口，不重复维护具体示例的完整构建参数。Granit 保留一个最小 API 示例和两个
-面向使用者的完整示例系列；版本查询、离屏清屏、
-纹理回读和平台窗口等单能力验证位于 `tests/smoke`，由构建与 CTest 覆盖，不再作为示例发布。
-
-## Minimal Renderer
-
-`granit_minimal_renderer_example` 是教程和安装 Consumer 的最小入口，只创建 Renderer、查询设备
-信息与限制并正常退出。窗口应用的连续学习入口见[教程系列](../tutorials/README.md)。
-
-## Triangle
-
-`granit_triangle_example` 是无窗口的离屏 GPU 示例，使用 AssetTools 生成跨后端 Shader Library，
-创建 Graphics Pipeline，绘制 64×64 三角形并读取中心像素。完整步骤见[创建 Shader 与 Graphics
-Pipeline](../tutorials/02-triangle.md)。
+本文是综合示例目录和运行入口，不重复维护具体示例的完整构建参数。Granit 保留独立 ImGui 示例，
+Model Viewer 作为线性教程的最终综合项目；完整学习路径见[教程系列](../tutorials/README.md)。版本
+查询、离屏清屏、纹理回读和平台窗口等单能力验证位于 `tests/smoke`，由构建与 CTest 覆盖，不再
+作为示例发布。
 
 ## SDL3 + ImGui
 
@@ -56,13 +46,14 @@ python -m http.server 8000 --directory build/emscripten-release/web
 `http://localhost:8000/granit_imgui_web.html`。页面使用 SDL3 处理浏览器事件，ImGui 仍通过 Granit
 Canvas 绘制，不是 DOM/CSS 仿制界面，因此可用于核对桌面与 Web 的字体、纹理、裁剪和输入一致性。
 
-## Model Viewer
+## Tutorial 10 Model Viewer
 
-`granit_model_viewer_example` 是跨后端的完整渲染示例。它复用同一应用核心，在桌面 Vulkan 和
+`granit_tutorial_10_model_viewer` 是教程的最终跨后端应用。它复用同一应用核心，在桌面 Vulkan 和
 浏览器 Emscripten WebGPU 中加载 glTF/GLB、上传 GPU Scene 并显示 PBR 模型；桌面目标还提供
 编辑器式面板。该目标需要显式启用模型查看器及对应 Integration。
 
-构建、资产获取、命令行参数和排错见[跨后端模型查看器指南](model-viewer.md)。
+功能分层见[完成跨后端 Model Viewer](../tutorials/10-model-viewer.md)，构建、资产获取、命令行参数和
+排错见[跨后端模型查看器指南](model-viewer.md)。
 
 ## ImGui 固定画面验收
 

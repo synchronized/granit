@@ -20,27 +20,25 @@ public:
         std::string{GRANIT_PIPELINE_SHADER_DIR} + "/tone_mapping.vert.grshaderobj";
     const auto fragment_path =
         std::string{GRANIT_PIPELINE_SHADER_DIR} + "/tone_mapping.frag.grshaderobj";
-    if (!assets_.add(vertex_path) || !assets_.add(fragment_path) ||
+    if (!assets_.add(vertex_path, vertex_name()) || !assets_.add(fragment_path, fragment_name()) ||
         !assets_.initialize_library(renderer, bytes_, library_)) {
       return false;
     }
-    vertex_id_ = assets_.reference(vertex_path).asset_id;
-    fragment_id_ = assets_.reference(fragment_path).asset_id;
     return true;
   }
 
   [[nodiscard]] const granit::shader_library& library() const noexcept { return library_; }
-  [[nodiscard]] const granit::shader_content_id& vertex_id() const noexcept { return vertex_id_; }
-  [[nodiscard]] const granit::shader_content_id& fragment_id() const noexcept {
-    return fragment_id_;
+  [[nodiscard]] static constexpr std::string_view vertex_name() noexcept {
+    return "tone_mapping.vertex";
+  }
+  [[nodiscard]] static constexpr std::string_view fragment_name() noexcept {
+    return "tone_mapping.fragment";
   }
 
 private:
   shader_asset_store assets_;
   std::vector<std::byte> bytes_;
   granit::shader_library library_;
-  granit::shader_content_id vertex_id_{};
-  granit::shader_content_id fragment_id_{};
 };
 
 } // namespace granit::tests

@@ -111,9 +111,9 @@ int main(int argc, char** argv) {
   const auto vertex_reference = shader_assets.reference(vertex_path);
   const auto fragment_reference = shader_assets.reference(fragment_path);
   if (result.ok())
-    result = shader_library.create_shader(vertex_reference.asset_id, vertex);
+    result = shader_library.create_shader_by_content_id(vertex_reference.asset_id, vertex);
   if (result.ok())
-    result = shader_library.create_shader(fragment_reference.asset_id, fragment);
+    result = shader_library.create_shader_by_content_id(fragment_reference.asset_id, fragment);
 
   granit::pipeline_layout layout;
   if (result.ok())
@@ -121,30 +121,29 @@ int main(int argc, char** argv) {
   constexpr granit::texture_format format = granit::texture_format::rgba8_unorm;
   granit::graphics_pipeline pipeline;
   if (result.ok()) {
-    result = pipeline.initialize(renderer,
-                                 {
-                                     .layout = layout.ref(),
-                                     .vertex_shader = vertex.ref(),
-                                     .fragment_shader = fragment.ref(),
-                                     .color_formats = std::span{&format, 1},
-                                     .depth_stencil_format = granit::texture_format::undefined,
-                                     .samples = granit::sample_count::one,
-                                     .vertex_buffers = {},
-                                     .primitive = {},
-                                     .depth = std::nullopt,
-                                     .color_blends = {},
-                                     .depth_bias = std::nullopt,
-                                 });
+    result =
+        pipeline.initialize(renderer, {
+                                          .layout = layout.ref(),
+                                          .vertex_shader = vertex.ref(),
+                                          .fragment_shader = fragment.ref(),
+                                          .color_formats = std::span{&format, 1},
+                                          .depth_stencil_format = granit::texture_format::undefined,
+                                          .samples = granit::sample_count::one,
+                                          .vertex_buffers = {},
+                                          .primitive = {},
+                                          .depth = std::nullopt,
+                                          .color_blends = {},
+                                          .depth_bias = std::nullopt,
+                                      });
   }
 
   granit::texture texture;
   if (result.ok()) {
-    result = texture.initialize(
-        renderer,
-        {.format = format,
-         .usage = granit::texture_usage::color_attachment | granit::texture_usage::transfer_source,
-         .width = k_width,
-         .height = k_height});
+    result = texture.initialize(renderer, {.format = format,
+                                           .usage = granit::texture_usage::color_attachment |
+                                                    granit::texture_usage::transfer_source,
+                                           .width = k_width,
+                                           .height = k_height});
   }
   granit::texture_view view;
   if (result.ok())

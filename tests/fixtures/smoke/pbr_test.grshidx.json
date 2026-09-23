@@ -1,5 +1,0 @@
-{"format_version":1,"library":"pbr_test","content_digest":"0000000000000000000000000000000000000000000000000000000000000000","shaders":[
-  {"name":"pbr.vertex","content_id":"d805f6228fecfd49b4d9dbec80c6363e54acc69b8238815064bef85fcd7aefa9","stage":"vertex","entry_point":"vertex_main"},
-  {"name":"pbr.fragment/untextured","content_id":"656d1bfb741dde14acc3a774be6ead0bf908fdc22dabf0ec89866cf4385d03f1","stage":"fragment","entry_point":"fragment_main"},
-  {"name":"pbr.fragment/textured","content_id":"2b4ca9d1c60fc84a38ac8c508e248bd2d74e27ce3be4765b521b1a4fbd308638","stage":"fragment","entry_point":"fragment_main"}
-]}

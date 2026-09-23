@@ -22,15 +22,11 @@ typedef struct granit_asset_tools_shader_source_library_desc {
   uint64_t cache_path_length;
   const char* output_path;
   uint64_t output_path_length;
-  const char* index_path;
-  uint64_t index_path_length;
 } granit_asset_tools_shader_source_library_desc;
 
 #define GRANIT_ASSET_TOOLS_SHADER_SOURCE_LIBRARY_DESC_INIT                                         \
   {(uint32_t)sizeof(granit_asset_tools_shader_source_library_desc),                                \
    UINT32_C(0),                                                                                    \
-   0,                                                                                              \
-   UINT64_C(0),                                                                                    \
    0,                                                                                              \
    UINT64_C(0),                                                                                    \
    0,                                                                                              \
@@ -45,22 +41,13 @@ extern "C" {
 #endif
 
 /**
- * 从 `.grshlib.json` 一次生成跨后端 Library、逻辑名称索引和私有 Object 缓存。
- * cache_hit 仅在 Object、Library 与索引均未变化时写为 1。
+ * 从 `.grshlib.json` 一次生成包含逻辑名称表的跨后端 Library 和私有 Object 缓存。
+ * cache_hit 仅在 Object 与 Library 均未变化时写为 1。
  * 描述中的 UTF-8 路径仅在调用期间借用；清单或路径无效返回 INVALID_ARGUMENT，缺少工具返回
  * NOT_READY，编译或写入失败返回 INITIALIZATION_FAILED。不同输出与缓存路径可由多个线程并发构建。
  */
 GRANIT_ASSET_TOOLS_API granit_result granit_asset_tools_shader_build_library_from_manifest(
     const granit_asset_tools_shader_source_library_desc* desc, uint32_t* cache_hit);
-
-/**
- * 从内存中的 `.grshidx.json` 查询逻辑 Shader 名称对应的内容 ID。
- * 输入内存只需在调用期间有效；失败时 content_id 清零。JSON 无效或名称不存在返回
- * INVALID_ARGUMENT。该函数线程安全。
- */
-GRANIT_ASSET_TOOLS_API granit_result granit_asset_tools_shader_index_find_content_id(
-    const char* index_json, uint64_t index_json_length, const char* logical_name,
-    uint64_t logical_name_length, granit_shader_content_id content_id);
 
 #ifdef __cplusplus
 }

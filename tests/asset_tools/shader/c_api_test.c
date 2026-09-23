@@ -28,25 +28,8 @@ int main(int argc, char** argv) {
   uint32_t library_cache_hit = 1;
   granit_asset_tools_shader_source_library_desc source_library_desc =
       GRANIT_ASSET_TOOLS_SHADER_SOURCE_LIBRARY_DESC_INIT;
-  granit_shader_content_id index_content_id;
-  const char index_json[] =
-      "{\"format_version\":1,\"library\":\"fixture\","
-      "\"content_digest\":\"0000000000000000000000000000000000000000000000000000000000000000\","
-      "\"shaders\":[{\"name\":\"main.fragment\","
-      "\"content_id\":\"8f7cfc8e65d45e5e67410d4de4bf6b20420d60506e8d04418fae81a77757b483\","
-      "\"stage\":\"fragment\",\"entry_point\":\"main\"}]}";
   if (argc != 2)
     return 1;
-  if (granit_asset_tools_shader_index_find_content_id(index_json, (uint64_t)strlen(index_json),
-                                                      "main.fragment", UINT64_C(13),
-                                                      index_content_id) != GRANIT_SUCCESS ||
-      index_content_id[0] != UINT8_C(0x8f))
-    return 18;
-  memset(index_content_id, 0xff, sizeof(index_content_id));
-  if (granit_asset_tools_shader_index_find_content_id(
-          NULL, 0, "missing", UINT64_C(7), index_content_id) != GRANIT_ERROR_INVALID_ARGUMENT ||
-      index_content_id[0] != 0)
-    return 18;
   if (granit_asset_tools_shader_build_library_from_manifest(
           &source_library_desc, &library_cache_hit) != GRANIT_ERROR_INVALID_ARGUMENT ||
       library_cache_hit != 0)
