@@ -13,15 +13,7 @@
 
 1. [教程系列说明](tutorials/README.md)
 2. [创建窗口并清屏](tutorials/01-window.md)
-3. [绘制三角形](tutorials/02-triangle.md)
-4. [添加纹理](tutorials/03-texture.md)
-5. [加入深度与相机](tutorials/04-depth-and-camera.md)
-6. [把几何组织为 Mesh](tutorials/05-mesh.md)
-7. [添加材质与光照](tutorials/06-material-and-lighting.md)
-8. [迁移到 Render Pipeline](tutorials/07-render-pipeline.md)
-9. [接入 ImGui 调试界面](tutorials/08-imgui.md)
-10. [加载 glTF 模型](tutorials/09-model-loading.md)
-11. [完成跨后端 Model Viewer](tutorials/10-model-viewer.md)
+3. 按系列说明中的顺序继续到跨后端 Model Viewer
 
 ### 使用核心 Renderer
 
@@ -68,20 +60,11 @@
 
 ## 教程
 
-教程从窗口清屏开始，逐章扩展同一个应用；每章只增加一种主要能力。01～10 均已提供配套源码与
-自动验证，01、08 与 10 还覆盖浏览器 WebGPU。API 细节以对应 Reference 为准。
+教程从窗口清屏开始，逐章扩展同一个应用，最终得到跨后端 Model Viewer。章节顺序、配套源码和
+平台验证范围统一由教程系列说明维护；API 细节以对应 Reference 为准。
 
 - [教程系列说明](tutorials/README.md)
 - [01：创建窗口并清屏](tutorials/01-window.md)
-- [02：绘制三角形](tutorials/02-triangle.md)
-- [03：添加纹理](tutorials/03-texture.md)
-- [04：加入深度与相机](tutorials/04-depth-and-camera.md)
-- [05：把几何组织为 Mesh](tutorials/05-mesh.md)
-- [06：添加材质与光照](tutorials/06-material-and-lighting.md)
-- [07：迁移到 Render Pipeline](tutorials/07-render-pipeline.md)
-- [08：接入 ImGui 调试界面](tutorials/08-imgui.md)
-- [09：加载 glTF 模型](tutorials/09-model-loading.md)
-- [10：完成跨后端 Model Viewer](tutorials/10-model-viewer.md)
 
 ## API 与行为参考
 
