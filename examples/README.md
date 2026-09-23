@@ -3,8 +3,8 @@
 
 # Granit 示例
 
-本目录保存线性教程的可运行源码和面向使用者的完整应用。连续学习内容及其最终项目进入
-`tutorials`，独立集成示例进入 `samples`；单项 API、错误路径和平台能力验证进入 `tests`，不为
+本目录保存特性教程的可运行源码和面向使用者的完整应用。聚焦单条渲染路径的内容进入
+`tutorials`，完整应用与集成示例进入 `samples`；单项 API、错误路径和平台能力验证进入 `tests`，不为
 展示数量复制成独立示例。
 构建与运行命令见[示例程序指南](../docs/guides/examples.md)。
 
@@ -13,10 +13,10 @@
 | 入口 | 位置 | 目标 | 用途 |
 |---|---|---|---|
 | ImGui | `samples/imgui` | `granit_sdl3_imgui_example`、`granit_imgui_web` | 验证 SDL3、ImGui 和 Canvas 集成 |
+| Model Loading | `samples/model_loading` | `granit_sample_model_loading` | 展示最小同步 glTF 加载 |
 | Model Viewer | `samples/model_viewer` | `granit_sample_model_viewer`、Web 目标 | 展示完整跨后端 PBR 工具 |
 
-从窗口创建到第一个三角形等渐进内容位于 `tutorials`，其中 01 Window 和 02 Triangle 已取代旧的
-Minimal Renderer 与离屏 Triangle 示例。
+低层纹理立方体和 PBR 资产路径位于 `tutorials`，公共应用生命周期位于 `common/application`。
 
 ## 目录职责
 
@@ -25,14 +25,17 @@ examples/
 ├─ assets/       可再分发的示例输入资产
 ├─ common/       多个示例共享、但不属于安装 SDK 的私有实现，按技术域分
 │  ├─ gltf/      许可适合再分发的 glTF 加载器与资源解析
+│  ├─ application/ Window、Renderer 与 Swapchain 示例生命周期
 │  ├─ imgui/     ImGui 主题、Draw Data 捕获与 Texture ID 注册
 │  ├─ model_viewer/ 教程与完整查看器共用的 glTF → GPU Scene 映射
 │  ├─ sdl/       SDL3 窗口与 ImGui 生命周期 RAII
 │  ├─ validation/ 截图与视觉回归比较
 │  └─ web/       浏览器资源请求、资源包与批量 Fetch
 ├─ samples/      综合应用内容、平台入口及自身目标声明
-│  └─ imgui/      SDL3 + ImGui 完整集成
-└─ tutorials/    从 Window 到 Model Viewer 的线性教程源码
+│  ├─ imgui/      SDL3 + ImGui 完整集成
+│  ├─ model_loading/ 最小同步模型加载
+│  └─ model_viewer/ 完整跨后端模型查看器
+└─ tutorials/    编号特性教程源码
 ```
 
 `common`、`samples` 与 `tutorials` 都是仓库私有实现，不安装、不导出，也不构成公共 SDK。

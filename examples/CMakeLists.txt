@@ -3,7 +3,7 @@
 
 set_property(DIRECTORY APPEND PROPERTY LABELS integration)
 
-# 示例共享基础设施（common/），随后是综合示例（samples/）和线性教程（tutorials/）。
+# 示例共享基础设施（common/），随后是综合示例（samples/）和特性教程（tutorials/）。
 # common 是仓库私有实现，不安装、不导出。
 
 add_subdirectory(common/application)

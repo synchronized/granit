@@ -12,8 +12,9 @@
 ### 从零构建渲染程序
 
 1. [教程系列说明](tutorials/README.md)
-2. [创建窗口并清屏](tutorials/01-window.md)
-3. 按系列说明中的顺序继续到跨后端 Model Viewer
+2. [纹理立方体](tutorials/01-cube.md)
+3. [PBR 资产与参考渲染管线](tutorials/02-pbr-assets.md)
+4. [运行跨后端 Model Viewer](guides/model-viewer.md)
 
 ### 使用核心 Renderer
 
@@ -60,11 +61,12 @@
 
 ## 教程
 
-教程从窗口清屏开始，逐章扩展同一个应用，最终得到跨后端 Model Viewer。章节顺序、配套源码和
-平台验证范围统一由教程系列说明维护；API 细节以对应 Reference 为准。
+教程以两个完整的可运行目标介绍低层 Renderer 与高级 Render Pipeline。章节顺序、配套源码和平台
+验证范围统一由教程系列说明维护；完整应用进入 Samples，API 细节以对应 Reference 为准。
 
 - [教程系列说明](tutorials/README.md)
-- [01：创建窗口并清屏](tutorials/01-window.md)
+- [01：纹理立方体](tutorials/01-cube.md)
+- [02：PBR 资产与参考渲染管线](tutorials/02-pbr-assets.md)
 
 ## API 与行为参考
 
