@@ -5,6 +5,7 @@
 #define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_VIEWER_STATE_H_
 
 #include "gltf/scene.h"
+#include "model_viewer/material_edit.h"
 #include "model_viewer/orbit_camera.h"
 
 #include <cstdint>
@@ -12,18 +13,6 @@
 #include <vector>
 
 namespace granit::example::model_viewer {
-
-enum class debug_display_mode : std::uint32_t {
-  shaded,
-  base_color,
-  normals,
-  metallic,
-  roughness,
-  geometric_normals,
-  sampled_normals,
-  vertex_normals,
-  vertex_tangents,
-};
 
 struct viewer_panels {
   bool scene{true};

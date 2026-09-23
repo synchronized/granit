@@ -7,6 +7,7 @@ set_property(DIRECTORY APPEND PROPERTY LABELS integration)
 # common 是仓库私有实现，不安装、不导出。
 
 add_subdirectory(common/gltf)
+add_subdirectory(common/model_viewer)
 add_subdirectory(common/validation)
 add_subdirectory(common/web)
 add_subdirectory(common/imgui)

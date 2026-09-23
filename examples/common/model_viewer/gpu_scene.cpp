@@ -3,7 +3,6 @@
 
 #include "gpu_scene.h"
 #include "model_viewer/material_archive.h"
-#include "model_viewer/viewer_state.h"
 
 #include <granit/renderer/upload_batch.hpp>
 

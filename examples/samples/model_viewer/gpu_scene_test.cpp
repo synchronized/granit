@@ -3,7 +3,7 @@
 
 #include <catch2/catch_all.hpp>
 
-#include "gpu_scene.h"
+#include "model_viewer/gpu_scene.h"
 
 #include <granit/renderer/renderer.hpp>
 

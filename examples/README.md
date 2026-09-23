@@ -25,6 +25,7 @@ examples/
 ├─ common/       多个示例共享、但不属于安装 SDK 的私有实现，按技术域分
 │  ├─ gltf/      许可适合再分发的 glTF 加载器与资源解析
 │  ├─ imgui/     ImGui 主题、Draw Data 捕获与 Texture ID 注册
+│  ├─ model_viewer/ 教程与完整查看器共用的 glTF → GPU Scene 映射
 │  ├─ sdl/       SDL3 窗口与 ImGui 生命周期 RAII
 │  ├─ validation/ 截图与视觉回归比较
 │  └─ web/       浏览器资源请求、资源包与批量 Fetch
