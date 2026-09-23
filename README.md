@@ -53,8 +53,8 @@ Granit 采用“Bring Your Own Engine”边界，不接管使用者的 ECS、Sce
 
 ## 使用发布包
 
-[Granit 0.29.1 Release](https://github.com/synchronized/granit/releases/tag/v0.29.1) 提供 Windows 与
-Linux x64 的共享库、静态库安装包及 `SHA256SUMS`。下载后先验证校验和，再解压到固定目录；压缩包
+[Granit 0.29.1 Release](https://github.com/synchronized/granit/releases/tag/v0.29.1) 含 Windows/Linux x64 SDK 及 `SHA256SUMS`；
+普通使用者应选择 `-shared` 包，0.30.0 起只发布共享库 SDK。验证校验和并解压后，压缩包
 内的顶层目录就是 CMake package 前缀：
 
 ```sh
@@ -65,7 +65,7 @@ cmake --build <your-build>
 发布包只包含可分发 SDK；仓库示例及其资源需要从源码构建。
 共享库还需位于运行时搜索路径：Windows 将包内 `bin` 加入 `PATH`，Linux 将包内 `lib` 加入
 `LD_LIBRARY_PATH` 或按应用部署规则安装。源码构建、依赖要求和静态链接说明见
-[构建与安装](docs/guides/build.md)。
+[构建与安装](docs/guides/build.md)；需要静态库时请从源码构建。
 
 ## 快速开始
 

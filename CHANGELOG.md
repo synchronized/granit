@@ -8,6 +8,11 @@
 
 ## Unreleased
 
+### 变更
+
+- 正式 Release 只提供 Windows 与 Linux x64 的共享库 SDK；静态库继续支持源码构建，并由平台 CI
+  和安装 Consumer 验证。
+
 ## 0.29.1 - 2026-09-23
 
 ### 修复

@@ -50,10 +50,6 @@ jobs:
   windows-package:
     needs: validate
     runs-on: windows-2022
-    strategy:
-      fail-fast: false
-      matrix:
-        linkage: [shared, static]
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-msvc
@@ -69,13 +65,12 @@ jobs:
             shader-toolchain-${{ runner.os }}-
             ${{ hashFiles('cmake/toolchain/download_shader_toolchain.cmake',
             'cmake/toolchain/GranitShaderToolchain.cmake') }}
-      - name: 选择 preset 和产物名
+      - name: 设置 preset 和产物名
         id: package
         shell: pwsh
         run: |
-          $suffix = if ('${{ matrix.linkage }}' -eq 'static') { '-static' } else { '' }
-          "preset=windows-msvc${suffix}-release" >> $env:GITHUB_OUTPUT
-          "name=granit-$($env:RELEASE_TAG.TrimStart('v'))-windows-x64-${{ matrix.linkage }}" `
+          "preset=windows-msvc-release" >> $env:GITHUB_OUTPUT
+          "name=granit-$($env:RELEASE_TAG.TrimStart('v'))-windows-x64-shared" `
             >> $env:GITHUB_OUTPUT
       - name: 配置、构建与测试
         shell: pwsh
@@ -113,10 +108,6 @@ jobs:
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-    strategy:
-      fail-fast: false
-      matrix:
-        linkage: [shared, static]
     steps:
       - uses: actions/checkout@v5
       - name: 恢复编译缓存
@@ -124,9 +115,9 @@ jobs:
         with:
           path: .cache/ccache
           key: >-
-            release-linux-ccache-v1-${{ matrix.linkage }}-${{ github.sha }}
+            release-linux-ccache-v1-shared-${{ github.sha }}
           restore-keys: |
-            release-linux-ccache-v1-${{ matrix.linkage }}-
+            release-linux-ccache-v1-shared-
       - name: 恢复锁定 Shader 工具链
         uses: actions/cache@v5
         with:
@@ -135,14 +126,12 @@ jobs:
             shader-toolchain-${{ runner.os }}-
             ${{ hashFiles('cmake/toolchain/download_shader_toolchain.cmake',
             'cmake/toolchain/GranitShaderToolchain.cmake') }}
-      - name: 选择 preset 和产物名
+      - name: 设置 preset 和产物名
         id: package
         shell: bash
         run: |
-          suffix=""
-          if [[ "${{ matrix.linkage }}" == "static" ]]; then suffix="-static"; fi
-          echo "preset=linux-clang${suffix}-release" >> "$GITHUB_OUTPUT"
-          echo "name=granit-${RELEASE_TAG#v}-linux-x64-${{ matrix.linkage }}" >> "$GITHUB_OUTPUT"
+          echo "preset=linux-clang-release" >> "$GITHUB_OUTPUT"
+          echo "name=granit-${RELEASE_TAG#v}-linux-x64-shared" >> "$GITHUB_OUTPUT"
       - name: 配置、构建与测试
         shell: bash
         run: |
@@ -236,12 +225,10 @@ jobs:
           version="${RELEASE_TAG#v}"
           for name in \
             "granit-$version-linux-x64-shared.tar.gz" \
-            "granit-$version-linux-x64-static.tar.gz" \
-            "granit-$version-windows-x64-shared.zip" \
-            "granit-$version-windows-x64-static.zip"; do
+            "granit-$version-windows-x64-shared.zip"; do
             test -s "dist/$name"
           done
-          test "$(find dist -maxdepth 1 -type f -name 'granit-*' | wc -l)" -eq 4
+          test "$(find dist -maxdepth 1 -type f -name 'granit-*' | wc -l)" -eq 2
       - name: 创建 GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -269,12 +256,10 @@ jobs:
           version="${RELEASE_TAG#v}"
           for name in \
             "granit-$version-linux-x64-shared.tar.gz" \
-            "granit-$version-linux-x64-static.tar.gz" \
-            "granit-$version-windows-x64-shared.zip" \
-            "granit-$version-windows-x64-static.zip"; do
+            "granit-$version-windows-x64-shared.zip"; do
             test -s "dist/$name"
           done
-          test "$(find dist -maxdepth 1 -type f -name 'granit-*' | wc -l)" -eq 4
+          test "$(find dist -maxdepth 1 -type f -name 'granit-*' | wc -l)" -eq 2
           for archive in dist/granit-*.tar.gz; do
             test "$(tar -tzf "$archive" | cut -d/ -f1 | sort -u | wc -l)" -eq 1
           done

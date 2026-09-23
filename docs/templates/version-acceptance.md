@@ -20,7 +20,7 @@
 - [ ] C11/C++20 公共头、ABI 快照和安装 Consumer。
 - [ ] Emscripten 构建与 Chrome WebGPU 验收。
 - [ ] Documentation 与 `git diff --check`。
-- [ ] Release Candidate 四套 SDK、安装审计、manifest 和 SHA-256 校验。
+- [ ] Release Candidate 两套共享库 SDK、安装审计、manifest 和 SHA-256 校验。
 
 ## 发布条件
 
@@ -29,7 +29,7 @@
 - [ ] Candidate 基于 `main` 的目标提交，且工作区干净。
 - [ ] 标签指向 manifest 记录的同一提交。
 - [ ] 正式 Release 直接晋级已验证候选，不重新构建。
-- [ ] Release 非草稿，四套 SDK 与 `SHA256SUMS` 均可公开下载并通过复验。
+- [ ] Release 非草稿，两套共享库 SDK 与 `SHA256SUMS` 均可公开下载并通过复验。
 
 ## 未验证项与风险
 

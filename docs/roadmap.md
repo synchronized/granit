@@ -23,7 +23,7 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 | RenderPipeline | 可用，未冻结 | Scene Snapshot、Material、Forward PBR、Shadow、IBL、UI 与后处理 |
 | Window 与 Input | 可用，未冻结 | 单一 Window System 管理窗口、事件、输入状态和直接 Surface 创建 |
 | AssetTools | 实验性 | HLSL-first Shader Library、Material、Texture、Environment 构建与检查 |
-| SDK 与发布 | 可用 | Windows/Linux shared/static、安装审计与不可变候选晋级 |
+| SDK 与发布 | 可用 | Windows/Linux shared SDK、静态源码构建、安装审计与不可变候选晋级 |
 
 各能力的准确使用方式和限制以 [Reference](README.md#api-与行为参考) 为准。
 

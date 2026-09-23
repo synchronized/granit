@@ -60,7 +60,7 @@ required check。
 | `linux` | PR + 手动 | Linux 完整验证（构建、测试、安装、Consumer） | clang / gcc × shared / static |
 | `windows` | PR + 手动 | Windows 完整验证 | MSVC × shared / static |
 | `emscripten` | PR + 手动 | 浏览器 WebGPU 构建与行为验证 | Linux + Emscripten |
-| `release` | 手动 | 发布产物构建、校验、tag 与 Release | win / linux × shared / static |
+| `release` | 手动 | 发布产物构建、校验、tag 与 Release | win / linux × shared |
 | `package-shader-toolchain` | 手动（`run_windows` / `run_linux`） | 打包锁定 Shader 工具链 | win / linux |
 | `linux-ci-image` | 手动 + `main` 改 Dockerfile | 构建自定义 CI Runner 镜像 | Linux |
 
@@ -96,7 +96,7 @@ required check。
 
 ### `release` —— 发布
 
-手动运行一次执行 `validate` → `windows-package` / `linux-package`（各 shared/static 打包并测试）→
+手动运行一次执行 `validate` → `windows-package` / `linux-package`（各构建 shared SDK 并测试）→
 `checksums`（SHA-256）→ `publish`（为同一提交创建 tag 和 GitHub Release）→
 `verify-public-release`（从公开 Release 重新下载校验）。`publish` 可以通过 GitHub 的 `release`
 Environment 增加人工审批。完整命令与失败恢复见[发布验收](release.md)。
