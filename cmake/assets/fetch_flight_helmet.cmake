@@ -8,7 +8,8 @@ if(NOT DEFINED GRANIT_FLIGHT_HELMET_OUTPUT_DIR)
   message(FATAL_ERROR "必须通过 GRANIT_FLIGHT_HELMET_OUTPUT_DIR 指定资产输出目录")
 endif()
 
-set(manifest_path "${GRANIT_SOURCE_DIR}/examples/assets/FlightHelmet.manifest.json")
+set(manifest_path
+    "${GRANIT_SOURCE_DIR}/examples/assets/samples/model_viewer/FlightHelmet.manifest.json")
 file(READ "${manifest_path}" manifest)
 string(JSON schema_version GET "${manifest}" schema_version)
 if(NOT schema_version EQUAL 1)

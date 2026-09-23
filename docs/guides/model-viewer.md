@@ -88,7 +88,8 @@ GPU 资源创建仍由拥有 Renderer 的线程执行，但纹理和几何数据
 与处理窗口事件。`--no-ui` 模式不绘制进度界面，但采用相同的异步提交路径。
 
 资产来自 Khronos glTF Sample Assets，模型使用 CC0-1.0。锁定版本和第三方通知见
-[`FlightHelmet.manifest.json`](../../examples/assets/FlightHelmet.manifest.json) 与
+[`FlightHelmet 清单`](../../examples/assets/samples/model_viewer/FlightHelmet.manifest.json)
+与
 [`THIRD_PARTY_NOTICES.md`](../../examples/common/gltf/THIRD_PARTY_NOTICES.md)。
 
 ## 运行

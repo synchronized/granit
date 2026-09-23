@@ -10,9 +10,9 @@ Scene Snapshot、阴影、HDR、Tone Mapping、FXAA 和 Canvas 合成。完整�
 ## 模型与构建期资产
 
 教程输入是 Khronos glTF Sample Assets 的 CC0 Suzanne 模型、BIN、Base Color 与
-Metallic/Roughness 纹理。桌面从源码目录读取这些文件，浏览器把同一组文件预载到虚拟文件系统；
-来源、许可和摘要见
-[`assets/README.md`](../../examples/tutorials/02_pbr_assets/assets/README.md)。
+Metallic/Roughness 纹理。两端都通过 `tutorials/02_pbr_assets/...` 逻辑路径读取；CMake 在桌面复制
+运行时文件，并在浏览器预载同一组文件。来源、许可和摘要见
+[`资产说明`](../../examples/assets/tutorials/02_pbr_assets/README.md)。
 
 仓库私有 glTF 支持层解析模型和图片，GPU Scene 支持层将真实顶点、索引、纹理、Sampler 与 PBR
 Material 上传到 Granit。Shader Library 与 Material Archive 仍来自 HLSL-first 的锁定资产快照，

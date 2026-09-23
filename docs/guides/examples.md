@@ -98,12 +98,13 @@ ctest --preset windows-clang-debug -R "^granit\.smoke\."
 ```text
 assets/sources/shaders/pipeline/   正式 Pipeline 内置 Shader
 assets/sources/shaders/pbr/     示例、测试和工具共享的 PBR 参考 Shader
-examples/assets/        Model Viewer 的示例资产
+examples/assets/        教程与 Sample 的可再分发输入资产
 tests/fixtures/         测试与 Smoke 固定输入
 ```
 
 正式库源码不得反向依赖 `examples` 或 `tests`。公开示例不包含 Vulkan 头文件；预编译 Shader
 随仓库提供，普通构建不要求运行时 Shader 编译器。
 
-示例源码按职责分层：`examples/common` 按技术域保存多个示例共用的平台辅助代码，
+示例源码按职责分层：`examples/common` 按技术域保存多个示例共用的平台辅助代码；其中只读
+Asset Store 使用稳定逻辑路径，CMake 负责桌面复制和浏览器预载。
 `examples/samples` 保存各示例内容和自身目标声明。两者均为仓库私有实现，不随 SDK 安装。

@@ -1,0 +1,80 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Granit contributors
+
+#include "assets/asset_store.h"
+
+#include <cstdint>
+#include <fstream>
+#include <limits>
+#include <string>
+
+namespace granit::example::assets {
+namespace {
+
+bool valid_logical_path(std::string_view path) noexcept {
+  if (path.empty() || path.front() == '/' || path.front() == '\\' || path.find(':') != path.npos ||
+      path.find('\0') != path.npos) {
+    return false;
+  }
+  std::size_t segment_begin = 0;
+  while (segment_begin < path.size()) {
+    const auto segment_end = path.find('/', segment_begin);
+    const auto length =
+        (segment_end == std::string_view::npos ? path.size() : segment_end) - segment_begin;
+    const auto segment = path.substr(segment_begin, length);
+    if (segment.empty() || segment == "." || segment == ".." ||
+        segment.find('\\') != segment.npos) {
+      return false;
+    }
+    if (segment_end == std::string_view::npos)
+      break;
+    segment_begin = segment_end + 1;
+  }
+  return true;
+}
+
+} // namespace
+
+bool asset_store::initialize(std::string_view executable_path) {
+#if defined(__EMSCRIPTEN__)
+  static_cast<void>(executable_path);
+  root_ = "/assets";
+#else
+  if (executable_path.empty())
+    return false;
+  std::error_code error;
+  auto executable = std::filesystem::absolute(std::filesystem::path{executable_path}, error);
+  if (error)
+    return false;
+  root_ = executable.parent_path() / "assets";
+#endif
+  return true;
+}
+
+bool asset_store::read(std::string_view logical_path, std::vector<std::byte>& output) const {
+  if (root_.empty() || !valid_logical_path(logical_path))
+    return false;
+
+  const auto path = root_ / std::filesystem::path{std::string{logical_path}};
+  std::ifstream stream{path, std::ios::binary | std::ios::ate};
+  if (!stream)
+    return false;
+  const auto end = stream.tellg();
+  if (end <= 0)
+    return false;
+  const auto size = static_cast<std::uint64_t>(end);
+  if (size > std::numeric_limits<std::size_t>::max() ||
+      size > static_cast<std::uint64_t>(std::numeric_limits<std::streamsize>::max())) {
+    return false;
+  }
+
+  std::vector<std::byte> candidate(static_cast<std::size_t>(size));
+  stream.seekg(0, std::ios::beg);
+  stream.read(reinterpret_cast<char*>(candidate.data()), static_cast<std::streamsize>(size));
+  if (!stream)
+    return false;
+  output = std::move(candidate);
+  return true;
+}
+
+} // namespace granit::example::assets

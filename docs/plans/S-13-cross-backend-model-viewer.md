@@ -67,7 +67,7 @@ glTF 首阶段只是示例输入格式，加载代码位于 `examples/common/glt
 
 S-13A 的交付物包含依赖锁定记录、第三方通知、资产 manifest、可重入的获取
 脚本和离线路径验证。没有通过哈希与许可校验时，不得开始将完整资产接入查看器。
-资产清单位于 `examples/assets/FlightHelmet.manifest.json`，获取入口为
+资产清单位于 `examples/assets/samples/model_viewer/FlightHelmet.manifest.json`，获取入口为
 `cmake/fetch_flight_helmet.cmake`；默认构建不会调用该脚本或访问网络。
 
 ### S-13B CPU Scene 与加载契约

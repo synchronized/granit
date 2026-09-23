@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "application/application.h"
+#include "assets/gltf_resolver.h"
 #include "gltf/loader.h"
 #include "imgui/imgui_font_atlas.h"
 #include "imgui/imgui_input.h"
@@ -18,10 +19,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <filesystem>
-#include <fstream>
 #include <iostream>
-#include <limits>
 #include <span>
 #include <string_view>
 #include <vector>
@@ -29,10 +27,6 @@
 #if defined(__EMSCRIPTEN__)
 #include <emscripten/emscripten.h>
 #endif
-#ifndef GRANIT_TUTORIAL_02_MODEL
-#error "GRANIT_TUTORIAL_02_MODEL must point to the Suzanne glTF document"
-#endif
-
 namespace {
 
 using granit::math::matrix4;
@@ -63,41 +57,6 @@ int report_failure(std::string_view operation, granit::result result) {
   std::cerr << operation << " failed: " << result.message() << '\n';
   return 1;
 }
-
-std::vector<std::byte> read_file(const char* path) {
-  std::ifstream stream{path, std::ios::binary | std::ios::ate};
-  if (!stream)
-    return {};
-  const auto size = stream.tellg();
-  if (size <= 0)
-    return {};
-  const auto byte_count = static_cast<std::uint64_t>(size);
-  if (byte_count > std::numeric_limits<std::size_t>::max() ||
-      byte_count > static_cast<std::uint64_t>(std::numeric_limits<std::streamsize>::max())) {
-    return {};
-  }
-  stream.seekg(0, std::ios::beg);
-  std::vector<std::byte> bytes(static_cast<std::size_t>(byte_count));
-  stream.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(byte_count));
-  return stream ? bytes : std::vector<std::byte>{};
-}
-
-class file_resolver final : public granit::example::gltf::resource_resolver {
-public:
-  explicit file_resolver(std::filesystem::path root) : root_(std::move(root)) {}
-
-  [[nodiscard]] bool resolve(std::string_view path, std::vector<std::byte>& output) const override {
-    const auto absolute = root_ / std::filesystem::path{path};
-    auto bytes = read_file(absolute.string().c_str());
-    if (bytes.empty())
-      return false;
-    output = std::move(bytes);
-    return true;
-  }
-
-private:
-  std::filesystem::path root_;
-};
 
 class tutorial_application final : public granit::example::application {
 public:
@@ -174,14 +133,13 @@ private:
   }
 
   granit::result initialize_model() noexcept {
-    const std::filesystem::path document_path{GRANIT_TUTORIAL_02_MODEL};
-    const auto document = read_file(document_path.string().c_str());
-    if (document.empty()) {
-      std::cerr << "Failed to read Suzanne model: " << GRANIT_TUTORIAL_02_MODEL << '\n';
+    std::vector<std::byte> document;
+    if (!assets().read("tutorials/02_pbr_assets/Suzanne.gltf", document)) {
+      std::cerr << "Failed to read Suzanne model\n";
       return granit::result::invalid_argument;
     }
 
-    file_resolver resolver{document_path.parent_path()};
+    granit::example::assets::gltf_resolver resolver{assets(), "tutorials/02_pbr_assets"};
     const auto loaded = granit::example::gltf::load(document, &resolver, model_scene_);
     if (!loaded) {
       std::cerr << "Failed to load Suzanne model: " << loaded.diagnostic << '\n';
@@ -360,8 +318,11 @@ extern "C" EMSCRIPTEN_KEEPALIVE granit_result granit_tutorial_02_shutdown_reason
 
 int main(int argument_count, char** arguments) {
   const bool smoke_test = argument_count == 2 && std::string_view{arguments[1]} == "--smoke-test";
+  const std::string_view executable_path =
+      argument_count > 0 && arguments[0] != nullptr ? arguments[0] : "";
 
-  const auto result = application.run({.title = "Granit PBR Assets",
+  const auto result = application.run({.executable_path = executable_path,
+                                       .title = "Granit PBR Assets",
                                        .application_name = "Granit PBR Assets",
                                        .smoke_test_frames = 5,
                                        .smoke_test = smoke_test});

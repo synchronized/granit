@@ -4,6 +4,8 @@
 #ifndef GRANIT_EXAMPLE_APPLICATION_APPLICATION_H_
 #define GRANIT_EXAMPLE_APPLICATION_APPLICATION_H_
 
+#include "assets/asset_store.h"
+
 #include <chrono>
 #include <cstdint>
 #include <string_view>
@@ -14,6 +16,7 @@
 namespace granit::example {
 
 struct application_desc {
+  std::string_view executable_path;
   std::string_view title{"Granit Example"};
   std::string_view application_name{"Granit Example"};
   std::uint32_t width{1280};
@@ -62,6 +65,7 @@ protected:
   [[nodiscard]] granit::renderer& renderer_owner() noexcept { return renderer_; }
   [[nodiscard]] renderer_ref renderer() const noexcept { return renderer_.ref(); }
   [[nodiscard]] granit::window& app_window() noexcept { return window_; }
+  [[nodiscard]] assets::asset_store& assets() noexcept { return assets_; }
   [[nodiscard]] const swapchain_info& presentation_info() const noexcept {
     return swapchain_info_;
   }
@@ -78,6 +82,7 @@ private:
   [[nodiscard]] result render_present_frame() noexcept;
   [[nodiscard]] bool smoke_complete() const noexcept;
 
+  assets::asset_store assets_;
   window_system window_system_;
   granit::window window_;
   granit::renderer renderer_;

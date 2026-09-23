@@ -21,9 +21,10 @@
 
 ```text
 examples/
-├─ assets/       可再分发的示例输入资产
+├─ assets/       按 tutorials/samples 组织的可再分发输入资产
 ├─ common/       多个示例共享、但不属于安装 SDK 的私有实现，按技术域分
 │  ├─ gltf/      许可适合再分发的 glTF 加载器与资源解析
+│  ├─ assets/    只读逻辑路径、运行时目录与 glTF 资源适配
 │  ├─ application/ Window、Renderer 与 Swapchain 示例生命周期
 │  ├─ imgui/     ImGui 输入、字体图集、Draw Data 捕获与 Texture ID 注册
 │  ├─ model_viewer/ 教程与完整查看器共用的 glTF → GPU Scene 映射

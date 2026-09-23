@@ -6,6 +6,7 @@
 #include "imgui/imgui_font_atlas.h"
 #include "imgui/imgui_input.h"
 #include "imgui/imgui_texture_registry.h"
+#include "shader_archive.h"
 
 #include <granit/integrations/imgui/renderer.hpp>
 #include <granit/pipeline/canvas_draw_list.hpp>
@@ -16,7 +17,6 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <fstream>
 #include <iostream>
 #include <span>
 #include <string_view>
@@ -27,13 +27,6 @@
 #endif
 
 #include "model_data.hpp"
-
-#ifndef GRANIT_TUTORIAL_01_SHADER_LIBRARY
-#error "GRANIT_TUTORIAL_01_SHADER_LIBRARY must point to the generated Shader Library"
-#endif
-#ifndef GRANIT_TUTORIAL_01_CRATE_TEXTURE
-#error "GRANIT_TUTORIAL_01_CRATE_TEXTURE must point to the wooden crate texture"
-#endif
 
 namespace {
 
@@ -86,30 +79,12 @@ int report_failure(std::string_view operation, granit::result result) {
   return 1;
 }
 
-std::vector<std::byte> read_file(const char* path) {
-  std::ifstream stream{path, std::ios::binary | std::ios::ate};
-  if (!stream)
-    return {};
-  const auto size = stream.tellg();
-  if (size <= 0)
-    return {};
-  stream.seekg(0, std::ios::beg);
-  std::vector<std::byte> bytes(static_cast<std::size_t>(size));
-  stream.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
-  return stream ? bytes : std::vector<std::byte>{};
-}
-
 class tutorial_application final : public granit::example::application {
 public:
   [[nodiscard]] std::uint32_t canvas_items() const noexcept { return canvas_items_; }
 
 private:
   granit::result on_initialize() noexcept override {
-    shader_archive_ = read_file(GRANIT_TUTORIAL_01_SHADER_LIBRARY);
-    if (shader_archive_.empty()) {
-      std::cerr << "Failed to read Shader Library: " << GRANIT_TUTORIAL_01_SHADER_LIBRARY << '\n';
-      return granit::result::invalid_argument;
-    }
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
     imgui_initialized_ = true;
@@ -118,7 +93,7 @@ private:
     if (result.ok())
       result = frame_context_.initialize(renderer());
     if (result.ok())
-      result = shader_library_.initialize(renderer(), shader_archive_);
+      result = shader_library_.initialize(renderer(), tutorial_cube::shader_archive());
     if (result.ok())
       result = shader_library_.create_shader("mesh.vertex", vertex_shader_);
     if (result.ok())
@@ -189,13 +164,13 @@ private:
   }
 
   granit::result initialize_texture_resources() noexcept {
-    const auto encoded_texture = read_file(GRANIT_TUTORIAL_01_CRATE_TEXTURE);
+    std::vector<std::byte> encoded_texture;
     granit::example::gltf::image decoded_texture;
-    if (encoded_texture.empty() ||
+    if (!assets().read("tutorials/01_cube/wooden_crate.png", encoded_texture) ||
         granit::example::gltf::decode_image(encoded_texture, decoded_texture) !=
             granit::example::gltf::image_decode_error::none ||
         decoded_texture.mips.size() != 1) {
-      std::cerr << "Failed to decode crate texture: " << GRANIT_TUTORIAL_01_CRATE_TEXTURE << '\n';
+      std::cerr << "Failed to decode crate texture\n";
       return granit::result::invalid_argument;
     }
     const auto& mip = decoded_texture.mips.front();
@@ -447,7 +422,6 @@ private:
   }
 
   granit::frame_context frame_context_;
-  std::vector<std::byte> shader_archive_;
   granit::shader_library shader_library_;
   granit::shader vertex_shader_;
   granit::shader fragment_shader_;
@@ -502,9 +476,13 @@ extern "C" EMSCRIPTEN_KEEPALIVE int granit_tutorial_01_ready() noexcept {
 
 int main(int argument_count, char** arguments) {
   const bool smoke_test = argument_count == 2 && std::string_view{arguments[1]} == "--smoke-test";
+  const std::string_view executable_path =
+      argument_count > 0 && arguments[0] != nullptr ? arguments[0] : "";
 
-  const auto result = application.run(
-      {.title = "Granit Cube", .application_name = "Granit Cube", .smoke_test = smoke_test});
+  const auto result = application.run({.executable_path = executable_path,
+                                       .title = "Granit Cube",
+                                       .application_name = "Granit Cube",
+                                       .smoke_test = smoke_test});
   if (smoke_test && result == granit::result::backend_unavailable)
     return 77;
   if (result.failed())

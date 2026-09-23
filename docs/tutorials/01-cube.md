@@ -33,13 +33,15 @@ Graphics Pipeline。窗口最小化产生零尺寸 framebuffer 时暂停 Acquire
 
 [`cube.hlsl`](../../examples/tutorials/01_cube/cube.hlsl) 是 HLSL-first 作者输入。CMake 使用
 [`cube.grshlib.json`](../../examples/tutorials/01_cube/cube.grshlib.json) 构建同时包含 Vulkan SPIR-V
-与 WebGPU WGSL 的 Shader Library，运行时通过 `mesh.vertex` 和 `mesh.fragment` 查找入口。
+与 WebGPU WGSL 的 Shader Library。CMake 将归档内嵌到程序，运行时通过 `mesh.vertex` 和
+`mesh.fragment` 查找入口，不依赖外部 Shader 文件。
 
 Bind Group 0 包含动态相机 Uniform、采样纹理和 Sampler。每个 Frame Slot 使用不同的 Uniform
 偏移，避免 CPU 覆盖仍由 GPU 读取的数据。Mesh 保存 Buffer、顶点布局和索引 Draw 参数，Pipeline
 保存 Shader、目标格式、深度状态和资源布局。木箱 PNG 通过仓库私有图片解码器转换为 RGBA8 后
-上传；原创资产、生成说明、许可和摘要见
-[`assets/README.md`](../../examples/tutorials/01_cube/assets/README.md)。
+上传。桌面与浏览器都通过逻辑路径 `tutorials/01_cube/wooden_crate.png` 读取；原创资产、生成说明、
+许可和摘要见
+[`资产说明`](../../examples/assets/tutorials/01_cube/README.md)。
 
 ## ImGui 与 Canvas
 

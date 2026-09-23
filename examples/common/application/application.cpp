@@ -6,12 +6,15 @@
 namespace granit::example {
 
 result application::run(const application_desc& desc) noexcept {
-  if (phase_ != phase::fresh || desc.title.empty() || desc.application_name.empty() ||
-      desc.width == 0 || desc.height == 0 || desc.smoke_test_frames == 0) {
+  if (phase_ != phase::fresh || desc.executable_path.empty() || desc.title.empty() ||
+      desc.application_name.empty() || desc.width == 0 || desc.height == 0 ||
+      desc.smoke_test_frames == 0) {
     return result::invalid_argument;
   }
 
   desc_ = desc;
+  if (!assets_.initialize(desc.executable_path))
+    return result::invalid_argument;
   auto operation = window_system_.initialize();
   if (operation.ok()) {
     operation = window_.initialize(
