@@ -4,7 +4,9 @@
 # Command Recorder
 
 Command Recorder 是 Granit 的显式命令录制上下文。它使用整数句柄隔离 Vulkan Command Pool 和
-Command Buffer，允许不同 Recorder 在不同线程并行录制。
+Command Buffer，允许不同 Recorder 在不同线程并行录制。窗口实时帧通常由 Frame Context 轮转和
+复用 Recorder；离屏、复制、Compute 和自定义执行器可以直接使用它。选择依据见
+[Frame 与命令录制分层](../concepts/frame-and-command-lifecycle.md)。
 
 ## C API
 

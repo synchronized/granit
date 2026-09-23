@@ -4,7 +4,9 @@
 # Frame Context
 
 Frame Context 按 Renderer 的真实在途帧槽轮转一组 Command Recorder，避免实时窗口每帧提交后立即
-等待并 reset 同一个 Recorder。当前同时提供 C ABI 和无额外运行时状态的 C++20 包装。
+等待并 reset 同一个 Recorder。当前同时提供 C ABI 和无额外运行时状态的 C++20 包装。它与独立
+Recorder、高层 Render Pipeline 的选择和完整帧生命周期见
+[Frame 与命令录制分层](../concepts/frame-and-command-lifecycle.md)。
 
 ## 创建
 
@@ -14,10 +16,9 @@ granit_frame_context context = GRANIT_NULL_HANDLE;
 granit_frame_context_create(renderer, &desc, &context);
 ```
 
-## 完整窗口帧循环
+## 在窗口帧循环中的位置
 
-Window、Renderer、Swapchain 与 Frame Context 各自只定义一段职责。应用的正常呈现路径按下面的
-顺序组合：
+Frame Context 只负责从 `begin` 到 `submit/abort` 的区间。应用的正常呈现路径按下面的顺序组合：
 
 ```text
 推进事件：window_system.process_events + renderer.process_events
@@ -26,18 +27,7 @@ Window、Renderer、Swapchain 与 Frame Context 各自只定义一段职责。�
 提交呈现：frame_recording.submit → swapchain.present
 ```
 
-`window_system.process_events` 更新窗口和输入事件；`renderer.process_events` 推进异步后端事件与
-完成通知。两者都应由应用循环定期调用，但不持有 Frame，也不属于 acquire 到 present 的令牌
-生命周期。
-
-获取成功后，Frame 必须沿以下两条路径之一结束：
-
-- 正常路径调用 `frame_context.begin`、录制命令、`submit` 和 `present`。
-- 录制或提交前失败时先 `abort` 有效的 Recording，再 `cancel` 有效的 Frame。
-
-`begin_rendering`、clear、draw 和 dispatch 都属于“应用选择的录制操作”，不是 Frame Context 的
-固定步骤。仅清屏的程序会在这里查询 Backbuffer View，然后调用 `begin_rendering(clear)` 和
-`end_rendering`；使用 Render Pipeline 的程序则可录制另一组命令。
+事件推进、失败终点和各层职责由 Concept 统一说明。本页后续只定义 Frame Context 的接口契约。
 
 下面是正常路径的 C++20 轮廓，省略了逐项错误处理：
 

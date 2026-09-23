@@ -104,7 +104,7 @@ Application 使用静态存储期，并只在 `shutdown` 回调中释放资源�
 作用域的对象。
 
 完整调用顺序、取消路径与恢复规则见
-[Frame Context 的完整窗口帧循环](../reference/frame-context.md#完整窗口帧循环)。
+[Frame 与命令录制分层](../concepts/frame-and-command-lifecycle.md)。
 
 ## 5. 构建和运行
 

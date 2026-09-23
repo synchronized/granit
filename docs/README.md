@@ -29,8 +29,9 @@
 2. [Renderer](reference/renderer.md)
 3. [资源类型](reference/resource-types.md)
 4. [Command Recorder](reference/command-recorder.md)
-5. [Frame Context](reference/frame-context.md)
-6. [线程安全](reference/thread-safety.md)
+5. [Frame 与命令录制分层](concepts/frame-and-command-lifecycle.md)
+6. [Frame Context](reference/frame-context.md)
+7. [线程安全](reference/thread-safety.md)
 
 ### 理解高级渲染层
 
@@ -141,6 +142,7 @@
 ## 架构与原理
 
 - [总体架构、ABI 与渲染分层](concepts/architecture.md)
+- [Frame、Frame Context 与 Command Recorder 分层](concepts/frame-and-command-lifecycle.md)
 - [Vulkan Loader、Instance 与后端边界](concepts/vulkan-backend.md)
 - [第三方 UI 与字体适配边界](concepts/third-party-ui-adapter-boundary.md)
 - [分阶段路线图](roadmap.md)
