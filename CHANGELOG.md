@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+## 0.28.1 - 2026-09-23
+
 ### 修复
 
 - Vulkan 后端现在把公开的 Y 向上逻辑裁剪空间转换为负高度原生 Viewport，并同步转换 Front Face；
