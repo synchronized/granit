@@ -16,7 +16,7 @@ const contentTypes = new Map([
 
 const server = http.createServer((request, response) => {
   const requestPath = new URL(request.url, "http://127.0.0.1").pathname;
-  const relativePath = requestPath === "/" ? "granit_tutorial_01_window.html" : requestPath.slice(1);
+  const relativePath = requestPath === "/" ? "granit_tutorial_01_cube.html" : requestPath.slice(1);
   const filePath = path.resolve(outputDirectory, relativePath);
   if (!filePath.startsWith(`${outputDirectory}${path.sep}`)) {
     response.writeHead(403).end();
@@ -57,13 +57,14 @@ async function main() {
     if (message.type() === "error") errors.push(message.text());
   });
   try {
-    await page.goto(`http://127.0.0.1:${address.port}/granit_tutorial_01_window.html`);
+    await page.goto(`http://127.0.0.1:${address.port}/granit_tutorial_01_cube.html`);
     await page.waitForFunction(
       () =>
         Module.runtimeReady === true &&
         typeof Module._granit_tutorial_01_ready === "function" &&
         Module._granit_tutorial_01_ready() === 1 &&
-        Module._granit_tutorial_01_rendered_frames() >= 3,
+        Module._granit_tutorial_01_rendered_frames() >= 3 &&
+        Module._granit_tutorial_01_canvas_items() > 0,
       undefined,
       { timeout: 30_000 },
     );

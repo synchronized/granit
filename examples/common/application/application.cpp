@@ -43,9 +43,11 @@ result application::poll_events() noexcept {
         window_event_value.type == window_event_type::native_handle_changed) {
       recreate_ = true;
     }
-    operation = on_window_event(window_event_value);
-    if (operation.failed())
-      return operation;
+    if (content_started_) {
+      operation = on_window_event(window_event_value);
+      if (operation.failed())
+        return operation;
+    }
   }
   if (operation != result::not_ready)
     return operation;
@@ -59,9 +61,11 @@ result application::poll_events() noexcept {
         input_event_value.data.key.physical == physical_key::escape) {
       running_ = false;
     }
-    operation = on_input_event(input_event_value);
-    if (operation.failed())
-      return operation;
+    if (content_started_) {
+      operation = on_input_event(input_event_value);
+      if (operation.failed())
+        return operation;
+    }
   }
   return operation == result::not_ready ? result::success : operation;
 }
@@ -153,8 +157,7 @@ result application::tick(window_loop_action& action) noexcept {
     return operation;
   if (!running_) {
     action = window_loop_action::stop;
-    return smoke_complete() || !desc_.smoke_test ? result::success
-                                                 : result::initialization_failed;
+    return smoke_complete() || !desc_.smoke_test ? result::success : result::initialization_failed;
   }
 
   operation = renderer_.process_events();
@@ -217,9 +220,7 @@ void application::shutdown(result reason) noexcept {
 
 bool application::ready() const noexcept { return phase_ == phase::running; }
 
-result application::on_swapchain_changed(const swapchain_info&) noexcept {
-  return result::success;
-}
+result application::on_swapchain_changed(const swapchain_info&) noexcept { return result::success; }
 
 result application::on_window_event(const window_event&) noexcept { return result::success; }
 
