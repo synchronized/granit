@@ -32,6 +32,12 @@
   接管桌面、浏览器与离屏入口；`examples/samples` 只保留独立的 ImGui 集成示例。
 - 删除已由 Tutorial 01/02 和自动测试覆盖的 Minimal Renderer 与离屏 Triangle 重复示例。
 
+### 兼容性与迁移
+
+- `.grshlib` 已升级到 schema 2，旧归档需要重新生成；按内容 ID 创建 Shader 的旧入口、Shader
+  索引 API、`--index` 与 `--shader-index` 参数已经删除或改名。完整步骤见
+  [从 0.28 迁移到 0.29](docs/guides/migrate-0.28-to-0.29.md)。
+
 ## 0.28.1 - 2026-09-23
 
 ### 修复

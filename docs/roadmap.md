@@ -29,9 +29,21 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 
 ## 当前计划
 
-当前没有正在实施的计划。新增任务前应先确认真实 Consumer 需求、边界和验收条件。
+### S-52：0.29.0 版本收口与发布验收
+
+**状态：实施中，P1。**
+
+[S-52](plans/S-52-0.29.0-release-acceptance.md) 停止扩展 0.29 功能，补齐破坏性变化迁移说明、
+跨平台测试、安装包与候选发布证据，再按 release 分支流程发布 0.29.0。
 
 ## 最近完成
+
+### S-51：0.29.0 Shader Library 逻辑名称
+
+**状态：已完成，P1。**
+
+[S-51](plans/S-51-0.29.0-shader-library-logical-names.md) 已把 Library 与 Shader 逻辑名称写入
+`.grshlib`，运行时和 Material Builder 直接消费该归档，并删除独立索引和生成内容 ID include。
 
 ### S-50：0.29.0 Model Viewer 教程迁移
 
@@ -106,7 +118,7 @@ Viewer 不再维护私有 DOM 输入和 Canvas Surface 生命周期。
 ## 历史入口
 
 - [Changelog](../CHANGELOG.md)：面向使用者的逐版本变化和迁移影响。
-- [迁移指南](guides/migrate-0.24-to-0.25.md)：最近一次破坏性版本迁移。
+- [迁移指南](guides/migrate-0.28-to-0.29.md)：最近一次破坏性版本迁移。
 - [计划索引](plans/README.md)：当前与暂缓任务；[完成计划索引](plans/completed.md)保存已验收计划。
 - [实施记录](records/README.md)：跨平台、性能和发布验收证据。
 
