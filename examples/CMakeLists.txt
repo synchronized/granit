@@ -3,9 +3,7 @@
 
 set_property(DIRECTORY APPEND PROPERTY LABELS integration)
 
-# add_subdirectory(samples/triangle)
-
-# 示例共享基础设施（common/），随后是各示例（samples/）。
+# 示例共享基础设施（common/），随后是综合示例（samples/）和线性教程（tutorials/）。
 # common 是仓库私有实现，不安装、不导出。
 
 add_subdirectory(common/gltf)

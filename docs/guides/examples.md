@@ -3,20 +3,10 @@
 
 # 示例程序
 
-本文是示例目录和运行入口，不重复维护具体示例的完整构建参数。Granit 保留一个最小 API 示例和两个
-面向使用者的完整示例系列；版本查询、离屏清屏、
-纹理回读和平台窗口等单能力验证位于 `tests/smoke`，由构建与 CTest 覆盖，不再作为示例发布。
-
-## Minimal Renderer
-
-`granit_minimal_renderer_example` 是教程和安装 Consumer 的最小入口，只创建 Renderer、查询设备
-信息与限制并正常退出。窗口应用的连续学习入口见[教程系列](../tutorials/README.md)。
-
-## Triangle
-
-`granit_triangle_example` 是无窗口的离屏 GPU 示例，使用 AssetTools 生成跨后端 Shader Library，
-创建 Graphics Pipeline，绘制 64×64 三角形并读取中心像素。完整步骤见[创建 Shader 与 Graphics
-Pipeline](../tutorials/02-triangle.md)。
+本文是综合示例目录和运行入口，不重复维护具体示例的完整构建参数。Granit 保留 ImGui 和 Model
+Viewer 两个面向使用者的完整示例系列；从 Window 到 Triangle 的渐进学习入口见
+[教程系列](../tutorials/README.md)。版本查询、离屏清屏、纹理回读和平台窗口等单能力验证位于
+`tests/smoke`，由构建与 CTest 覆盖，不再作为示例发布。
 
 ## SDL3 + ImGui
 

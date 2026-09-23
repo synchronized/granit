@@ -3,4 +3,3 @@
 
 add_subdirectory(model_viewer)
 add_subdirectory(imgui)
-add_subdirectory(minimal_renderer)
