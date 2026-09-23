@@ -2,7 +2,7 @@
 # Copyright (c) 2026 Granit contributors
 
 # Granit 工程版本的唯一来源。发布脚本只修改此值，其余构建与测试从这里派生。
-set(GRANIT_PROJECT_VERSION "0.29.0")
+set(GRANIT_PROJECT_VERSION "0.29.1")
 
 if(NOT GRANIT_PROJECT_VERSION MATCHES "^([0-9]+)\\.([0-9]+)\\.([0-9]+)$")
   message(FATAL_ERROR "无效的 Granit 工程版本：${GRANIT_PROJECT_VERSION}")
