@@ -7,6 +7,11 @@
 行为以 Reference、Concept 和仓库实现为准。全局优先级见[路线图](../roadmap.md)，执行结果见
 [实施记录](../records/README.md)。
 
+## 当前计划
+
+- [S-50：0.29.0 Model Viewer 教程迁移](S-50-0.29.0-model-viewer-tutorial-migration.md)——新增
+  09 Model Loading 与 10 Model Viewer，在完整接管桌面/Web 行为后删除重复 Sample。
+
 ## 最近完成
 
 - [S-48：线性入门教程与配套示例](S-48-0.28.0-linear-tutorial-series.md)——完成从 Window 到
