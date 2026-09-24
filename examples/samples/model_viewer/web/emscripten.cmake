@@ -8,6 +8,8 @@ add_library(
   "${CMAKE_CURRENT_LIST_DIR}/application.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/application.h"
   "${CMAKE_CURRENT_LIST_DIR}/browser_api.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/pipeline_validation.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/pipeline_validation.h"
   "${CMAKE_CURRENT_LIST_DIR}/runtime_control.h"
 )
 target_compile_features(granit_web_model_viewer_platform PUBLIC cxx_std_20)

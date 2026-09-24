@@ -20,11 +20,8 @@
 #include <granit/pipeline/render_pipeline.h>
 #include <granit/renderer/buffer.hpp>
 #include <granit/renderer/command_recorder.hpp>
-#include <granit/renderer/pipeline.hpp>
-#include <granit/renderer/pipeline_warmup.h>
 #include <granit/renderer/renderer.h>
 #include <granit/renderer/sampler.hpp>
-#include <granit/renderer/shader.hpp>
 #include <granit/renderer/swapchain.h>
 #include <granit/renderer/texture.hpp>
 #include <granit/renderer/texture_asset.h>
@@ -38,6 +35,7 @@
 #include "model_viewer/viewer_input_accumulator.h"
 
 #include "application.h"
+#include "pipeline_validation.h"
 #include "runtime_control.h"
 
 namespace {
@@ -51,15 +49,7 @@ struct web_platform_state {
   granit_surface surface{};
   granit_swapchain swapchain{};
   granit_render_pipeline pipeline{};
-  granit_shader warmup_vertex{};
-  granit_shader warmup_fragment{};
-  granit_shader warmup_compute{};
-  granit_pipeline_layout warmup_layout{};
-  granit_pipeline_warmup_batch warmup_batch{};
-  granit_async_operation warmup_operation{};
-  std::uint32_t warmup_graphics_index{};
-  std::uint32_t warmup_compute_index{};
-  std::vector<std::uint32_t> material_warmup_indices;
+  granit::example::model_viewer::web::pipeline_validation pipeline_validation;
   startup_status status{startup_status::starting};
   unsigned input_event_count{};
   unsigned applied_input_count{};
@@ -83,7 +73,6 @@ struct web_platform_state {
   bool asset_ready{};
   bool upload_active{};
   bool upload_cancel_requested{};
-  bool pipeline_validation_started{};
   double renderer_initialization_started_ms{};
   granit::example::model_viewer::gpu_scene_upload_progress upload_progress{};
 };
@@ -177,205 +166,6 @@ std::string selected_model_url() {
       "new URLSearchParams(globalThis.location.search).get('model') || ''");
   return selected == nullptr || *selected == '\0' ? std::string{options.default_model_url}
                                                   : std::string{selected};
-}
-
-granit_result begin_public_pipeline_validation(granit_texture_format model_color_format) {
-  constexpr char vertex_wgsl[] = R"(
-@vertex fn main(@builtin(vertex_index) index: u32) -> @builtin(position) vec4f {
-  var positions = array<vec2f, 3>(vec2f(0.0, 0.5), vec2f(-0.5, -0.5), vec2f(0.5, -0.5));
-  return vec4f(positions[index], 0.0, 1.0);
-})";
-  constexpr char fragment_wgsl[] = R"(
-@fragment fn main() -> @location(0) vec4f {
-  return vec4f(0.0, 1.0, 0.0, 1.0);
-})";
-  constexpr char compute_wgsl[] = R"(
-@compute @workgroup_size(1) fn main() {}
-)";
-  granit_shader_desc desc = GRANIT_SHADER_DESC_INIT;
-  desc.code_format = GRANIT_SHADER_CODE_FORMAT_WGSL;
-  desc.code = vertex_wgsl;
-  desc.code_size = sizeof(vertex_wgsl) - 1;
-  auto result = granit_shader_create(state.renderer, &desc, &state.warmup_vertex);
-  if (result != GRANIT_SUCCESS) {
-    return result;
-  }
-  desc.stage = GRANIT_SHADER_STAGE_FRAGMENT;
-  desc.code = fragment_wgsl;
-  desc.code_size = sizeof(fragment_wgsl) - 1;
-  result = granit_shader_create(state.renderer, &desc, &state.warmup_fragment);
-  if (result != GRANIT_SUCCESS)
-    return result;
-  granit_pipeline_layout_desc layout_desc = GRANIT_PIPELINE_LAYOUT_DESC_INIT;
-  result = granit_pipeline_layout_create(state.renderer, &layout_desc, &state.warmup_layout);
-  if (result != GRANIT_SUCCESS)
-    return result;
-  desc.stage = GRANIT_SHADER_STAGE_COMPUTE;
-  desc.code = compute_wgsl;
-  desc.code_size = sizeof(compute_wgsl) - 1;
-  result = granit_shader_create(state.renderer, &desc, &state.warmup_compute);
-  if (result != GRANIT_SUCCESS) {
-    std::fprintf(stderr, "GRANIT_DIAGNOSTIC:Compute Shader 创建失败：%d\n", result);
-    return result;
-  }
-  constexpr granit_texture_format color_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
-  granit_graphics_pipeline_desc pipeline_desc = GRANIT_GRAPHICS_PIPELINE_DESC_INIT;
-  pipeline_desc.layout = state.warmup_layout;
-  pipeline_desc.vertex_shader = state.warmup_vertex;
-  pipeline_desc.fragment_shader = state.warmup_fragment;
-  pipeline_desc.color_format_count = 1;
-  pipeline_desc.color_formats = &color_format;
-  granit_renderer_limits limits = GRANIT_RENDERER_LIMITS_INIT;
-  result = granit_renderer_get_limits(state.renderer, &limits);
-  if (result != GRANIT_SUCCESS ||
-      (limits.supported_features & GRANIT_RENDERER_FEATURE_NON_BLOCKING_PIPELINE_WARMUP_BIT) == 0) {
-    result = result == GRANIT_SUCCESS ? GRANIT_ERROR_UNSUPPORTED : result;
-  }
-  if (result == GRANIT_SUCCESS) {
-    const granit_pipeline_warmup_batch_desc warmup_desc = GRANIT_PIPELINE_WARMUP_BATCH_DESC_INIT;
-    result = granit_pipeline_warmup_batch_create(state.renderer, &warmup_desc, &state.warmup_batch);
-  }
-  if (result == GRANIT_SUCCESS)
-    result = granit_pipeline_warmup_batch_add_graphics(
-        state.renderer, state.warmup_batch, &pipeline_desc, &state.warmup_graphics_index);
-  granit_compute_pipeline_desc compute_desc = GRANIT_COMPUTE_PIPELINE_DESC_INIT;
-  compute_desc.layout = state.warmup_layout;
-  compute_desc.compute_shader = state.warmup_compute;
-  if (result == GRANIT_SUCCESS)
-    result = granit_pipeline_warmup_batch_add_compute(state.renderer, state.warmup_batch,
-                                                      &compute_desc, &state.warmup_compute_index);
-  if (result == GRANIT_SUCCESS) {
-    result = granit::to_native(state.core.scene_gpu().add_pipeline_warmups(
-        granit::pipeline_warmup_batch_ref::from_native(state.warmup_batch),
-        static_cast<granit::texture_format>(model_color_format),
-        static_cast<granit::sample_count>(state.sample_count), state.material_warmup_indices));
-  }
-  if (result != GRANIT_SUCCESS)
-    std::fprintf(stderr, "GRANIT_DIAGNOSTIC:Pipeline 预热批次构建失败：%d\n", result);
-  if (result == GRANIT_SUCCESS)
-    result = granit_pipeline_warmup_batch_submit_async(state.renderer, state.warmup_batch,
-                                                       &state.warmup_operation);
-  if (result == GRANIT_SUCCESS)
-    std::printf("GRANIT_PROGRESS:pipelines:0:%zu\n", state.material_warmup_indices.size() + 2);
-  state.pipeline_validation_started = result == GRANIT_SUCCESS;
-  return result;
-}
-
-void cleanup_public_pipeline_validation() noexcept {
-  if (state.warmup_operation != GRANIT_NULL_HANDLE)
-    static_cast<void>(granit_async_operation_destroy(state.renderer, state.warmup_operation));
-  if (state.warmup_batch != GRANIT_NULL_HANDLE)
-    static_cast<void>(granit_pipeline_warmup_batch_destroy(state.renderer, state.warmup_batch));
-  if (state.warmup_layout != GRANIT_NULL_HANDLE)
-    static_cast<void>(granit_pipeline_layout_destroy(state.renderer, state.warmup_layout));
-  if (state.warmup_compute != GRANIT_NULL_HANDLE)
-    static_cast<void>(granit_shader_destroy(state.renderer, state.warmup_compute));
-  if (state.warmup_fragment != GRANIT_NULL_HANDLE)
-    static_cast<void>(granit_shader_destroy(state.renderer, state.warmup_fragment));
-  if (state.warmup_vertex != GRANIT_NULL_HANDLE)
-    static_cast<void>(granit_shader_destroy(state.renderer, state.warmup_vertex));
-  state.warmup_operation = GRANIT_NULL_HANDLE;
-  state.warmup_batch = GRANIT_NULL_HANDLE;
-  state.warmup_layout = GRANIT_NULL_HANDLE;
-  state.warmup_compute = GRANIT_NULL_HANDLE;
-  state.warmup_fragment = GRANIT_NULL_HANDLE;
-  state.warmup_vertex = GRANIT_NULL_HANDLE;
-}
-
-granit_result poll_public_pipeline_validation() {
-  granit_async_operation_status warmup_status = GRANIT_ASYNC_OPERATION_STATUS_INIT;
-  auto result =
-      granit_async_operation_get_status(state.renderer, state.warmup_operation, &warmup_status);
-  if (result == GRANIT_SUCCESS && warmup_status.state == GRANIT_ASYNC_OPERATION_STATE_RUNNING)
-    return GRANIT_ERROR_NOT_READY;
-  granit_pipeline_warmup_result_info warmup_info = GRANIT_PIPELINE_WARMUP_RESULT_INFO_INIT;
-  granit_pipeline_warmup_result_info compute_warmup_info = GRANIT_PIPELINE_WARMUP_RESULT_INFO_INIT;
-  bool software_adapter_fallback{};
-  const auto accept_software_adapter_failure = [&software_adapter_fallback](granit_result value) {
-    if (value == GRANIT_ERROR_INTERNAL) {
-      software_adapter_fallback = true;
-      return GRANIT_SUCCESS;
-    }
-    return value;
-  };
-  if (result == GRANIT_SUCCESS && warmup_status.state == GRANIT_ASYNC_OPERATION_STATE_SUCCEEDED) {
-    result = granit_pipeline_warmup_operation_get_result(state.renderer, state.warmup_operation,
-                                                         state.warmup_graphics_index, &warmup_info);
-    if (result == GRANIT_SUCCESS)
-      result = granit_pipeline_warmup_operation_get_result(
-          state.renderer, state.warmup_operation, state.warmup_compute_index, &compute_warmup_info);
-    if (result == GRANIT_SUCCESS)
-      result = accept_software_adapter_failure(warmup_info.result);
-    if (result == GRANIT_SUCCESS)
-      result = accept_software_adapter_failure(compute_warmup_info.result);
-    for (const auto index : state.material_warmup_indices) {
-      granit_pipeline_warmup_result_info material_info = GRANIT_PIPELINE_WARMUP_RESULT_INFO_INIT;
-      if (result == GRANIT_SUCCESS)
-        result = granit_pipeline_warmup_operation_get_result(state.renderer, state.warmup_operation,
-                                                             index, &material_info);
-      if (result == GRANIT_SUCCESS)
-        result = accept_software_adapter_failure(material_info.result);
-    }
-  } else if (result == GRANIT_SUCCESS) {
-    result = warmup_status.result == GRANIT_ERROR_NOT_READY ? GRANIT_ERROR_NOT_READY
-                                                            : warmup_status.result;
-  }
-  if (result == GRANIT_SUCCESS)
-    std::printf("GRANIT_PROGRESS:pipelines:%zu:%zu\n", state.material_warmup_indices.size() + 2,
-                state.material_warmup_indices.size() + 2);
-  if (software_adapter_fallback) {
-    constexpr char message[] =
-        "GRANIT_DIAGNOSTIC:软件 WebGPU 适配器异步编译失败，回退到按需同步创建管线";
-    std::fprintf(stderr, "%s\n", message);
-  }
-  if (result != GRANIT_SUCCESS) {
-    cleanup_public_pipeline_validation();
-    return result;
-  }
-  result = granit_async_operation_destroy(state.renderer, state.warmup_operation);
-  state.warmup_operation = GRANIT_NULL_HANDLE;
-  if (result == GRANIT_SUCCESS)
-    result = granit_pipeline_warmup_batch_destroy(state.renderer, state.warmup_batch);
-  state.warmup_batch = GRANIT_NULL_HANDLE;
-  if (result != GRANIT_SUCCESS) {
-    cleanup_public_pipeline_validation();
-    return result;
-  }
-  granit_graphics_pipeline pipeline{};
-  constexpr granit_texture_format color_format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
-  granit_graphics_pipeline_desc pipeline_desc = GRANIT_GRAPHICS_PIPELINE_DESC_INIT;
-  pipeline_desc.layout = state.warmup_layout;
-  pipeline_desc.vertex_shader = state.warmup_vertex;
-  pipeline_desc.fragment_shader = state.warmup_fragment;
-  pipeline_desc.color_format_count = 1;
-  pipeline_desc.color_formats = &color_format;
-  result = granit_graphics_pipeline_create(state.renderer, &pipeline_desc, &pipeline);
-  if (result != GRANIT_SUCCESS) {
-    cleanup_public_pipeline_validation();
-    return result;
-  }
-  if (granit_shader_destroy(state.renderer, state.warmup_compute) != GRANIT_SUCCESS ||
-      granit_shader_destroy(state.renderer, state.warmup_vertex) != GRANIT_SUCCESS ||
-      granit_pipeline_layout_destroy(state.renderer, state.warmup_layout) != GRANIT_SUCCESS) {
-    static_cast<void>(granit_graphics_pipeline_destroy(state.renderer, pipeline));
-    cleanup_public_pipeline_validation();
-    return GRANIT_ERROR_INTERNAL;
-  }
-  state.warmup_compute = GRANIT_NULL_HANDLE;
-  state.warmup_vertex = GRANIT_NULL_HANDLE;
-  state.warmup_layout = GRANIT_NULL_HANDLE;
-  result = granit_graphics_pipeline_destroy(state.renderer, pipeline);
-  if (result == GRANIT_SUCCESS) {
-    result = granit_shader_destroy(state.renderer, state.warmup_fragment);
-    if (result == GRANIT_SUCCESS)
-      state.warmup_fragment = GRANIT_NULL_HANDLE;
-  }
-  if (result != GRANIT_SUCCESS ||
-      granit_shader_destroy(state.renderer, state.warmup_vertex) != GRANIT_ERROR_INVALID_HANDLE) {
-    cleanup_public_pipeline_validation();
-    return result == GRANIT_SUCCESS ? GRANIT_ERROR_INTERNAL : result;
-  }
-  return GRANIT_SUCCESS;
 }
 
 void diagnose(granit_diagnostic_severity severity, granit_diagnostic_category, const char* message,
@@ -724,7 +514,7 @@ void update_web_application() noexcept {
     return;
   }
 
-  if (!state.pipeline_validation_started) {
+  if (!state.pipeline_validation.started()) {
     granit_renderer_limits limits = GRANIT_RENDERER_LIMITS_INIT;
     const auto limits_result = granit_renderer_get_limits(state.renderer, &limits);
     if (limits_result != GRANIT_SUCCESS || limits.uniform_buffer_offset_alignment == 0 ||
@@ -755,23 +545,22 @@ void update_web_application() noexcept {
       fail("presentation-info", result);
       return;
     }
-    if (!state.pipeline_validation_started) {
+    if (!state.pipeline_validation.started()) {
       state.upload_active = true;
       state.upload_cancel_requested = false;
-      const auto begin_result = begin_public_pipeline_validation(swapchain_info.format);
+      const auto begin_result = state.pipeline_validation.begin(
+          state.renderer, state.core.scene_gpu(), swapchain_info.format, state.sample_count);
       if (begin_result != GRANIT_SUCCESS) {
         state.upload_active = false;
-        cleanup_public_pipeline_validation();
         fail("renderer-pipeline", begin_result);
         return;
       }
     }
-    const auto pipeline_result = poll_public_pipeline_validation();
+    const auto pipeline_result = state.pipeline_validation.poll();
     if (pipeline_result == GRANIT_ERROR_NOT_READY)
       return;
     state.upload_active = false;
     if (pipeline_result != GRANIT_SUCCESS) {
-      cleanup_public_pipeline_validation();
       fail("renderer-pipeline", pipeline_result);
       return;
     }
@@ -809,8 +598,7 @@ granit_result shutdown_web_resources() noexcept {
     if (first_error == GRANIT_SUCCESS && result != GRANIT_SUCCESS)
       first_error = result;
   };
-  if (state.pipeline_validation_started)
-    cleanup_public_pipeline_validation();
+  state.pipeline_validation.reset();
   if (state.pipeline != GRANIT_NULL_HANDLE) {
     capture(granit_render_pipeline_destroy(state.renderer, state.pipeline));
     state.pipeline = GRANIT_NULL_HANDLE;

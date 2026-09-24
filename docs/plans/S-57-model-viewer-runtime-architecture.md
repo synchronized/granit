@@ -7,8 +7,8 @@
 
 **实施中。** S-55 已统一资产与 glTF 加载边界，S-56 已统一 Desktop/Web Window 和输入语义。
 Viewer Core 纯渲染帧与执行层 Frame Packet 已完成分离；Desktop 渲染命令和 GPU 资源所有权
-已收敛到专用服务，应用生命周期也已移出进程入口。下一步拆分 Web 运行时职责，不改变
-现有目录入口、用户功能或线程模型。
+已收敛到专用服务，应用生命周期也已移出进程入口。Web Pipeline 验收与浏览器导出也已从产品
+运行时分离。下一步审计 Desktop/Web 重复职责，不改变现有目录入口、用户功能或线程模型。
 
 ## 背景
 
@@ -113,10 +113,11 @@ examples/samples/model_viewer/
 3. **S-57C Desktop 应用壳（已完成）**：加载阶段、窗口事件、UI 帧、呈现恢复和性能采样
    已收进 `desktop/application.*`；`main.cpp` 只解析 options、运行 application 并返回结果。保留直接
    Window 循环，不扩展通用 Application Host。
-4. **S-57D Web 职责拆分**：将 Pipeline 预热和公共 C API 生命周期验收移出运行时文件，将
+4. **S-57D Web 职责拆分（已完成）**：将 Pipeline 预热和公共 C API 生命周期验收移出运行时文件，将
    JavaScript 导出集中为只校验参数并转发状态/控制的边界；Host 和 inline 帧执行行为不变。
    `browser_api.cpp` 已保留稳定 C 导出、异常转换和参数转发，并通过私有控制接口访问运行时；
-   下一步提取 Pipeline 验收状态与算法。
+   `pipeline_validation.*` 持有预热资源、异步状态、软件适配器回退与失败清理。Emscripten 构建及
+   Chrome 的渲染、控制、取消、缺失 Buffer 和资源释放验收已经通过。
 5. **S-57E 重复审计**：完成拆分后再比较 Desktop/Web 的加载阶段、质量设置和呈现恢复。只有存在
    相同所有权与失败语义的逻辑才提升到 Sample Core；不为减少行数制造跨平台虚基类。
 6. **S-57F 验证与文档**：补齐状态转换、线程命令、失败回滚和重复 Shutdown 测试，运行 Desktop、
