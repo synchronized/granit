@@ -10,9 +10,6 @@ add_library(
   presentation_policy.h
 )
 
-target_sources(granit_sample_model_viewer_desktop_shell PRIVATE sdl3_input.cpp sdl3_input.h)
-target_link_libraries(granit_sample_model_viewer_desktop_shell PUBLIC "${GRANIT_SDL3_TARGET}")
-
 add_executable(granit_sample_model_viewer main.cpp)
 target_include_directories(
   granit_sample_model_viewer
@@ -24,7 +21,7 @@ target_include_directories(
 target_link_libraries(
   granit_sample_model_viewer
   PRIVATE granit_sample_model_viewer_desktop_shell granit_sample_model_viewer_imgui
-          granit_example_assets granit_example_sdl granit::integration_sdl3
+          granit_example_assets granit::window
 )
 if(WIN32)
   add_custom_command(
@@ -58,9 +55,6 @@ if(GRANIT_TESTING_ENABLED)
     desktop_options_test.cpp
     presentation_policy_test.cpp
   )
-  if(GRANIT_BUILD_INTEGRATION_SDL3)
-    target_sources(granit_sample_model_viewer_desktop_shell_test PRIVATE sdl3_input_test.cpp)
-  endif()
   target_link_libraries(
     granit_sample_model_viewer_desktop_shell_test
     PRIVATE granit_sample_model_viewer_desktop_shell Catch2::Catch2WithMain

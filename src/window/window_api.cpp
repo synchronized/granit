@@ -58,28 +58,13 @@ extern "C" granit_result granit_window_create(granit_window_system system_handle
     return GRANIT_ERROR_INVALID_HANDLE;
   if (!on_owner_thread(*system))
     return GRANIT_ERROR_INVALID_ARGUMENT;
-#if !defined(__EMSCRIPTEN__)
   const auto* target = get_window_target(*desc);
-  if (target != nullptr && target->type != GRANIT_WINDOW_TARGET_AUTOMATIC)
+  if (target != nullptr && target->type == GRANIT_WINDOW_TARGET_CANVAS_SELECTOR &&
+      (system->operations == nullptr || !system->operations->accepts_canvas_target)) {
     return GRANIT_ERROR_UNSUPPORTED;
-#endif
-#if defined(_WIN32)
-  return create_win32_window(system, desc, output);
-#elif defined(GRANIT_WINDOW_HAS_XCB) || defined(GRANIT_WINDOW_HAS_WAYLAND)
-#if defined(GRANIT_WINDOW_HAS_WAYLAND)
-  if (system->backend == GRANIT_WINDOW_BACKEND_WAYLAND)
-    return create_wayland_window(system, desc, output);
-#endif
-#if defined(GRANIT_WINDOW_HAS_XCB)
-  return create_xcb_window(system, desc, output);
-#else
-  return GRANIT_ERROR_UNSUPPORTED;
-#endif
-#elif defined(__EMSCRIPTEN__)
-  return create_emscripten_window(system, desc, output);
-#else
-  return GRANIT_ERROR_UNSUPPORTED;
-#endif
+  }
+  return system->operations == nullptr ? GRANIT_ERROR_INTERNAL
+                                       : system->operations->create_window(system, desc, output);
 }
 
 extern "C" granit_result granit_window_destroy(granit_window_system system_handle,
@@ -93,25 +78,8 @@ extern "C" granit_result granit_window_destroy(granit_window_system system_handl
   if (found == system->windows.end())
     return GRANIT_ERROR_INVALID_HANDLE;
   clear_window_input(*system, window_handle);
-#if defined(_WIN32)
-  return destroy_win32_window(system, window_handle);
-#elif defined(GRANIT_WINDOW_HAS_XCB) || defined(GRANIT_WINDOW_HAS_WAYLAND)
-  const auto window = std::move(found->second);
-  system->windows.erase(found);
-#if defined(GRANIT_WINDOW_HAS_WAYLAND)
-  if (system->backend == GRANIT_WINDOW_BACKEND_WAYLAND)
-    return destroy_registered_wayland_window(system, window, window_handle);
-#endif
-#if defined(GRANIT_WINDOW_HAS_XCB)
-  return destroy_xcb_window(system, window);
-#else
-  return GRANIT_ERROR_UNSUPPORTED;
-#endif
-#elif defined(__EMSCRIPTEN__)
-  return destroy_emscripten_window(system, window_handle);
-#else
-  return GRANIT_ERROR_UNSUPPORTED;
-#endif
+  return system->operations == nullptr ? GRANIT_ERROR_INTERNAL
+                                       : system->operations->destroy_window(system, window_handle);
 }
 
 extern "C" granit_result granit_window_get_state(granit_window_system system_handle,
@@ -153,6 +121,8 @@ extern "C" granit_result granit_window_get_native_win32(granit_window_system sys
   if (found == system->windows.end())
     return GRANIT_ERROR_INVALID_HANDLE;
 #if defined(_WIN32)
+  if (system->backend != GRANIT_WINDOW_BACKEND_WIN32)
+    return GRANIT_ERROR_UNSUPPORTED;
   return get_native_win32(found->second, *output);
 #else
   return GRANIT_ERROR_UNSUPPORTED;
@@ -217,6 +187,8 @@ granit_window_get_native_emscripten(granit_window_system system_handle, granit_w
   if (found == system->windows.end())
     return GRANIT_ERROR_INVALID_HANDLE;
 #if defined(__EMSCRIPTEN__)
+  if (system->backend != GRANIT_WINDOW_BACKEND_EMSCRIPTEN)
+    return GRANIT_ERROR_UNSUPPORTED;
   return get_native_emscripten(found->second, *output);
 #else
   return GRANIT_ERROR_UNSUPPORTED;

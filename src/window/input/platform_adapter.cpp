@@ -15,6 +15,9 @@
 #if defined(__EMSCRIPTEN__)
 #include "window/platform/emscripten/input.h"
 #endif
+#if defined(GRANIT_WINDOW_HAS_SDL3)
+#include "window/platform/sdl3/input.h"
+#endif
 
 #include <cstddef>
 
@@ -40,6 +43,12 @@ platform_input_adapter::~platform_input_adapter() = default;
 void platform_input_adapter::handle(granit_window window,
                                     const granit_window_input_native_event& event,
                                     const platform_input_sink& sink) {
+#if defined(GRANIT_WINDOW_HAS_SDL3)
+  if (event.backend == GRANIT_WINDOW_INPUT_BACKEND_SDL3) {
+    handle_sdl3_input(window, event, sink);
+    return;
+  }
+#endif
 #if defined(_WIN32)
   if (event.backend == GRANIT_WINDOW_INPUT_BACKEND_WIN32) {
     const win32_input_sink native_sink{sink.user_data, sink.keyboard, sink.pointer, sink.event,

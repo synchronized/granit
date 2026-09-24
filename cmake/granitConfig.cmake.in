@@ -6,6 +6,10 @@
 include("${CMAKE_CURRENT_LIST_DIR}/granitTargets.cmake")
 
 if("Window" IN_LIST granit_FIND_COMPONENTS)
+  if(@GRANIT_ENABLE_WINDOW_SDL3@ AND NOT @BUILD_SHARED_LIBS@)
+    include(CMakeFindDependencyMacro)
+    find_dependency(SDL3 3.2 CONFIG)
+  endif()
   if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/granitWindowTargets.cmake")
     include("${CMAKE_CURRENT_LIST_DIR}/granitWindowTargets.cmake")
     set(granit_Window_FOUND TRUE)

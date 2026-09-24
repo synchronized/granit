@@ -26,7 +26,8 @@ enum class window_backend : std::uint32_t {
   win32 = GRANIT_WINDOW_BACKEND_WIN32,
   xcb = GRANIT_WINDOW_BACKEND_XCB,
   wayland = GRANIT_WINDOW_BACKEND_WAYLAND,
-  emscripten = GRANIT_WINDOW_BACKEND_EMSCRIPTEN
+  emscripten = GRANIT_WINDOW_BACKEND_EMSCRIPTEN,
+  sdl3 = GRANIT_WINDOW_BACKEND_SDL3
 };
 
 struct window_system_desc {

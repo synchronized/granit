@@ -3,26 +3,24 @@
 
 #include "model_viewer/desktop/desktop_options.h"
 #include "model_viewer/desktop/presentation_policy.h"
-#include "model_viewer/desktop/sdl3_input.h"
 
 #include "assets/asset_loader.h"
 #include "gltf/document_loader.h"
 #include "imgui/imgui_frame_capture.h"
+#include "imgui/imgui_input.h"
 #include "imgui/imgui_texture_registry.h"
 #include "imgui/imgui_theme.h"
 #include "model_viewer/application_core.h"
 #include "model_viewer/frame_executor.h"
+#include "model_viewer/viewer_input_accumulator.h"
 #include "model_viewer/viewer_panels.h"
-#include "sdl/sdl3_lifecycle.h"
 
-#include <SDL3/SDL.h>
-#include <backends/imgui_impl_sdl3.h>
 #include <imgui.h>
 
 #include <granit/granit.hpp>
-#include <granit/integrations/sdl3/surface.hpp>
 #include <granit/pipeline/canvas_draw_list.hpp>
 #include <granit/pipeline/render_pipeline.hpp>
+#include <granit/window.hpp>
 
 #include <algorithm>
 #include <array>
@@ -48,6 +46,58 @@
 #include <vector>
 
 namespace {
+
+struct imgui_context {
+  ~imgui_context() { ImGui::DestroyContext(); }
+};
+
+struct desktop_window_events {
+  bool close_requested{};
+  bool resized{};
+};
+
+granit::result pump_window_events(
+    granit::window_system& system, granit::window& window, granit::window_state& state,
+    desktop_window_events& output,
+    granit::example::model_viewer::viewer_input_accumulator* input = nullptr) noexcept {
+  output = {};
+  auto result = system.process_events();
+  granit::window_event window_event;
+  while (result.ok()) {
+    const auto poll_result = system.poll(window_event);
+    if (poll_result == granit::result::not_ready)
+      break;
+    if (poll_result.failed())
+      return poll_result;
+    if (window_event.window != window.ref())
+      continue;
+    granit::example::imgui::process_window_event(window_event);
+    if (input != nullptr)
+      input->process(window_event);
+    output.close_requested =
+        output.close_requested || window_event.type == granit::window_event_type::close_requested;
+    output.resized = output.resized || window_event.type == granit::window_event_type::resized ||
+                     window_event.type == granit::window_event_type::scale_changed;
+  }
+  granit::input_event input_event;
+  while (result.ok()) {
+    const auto poll_result = system.poll(input_event);
+    if (poll_result == granit::result::not_ready)
+      break;
+    if (poll_result.failed())
+      return poll_result;
+    if (input_event.window != window.ref())
+      continue;
+    granit::example::imgui::process_input_event(input_event);
+    if (input != nullptr) {
+      input->process(input_event, ImGui::GetIO().WantCaptureMouse,
+                     ImGui::GetIO().WantCaptureKeyboard);
+    }
+  }
+  if (result.ok() && output.resized)
+    result = window.get_state(state);
+  return result;
+}
 
 constexpr std::string_view present_mode_name(granit::present_mode mode) noexcept {
   switch (mode) {
@@ -209,12 +259,12 @@ bool loading_needs_srgb_encoding(granit::texture_format format) noexcept {
          format == granit::texture_format::bgra8_unorm;
 }
 
-granit::result capture_loading_frame(const granit::swapchain_info& swapchain_info,
+granit::result capture_loading_frame(const granit::window_state& window_state,
+                                     const granit::swapchain_info& swapchain_info,
                                      granit::example::imgui::texture_registry& textures,
                                      const char* stage, float progress,
                                      granit::example::imgui::frame_canvas_data& output) {
-  ImGui_ImplSDL3_NewFrame();
-  ImGui::NewFrame();
+  granit::example::imgui::begin_frame(window_state, 1.0F / 60.0F);
   const ImVec2 panel_size{420.0F, 118.0F};
   ImGui::SetNextWindowPos({(static_cast<float>(swapchain_info.width) - panel_size.x) * 0.5F,
                            (static_cast<float>(swapchain_info.height) - panel_size.y) * 0.5F});
@@ -275,13 +325,15 @@ granit::result render_loading_frame_data(granit::swapchain& swapchain,
 }
 
 granit::result render_loading_frame(granit::swapchain& swapchain,
+                                    const granit::window_state& window_state,
                                     const granit::swapchain_info& swapchain_info,
                                     granit::frame_context& frame_context,
                                     granit::canvas_draw_list& canvas,
                                     granit::example::imgui::texture_registry& textures,
                                     const char* stage, float progress) {
   granit::example::imgui::frame_canvas_data data;
-  auto result = capture_loading_frame(swapchain_info, textures, stage, progress, data);
+  auto result =
+      capture_loading_frame(window_state, swapchain_info, textures, stage, progress, data);
   if (result.ok())
     result = render_loading_frame_data(swapchain, swapchain_info, frame_context, canvas, data);
   return result;
@@ -607,27 +659,27 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  if (!SDL_Init(SDL_INIT_VIDEO)) {
-    std::cerr << "SDL3 初始化失败：" << SDL_GetError() << '\n';
-    return 1;
-  }
-  granit::example::sdl::sdl_quit quit;
   const auto initial_width = options.profile_output_path.empty() ? 1280 : 1920;
   const auto initial_height = options.profile_output_path.empty() ? 720 : 1080;
-  std::unique_ptr<SDL_Window, granit::example::sdl::window_deleter> window(
-      SDL_CreateWindow("Granit Model Viewer", initial_width, initial_height,
-                       SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY));
-  if (!window) {
-    std::cerr << "SDL3 窗口创建失败：" << SDL_GetError() << '\n';
+  granit::window_system window_system;
+  if ((result = window_system.initialize({.backend = granit::window_backend::sdl3})).failed()) {
+    std::cerr << "Window System 初始化失败：" << granit::result_message(result) << '\n';
+    return 1;
+  }
+  granit::window window;
+  result = window.initialize(window_system, {.title = "Granit Model Viewer",
+                                             .width = static_cast<std::uint32_t>(initial_width),
+                                             .height = static_cast<std::uint32_t>(initial_height),
+                                             .flags = granit::window_flag::visible |
+                                                      granit::window_flag::resizable |
+                                                      granit::window_flag::high_dpi});
+  if (result.failed()) {
+    std::cerr << "Window 创建失败：" << granit::result_message(result) << '\n';
     return 1;
   }
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
-  if (!ImGui_ImplSDL3_InitForOther(window.get())) {
-    ImGui::DestroyContext();
-    return 1;
-  }
-  granit::example::sdl::imgui_quit imgui;
+  imgui_context imgui;
   ImGui::GetIO().IniFilename = nullptr;
   granit::example::apply_imgui_theme();
 
@@ -666,12 +718,12 @@ int main(int argc, char** argv) {
     result = core.renderer_ready();
 
   if (result.ok())
-    result = granit::integration::sdl3::create_surface(renderer, window.get(), surface);
-  int pixel_width = 0;
-  int pixel_height = 0;
-  if (result.ok() && !SDL_GetWindowSizeInPixels(window.get(), &pixel_width, &pixel_height)) {
-    result = granit::result::backend_unavailable;
-  }
+    result = window.create_surface(renderer, surface);
+  granit::window_state window_state;
+  if (result.ok())
+    result = window.get_state(window_state);
+  auto pixel_width = window_state.framebuffer_width;
+  auto pixel_height = window_state.framebuffer_height;
   if (result.ok() && !options.profile_output_path.empty() &&
       (pixel_width != 1920 || pixel_height != 1080)) {
     std::cerr << "性能采样要求窗口像素尺寸为 1920x1080，实际为 " << pixel_width << 'x'
@@ -729,21 +781,17 @@ int main(int argc, char** argv) {
   while (result.ok() && !asset_bytes_ready && !loading_cancelled) {
     document_loader.poll();
     asset_loader.poll();
-    SDL_Event event{};
-    while (SDL_PollEvent(&event)) {
-      ImGui_ImplSDL3_ProcessEvent(&event);
-      if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) {
-        loading_cancelled = true;
-      } else if (event.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
-        pixel_width = event.window.data1;
-        pixel_height = event.window.data2;
-        if (pixel_width > 0 && pixel_height > 0) {
-          result = swapchain.recreate({.width = static_cast<std::uint32_t>(pixel_width),
-                                       .height = static_cast<std::uint32_t>(pixel_height),
-                                       .presentation = options.presentation});
-          if (result.ok())
-            result = swapchain.query_info(swapchain_info);
-        }
+    desktop_window_events events;
+    result = pump_window_events(window_system, window, window_state, events);
+    loading_cancelled = events.close_requested;
+    if (result.ok() && events.resized) {
+      pixel_width = window_state.framebuffer_width;
+      pixel_height = window_state.framebuffer_height;
+      if (pixel_width > 0 && pixel_height > 0) {
+        result = swapchain.recreate(
+            {.width = pixel_width, .height = pixel_height, .presentation = options.presentation});
+        if (result.ok())
+          result = swapchain.query_info(swapchain_info);
       }
     }
     if (result.failed() || loading_cancelled)
@@ -774,13 +822,13 @@ int main(int argc, char** argv) {
                                 ? static_cast<float>(progress.received_bytes) /
                                       static_cast<float>(*progress.total_bytes)
                                 : 0.0F;
-      result = render_loading_frame(swapchain, swapchain_info, loading_frame_context, canvas,
-                                    textures, "Loading asset resources...",
+      result = render_loading_frame(swapchain, window_state, swapchain_info, loading_frame_context,
+                                    canvas, textures, "Loading asset resources...",
                                     0.05F + std::min(fraction, 1.0F) * 0.20F);
       if (result == granit::result::out_of_date)
         result = granit::result::success;
     }
-    SDL_Delay(16);
+    std::this_thread::sleep_for(std::chrono::milliseconds{16});
   }
 
   if (loading_cancelled) {
@@ -824,21 +872,17 @@ int main(int argc, char** argv) {
   }
   while (result.ok() && cpu_loading.valid() &&
          cpu_loading.wait_for(std::chrono::milliseconds{0}) != std::future_status::ready) {
-    SDL_Event event{};
-    while (SDL_PollEvent(&event)) {
-      ImGui_ImplSDL3_ProcessEvent(&event);
-      if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED)
-        loading_cancelled = true;
-      else if (event.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
-        pixel_width = event.window.data1;
-        pixel_height = event.window.data2;
-        if (pixel_width > 0 && pixel_height > 0) {
-          result = swapchain.recreate({.width = static_cast<std::uint32_t>(pixel_width),
-                                       .height = static_cast<std::uint32_t>(pixel_height),
-                                       .presentation = options.presentation});
-          if (result.ok())
-            result = swapchain.query_info(swapchain_info);
-        }
+    desktop_window_events events;
+    result = pump_window_events(window_system, window, window_state, events);
+    loading_cancelled = events.close_requested;
+    if (result.ok() && events.resized) {
+      pixel_width = window_state.framebuffer_width;
+      pixel_height = window_state.framebuffer_height;
+      if (pixel_width > 0 && pixel_height > 0) {
+        result = swapchain.recreate(
+            {.width = pixel_width, .height = pixel_height, .presentation = options.presentation});
+        if (result.ok())
+          result = swapchain.query_info(swapchain_info);
       }
     }
     if (result.failed() || loading_cancelled || !options.show_ui)
@@ -847,11 +891,11 @@ int main(int argc, char** argv) {
     const char* label =
         stage < 4 ? "Parsing glTF and decoding textures..." : "Planning GPU resources...";
     const auto progress = stage < 4 ? 0.30F : 0.38F;
-    result = render_loading_frame(swapchain, swapchain_info, loading_frame_context, canvas,
-                                  textures, label, progress);
+    result = render_loading_frame(swapchain, window_state, swapchain_info, loading_frame_context,
+                                  canvas, textures, label, progress);
     if (result == granit::result::out_of_date)
       result = granit::result::success;
-    SDL_Delay(16);
+    std::this_thread::sleep_for(std::chrono::milliseconds{16});
   }
   if (cpu_loading.valid()) {
     auto loaded = cpu_loading.get();
@@ -865,14 +909,14 @@ int main(int argc, char** argv) {
       environment_bytes = std::move(loaded.environment_bytes);
   }
   if (result.ok() && options.show_ui)
-    result = render_loading_frame(swapchain, swapchain_info, loading_frame_context, canvas,
-                                  textures, "Preparing GPU upload...", 0.40F);
+    result = render_loading_frame(swapchain, window_state, swapchain_info, loading_frame_context,
+                                  canvas, textures, "Preparing GPU upload...", 0.40F);
   std::array<granit::example::imgui::frame_canvas_data, 101> gpu_progress_frames;
   if (result.ok() && options.show_ui) {
     for (std::size_t percentage = 0; percentage < gpu_progress_frames.size(); ++percentage) {
-      result = capture_loading_frame(swapchain_info, textures, "Uploading GPU resources...",
-                                     static_cast<float>(percentage) / 100.0F,
-                                     gpu_progress_frames[percentage]);
+      result = capture_loading_frame(
+          window_state, swapchain_info, textures, "Uploading GPU resources...",
+          static_cast<float>(percentage) / 100.0F, gpu_progress_frames[percentage]);
       if (result.failed())
         break;
     }
@@ -897,25 +941,15 @@ int main(int argc, char** argv) {
     result = frame_executor.submit_command(execute_gpu_upload, &upload_context, upload_sequence);
     bool upload_completed = false;
     while (result.ok() && !upload_completed) {
-      SDL_Event event{};
-      while (SDL_PollEvent(&event)) {
-        ImGui_ImplSDL3_ProcessEvent(&event);
-        if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) {
-          upload_status.cancelled.store(true, std::memory_order_release);
-        } else if (event.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
-          pixel_width = event.window.data1;
-          pixel_height = event.window.data2;
-          upload_resize_pending = true;
-        }
+      desktop_window_events events;
+      result = pump_window_events(window_system, window, window_state, events);
+      if (events.close_requested)
+        upload_status.cancelled.store(true, std::memory_order_release);
+      if (events.resized) {
+        pixel_width = window_state.framebuffer_width;
+        pixel_height = window_state.framebuffer_height;
+        upload_resize_pending = true;
       }
-      const auto progress = granit::example::model_viewer::gpu_scene_upload_progress{
-          .stage = upload_status.stage.load(std::memory_order_relaxed),
-          .completed = upload_status.completed.load(std::memory_order_relaxed),
-          .total = upload_status.total.load(std::memory_order_acquire)};
-      const auto overall_progress = gpu_upload_percentage(progress);
-      const auto loading_title =
-          "Granit Model Viewer | Uploading GPU resources " + std::to_string(overall_progress) + "%";
-      SDL_SetWindowTitle(window.get(), loading_title.c_str());
       granit::example::model_viewer::render_command_completion completion;
       if (frame_executor.try_take_command_completion(completion)) {
         if (completion.sequence != upload_sequence)
@@ -924,7 +958,7 @@ int main(int argc, char** argv) {
           result = completion.status;
         upload_completed = true;
       }
-      SDL_Delay(16);
+      std::this_thread::sleep_for(std::chrono::milliseconds{16});
     }
     if (result.ok() && upload_status.cancelled.load(std::memory_order_acquire))
       result = granit::result::not_ready;
@@ -939,8 +973,8 @@ int main(int argc, char** argv) {
     }
   }
   if (result.ok() && options.show_ui)
-    result = render_loading_frame(swapchain, swapchain_info, loading_frame_context, canvas,
-                                  textures, "Creating render pipeline...", 0.96F);
+    result = render_loading_frame(swapchain, window_state, swapchain_info, loading_frame_context,
+                                  canvas, textures, "Creating render pipeline...", 0.96F);
   granit::render_pipeline_desc pipeline_desc{
       .samples = static_cast<granit::sample_count>(render_quality.sample_count),
       .enable_fxaa = render_quality.enable_fxaa != 0,
@@ -988,8 +1022,8 @@ int main(int argc, char** argv) {
   if (result.ok() && options.show_ui)
     result = rebuild_previews();
   if (result.ok() && options.show_ui)
-    result = render_loading_frame(swapchain, swapchain_info, loading_frame_context, canvas,
-                                  textures, "Loading complete", 1.0F);
+    result = render_loading_frame(swapchain, window_state, swapchain_info, loading_frame_context,
+                                  canvas, textures, "Loading complete", 1.0F);
   if (loading_frame_context.valid()) {
     const auto reset_result = loading_frame_context.reset();
     if (result.ok())
@@ -1005,11 +1039,7 @@ int main(int argc, char** argv) {
   }
   const auto backend_name =
       renderer_info.backend == granit::renderer_backend::webgpu ? "WebGPU" : "Vulkan";
-  const auto title =
-      std::string("Granit Model Viewer | ") + backend_name + " | " + renderer_info.adapter_name;
-  SDL_SetWindowTitle(window.get(), title.c_str());
-
-  desktop::sdl3_input input_adapter;
+  viewer_input_accumulator input_adapter;
   bool running = true;
   bool recreate = false;
   bool recreate_surface = false;
@@ -1020,6 +1050,7 @@ int main(int argc, char** argv) {
   performance_sample latest_sample;
   bool has_pending_sample = false;
   std::unordered_map<std::uint64_t, float> producer_frame_times;
+  auto last_ui_time = std::chrono::steady_clock::now();
   while (running) {
     const auto cpu_begin = std::chrono::steady_clock::now();
     frame_completion completed;
@@ -1059,23 +1090,20 @@ int main(int argc, char** argv) {
     if (!running)
       break;
     input_adapter.begin_frame();
-    SDL_Event event{};
-    while (SDL_PollEvent(&event)) {
-      ImGui_ImplSDL3_ProcessEvent(&event);
-      input_adapter.process(event, options.show_ui && ImGui::GetIO().WantCaptureMouse,
-                            options.show_ui && ImGui::GetIO().WantCaptureKeyboard);
-      if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED)
-        running = false;
-      else if (event.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
-        pixel_width = event.window.data1;
-        pixel_height = event.window.data2;
-        recreate = true;
-      }
+    desktop_window_events events;
+    result = pump_window_events(window_system, window, window_state, events, &input_adapter);
+    if (result.failed())
+      break;
+    running = !events.close_requested;
+    if (events.resized) {
+      pixel_width = window_state.framebuffer_width;
+      pixel_height = window_state.framebuffer_height;
+      recreate = true;
     }
     if (!running)
       break;
     if (pixel_width <= 0 || pixel_height <= 0) {
-      SDL_Delay(16);
+      std::this_thread::sleep_for(std::chrono::milliseconds{16});
       continue;
     }
     if (recreate_surface) {
@@ -1083,8 +1111,7 @@ int main(int argc, char** argv) {
       if (result.failed())
         break;
       if ((result = swapchain.reset()).failed() || (result = surface.reset()).failed() ||
-          (result = granit::integration::sdl3::create_surface(renderer, window.get(), surface))
-              .failed() ||
+          (result = window.create_surface(renderer, surface)).failed() ||
           (result = swapchain.initialize(renderer, surface,
                                          {.width = static_cast<std::uint32_t>(pixel_width),
                                           .height = static_cast<std::uint32_t>(pixel_height),
@@ -1119,8 +1146,10 @@ int main(int argc, char** argv) {
     viewer_panel_changes changes;
     granit::example::imgui::frame_canvas_data ui_frame;
     if (options.show_ui) {
-      ImGui_ImplSDL3_NewFrame();
-      ImGui::NewFrame();
+      const auto ui_time = std::chrono::steady_clock::now();
+      const auto delta_seconds = std::chrono::duration<float>(ui_time - last_ui_time).count();
+      last_ui_time = ui_time;
+      granit::example::imgui::begin_frame(window_state, delta_seconds);
       const renderer_panel_info panel_renderer{
           .backend = backend_name,
           .adapter = renderer_info.adapter_name,

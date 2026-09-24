@@ -5,8 +5,9 @@
 
 ## 状态
 
-**实施中。** 通用 Target 契约和原生 Emscripten 多 Canvas 已完成，并通过桌面契约、Emscripten
-编译和 Chrome 双 Canvas 行为验证；下一阶段收敛内部分发并接入可选 SDL3 后端。
+**实施中。** 通用 Target、原生与 SDL3 Emscripten 多 Canvas、后端操作表和桌面 SDL3 Window
+后端已经完成。Model Viewer 的 Desktop/Web 已共用 Viewer 输入累积器；
+shared/static 安装 Consumer 已验证，剩余重点是文档发布与跨平台收口。
 
 ## 背景与目标
 
@@ -75,12 +76,15 @@ Window System
 2. **S-56B 原生 Emscripten 多 Canvas（已完成）**：按 Window 保存 selector，几何、输入回调、
    原生查询和 Surface 创建均使用该值；已删除单活动窗口限制、检测重复目标，并通过 Chrome
    双 Canvas 创建、冲突和销毁后重建验证。
-3. **S-56C Window 内部分发边界**：把当前编译平台分支收敛成 Window System 选择后固定的后端
-   操作，避免 SDL3 分支散落于每个公共 API。
-4. **S-56D 可选 SDL3 后端**：增加构建选项、系统与窗口生命周期、事件和输入转换、状态查询、
-   Surface 创建及 Canvas Target 传递；保留 IntegrationSDL3 的外部窗口适配入口。
-5. **S-56E 消费者迁移**：选择一个当前 SDL3 sample 使用统一 Window API，验证迁移不会破坏
-   Model Viewer 的线程与渲染执行语义后，再决定其余 sample 的迁移范围。
+3. **S-56C Window 内部分发边界（已完成）**：Window System 创建时固定后端操作表，公共的系统、
+   窗口和 Surface API 不再散落 SDL3 判断；平台专用原生句柄查询继续显式校验后端类型。
+4. **S-56D 可选 SDL3 后端（已完成）**：桌面系统与多窗口生命周期、事件和输入转换、状态查询、
+   Surface 创建及单活动 System 约束已经落地；IntegrationSDL3 的外部窗口入口保持不变。SDL3
+   Emscripten 已通过 Chrome 双 Canvas 创建、重复 selector 拒绝、销毁和重新创建验收。
+5. **S-56E 消费者迁移（已完成）**：Model Viewer Desktop/Web 共用
+   `viewer_input_accumulator`，统一拖动、滚轮、快捷键、焦点、UI 捕获和背压语义。Desktop 已改用
+   `granit::window` SDL3 后端、统一 Surface API 和 Granit Input → ImGuiIO 适配，同时保持独立
+   渲染线程与 Frame Packet 语义不变；原 SDL Event 翻译层已删除。
 6. **S-56F 文档与发布收口**：更新 Window、Input、Integration、Compatibility 和 Architecture
    的当前行为，补充安装组件与迁移说明，并完成跨平台验证。
 
@@ -102,6 +106,9 @@ Window System
   `tabindex` 约束，不能继续把所有键盘事件绑定到全局 Window。
 - SDL 事件队列属于进程级资源；多个 Granit SDL3 Window System 同时处理事件会产生所有权冲突。
   首版可限制进程内只有一个活动 SDL3 Window System，并返回资源占用。
-- 静态安装包启用 SDL3 后需要向最终链接传播 SDL3 链接依赖；必须由 package Consumer 验证，
-  不能只验证源码树构建。
-- Model Viewer 桌面端拥有主线程 UI 和后台渲染线程，不因统一 Window API 自动具备迁移条件。
+- 下载模式启用 SDL3 后端会随 Window 安装锁定版本 SDL3 的运行库和包配置；系统依赖模式仍需由
+  SDK 打包环境提供对应 SDL3 运行库。
+- Model Viewer 桌面端仍拥有主线程 UI 和后台渲染线程；统一 Window API 不改变其 Frame Packet
+  与渲染线程所有权边界。
+- SDL 3.4.10 的 Emscripten 后端注销拖放事件时会重复删除 `/tmp/filedrop`；当前仅在窗口销毁调用
+  期间兼容该上游行为，后续升级 SDL 时应复查并删除兼容分支。

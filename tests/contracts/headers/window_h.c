@@ -32,6 +32,7 @@ void granit_window_h_header_test(void) {
   (void)granit_test_window;
   granit_test_window_system_desc.backend = GRANIT_WINDOW_BACKEND_AUTO;
   granit_test_window_system_desc.backend = GRANIT_WINDOW_BACKEND_EMSCRIPTEN;
+  granit_test_window_system_desc.backend = GRANIT_WINDOW_BACKEND_SDL3;
   granit_test_window_desc.width = UINT32_C(640);
   granit_test_window_target_desc.type = GRANIT_WINDOW_TARGET_CANVAS_SELECTOR;
   granit_test_window_desc.target = &granit_test_window_target_desc;

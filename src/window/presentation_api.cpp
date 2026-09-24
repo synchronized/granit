@@ -4,6 +4,7 @@
 #include <granit/renderer/native_surface.h>
 #include <granit/window/presentation.h>
 
+#include "window/platform/backend.h"
 #include "window/registry.h"
 
 extern "C" granit_result granit_window_create_surface(granit_window_system system_handle,
@@ -21,6 +22,10 @@ extern "C" granit_result granit_window_create_surface(granit_window_system syste
   const auto found = system->windows.find(window_handle);
   if (found == system->windows.end() || renderer == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (system->operations == nullptr)
+    return GRANIT_ERROR_INTERNAL;
+  if (system->operations->create_surface != nullptr)
+    return system->operations->create_surface(system, found->second, renderer, surface);
 
   granit_surface_desc desc = GRANIT_SURFACE_DESC_INIT;
 #if defined(_WIN32)

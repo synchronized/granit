@@ -34,6 +34,11 @@ function(granit_fetch_sdl3)
   set(SDL_TEST_LIBRARY OFF CACHE BOOL "" FORCE)
   set(SDL_TESTS OFF CACHE BOOL "" FORCE)
   set(SDL_EXAMPLES OFF CACHE BOOL "" FORCE)
+  if(GRANIT_ENABLE_WINDOW_SDL3)
+    # Window 后端是已安装库的一部分，下载依赖时也要安装 SDL 的运行库与包配置，
+    # 保证共享库可部署，并让静态 Consumer 能解析最终链接依赖。
+    set(SDL_INSTALL ON CACHE BOOL "" FORCE)
+  endif()
   FetchContent_Declare(
     granit_sdl3
     URL "https://github.com/libsdl-org/SDL/archive/${GRANIT_SDL3_LOCKED_COMMIT}.tar.gz"

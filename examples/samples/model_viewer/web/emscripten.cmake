@@ -7,8 +7,6 @@ add_library(
   granit_web_model_viewer_platform STATIC
   "${CMAKE_CURRENT_LIST_DIR}/application.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/application.h"
-  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/web/web_input.cpp"
-  "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/web/web_input.h"
 )
 target_compile_features(granit_web_model_viewer_platform PUBLIC cxx_std_20)
 target_include_directories(

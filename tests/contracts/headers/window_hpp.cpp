@@ -21,5 +21,7 @@ static_assert(static_cast<std::uint32_t>(granit::window_backend::win32) ==
               GRANIT_WINDOW_BACKEND_WIN32);
 static_assert(static_cast<std::uint32_t>(granit::window_backend::emscripten) ==
               GRANIT_WINDOW_BACKEND_EMSCRIPTEN);
+static_assert(static_cast<std::uint32_t>(granit::window_backend::sdl3) ==
+              GRANIT_WINDOW_BACKEND_SDL3);
 static_assert(granit::window_target::canvas("#viewport").type ==
               granit::window_target_type::canvas_selector);

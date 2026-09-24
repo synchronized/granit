@@ -141,9 +141,33 @@ async function main() {
         secondary.style.left = "-10000px";
         secondary.style.border = "none";
         document.body.appendChild(secondary);
-        const result = Module._granit_web_validate_multi_window();
-        secondary.remove();
-        if (result !== 0) throw new Error(`浏览器多 Window Target 验证失败：${result}`);
+        const sdlPrimary = document.createElement("canvas");
+        sdlPrimary.id = "sdl-primary-canvas";
+        sdlPrimary.tabIndex = 0;
+        const sdlSecondary = document.createElement("canvas");
+        sdlSecondary.id = "sdl-secondary-canvas";
+        sdlSecondary.tabIndex = 0;
+        for (const canvas of [sdlPrimary, sdlSecondary]) {
+          canvas.style.position = "fixed";
+          canvas.style.left = "-10000px";
+          canvas.style.border = "none";
+          document.body.appendChild(canvas);
+        }
+        sdlPrimary.style.width = "320px";
+        sdlPrimary.style.height = "180px";
+        sdlSecondary.style.width = "400px";
+        sdlSecondary.style.height = "200px";
+        try {
+          const result = Module._granit_web_validate_multi_window();
+          if (result !== 0) throw new Error(`浏览器多 Window Target 验证失败：${result}`);
+          const sdlResult = Module._granit_web_validate_sdl3_multi_window();
+          if (sdlResult !== 0)
+            throw new Error(`浏览器 SDL3 多 Window Target 验证失败：${sdlResult}`);
+        } finally {
+          secondary.remove();
+          sdlPrimary.remove();
+          sdlSecondary.remove();
+        }
       });
     }
     const rendererState = await page.evaluate(() => Module._granit_web_renderer_state());

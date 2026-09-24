@@ -35,7 +35,7 @@
 #include "gltf/document_loader.h"
 #include "model_viewer/application_core.h"
 #include "model_viewer/frame_executor.h"
-#include "model_viewer/web/web_input.h"
+#include "model_viewer/viewer_input_accumulator.h"
 
 #include "application.h"
 
@@ -74,7 +74,7 @@ struct web_platform_state {
   std::uint64_t shutdown_pending_retirement_count{};
   granit_result shutdown_result{GRANIT_SUCCESS};
   bool shutdown_complete{};
-  granit::example::model_viewer::web::web_input input;
+  granit::example::model_viewer::viewer_input_accumulator input;
   granit::example::gltf::document_loader document_loader;
   std::string asset_url;
   granit::example::model_viewer::application_core core;
@@ -869,7 +869,6 @@ granit::result web_application_host::on_host_initialize() noexcept {
   }
   state.renderer_initialization_started_ms = emscripten_get_now();
   state.status = startup_status::provider_pending;
-  state.input.focus_changed(true);
   return granit::result::success;
 }
 
@@ -883,54 +882,16 @@ granit::result web_application_host::on_host_update(float,
 
 granit::result
 web_application_host::on_host_window_event(const granit::window_event& event) noexcept {
-  if (event.type == granit::window_event_type::focus_changed) {
+  if (event.type == granit::window_event_type::focus_changed)
     ++state.input_event_count;
-    state.input.focus_changed(event.data.focus.focused);
-  }
+  state.input.process(event);
   return granit::result::success;
 }
 
 granit::result
 web_application_host::on_host_input_event(const granit::input_event& event) noexcept {
   ++state.input_event_count;
-  switch (event.type) {
-  case granit::input_event_type::key: {
-    using granit::example::model_viewer::web::shortcut_key;
-    auto key = shortcut_key::other;
-    if (event.data.key.physical == granit::physical_key::f)
-      key = shortcut_key::focus;
-    else if (event.data.key.logical == granit::logical_key::home)
-      key = shortcut_key::home;
-    if (event.data.key.action != granit::key_action::released)
-      state.input.key_pressed(key, event.data.key.action == granit::key_action::repeated);
-    break;
-  }
-  case granit::input_event_type::pointer_entered:
-    state.input.pointer_presence_changed(true);
-    break;
-  case granit::input_event_type::pointer_left:
-    state.input.pointer_presence_changed(false);
-    break;
-  case granit::input_event_type::pointer_moved:
-    state.input.pointer_motion(event.data.pointer_moved.delta_x, event.data.pointer_moved.delta_y);
-    break;
-  case granit::input_event_type::pointer_button: {
-    using granit::example::model_viewer::web::pointer_button;
-    auto button = pointer_button::primary;
-    if (event.data.pointer_button.button == GRANIT_POINTER_MIDDLE_BIT)
-      button = pointer_button::middle;
-    else if (event.data.pointer_button.button == GRANIT_POINTER_SECONDARY_BIT)
-      button = pointer_button::secondary;
-    state.input.pointer_button_changed(button, event.data.pointer_button.pressed != 0);
-    break;
-  }
-  case granit::input_event_type::pointer_wheel:
-    state.input.wheel(event.data.pointer_wheel.delta_y);
-    break;
-  case granit::input_event_type::none:
-  case granit::input_event_type::text:
-    break;
-  }
+  state.input.process(event);
   return granit::result::success;
 }
 

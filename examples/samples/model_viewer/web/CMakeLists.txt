@@ -6,31 +6,4 @@ if(NOT GRANIT_HAS_NATIVE_WINDOW)
   return()
 endif()
 
-# Model Viewer 的浏览器输入支撑层。跨平台资源加载位于 examples/common/assets。
-
-add_library(granit_sample_model_viewer_web_shell STATIC web_input.cpp web_input.h)
-target_compile_features(granit_sample_model_viewer_web_shell PUBLIC cxx_std_20)
-target_include_directories(
-  granit_sample_model_viewer_web_shell
-  PUBLIC "${PROJECT_SOURCE_DIR}/examples/samples"
-)
-target_link_libraries(
-  granit_sample_model_viewer_web_shell PUBLIC granit_sample_model_viewer_core
-)
-set_target_properties(
-  granit_sample_model_viewer_web_shell PROPERTIES FOLDER "Examples/Samples"
-)
-granit_target_compile_warnings(granit_sample_model_viewer_web_shell)
-
-if(GRANIT_TESTING_ENABLED)
-  add_executable(granit_sample_model_viewer_web_shell_test web_input_test.cpp)
-  target_link_libraries(
-    granit_sample_model_viewer_web_shell_test
-    PRIVATE granit_sample_model_viewer_web_shell Catch2::Catch2WithMain
-  )
-  granit_target_compile_warnings(granit_sample_model_viewer_web_shell_test)
-  add_test(
-    NAME granit.sample.model_viewer_web_shell
-    COMMAND granit_sample_model_viewer_web_shell_test
-  )
-endif()
+# 浏览器入口直接复用 Model Viewer 的输入累积器，不保留平行输入状态机。

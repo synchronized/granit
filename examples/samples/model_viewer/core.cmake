@@ -18,6 +18,8 @@ add_library(
   viewer_state.cpp
   viewer_state.h
   viewer_input.h
+  viewer_input_accumulator.cpp
+  viewer_input_accumulator.h
 )
 add_library(granit_sample_model_viewer_support ALIAS granit_sample_model_viewer_core)
 target_compile_features(granit_sample_model_viewer_core PUBLIC cxx_std_20)
@@ -61,6 +63,7 @@ if(GRANIT_HAS_NATIVE_WINDOW AND GRANIT_TESTING_ENABLED)
     orbit_camera_test.cpp
     performance_history_test.cpp
     viewer_state_test.cpp
+    viewer_input_accumulator_test.cpp
   )
   target_link_libraries(
     granit_sample_model_viewer_support_test
