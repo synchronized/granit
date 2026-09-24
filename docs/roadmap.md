@@ -31,7 +31,7 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 
 ### S-59：Model Viewer 渲染任务运行时
 
-**状态：本地实施完成，等待远端 Linux 与浏览器验收，P1。**
+**状态：本地实施与浏览器验收完成，等待远端跨平台验收，P1。**
 
 [S-59](plans/S-59-model-viewer-render-task-runtime.md) 将帧执行器提升为拥有型强类型渲染任务执行器，
 以 threaded/inline 两种策略统一 Desktop/Web 的 GPU 任务语义，并在其上收敛 Viewer 生命周期状态机。
