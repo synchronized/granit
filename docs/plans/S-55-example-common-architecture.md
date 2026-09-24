@@ -78,7 +78,7 @@ validation ──────────────────┘
    Emscripten Fetch 属于 Web 后端；HTML Shell 属于具体 sample。
 3. **S-55C 资产/Web 边界设计（已完成）**：通用能力归入 `assets/`，构建时选择 Desktop 文件
    后端或 Web Fetch 后端；原 `common/web` 不再保留平行状态系统。
-4. **S-55D 统一后端接口实施（已完成）**：Model Viewer 两端均使用 `asset_loader`、
+4. **S-55D 统一后端接口实施（已完成）**：Model Viewer 两端均使用统一 Asset System、
    `asset_batch` 和 `memory_resource_resolver`；请求提供状态、字节进度、取消、诊断和 generation
    失效保护，外部资源位置由统一函数解析。通用 Resolver 和安全资源路径归属 `assets/`，依赖方向
    已调整为 `gltf -> assets`。

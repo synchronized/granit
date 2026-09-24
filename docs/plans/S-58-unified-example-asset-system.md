@@ -5,9 +5,9 @@
 
 ## 状态
 
-**实施中，P1。** 当前 `asset_store` 将逻辑路径、打包目录和同步读取绑定在一起，`asset_loader`
-将外部位置与异步调度绑定在一起；二者在路径解析和完整 Blob 读取上职责交叉。S-58 将资产身份、
-来源和读取调度拆开，以单一请求模型服务 Application Host、教程、glTF 与 Model Viewer。
+**本地实施完成，P1。** 原 `asset_store` 与 `asset_loader` 在路径解析和完整 Blob 读取上职责交叉。
+S-58 已将资产身份、来源和读取调度拆开，以单一请求模型服务 Application Host、教程、glTF 与
+Model Viewer；等待远端浏览器验收。
 
 ## 目标
 
@@ -97,8 +97,7 @@ examples/common/assets/
    打包资产可立即完成，外部根继续异步读取，二者复用同一 `asset_request` 状态、进度、取消与
    generation 保护。Windows 与 Emscripten 资产测试通过。
 3. **S-58C 内部 Source（已完成）**：Desktop packaged/filesystem 与 Web MEMFS/Fetch 已收进
-   Asset System 的私有实现；业务头文件不再包含 Store、Loader、文件系统或平台读取实现。现有
-   Store/Loader 暂作内部适配层，待 S-58F 删除。
+   Asset System 的私有实现；业务头文件不再包含 Store、Loader、文件系统或平台读取实现。
 4. **S-58D Application 与教程迁移（已完成）**：Application Host 已改为单一 Asset System；Cube
    纹理以及 PBR Assets 的 glTF、Buffer 和纹理均通过 Mount 与逻辑 Key 读取。同步 Importer 使用
    基于 Asset System 的驻留资源 Resolver，旧 Store Resolver 已删除。
@@ -106,8 +105,9 @@ examples/common/assets/
    Viewer 已接收 Asset System 与 Mount，模型、外部资源和环境贴图使用统一请求。共享
    `model_loading_session` 统一“文档 → Import → GPU Plan”的状态、进度和取消；Desktop/Web 仅保留
    任务调度、UI 与 GPU 所属线程差异。
-6. **S-58F 删除与验证**：删除 Store/Loader 并列入口和重复 Resolver，更新指南与实施记录；验证
-   Windows shared/static、Emscripten、Chrome、取消、失败回滚、路径逃逸和资源释放。
+6. **S-58F 删除与验证（本地完成）**：已删除 Store/Loader 并列入口和重复 Resolver，平台代码仅以
+   Asset System 私有 Source 存在；Windows 与 Emscripten 构建、单元测试、Desktop 冒烟测试已
+   通过。Chrome 与远端矩阵留待分支推送后的 CI 验收。
 
 ## 验收标准
 

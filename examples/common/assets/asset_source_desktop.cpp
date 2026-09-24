@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "assets/asset_loader.h"
+#include "assets/asset_source.h"
 
 #include <algorithm>
 #include <chrono>
@@ -71,7 +71,7 @@ load_result read_asset(std::shared_ptr<asset_request> request, std::uint64_t gen
 
 } // namespace
 
-struct asset_loader::implementation {
+struct asset_source::implementation {
   struct job {
     std::shared_ptr<asset_request> request;
     std::uint64_t generation{};
@@ -80,10 +80,10 @@ struct asset_loader::implementation {
   std::vector<job> jobs;
 };
 
-asset_loader::asset_loader() : implementation_(std::make_unique<implementation>()) {}
-asset_loader::~asset_loader() = default;
+asset_source::asset_source() : implementation_(std::make_unique<implementation>()) {}
+asset_source::~asset_source() = default;
 
-std::shared_ptr<asset_request> asset_loader::load(std::string location) {
+std::shared_ptr<asset_request> asset_source::load(std::string location) {
   auto request = std::make_shared<asset_request>();
   const auto generation = asset_request_writer::begin(*request, location);
   if (location.empty() || location.find('\0') != std::string::npos) {
@@ -98,7 +98,7 @@ std::shared_ptr<asset_request> asset_loader::load(std::string location) {
   return request;
 }
 
-void asset_loader::poll() {
+void asset_source::poll() {
   auto& jobs = implementation_->jobs;
   for (auto current = jobs.begin(); current != jobs.end();) {
     if (current->result.wait_for(std::chrono::milliseconds{0}) != std::future_status::ready) {

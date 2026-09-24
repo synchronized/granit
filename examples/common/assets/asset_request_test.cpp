@@ -1,16 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "assets/asset_loader.h"
 #include "assets/asset_request.h"
 
 #include <catch2/catch_all.hpp>
 
 #include <array>
-#include <chrono>
-#include <filesystem>
-#include <fstream>
-#include <thread>
 #include <vector>
 
 namespace assets = granit::example::assets;
@@ -57,35 +52,3 @@ TEST_CASE("资产请求报告进度、失败和取消", "[example][assets]") {
   CHECK(request.location().empty());
   CHECK(request.bytes().empty());
 }
-
-TEST_CASE("资产 Loader 拒绝无效位置", "[example][assets]") {
-  assets::asset_loader loader;
-  const auto request = loader.load({});
-  CHECK(request->status() == assets::asset_request_status::failed);
-  CHECK(request->error() == assets::asset_request_error::invalid_location);
-}
-
-#if !defined(__EMSCRIPTEN__)
-TEST_CASE("Desktop 资产 Loader 异步读取文件", "[example][assets]") {
-  const auto path = std::filesystem::temp_directory_path() / "granit_asset_loader_test.bin";
-  {
-    std::ofstream stream(path, std::ios::binary);
-    const std::array bytes{char{1}, char{2}, char{3}};
-    stream.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
-  }
-
-  assets::asset_loader loader;
-  const auto request = loader.load(path.string());
-  const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds{5};
-  while (request->status() == assets::asset_request_status::pending &&
-         std::chrono::steady_clock::now() < deadline) {
-    loader.poll();
-    std::this_thread::sleep_for(std::chrono::milliseconds{1});
-  }
-
-  CHECK(request->status() == assets::asset_request_status::ready);
-  CHECK(request->bytes().size() == 3);
-  std::error_code error;
-  std::filesystem::remove(path, error);
-}
-#endif
