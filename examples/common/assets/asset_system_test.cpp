@@ -57,7 +57,14 @@ TEST_CASE("Asset System 以统一请求读取打包和外部资产", "[example][
   const auto bundled = system.request({system.bundled(), "tutorials/./bundled.bin"});
   REQUIRE(bundled);
   CHECK(bundled->status() == assets::asset_request_status::ready);
+  CHECK(bundled->location() == "asset:///tutorials/bundled.bin");
   CHECK(bundled->bytes().size() == 3);
+
+  const auto missing = system.request({system.bundled(), "tutorials/missing.bin"});
+  REQUIRE(missing);
+  CHECK(missing->status() == assets::asset_request_status::failed);
+  CHECK(missing->error() == assets::asset_request_error::io_error);
+  CHECK(missing->location() == "asset:///tutorials/missing.bin");
 
   assets::asset_system_resolver resolver{system, system.bundled(), "tutorials"};
   std::vector<std::byte> resolved;
@@ -78,6 +85,8 @@ TEST_CASE("Asset System 以统一请求读取打包和外部资产", "[example][
     std::this_thread::sleep_for(std::chrono::milliseconds{1});
   }
   CHECK(external->status() == assets::asset_request_status::ready);
+  CHECK(external->location() ==
+        (fixture.root / "content" / "external.bin").lexically_normal().string());
   CHECK(external->bytes().size() == 3);
 
   assets::asset_mount file_mount;
@@ -86,6 +95,12 @@ TEST_CASE("Asset System 以统一请求读取打包和外部资产", "[example][
                                 file_path));
   CHECK(file_mount.valid());
   CHECK(file_path == "external.bin");
+
+  assets::asset_mount url_mount;
+  std::string url_path;
+  REQUIRE(system.mount_location("https://example.com/models/scene.gltf", url_mount, url_path));
+  CHECK(url_mount.valid());
+  CHECK(url_path == "scene.gltf");
 }
 #endif
 

@@ -45,6 +45,9 @@ examples/
 `common` 只保存被至少一个示例复用的能力；只有被两个真实下游共同需要、所有权和线程语义稳定的
 能力，才应另行设计为 Granit 公共 API。
 
+示例资产统一使用 Mount 与逻辑路径，Desktop/Web 的文件读取、Fetch 和部署差异由私有实现处理；
+具体边界见 [Example Asset System 契约](common/assets/README.md)。
+
 Model Viewer 的内容、Core、工具和验收程序均位于 `samples/model_viewer`。桌面入口与 SDL3
 平台壳层位于其 `desktop` 子目录，浏览器入口和输入适配位于 `web`；
 跨教程复用的 GPU Scene 位于 `common/model_viewer`，跨平台资源读取位于 `common/assets`。
