@@ -17,8 +17,8 @@ Swapchain、Pipeline、Scene 上传、质量切换、帧执行和释放；`rende
 `render_task_executor` 组合，统一帧与不可丢弃控制任务的执行语义。`viewer_frame_builder` 统一两端的
 面板构造、输入消费、Viewer Tick、Canvas 捕获和帧包生成：
 
-- Desktop 主线程处理 Window、Input、共享 ImGui 前端和加载编排，`threaded_render_service` 为共用
-  Render Service 增加专用线程、异步上传和帧完成回执；普通帧允许替换，控制任务有序执行。
+- Desktop 主线程处理 Window、Input、共享 ImGui 前端和加载编排，threaded Executor 为共用
+  Render Service 提供专用线程、异步上传和帧完成回执；普通帧允许替换，控制任务有序执行。
 - Web 持久使用浏览器主线程 inline 执行器调用同一个 Render Service，并将 Window/Input 事件交给
   同一个 `viewer_ui`；Fetch 和资源上传在明确边界通过 Asyncify 让出事件循环。
   正式 `pipeline_warmup` 只预热场景材质；临时 Shader、Compute 和资源生命周期探针仅编入浏览器

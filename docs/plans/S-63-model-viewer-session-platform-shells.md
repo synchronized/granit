@@ -49,9 +49,9 @@ C++ RAII。Surface 和主循环的具体实现保持在平台壳，恢复决策�
 3. **S-63C Viewer Session（完成）**：用拥有型 `viewer_session` 组合 Application Core 与模型加载，
    统一 Renderer 阶段、CPU Scene 交接、失败、取消、重置及 GPU 操作入口；Render Runtime 只借用
    Session，平台入口不再并列维护三套生命周期对象。
-4. **S-63D 执行协议（实施中）**：对称化 inline/threaded 的帧与控制任务提交、容量和完成回执，
-   删除 `threaded_render_service`。
-5. **S-63E 统一异步准备（待开始）**：共享 Pipeline Prepare 与 CPU/GPU Application Task。
+4. **S-63D 执行协议（完成）**：已对称化 inline/threaded 的帧与控制任务提交、容量和完成回执，
+   GPU 上传通过共用 Render Service 提交，并删除 `threaded_render_service`。
+5. **S-63E 统一异步准备（实施中）**：共享 Pipeline Prepare 与 CPU/GPU Application Task。
 6. **S-63F 唯一 Application（待开始）**：实现一个 `viewer_application` 状态机，Desktop/Web
    入口只负责解析参数并构造描述。
 7. **S-63G 验收与文档（待开始）**：验证 Windows、Emscripten、Chrome、Linux 和文档。

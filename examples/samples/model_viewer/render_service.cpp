@@ -91,8 +91,61 @@ granit::result render_service::execute_upload_scene(std::span<const std::byte> e
                 : granit::result::not_ready;
 }
 
+granit::result render_service::begin_upload_scene(std::span<const std::byte> environment_bytes,
+                                                  float sampler_anisotropy,
+                                                  gpu_scene_upload_callback progress,
+                                                  void* progress_user_data,
+                                                  std::uint64_t& sequence) noexcept {
+  if (!state_)
+    return granit::result::not_ready;
+  try {
+    std::vector<std::byte> owned(environment_bytes.begin(), environment_bytes.end());
+    return state_->executor->submit_control(
+        [context = state_.get(), bytes = std::move(owned), sampler_anisotropy, progress,
+         progress_user_data] {
+          return context->runtime.upload_scene(bytes, sampler_anisotropy, progress,
+                                               progress_user_data);
+        },
+        sequence);
+  } catch (const std::bad_alloc&) {
+    return granit::result::out_of_memory;
+  } catch (...) {
+    return granit::result::internal;
+  }
+}
+
 granit::result render_service::submit(frame_packet packet, frame_execution_result& output) {
   return state_ ? state_->executor->submit(std::move(packet), output) : granit::result::not_ready;
+}
+
+granit::result render_service::submit_frame(frame_packet packet, std::uint64_t& sequence) noexcept {
+  return state_ ? state_->executor->submit_frame(std::move(packet), sequence)
+                : granit::result::not_ready;
+}
+
+bool render_service::try_take_frame_completion(frame_completion& completion) noexcept {
+  return state_ && state_->executor->try_take_frame_completion(completion);
+}
+
+bool render_service::try_take_control_completion(render_task_completion& completion) noexcept {
+  return state_ && state_->executor->try_take_control_completion(completion);
+}
+
+bool render_service::can_submit_frame() const noexcept {
+  return state_ && state_->executor->can_submit_frame();
+}
+
+void render_service::record_skipped_frame_build() noexcept {
+  if (state_)
+    state_->executor->record_skipped_frame_build();
+}
+
+render_task_queue_stats render_service::query_queue_stats() const noexcept {
+  return state_ ? state_->executor->query_queue_stats() : render_task_queue_stats{};
+}
+
+granit::result render_service::flush() noexcept {
+  return state_ ? state_->executor->flush() : granit::result::not_ready;
 }
 
 granit::result render_service::render_loading_frame(const imgui::frame_canvas_data& data) noexcept {
