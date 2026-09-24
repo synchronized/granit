@@ -65,8 +65,9 @@ Fetch、文件系统或 ImGui Context。
    渲染线程。
 4. **S-59D Web 迁移（已完成）**：Web 状态持久持有 inline 执行器，通过相同任务协议完成上传、帧、
    质量修改和资源释放，不再每帧临时构造执行器；Swapchain 信息也由运行状态持续维护。
-5. **S-59E 共享 Viewer Runtime**：提取跨平台状态转换，减少两端重复的加载完成、上传、运行、失败
-   和关闭编排。
+5. **S-59E 共享 Viewer Runtime（已完成）**：新增 `model_viewer_runtime` 连接
+   `model_loading_session` 与 `application_core`，统一 Renderer 阶段、资产轮询、CPU 导入、Scene/计划
+   交接、失败同步、取消和重置；Desktop/Web 只保留各自的 I/O、窗口循环和 GPU 执行策略。
 6. **S-59F 验收与文档**：验证 inline/threaded 语义一致性、跨平台 Sample、浏览器行为和文档边界，
    将长期结构更新到 Model Viewer Guide。
 
