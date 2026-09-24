@@ -5,8 +5,9 @@
 
 ## 状态
 
-**实施中。** SDL target 与 Desktop/Web 统一资产加载接口已经完成，原 `common/web` 的通用请求、
-批次和内存 Resolver 已收敛到 `assets/`。下一阶段专项分析 `model_viewer/`，再决定是否重构。
+**实施中。** SDL target、Desktop/Web 统一资产接口、glTF 文档资源编排和通用 Application Host
+已经完成。Web Model Viewer 已复用 Host；Desktop 仍保留 SDL 与独立渲染线程，后续只在不破坏线程
+语义的前提下评估是否接入 Host。
 
 ## 背景与目标
 
@@ -38,7 +39,7 @@
 
 ```text
 examples/common/
-├─ application/                 # 暂不调整
+├─ application/                 # 路径不调整；内部区分 Host 与 inline 呈现
 ├─ assets/                      # Desktop/Web 统一资产加载、批次和 Resolver
 ├─ gltf/                        # glTF/GLB 格式导入层，路径不调整
 ├─ imgui/                       # 暂不调整
@@ -57,7 +58,8 @@ validation ──────────────────┘
 
 具体约束如下：
 
-- `application/` 暂不改变现有路径和职责；
+- `application/` 保持现有路径，继续只负责应用壳；允许配置 Renderer/Swapchain，并统一轮询异步
+  资产服务，但不吸收 glTF、ImGui 或 Model Viewer 业务；
 - `gltf/` 保持现有路径和导入职责，资源读取改为依赖 `assets/` 的通用抽象；
 - `validation/` 暂不改变现有路径和实现；
 - `sdl/` 形成明确 target，但不引入 sample 业务逻辑；
@@ -80,11 +82,21 @@ validation ──────────────────┘
    `asset_batch` 和 `memory_resource_resolver`；请求提供状态、字节进度、取消、诊断和 generation
    失效保护，外部资源位置由统一函数解析。通用 Resolver 和安全资源路径归属 `assets/`，依赖方向
    已调整为 `gltf -> assets`。
-5. **S-55E Model Viewer 专项分析**：单独记录 `gpu_scene` 的数据流、资源所有权、上传阶段、
-   线程边界和测试缺口，再提出是否拆分及拆分方式。
-6. **S-55F 验证与文档收口（进行中）**：接口测试、Windows Clang 构建、Emscripten 构建、
-   浏览器 Smoke 和示例文档已经完成；Linux 与 Windows 静态配置留待完整任务收口时验证。
-   `application/`、`gltf/`、`validation/` 的路径保持不变，除非专项分析证明必要。
+5. **S-55E Model Viewer 专项分析（已完成）**：`application_core`、CPU Scene、GPU 上传与 Frame
+   Packet 已经保持后端无关；重复主要位于主文档/外部资源编排、窗口呈现和输入适配。Desktop 使用
+   带背压的独立渲染线程，Web 使用 inline executor 并承担 C ABI 浏览器验收，不能直接套用当前
+   单线程 `application` 而丢失执行语义。
+6. **S-55F glTF 文档资源收敛（已完成）**：新增 `gltf::document_loader`，统一主文档读取、外部 URI
+   发现、批量加载、Resolver 提交、取消、进度和结构化失败；Desktop/Web Model Viewer 不再各自
+   维护这套状态机。
+7. **S-55G Application 能力整理（部分完成）**：已抽出不拥有 Renderer 的 `application_host`，
+   统一 Window、事件循环和异步资产服务；现有 `application` 在其上提供可配置的 inline
+   Renderer/Swapchain 与不依赖 Acquire 的 update hook。Web Model Viewer 已接入 Host，同时保留
+   自身 inline executor 和浏览器验收接口。Desktop 仍使用 SDL 与 threaded executor；是否接入
+   Host 留待单独处理，不以删除渲染线程换取表面统一。
+8. **S-55H 验证与文档收口（进行中）**：资产、glTF 和 Model Viewer 相关 Windows 测试、
+   Emscripten 构建、浏览器 Smoke 与两个教程的浏览器测试已经通过；Linux、Windows 静态配置和
+   Desktop Host 取舍留待完整任务收口。`application/`、`gltf/`、`validation/` 的路径保持不变。
 
 ## 测试与验收
 
@@ -103,5 +115,6 @@ validation ──────────────────┘
 - Desktop 后端以后台文件读取发布进度，Web 后端依赖浏览器是否提供响应总长度；未知总长度不得
   伪造百分比。
 - 逻辑取消通过 generation 保证迟到结果失效；Web Fetch 当前不承诺立即终止底层网络传输。
-- Model Viewer 的资源所有权、线程边界和上传阶段尚未完成专项分析，暂不提前决定文件拆分。
+- Desktop Model Viewer 的 SDL 事件循环、主线程 UI 与后台渲染线程边界不同于通用 inline
+  `application`；接入 Host 前需要先证明不会引入跨线程 Renderer 调用或额外状态同步。
 - 是否提升任何能力为公共 API 必须另行评估，不能由本计划推导。

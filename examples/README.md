@@ -23,9 +23,9 @@
 examples/
 ├─ assets/       按 tutorials/samples 组织的可再分发输入资产
 ├─ common/       多个示例共享、但不属于安装 SDK 的私有实现，按技术域分
-│  ├─ gltf/      基于通用资产接口的 glTF/GLB 导入、图片解码与 CPU Scene 转换
+│  ├─ gltf/      glTF/GLB 文档资源编排、格式导入、图片解码与 CPU Scene 转换
 │  ├─ assets/    统一的 Desktop/Web 异步读取、资源批次、内存 Resolver 与运行时资产
-│  ├─ application/ Window、Renderer 与 Swapchain 示例生命周期
+│  ├─ application/ 跨平台应用 Host、inline 呈现与异步资产服务生命周期
 │  ├─ imgui/     ImGui 输入、字体图集、Draw Data 捕获与 Texture ID 注册
 │  ├─ model_viewer/ 教程与完整查看器共用的 glTF → GPU Scene 映射
 │  ├─ sdl/       SDL3 窗口与 ImGui 生命周期 RAII

@@ -1,7 +1,13 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
-add_library(granit_example_application STATIC application.cpp application.h)
+add_library(
+  granit_example_application STATIC
+  application.cpp
+  application.h
+  application_host.cpp
+  application_host.h
+)
 
 target_compile_features(granit_example_application PUBLIC cxx_std_20)
 target_include_directories(

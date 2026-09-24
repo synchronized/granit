@@ -5,9 +5,8 @@
 #include "model_viewer/desktop/presentation_policy.h"
 #include "model_viewer/desktop/sdl3_input.h"
 
-#include "assets/asset_batch.h"
 #include "assets/asset_loader.h"
-#include "assets/memory_resource_resolver.h"
+#include "gltf/document_loader.h"
 #include "imgui/imgui_frame_capture.h"
 #include "imgui/imgui_texture_registry.h"
 #include "imgui/imgui_theme.h"
@@ -717,18 +716,18 @@ int main(int argc, char** argv) {
   }
 
   const std::filesystem::path asset_path(options.asset_path);
+  granit::example::gltf::document_loader document_loader;
+  if (result.ok() && !document_loader.start(asset_path.string()))
+    result = granit::result::internal;
   granit::example::assets::asset_loader asset_loader;
-  auto asset_request = result.ok() ? asset_loader.load(asset_path.string()) : nullptr;
   std::shared_ptr<granit::example::assets::asset_request> environment_request;
   if (result.ok() && !options.environment_path.empty())
     environment_request = asset_loader.load(options.environment_path);
-  granit::example::assets::asset_batch resource_batch;
-  granit::example::assets::memory_resource_resolver resource_resolver;
-  bool resource_batch_started = false;
   bool asset_bytes_ready = false;
   bool loading_cancelled = false;
 
   while (result.ok() && !asset_bytes_ready && !loading_cancelled) {
+    document_loader.poll();
     asset_loader.poll();
     SDL_Event event{};
     while (SDL_PollEvent(&event)) {
@@ -750,11 +749,8 @@ int main(int argc, char** argv) {
     if (result.failed() || loading_cancelled)
       break;
 
-    if (!asset_request ||
-        asset_request->status() == granit::example::assets::asset_request_status::failed) {
-      const auto diagnostic =
-          asset_request ? std::string{asset_request->diagnostic()} : "无法创建模型资产请求";
-      core.fail(granit::result::invalid_argument, diagnostic);
+    if (document_loader.status() == granit::example::gltf::document_load_status::failed) {
+      core.fail(granit::result::invalid_argument, std::string{document_loader.diagnostic()});
       result = granit::result::invalid_argument;
       break;
     }
@@ -765,52 +761,15 @@ int main(int argc, char** argv) {
       break;
     }
 
-    if (!resource_batch_started &&
-        asset_request->status() == granit::example::assets::asset_request_status::ready) {
-      std::vector<std::string> resources;
-      const auto discovery =
-          granit::example::gltf::discover_external_resources(asset_request->bytes(), resources);
-      if (!discovery) {
-        core.fail(granit::result::invalid_argument, discovery.diagnostic);
-        result = granit::result::invalid_argument;
-        break;
-      }
-      for (const auto& resource : resources) {
-        std::string location;
-        if (!granit::example::assets::resolve_asset_location(options.asset_path, resource,
-                                                             location) ||
-            !resource_batch.add(resource, std::move(location))) {
-          core.fail(granit::result::invalid_argument, "外部资源位置无效");
-          result = granit::result::invalid_argument;
-          break;
-        }
-      }
-      if (result.failed())
-        break;
-      resource_batch_started = resource_batch.start(asset_loader);
-      if (!resource_batch_started) {
-        core.fail(granit::result::internal, "无法启动外部资源批次");
-        result = granit::result::internal;
-        break;
-      }
-    }
-
-    const auto batch_status = resource_batch.status();
-    if (batch_status == granit::example::assets::asset_batch_status::failed) {
-      core.fail(granit::result::invalid_argument, "读取外部资源失败");
-      result = granit::result::invalid_argument;
-      break;
-    }
     const bool environment_ready =
         !environment_request ||
         environment_request->status() == granit::example::assets::asset_request_status::ready;
     asset_bytes_ready =
-        asset_request->status() == granit::example::assets::asset_request_status::ready &&
-        environment_ready && resource_batch_started &&
-        batch_status == granit::example::assets::asset_batch_status::ready;
+        document_loader.status() == granit::example::gltf::document_load_status::ready &&
+        environment_ready;
 
     if (result.ok() && options.show_ui && !asset_bytes_ready) {
-      const auto progress = asset_request->progress();
+      const auto progress = document_loader.progress().document;
       const auto fraction = progress.total_bytes && *progress.total_bytes > 0
                                 ? static_cast<float>(progress.received_bytes) /
                                       static_cast<float>(*progress.total_bytes)
@@ -825,18 +784,12 @@ int main(int argc, char** argv) {
   }
 
   if (loading_cancelled) {
-    if (asset_request)
-      asset_request->cancel();
+    document_loader.cancel();
     if (environment_request)
       environment_request->cancel();
-    resource_batch.cancel();
   }
   if (result.ok() && loading_cancelled)
     result = granit::result::not_ready;
-  if (result.ok() && !resource_batch.commit(resource_resolver)) {
-    core.fail(granit::result::internal, "无法提交外部资源批次");
-    result = granit::result::internal;
-  }
 
   std::vector<std::byte> environment_bytes;
   std::atomic<unsigned> loading_stage{0};
@@ -845,8 +798,8 @@ int main(int argc, char** argv) {
     cpu_loading = std::async(std::launch::async, [&] {
       cpu_asset_result output;
       loading_stage.store(3, std::memory_order_release);
-      const auto loaded =
-          granit::example::gltf::load(asset_request->bytes(), &resource_resolver, output.scene);
+      const auto loaded = granit::example::gltf::load(document_loader.document(),
+                                                      &document_loader.resolver(), output.scene);
       if (!loaded) {
         output.status = granit::result::invalid_argument;
         output.diagnostic = loaded.diagnostic;

@@ -4,11 +4,16 @@
 #include <catch2/catch_all.hpp>
 
 #include "assets/resource_resolver.h"
+#include "gltf/document_loader.h"
 #include "gltf/fixtures/minimal_scene_glb.h"
 #include "gltf/loader.h"
 
 #include <array>
+#include <chrono>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
+#include <thread>
 #include <type_traits>
 
 namespace {
@@ -116,6 +121,57 @@ std::vector<std::byte> make_glb(std::string json, std::vector<std::byte> binary)
 } // namespace
 
 static_assert(!std::is_copy_constructible_v<granit::example::assets::resource_resolver>);
+
+TEST_CASE("glTF 文档 Loader 拒绝无效位置", "[example][gltf][document-loader]") {
+  granit::example::gltf::document_loader loader;
+  REQUIRE(loader.start({}));
+  loader.cancel();
+  CHECK(loader.status() == granit::example::gltf::document_load_status::cancelled);
+  CHECK(loader.error() == granit::example::gltf::document_load_error::cancelled);
+
+  loader.reset();
+  REQUIRE(loader.start({}));
+  loader.poll();
+  CHECK(loader.status() == granit::example::gltf::document_load_status::failed);
+  CHECK(loader.error() == granit::example::gltf::document_load_error::invalid_location);
+}
+
+#if !defined(__EMSCRIPTEN__)
+TEST_CASE("glTF 文档 Loader 读取主文档和外部资源", "[example][gltf][document-loader]") {
+  const auto directory = std::filesystem::temp_directory_path() / "granit_gltf_document_loader";
+  std::error_code filesystem_error;
+  std::filesystem::create_directories(directory, filesystem_error);
+  REQUIRE_FALSE(filesystem_error);
+  const auto document_path = directory / "scene.gltf";
+  const auto resource_path = directory / "scene.bin";
+  {
+    std::ofstream document{document_path, std::ios::binary};
+    document << R"({"asset":{"version":"2.0"},"buffers":[{"uri":"scene.bin","byteLength":4}]})";
+    std::ofstream resource{resource_path, std::ios::binary};
+    const std::array bytes{char{1}, char{2}, char{3}, char{4}};
+    resource.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
+  }
+
+  granit::example::gltf::document_loader loader;
+  REQUIRE(loader.start(document_path.string()));
+  const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds{5};
+  while ((loader.status() == granit::example::gltf::document_load_status::loading_document ||
+          loader.status() == granit::example::gltf::document_load_status::loading_resources) &&
+         std::chrono::steady_clock::now() < deadline) {
+    loader.poll();
+    std::this_thread::sleep_for(std::chrono::milliseconds{1});
+  }
+
+  REQUIRE(loader.status() == granit::example::gltf::document_load_status::ready);
+  CHECK_FALSE(loader.document().empty());
+  std::vector<std::byte> resource;
+  REQUIRE(loader.resolver().resolve("scene.bin", resource));
+  CHECK(resource.size() == 4);
+  std::filesystem::remove(document_path, filesystem_error);
+  std::filesystem::remove(resource_path, filesystem_error);
+  std::filesystem::remove(directory, filesystem_error);
+}
+#endif
 
 TEST_CASE("glTF CPU Scene 使用自有存储", "[example][gltf][scene]") {
   granit::example::gltf::scene scene;

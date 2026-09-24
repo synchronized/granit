@@ -31,9 +31,8 @@
 #include <granit/renderer/timestamp_query.h>
 #include <granit/window.h>
 
-#include "assets/asset_batch.h"
-#include "assets/asset_loader.h"
-#include "assets/memory_resource_resolver.h"
+#include "application/application_host.h"
+#include "gltf/document_loader.h"
 #include "model_viewer/application_core.h"
 #include "model_viewer/frame_executor.h"
 #include "model_viewer/web/web_input.h"
@@ -47,8 +46,6 @@ granit::example::model_viewer::web::application_options options;
 enum class startup_status : int { failed = -1, starting, provider_pending, ready, stopped };
 
 struct web_platform_state {
-  granit_window_system window_system{};
-  granit_window window{};
   granit_renderer renderer{};
   granit_surface surface{};
   granit_swapchain swapchain{};
@@ -75,15 +72,13 @@ struct web_platform_state {
   unsigned sampler_anisotropy{1};
   std::uint64_t shutdown_live_resource_count{};
   std::uint64_t shutdown_pending_retirement_count{};
+  granit_result shutdown_result{GRANIT_SUCCESS};
+  bool shutdown_complete{};
   granit::example::model_viewer::web::web_input input;
-  granit::example::assets::asset_loader asset_loader;
-  std::shared_ptr<granit::example::assets::asset_request> asset_request;
-  granit::example::assets::asset_batch resource_batch;
-  granit::example::assets::memory_resource_resolver resource_resolver;
+  granit::example::gltf::document_loader document_loader;
   std::string asset_url;
   granit::example::model_viewer::application_core core;
   bool core_renderer_ready{};
-  bool resource_batch_started{};
   bool asset_ready{};
   bool upload_active{};
   bool upload_cancel_requested{};
@@ -93,6 +88,27 @@ struct web_platform_state {
 };
 
 web_platform_state state;
+
+class web_application_host final : public granit::example::application_host {
+public:
+  [[nodiscard]] granit_window_system window_system_handle() noexcept {
+    return app_window_system().native_handle();
+  }
+  [[nodiscard]] granit_window window_handle() noexcept { return app_window().native_handle(); }
+  void request_shutdown() noexcept { request_stop(); }
+
+private:
+  [[nodiscard]] granit::result on_host_initialize() noexcept override;
+  [[nodiscard]] granit::result on_host_update(float delta_seconds,
+                                              granit::window_loop_action& action) noexcept override;
+  [[nodiscard]] granit::result
+  on_host_window_event(const granit::window_event& event) noexcept override;
+  [[nodiscard]] granit::result
+  on_host_input_event(const granit::input_event& event) noexcept override;
+  void on_host_shutdown(granit::result reason) noexcept override;
+};
+
+web_application_host web_host;
 
 const char*
 upload_stage_name(granit::example::model_viewer::gpu_scene_upload_stage stage) noexcept {
@@ -367,105 +383,14 @@ void diagnose(granit_diagnostic_severity severity, granit_diagnostic_category, c
   std::fprintf(stream, "GRANIT_DIAGNOSTIC:%.*s\n", static_cast<int>(message_length), message);
 }
 
-granit_result process_window_events() {
-  auto result = granit_window_system_process_events(state.window_system);
-  if (result != GRANIT_SUCCESS)
-    return result;
-
-  granit_window_event window_event = GRANIT_WINDOW_EVENT_INIT;
-  while ((result = granit_window_poll_event(state.window_system, &window_event)) ==
-         GRANIT_SUCCESS) {
-    if (window_event.type == GRANIT_WINDOW_EVENT_FOCUS_CHANGED) {
-      ++state.input_event_count;
-      state.input.focus_changed(window_event.data.focus.focused != 0);
-    }
-    window_event = GRANIT_WINDOW_EVENT_INIT;
-  }
-  if (result != GRANIT_ERROR_NOT_READY)
-    return result;
-
-  granit_input_event input_event = GRANIT_INPUT_EVENT_INIT;
-  while ((result = granit_window_poll_input_event(state.window_system, &input_event)) ==
-         GRANIT_SUCCESS) {
-    ++state.input_event_count;
-    switch (input_event.type) {
-    case GRANIT_INPUT_EVENT_KEY: {
-      using granit::example::model_viewer::web::shortcut_key;
-      auto key = shortcut_key::other;
-      if (input_event.data.key.physical_key == GRANIT_PHYSICAL_KEY_F)
-        key = shortcut_key::focus;
-      else if (input_event.data.key.logical_key == GRANIT_LOGICAL_KEY_HOME)
-        key = shortcut_key::home;
-      if (input_event.data.key.action != GRANIT_KEY_ACTION_RELEASED) {
-        state.input.key_pressed(key, input_event.data.key.action == GRANIT_KEY_ACTION_REPEATED);
-      }
-      break;
-    }
-    case GRANIT_INPUT_EVENT_POINTER_ENTERED:
-      state.input.pointer_presence_changed(true);
-      break;
-    case GRANIT_INPUT_EVENT_POINTER_LEFT:
-      state.input.pointer_presence_changed(false);
-      break;
-    case GRANIT_INPUT_EVENT_POINTER_MOVED:
-      state.input.pointer_motion(input_event.data.pointer_moved.delta_x,
-                                 input_event.data.pointer_moved.delta_y);
-      break;
-    case GRANIT_INPUT_EVENT_POINTER_BUTTON: {
-      using granit::example::model_viewer::web::pointer_button;
-      auto button = pointer_button::primary;
-      if (input_event.data.pointer_button.button == GRANIT_POINTER_MIDDLE_BIT)
-        button = pointer_button::middle;
-      else if (input_event.data.pointer_button.button == GRANIT_POINTER_SECONDARY_BIT)
-        button = pointer_button::secondary;
-      state.input.pointer_button_changed(button, input_event.data.pointer_button.pressed != 0);
-      break;
-    }
-    case GRANIT_INPUT_EVENT_POINTER_WHEEL:
-      state.input.wheel(input_event.data.pointer_wheel.delta_y);
-      break;
-    default:
-      break;
-    }
-    input_event = GRANIT_INPUT_EVENT_INIT;
-  }
-  return result == GRANIT_ERROR_NOT_READY ? GRANIT_SUCCESS : result;
-}
-
-granit_result create_window_resources() {
-  double width = 0.0;
-  double height = 0.0;
-  if (emscripten_get_element_css_size("#canvas", &width, &height) != EMSCRIPTEN_RESULT_SUCCESS ||
-      width < 1.0 || height < 1.0) {
-    return GRANIT_ERROR_BACKEND_UNAVAILABLE;
-  }
-  granit_window_system_desc system_desc = GRANIT_WINDOW_SYSTEM_DESC_INIT;
-  system_desc.backend = GRANIT_WINDOW_BACKEND_EMSCRIPTEN;
-  auto result = granit_window_system_create(&system_desc, &state.window_system);
-  if (result != GRANIT_SUCCESS)
-    return result;
-  granit_window_desc window_desc = GRANIT_WINDOW_DESC_INIT;
-  window_desc.width = static_cast<std::uint32_t>(std::lround(width));
-  window_desc.height = static_cast<std::uint32_t>(std::lround(height));
-  window_desc.flags =
-      GRANIT_WINDOW_VISIBLE_BIT | GRANIT_WINDOW_RESIZABLE_BIT | GRANIT_WINDOW_HIGH_DPI_BIT;
-  result = granit_window_create(state.window_system, &window_desc, &state.window);
-  if (result != GRANIT_SUCCESS) {
-    static_cast<void>(granit_window_system_destroy(state.window_system));
-    state.window_system = GRANIT_NULL_HANDLE;
-    return result;
-  }
-  state.input.focus_changed(true);
-  return GRANIT_SUCCESS;
-}
-
 granit_result create_presentation_resources() {
   granit_window_state window_state = GRANIT_WINDOW_STATE_INIT;
-  auto result = granit_window_get_state(state.window_system, state.window, &window_state);
+  auto result = granit_window_get_state(web_host.window_system_handle(), web_host.window_handle(),
+                                        &window_state);
   if (result != GRANIT_SUCCESS)
     return result;
-  result = granit_window_create_surface(state.window_system, state.window, state.renderer,
-                                        &state.surface);
+  result = granit_window_create_surface(web_host.window_system_handle(), web_host.window_handle(),
+                                        state.renderer, &state.surface);
   if (result != GRANIT_SUCCESS) {
     return result;
   }
@@ -490,7 +415,8 @@ granit_result create_presentation_resources() {
 
 granit_result resize_swapchain_if_needed() {
   granit_window_state window_state = GRANIT_WINDOW_STATE_INIT;
-  auto result = granit_window_get_state(state.window_system, state.window, &window_state);
+  auto result = granit_window_get_state(web_host.window_system_handle(), web_host.window_handle(),
+                                        &window_state);
   if (result != GRANIT_SUCCESS)
     return result;
   granit_swapchain_info info = GRANIT_SWAPCHAIN_INFO_INIT;
@@ -696,14 +622,17 @@ granit_result configure_lighting(float exposure_ev, float environment_intensity,
   return GRANIT_SUCCESS;
 }
 
-void tick(void*) noexcept {
+void update_web_application() noexcept {
   if (state.status == startup_status::failed) {
     return;
   }
-  state.asset_loader.poll();
-  const auto window_result = process_window_events();
-  if (window_result != GRANIT_SUCCESS) {
-    fail("window-events", window_result);
+  try {
+    state.document_loader.poll();
+  } catch (const std::bad_alloc&) {
+    fail("asset-allocation", GRANIT_ERROR_OUT_OF_MEMORY);
+    return;
+  } catch (...) {
+    fail("asset-exception", GRANIT_ERROR_INTERNAL);
     return;
   }
   if (state.status == startup_status::ready) {
@@ -748,54 +677,25 @@ void tick(void*) noexcept {
     }
     state.core_renderer_ready = true;
   }
-  if (state.asset_request->status() == granit::example::assets::asset_request_status::failed) {
-    fail("asset-fetch");
+  if (state.document_loader.status() == granit::example::gltf::document_load_status::failed) {
+    const auto* stage =
+        state.document_loader.error() == granit::example::gltf::document_load_error::resource_read
+            ? "asset-resource-fetch"
+            : "asset-fetch";
+    fail(stage, GRANIT_ERROR_INVALID_ARGUMENT);
     return;
   }
-  if (state.asset_request->status() != granit::example::assets::asset_request_status::ready) {
+  if (state.document_loader.status() != granit::example::gltf::document_load_status::ready) {
     return;
   }
 
   try {
-    if (!state.resource_batch_started) {
-      std::vector<std::string> resources;
-      const auto discovery = granit::example::gltf::discover_external_resources(
-          state.asset_request->bytes(), resources);
-      if (!discovery) {
-        fail("asset-discovery", GRANIT_ERROR_INVALID_ARGUMENT);
-        return;
-      }
-      for (const auto& resource : resources) {
-        std::string location;
-        if (!granit::example::assets::resolve_asset_location(state.asset_url, resource, location) ||
-            !state.resource_batch.add(resource, std::move(location))) {
-          fail("asset-batch-add", GRANIT_ERROR_INVALID_ARGUMENT);
-          return;
-        }
-      }
-      if (!state.resource_batch.start(state.asset_loader)) {
-        fail("asset-resource-fetch-start");
-        return;
-      }
-      state.resource_batch_started = true;
-    }
-
-    const auto batch_status = state.resource_batch.status();
-    if (batch_status == granit::example::assets::asset_batch_status::failed) {
-      fail("asset-resource-fetch");
-      return;
-    }
-    if (batch_status != granit::example::assets::asset_batch_status::ready)
-      return;
     if (!state.asset_ready) {
-      if (!state.resource_batch.commit(state.resource_resolver)) {
-        fail("asset-bundle-commit", GRANIT_ERROR_INTERNAL);
-        return;
-      }
       state.upload_active = true;
       state.upload_cancel_requested = false;
-      auto result = state.core.load_asset(state.asset_request->bytes(), &state.resource_resolver,
-                                          report_load_progress, nullptr);
+      auto result =
+          state.core.load_asset(state.document_loader.document(), &state.document_loader.resolver(),
+                                report_load_progress, nullptr);
       if (result != granit::result::success) {
         state.upload_active = false;
         fail("asset-load", granit::to_native(result));
@@ -898,6 +798,146 @@ void tick(void*) noexcept {
   std::puts("GRANIT_STATUS:ready");
 }
 
+granit_result shutdown_web_resources() noexcept {
+  state.document_loader.cancel();
+  state.core.reset();
+
+  auto first_error = GRANIT_SUCCESS;
+  const auto capture = [&](granit_result result) {
+    if (first_error == GRANIT_SUCCESS && result != GRANIT_SUCCESS)
+      first_error = result;
+  };
+  if (state.pipeline_validation_started)
+    cleanup_public_pipeline_validation();
+  if (state.pipeline != GRANIT_NULL_HANDLE) {
+    capture(granit_render_pipeline_destroy(state.renderer, state.pipeline));
+    state.pipeline = GRANIT_NULL_HANDLE;
+  }
+  if (state.swapchain != GRANIT_NULL_HANDLE) {
+    capture(granit_swapchain_destroy(state.renderer, state.swapchain));
+    state.swapchain = GRANIT_NULL_HANDLE;
+  }
+  if (state.surface != GRANIT_NULL_HANDLE) {
+    capture(granit_surface_destroy(state.renderer, state.surface));
+    state.surface = GRANIT_NULL_HANDLE;
+  }
+  if (state.renderer != GRANIT_NULL_HANDLE) {
+    granit_renderer_resource_stats stats = GRANIT_RENDERER_RESOURCE_STATS_INIT;
+    const auto stats_result = granit_renderer_get_resource_stats(state.renderer, &stats);
+    capture(stats_result);
+    if (stats_result == GRANIT_SUCCESS) {
+      state.shutdown_live_resource_count = stats.total_live_count;
+      state.shutdown_pending_retirement_count = stats.pending_retirement_count;
+      if (stats.total_live_count != 0)
+        capture(GRANIT_ERROR_INTERNAL);
+    }
+    capture(granit_renderer_destroy(state.renderer));
+    state.renderer = GRANIT_NULL_HANDLE;
+  }
+  state.shutdown_result = first_error;
+  state.shutdown_complete = true;
+  state.status = startup_status::stopped;
+  return first_error;
+}
+
+granit::result web_application_host::on_host_initialize() noexcept {
+  granit_renderer_desc desc = GRANIT_RENDERER_DESC_INIT;
+  desc.presentation_mode = GRANIT_PRESENTATION_ENABLED;
+  desc.diagnostic_callback = diagnose;
+  auto result = granit_renderer_create(&desc, &state.renderer);
+  if (result != GRANIT_SUCCESS) {
+    fail("provider-open", result);
+    return granit::from_native(result);
+  }
+  const auto core_result = state.core.begin_renderer();
+  if (core_result != granit::result::success) {
+    fail("core-renderer-begin", granit::to_native(core_result));
+    return core_result;
+  }
+  try {
+    state.asset_url = selected_model_url();
+    if (!state.document_loader.start(state.asset_url)) {
+      fail("asset-fetch-start");
+      return granit::result::initialization_failed;
+    }
+  } catch (const std::bad_alloc&) {
+    fail("asset-allocation", GRANIT_ERROR_OUT_OF_MEMORY);
+    return granit::result::out_of_memory;
+  } catch (...) {
+    fail("asset-exception", GRANIT_ERROR_INTERNAL);
+    return granit::result::internal;
+  }
+  state.renderer_initialization_started_ms = emscripten_get_now();
+  state.status = startup_status::provider_pending;
+  state.input.focus_changed(true);
+  return granit::result::success;
+}
+
+granit::result web_application_host::on_host_update(float,
+                                                    granit::window_loop_action& action) noexcept {
+  update_web_application();
+  if (state.status == startup_status::failed)
+    action = granit::window_loop_action::idle;
+  return granit::result::success;
+}
+
+granit::result
+web_application_host::on_host_window_event(const granit::window_event& event) noexcept {
+  if (event.type == granit::window_event_type::focus_changed) {
+    ++state.input_event_count;
+    state.input.focus_changed(event.data.focus.focused);
+  }
+  return granit::result::success;
+}
+
+granit::result
+web_application_host::on_host_input_event(const granit::input_event& event) noexcept {
+  ++state.input_event_count;
+  switch (event.type) {
+  case granit::input_event_type::key: {
+    using granit::example::model_viewer::web::shortcut_key;
+    auto key = shortcut_key::other;
+    if (event.data.key.physical == granit::physical_key::f)
+      key = shortcut_key::focus;
+    else if (event.data.key.logical == granit::logical_key::home)
+      key = shortcut_key::home;
+    if (event.data.key.action != granit::key_action::released)
+      state.input.key_pressed(key, event.data.key.action == granit::key_action::repeated);
+    break;
+  }
+  case granit::input_event_type::pointer_entered:
+    state.input.pointer_presence_changed(true);
+    break;
+  case granit::input_event_type::pointer_left:
+    state.input.pointer_presence_changed(false);
+    break;
+  case granit::input_event_type::pointer_moved:
+    state.input.pointer_motion(event.data.pointer_moved.delta_x, event.data.pointer_moved.delta_y);
+    break;
+  case granit::input_event_type::pointer_button: {
+    using granit::example::model_viewer::web::pointer_button;
+    auto button = pointer_button::primary;
+    if (event.data.pointer_button.button == GRANIT_POINTER_MIDDLE_BIT)
+      button = pointer_button::middle;
+    else if (event.data.pointer_button.button == GRANIT_POINTER_SECONDARY_BIT)
+      button = pointer_button::secondary;
+    state.input.pointer_button_changed(button, event.data.pointer_button.pressed != 0);
+    break;
+  }
+  case granit::input_event_type::pointer_wheel:
+    state.input.wheel(event.data.pointer_wheel.delta_y);
+    break;
+  case granit::input_event_type::none:
+  case granit::input_event_type::text:
+    break;
+  }
+  return granit::result::success;
+}
+
+void web_application_host::on_host_shutdown(granit::result) noexcept {
+  static_cast<void>(shutdown_web_resources());
+}
+
 } // namespace
 
 extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_platform_status() noexcept {
@@ -984,57 +1024,11 @@ granit_web_shutdown_pending_retirement_count() noexcept {
 }
 
 extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_shutdown() noexcept {
-  if (state.status == startup_status::stopped)
-    return GRANIT_SUCCESS;
-  emscripten_cancel_main_loop();
-  if (state.asset_request)
-    state.asset_request->cancel();
-  state.resource_batch.clear();
-  state.resource_resolver.clear();
-  state.core.reset();
-
-  auto first_error = GRANIT_SUCCESS;
-  const auto capture = [&](granit_result result) {
-    if (first_error == GRANIT_SUCCESS && result != GRANIT_SUCCESS)
-      first_error = result;
-  };
-  if (state.pipeline_validation_started)
-    cleanup_public_pipeline_validation();
-  if (state.pipeline != GRANIT_NULL_HANDLE) {
-    capture(granit_render_pipeline_destroy(state.renderer, state.pipeline));
-    state.pipeline = GRANIT_NULL_HANDLE;
-  }
-  if (state.swapchain != GRANIT_NULL_HANDLE) {
-    capture(granit_swapchain_destroy(state.renderer, state.swapchain));
-    state.swapchain = GRANIT_NULL_HANDLE;
-  }
-  if (state.surface != GRANIT_NULL_HANDLE) {
-    capture(granit_surface_destroy(state.renderer, state.surface));
-    state.surface = GRANIT_NULL_HANDLE;
-  }
-  if (state.window != GRANIT_NULL_HANDLE) {
-    capture(granit_window_destroy(state.window_system, state.window));
-    state.window = GRANIT_NULL_HANDLE;
-  }
-  if (state.window_system != GRANIT_NULL_HANDLE) {
-    capture(granit_window_system_destroy(state.window_system));
-    state.window_system = GRANIT_NULL_HANDLE;
-  }
-  if (state.renderer != GRANIT_NULL_HANDLE) {
-    granit_renderer_resource_stats stats = GRANIT_RENDERER_RESOURCE_STATS_INIT;
-    const auto stats_result = granit_renderer_get_resource_stats(state.renderer, &stats);
-    capture(stats_result);
-    if (stats_result == GRANIT_SUCCESS) {
-      state.shutdown_live_resource_count = stats.total_live_count;
-      state.shutdown_pending_retirement_count = stats.pending_retirement_count;
-      if (stats.total_live_count != 0)
-        capture(GRANIT_ERROR_INTERNAL);
-    }
-    capture(granit_renderer_destroy(state.renderer));
-    state.renderer = GRANIT_NULL_HANDLE;
-  }
-  state.status = startup_status::stopped;
-  return first_error;
+  if (state.shutdown_complete)
+    return state.shutdown_result;
+  const auto result = shutdown_web_resources();
+  web_host.request_shutdown();
+  return result;
 }
 
 extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_asset_status() noexcept {
@@ -1076,37 +1070,20 @@ extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_renderer_failure_result() noexcep
 
 int granit::example::model_viewer::web::run_application(const application_options& configuration) {
   options = configuration;
-  const auto window_result = create_window_resources();
-  if (window_result != GRANIT_SUCCESS) {
-    fail("window-create", window_result);
+  double width = 0.0;
+  double height = 0.0;
+  if (emscripten_get_element_css_size("#canvas", &width, &height) != EMSCRIPTEN_RESULT_SUCCESS ||
+      width < 1.0 || height < 1.0) {
+    fail("window-create", GRANIT_ERROR_BACKEND_UNAVAILABLE);
     return 1;
   }
-  granit_renderer_desc desc = GRANIT_RENDERER_DESC_INIT;
-  desc.presentation_mode = GRANIT_PRESENTATION_ENABLED;
-  desc.diagnostic_callback = diagnose;
-  const auto result = granit_renderer_create(&desc, &state.renderer);
-  if (result != GRANIT_SUCCESS) {
-    fail("provider-open", result);
-    static_cast<void>(granit_window_destroy(state.window_system, state.window));
-    static_cast<void>(granit_window_system_destroy(state.window_system));
-    state.window = GRANIT_NULL_HANDLE;
-    state.window_system = GRANIT_NULL_HANDLE;
-    return 1;
-  }
-  const auto core_result = state.core.begin_renderer();
-  if (core_result != granit::result::success) {
-    fail("core-renderer-begin", granit::to_native(core_result));
-    return 1;
-  }
-  state.asset_url = selected_model_url();
-  state.asset_request = state.asset_loader.load(state.asset_url);
-  if (!state.asset_request ||
-      state.asset_request->status() == granit::example::assets::asset_request_status::failed) {
-    fail("asset-fetch-start");
-    return 1;
-  }
-  state.renderer_initialization_started_ms = emscripten_get_now();
-  state.status = startup_status::provider_pending;
-  emscripten_set_main_loop_arg(tick, &state, 0, EM_FALSE);
-  return 0;
+  const auto result = web_host.run_host(
+      {.executable_path = "granit_sample_model_viewer_web",
+       .title = "Granit Model Viewer",
+       .window_system = {.backend = granit::window_backend::emscripten},
+       .window_flags = granit::window_flag::visible | granit::window_flag::resizable |
+                       granit::window_flag::high_dpi,
+       .width = static_cast<std::uint32_t>(std::lround(width)),
+       .height = static_cast<std::uint32_t>(std::lround(height))});
+  return result.failed() ? 1 : 0;
 }

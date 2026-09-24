@@ -479,10 +479,13 @@ int main(int argument_count, char** arguments) {
   const std::string_view executable_path =
       argument_count > 0 && arguments[0] != nullptr ? arguments[0] : "";
 
-  const auto result = application.run({.executable_path = executable_path,
-                                       .title = "Granit Cube",
-                                       .application_name = "Granit Cube",
-                                       .smoke_test = smoke_test});
+  const auto result =
+      application.run({.executable_path = executable_path,
+                       .title = "Granit Cube",
+                       .renderer = {.application_name = "Granit Cube",
+                                    .presentation = granit::presentation_mode::enabled},
+                       .swapchain = {},
+                       .smoke_test = smoke_test});
   if (smoke_test && result == granit::result::backend_unavailable)
     return 77;
   if (result.failed())
