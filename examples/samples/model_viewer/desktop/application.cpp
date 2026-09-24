@@ -7,6 +7,7 @@
 #include "model_viewer/presentation_recovery.h"
 #include "model_viewer/render_service.h"
 #include "model_viewer/render_task_executor.h"
+#include "model_viewer/scene_prepare_task.h"
 #include "model_viewer/viewer_frame_builder.h"
 #include "model_viewer/viewer_input_accumulator.h"
 #include "model_viewer/viewer_panels.h"
@@ -30,7 +31,6 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
-#include <future>
 #include <iomanip>
 #include <iostream>
 #include <memory>
@@ -241,12 +241,6 @@ struct gpu_upload_progress_context {
   std::atomic<bool> cancelled{};
   granit::result progress_result{granit::result::success};
   unsigned displayed_percentage{40};
-};
-
-struct cpu_asset_result {
-  granit::result status{granit::result::unknown};
-  std::vector<std::byte> environment_bytes;
-  std::string diagnostic;
 };
 
 unsigned gpu_upload_percentage(
@@ -488,25 +482,12 @@ int granit::example::model_viewer::desktop::application::run() {
     result = granit::result::not_ready;
 
   std::vector<std::byte> environment_bytes;
-  std::atomic<unsigned> loading_stage{0};
-  std::future<cpu_asset_result> cpu_loading;
-  if (result.ok()) {
-    cpu_loading = std::async(std::launch::async, [&] {
-      cpu_asset_result output;
-      loading_stage.store(3, std::memory_order_release);
-      output.status = session.prepare_scene();
-      if (output.status.failed()) {
-        output.diagnostic = session.diagnostic();
-        return output;
-      }
-      if (environment_request)
-        output.environment_bytes = environment_request->bytes();
-      loading_stage.store(4, std::memory_order_release);
-      return output;
-    });
-  }
-  while (result.ok() && cpu_loading.valid() &&
-         cpu_loading.wait_for(std::chrono::milliseconds{0}) != std::future_status::ready) {
+  granit::example::model_viewer::scene_prepare_task scene_prepare;
+  if (result.ok())
+    result = scene_prepare.begin(session);
+  auto scene_prepare_result = granit::result::not_ready;
+  while (result.ok() &&
+         (scene_prepare_result = scene_prepare.poll()) == granit::result::not_ready) {
     desktop_window_events events;
     result = pump_window_events(window_system, window, window_state, events,
                                 options.show_ui ? &ui : nullptr);
@@ -521,28 +502,23 @@ int granit::example::model_viewer::desktop::application::run() {
           swapchain_info = rendering.swapchain_info();
       }
     }
-    if (result.failed() || loading_cancelled || !options.show_ui)
+    if (result.failed() || loading_cancelled)
       break;
-    const auto stage = loading_stage.load(std::memory_order_acquire);
-    const char* label =
-        stage < 4 ? "Parsing glTF and decoding textures..." : "Planning GPU resources...";
-    const auto progress = stage < 4 ? 0.30F : 0.38F;
-    result = render_loading_frame(rendering, window_state, swapchain_info, ui, label, progress);
-    if (result == granit::result::out_of_date)
-      result = granit::result::success;
+    if (options.show_ui) {
+      result = render_loading_frame(rendering, window_state, swapchain_info, ui,
+                                    "Parsing glTF and decoding textures...", 0.30F);
+      if (result == granit::result::out_of_date)
+        result = granit::result::success;
+    }
     std::this_thread::sleep_for(std::chrono::milliseconds{16});
   }
   if (loading_cancelled)
     session.cancel_loading();
-  if (cpu_loading.valid()) {
-    auto loaded = cpu_loading.get();
-    if (result.ok() && loaded.status.failed()) {
-      session.fail(loaded.status, std::move(loaded.diagnostic));
-      result = loaded.status;
-    }
-    if (result.ok())
-      environment_bytes = std::move(loaded.environment_bytes);
-  }
+  if (result.ok())
+    result = scene_prepare_result;
+  scene_prepare.reset();
+  if (result.ok() && environment_request)
+    environment_bytes = environment_request->bytes();
   if (result.ok() && options.show_ui)
     result = render_loading_frame(rendering, window_state, swapchain_info, ui,
                                   "Preparing GPU upload...", 0.40F);

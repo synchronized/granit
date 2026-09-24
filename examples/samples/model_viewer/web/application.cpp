@@ -16,6 +16,7 @@
 #include "model_viewer/presentation_recovery.h"
 #include "model_viewer/render_service.h"
 #include "model_viewer/render_task_executor.h"
+#include "model_viewer/scene_prepare_task.h"
 #include "model_viewer/viewer_frame_builder.h"
 #include "model_viewer/viewer_input_accumulator.h"
 #include "model_viewer/viewer_panels.h"
@@ -45,6 +46,7 @@ struct web_platform_state {
   granit::example::model_viewer::inline_render_task_executor executor;
   granit::example::model_viewer::render_service rendering;
   granit::example::model_viewer::pipeline_prepare pipeline_warmup;
+  granit::example::model_viewer::scene_prepare_task scene_prepare;
 #if defined(GRANIT_MODEL_VIEWER_BROWSER_TESTS)
   granit::example::model_viewer::web::pipeline_validation pipeline_validation;
 #endif
@@ -483,7 +485,13 @@ void update_web_application() noexcept {
     if (!state.asset_ready) {
       state.upload_active = true;
       state.upload_cancel_requested = false;
-      auto result = state.session.prepare_scene(report_load_progress, nullptr);
+      auto result = state.scene_prepare.started()
+                        ? state.scene_prepare.poll()
+                        : state.scene_prepare.begin(state.session, report_load_progress, nullptr);
+      if (result.ok())
+        result = state.scene_prepare.poll();
+      if (result == granit::result::not_ready)
+        return;
       if (result != granit::result::success) {
         state.upload_active = false;
         fail("asset-load", granit::to_native(result));
@@ -638,6 +646,7 @@ void update_web_application() noexcept {
 granit_result destroy_web_render_resources() noexcept {
   state.previews.clear(state.ui);
   state.ui.clear_textures();
+  state.scene_prepare.reset();
   state.session.reset();
   state.pipeline_warmup.reset();
 #if defined(GRANIT_MODEL_VIEWER_BROWSER_TESTS)

@@ -15,6 +15,8 @@ add_library(
   render_service.h
   render_runtime.cpp
   render_runtime.h
+  scene_prepare_task.cpp
+  scene_prepare_task.h
   model_loading_session.cpp
   model_loading_session.h
   viewer_session.cpp
