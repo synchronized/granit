@@ -14,7 +14,8 @@ Emscripten WebGPU 上显示 glTF 2.0 模型。两个目标叠加同一套 ImGui 
 Viewer 状态和纯渲染帧数据。Viewer Session 拥有 Application Core 与模型加载状态，统一 Renderer
 阶段、CPU 导入、Scene/GPU 计划交接、失败同步、取消和重置；Render Runtime 统一 Renderer、Surface、
 Swapchain、Pipeline、Scene 上传、质量切换、帧执行和释放；`render_service` 将这些操作与
-`render_task_executor` 组合，统一帧与不可丢弃控制任务的执行语义：
+`render_task_executor` 组合，统一帧与不可丢弃控制任务的执行语义。`viewer_frame_builder` 统一两端的
+面板构造、输入消费、Viewer Tick、Canvas 捕获和帧包生成：
 
 - Desktop 主线程处理 Window、Input、共享 ImGui 前端和加载编排，`threaded_render_service` 为共用
   Render Service 增加专用线程、异步上传和帧完成回执；普通帧允许替换，控制任务有序执行。

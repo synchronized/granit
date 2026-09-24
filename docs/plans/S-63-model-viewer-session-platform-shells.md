@@ -49,7 +49,9 @@ C++ RAII。Surface 和主循环的具体实现保持在平台壳，恢复决策�
 3. **S-63C Viewer Session（完成）**：用拥有型 `viewer_session` 组合 Application Core 与模型加载，
    统一 Renderer 阶段、CPU Scene 交接、失败、取消、重置及 GPU 操作入口；Render Runtime 只借用
    Session，平台入口不再并列维护三套生命周期对象。
-4. **S-63D 平台壳迁移（实施中）**：Desktop 接入 `application_host`，两端只实现平台策略。
+4. **S-63D 平台壳迁移（实施中）**：已用 `viewer_frame_builder` 统一面板、输入、Viewer Tick、
+   Canvas 和帧包生成；下一步把 Desktop 加载阶段改为非阻塞状态机并接入 `application_host`，使两端
+   只实现平台策略。
 5. **S-63E 帧完成协议与层次收尾（待开始）**：统一同步/异步 completion，收窄或删除
    `threaded_render_service`，整理 Runtime/Service 命名。
 6. **S-63F 验收与文档（待开始）**：验证 Windows、Emscripten、Chrome、Linux 和文档。

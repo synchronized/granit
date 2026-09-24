@@ -7,6 +7,7 @@
 #include "assets/asset_system.h"
 #include "model_viewer/presentation_recovery.h"
 #include "model_viewer/render_task_executor.h"
+#include "model_viewer/viewer_frame_builder.h"
 #include "model_viewer/viewer_input_accumulator.h"
 #include "model_viewer/viewer_panels.h"
 #include "model_viewer/viewer_session.h"
@@ -33,6 +34,7 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <span>
 #include <sstream>
 #include <string>
@@ -663,89 +665,83 @@ int granit::example::model_viewer::desktop::application::run() {
       continue;
     }
 
-    viewer_panel_changes changes;
-    granit::example::imgui::frame_canvas_data ui_frame;
-    if (options.show_ui) {
-      const auto ui_time = std::chrono::steady_clock::now();
-      const auto delta_seconds = std::chrono::duration<float>(ui_time - last_ui_time).count();
-      last_ui_time = ui_time;
-      ui.begin_frame(window_state, delta_seconds);
-      const renderer_panel_info panel_renderer{
-          .backend = backend_name,
-          .adapter = renderer_info.adapter_name,
-          .swapchain_format = "Swapchain",
-          .present_mode = present_mode_label(swapchain_info.presentation),
-          .width = swapchain_info.width,
-          .height = swapchain_info.height,
-          .frame_slots = GRANIT_DEFAULT_FRAMES_IN_FLIGHT,
-          .supported_sample_counts = renderer_limits.framebuffer_sample_counts,
-          .max_sampler_anisotropy = renderer_limits.max_sampler_anisotropy};
-      const auto queue_stats = rendering.query_queue_stats();
-      const performance_panel_info panel_performance{
-          .frames_per_second = latest_sample.frames_per_second,
-          .cpu_frame_ms = latest_sample.cpu_frame_ms,
-          .render_queue_wait_ms = latest_sample.render_queue_wait_ms,
-          .frame_slot_wait_ms = latest_sample.frame_slot_wait_ms,
-          .present_wait_ms = latest_sample.present_wait_ms,
-          .gpu_frame_ms = latest_sample.gpu_frame_ms,
-          .gpu_timing_available = latest_sample.gpu_timing_available,
-          .queue_high_watermark = queue_stats.pending_high_watermark,
-          .replaced_frames = queue_stats.replaced_frames,
-          .skipped_frame_builds = queue_stats.skipped_frame_builds,
-          .merged_input_frames = input_adapter.merged_input_frames(),
-          .render_lag_ms = queue_stats.render_lag_ms,
-          .history = session.performance().summarize()};
-      changes = draw_viewer_panels(session.cpu_scene(), session.state(), panel_renderer,
-                                   panel_performance, render_quality, previews.items());
-      result = ui.capture(ui_frame);
-    }
+    const auto ui_time = std::chrono::steady_clock::now();
+    const auto delta_seconds = std::chrono::duration<float>(ui_time - last_ui_time).count();
+    last_ui_time = ui_time;
+    const renderer_panel_info panel_renderer{
+        .backend = backend_name,
+        .adapter = renderer_info.adapter_name,
+        .swapchain_format = "Swapchain",
+        .present_mode = present_mode_label(swapchain_info.presentation),
+        .width = swapchain_info.width,
+        .height = swapchain_info.height,
+        .frame_slots = GRANIT_DEFAULT_FRAMES_IN_FLIGHT,
+        .supported_sample_counts = renderer_limits.framebuffer_sample_counts,
+        .max_sampler_anisotropy = renderer_limits.max_sampler_anisotropy};
+    const auto queue_stats = rendering.query_queue_stats();
+    const performance_panel_info panel_performance{
+        .frames_per_second = latest_sample.frames_per_second,
+        .cpu_frame_ms = latest_sample.cpu_frame_ms,
+        .render_queue_wait_ms = latest_sample.render_queue_wait_ms,
+        .frame_slot_wait_ms = latest_sample.frame_slot_wait_ms,
+        .present_wait_ms = latest_sample.present_wait_ms,
+        .gpu_frame_ms = latest_sample.gpu_frame_ms,
+        .gpu_timing_available = latest_sample.gpu_timing_available,
+        .queue_high_watermark = queue_stats.pending_high_watermark,
+        .replaced_frames = queue_stats.replaced_frames,
+        .skipped_frame_builds = queue_stats.skipped_frame_builds,
+        .merged_input_frames = input_adapter.merged_input_frames(),
+        .render_lag_ms = queue_stats.render_lag_ms,
+        .history = session.performance().summarize()};
+    viewer_frame_build_result frame;
+    result = build_viewer_frame(session, ui, input_adapter,
+                                {.window = window_state,
+                                 .delta_seconds = delta_seconds,
+                                 .renderer = panel_renderer,
+                                 .performance = panel_performance,
+                                 .quality = render_quality,
+                                 .previews = previews.items(),
+                                 .sample = has_pending_sample
+                                               ? std::optional<performance_sample>{latest_sample}
+                                               : std::nullopt,
+                                 .show_ui = options.show_ui},
+                                frame);
     if (result.failed())
       break;
 
-    if (changes.quality) {
+    if (frame.changes.quality) {
       granit::render_pipeline_desc replacement_desc{
-          .samples = static_cast<granit::sample_count>(changes.quality->sample_count),
-          .enable_fxaa = changes.quality->enable_fxaa != 0,
-          .enable_specular_aa = changes.quality->enable_specular_aa != 0};
+          .samples = static_cast<granit::sample_count>(frame.changes.quality->sample_count),
+          .enable_fxaa = frame.changes.quality->enable_fxaa != 0,
+          .enable_specular_aa = frame.changes.quality->enable_specular_aa != 0};
       desktop::quality_change_result quality_result;
-      result = rendering.change_quality(
-          replacement_desc, changes.quality->sampler_anisotropy,
-          changes.quality->sampler_anisotropy != render_quality.sampler_anisotropy, quality_result);
+      result = rendering.change_quality(replacement_desc, frame.changes.quality->sampler_anisotropy,
+                                        frame.changes.quality->sampler_anisotropy !=
+                                            render_quality.sampler_anisotropy,
+                                        quality_result);
       if (result.ok() && quality_result.scene_reuploaded) {
         if (result.ok() && options.show_ui)
           result = previews.rebuild(session.cpu_scene(), session.scene_gpu(), ui);
-        ui_frame.clear();
+        frame.packet.canvas.clear();
       }
       if (result.ok()) {
-        render_quality = *changes.quality;
+        render_quality = *frame.changes.quality;
       }
     }
     if (result.failed())
       break;
 
-    frame_packet tick_output;
-    application_tick_input tick_input;
-    tick_input.input = input_adapter.finish(options.show_ui && ui.wants_mouse(),
-                                            options.show_ui && ui.wants_keyboard());
-    tick_input.change = changes.state;
-    tick_input.width = swapchain_info.width;
-    tick_input.height = swapchain_info.height;
-    if (has_pending_sample)
-      tick_input.performance = latest_sample;
-    if (result.ok())
-      result = session.tick(tick_input, tick_output.viewer);
-    if (result.ok())
-      tick_output.canvas = std::move(ui_frame);
     if (result.ok()) {
-      if (changes.material &&
+      if (frame.changes.material &&
           session.state().selected_material() != granit::example::gltf::invalid_index) {
-        result = rendering.update_material(session.state().selected_material(), *changes.material);
+        result =
+            rendering.update_material(session.state().selected_material(), *frame.changes.material);
       }
     }
     if (result.failed())
       break;
     [[maybe_unused]] std::uint64_t submitted_sequence{};
-    result = rendering.submit(std::move(tick_output), submitted_sequence);
+    result = rendering.submit(std::move(frame.packet), submitted_sequence);
     const auto producer_frame_ms =
         std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() - cpu_begin)
             .count();

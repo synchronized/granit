@@ -16,6 +16,7 @@
 #include "model_viewer/presentation_recovery.h"
 #include "model_viewer/render_service.h"
 #include "model_viewer/render_task_executor.h"
+#include "model_viewer/viewer_frame_builder.h"
 #include "model_viewer/viewer_input_accumulator.h"
 #include "model_viewer/viewer_panels.h"
 #include "model_viewer/viewer_session.h"
@@ -262,7 +263,6 @@ granit_result render_model_viewer_frame(float delta_seconds) {
   const auto& renderer_info = state.rendering.renderer_info();
   const auto& renderer_limits = state.rendering.renderer_limits();
   const auto& swapchain_info = state.rendering.swapchain_info();
-  state.ui.begin_frame(window_state, delta_seconds);
   const granit::example::model_viewer::renderer_panel_info panel_renderer{
       .backend = "WebGPU",
       .adapter = renderer_info.adapter_name,
@@ -286,46 +286,45 @@ granit_result render_model_viewer_frame(float delta_seconds) {
       .enable_fxaa = state.enable_fxaa != 0,
       .enable_specular_aa = state.enable_specular_aa != 0,
       .sampler_anisotropy = static_cast<float>(state.sampler_anisotropy)};
-  const auto changes = granit::example::model_viewer::draw_viewer_panels(
-      state.session.cpu_scene(), state.session.state(), panel_renderer, panel_performance, quality,
-      state.previews.items());
-  if (changes.quality) {
+  granit::example::model_viewer::viewer_frame_build_result frame;
+  operation =
+      granit::example::model_viewer::build_viewer_frame(state.session, state.ui, state.input,
+                                                        {.window = window_state,
+                                                         .delta_seconds = delta_seconds,
+                                                         .renderer = panel_renderer,
+                                                         .performance = panel_performance,
+                                                         .quality = quality,
+                                                         .previews = state.previews.items(),
+                                                         .sample = state.latest_performance},
+                                                        frame);
+  if (operation.failed())
+    return granit::to_native(operation);
+  if (frame.input_applied)
+    ++state.applied_input_count;
+  state.input.begin_frame();
+  if (frame.changes.quality) {
     result = execute_render_quality_change(
-        changes.quality->sample_count, changes.quality->enable_fxaa ? 1U : 0U,
-        changes.quality->enable_specular_aa ? 1U : 0U,
-        static_cast<unsigned>(changes.quality->sampler_anisotropy));
+        frame.changes.quality->sample_count, frame.changes.quality->enable_fxaa ? 1U : 0U,
+        frame.changes.quality->enable_specular_aa ? 1U : 0U,
+        static_cast<unsigned>(frame.changes.quality->sampler_anisotropy));
     if (result != GRANIT_SUCCESS)
       return result;
-    if (changes.quality->sampler_anisotropy != quality.sampler_anisotropy) {
+    if (frame.changes.quality->sampler_anisotropy != quality.sampler_anisotropy) {
       operation = rebuild_previews();
       if (operation.failed())
         return granit::to_native(operation);
+      frame.packet.canvas.clear();
     }
   }
-  granit::example::model_viewer::frame_packet output;
-  granit::example::model_viewer::application_tick_input input;
-  input.input = state.input.finish(state.ui.wants_mouse(), state.ui.wants_keyboard());
-  if (input.input.pointer_delta_x != 0.0F || input.input.pointer_delta_y != 0.0F ||
-      input.input.wheel_delta != 0.0F || input.input.focus_requested || input.input.home_requested)
-    ++state.applied_input_count;
-  state.input.begin_frame();
-  input.change = changes.state;
-  input.width = swapchain_info.width;
-  input.height = swapchain_info.height;
-  input.performance = state.latest_performance;
-  if (result == GRANIT_SUCCESS)
-    result = granit::to_native(state.session.tick(input, output.viewer));
-  if (result == GRANIT_SUCCESS)
-    result = granit::to_native(state.ui.capture(output.canvas));
-  if (result == GRANIT_SUCCESS && changes.material &&
+  if (result == GRANIT_SUCCESS && frame.changes.material &&
       state.session.state().selected_material() != granit::example::gltf::invalid_index) {
     result = granit::to_native(state.rendering.update_material(
-        state.session.state().selected_material(), *changes.material));
+        state.session.state().selected_material(), *frame.changes.material));
   }
   if (result != GRANIT_SUCCESS)
     return result;
   granit::example::model_viewer::frame_execution_result execution;
-  const auto submit_result = state.rendering.submit(std::move(output), execution);
+  const auto submit_result = state.rendering.submit(std::move(frame.packet), execution);
   const auto outcome = granit::example::model_viewer::classify_presentation_result(
       submit_result, execution.needs_recreate);
   if (outcome.action == granit::example::model_viewer::presentation_action::recreate_surface) {
