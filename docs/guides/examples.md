@@ -3,8 +3,8 @@
 
 # 示例程序
 
-本文是综合示例目录和运行入口，不重复维护具体示例的完整构建参数。Granit 保留独立 ImGui 示例，
-Model Viewer 作为线性教程的最终综合项目；完整学习路径见[教程系列](../tutorials/README.md)。版本
+本文是综合示例目录和运行入口，不重复维护具体示例的完整构建参数。Granit 保留独立 ImGui 示例、
+Model Viewer；完整学习路径见[教程系列](../tutorials/README.md)。版本
 查询、离屏清屏、纹理回读和平台窗口等单能力验证位于 `tests/smoke`，由构建与 CTest 覆盖，不再
 作为示例发布。
 
@@ -46,14 +46,13 @@ python -m http.server 8000 --directory build/emscripten-release/web
 `http://localhost:8000/granit_imgui_web.html`。页面使用 SDL3 处理浏览器事件，ImGui 仍通过 Granit
 Canvas 绘制，不是 DOM/CSS 仿制界面，因此可用于核对桌面与 Web 的字体、纹理、裁剪和输入一致性。
 
-## Tutorial 10 Model Viewer
+## Model Viewer
 
-`granit_tutorial_10_model_viewer` 是教程的最终跨后端应用。它复用同一应用核心，在桌面 Vulkan 和
+`granit_sample_model_viewer` 是完整跨后端应用，它复用同一应用核心，在桌面 Vulkan 和
 浏览器 Emscripten WebGPU 中加载 glTF/GLB、上传 GPU Scene 并显示 PBR 模型；桌面目标还提供
 编辑器式面板。该目标需要显式启用模型查看器及对应 Integration。
 
-功能分层见[完成跨后端 Model Viewer](../tutorials/10-model-viewer.md)，构建、资产获取、命令行参数和
-排错见[跨后端模型查看器指南](model-viewer.md)。
+构建、资产获取、命令行参数和排错见[跨后端模型查看器指南](model-viewer.md)。
 
 ## ImGui 固定画面验收
 
@@ -91,20 +90,21 @@ ctest --preset windows-clang-debug -R "^granit\.smoke\."
 ```
 
 其中纹理回读测试仍可直接运行并传入 `.rgba` 输出路径，详见
-[纹理同步回读](texture-readback.md)。Render Pipeline 的分步说明见
-[Render Pipeline 教程](../tutorials/07-render-pipeline.md)。
+[纹理同步回读](texture-readback.md)。Render Pipeline 的完整使用路径见
+[PBR 资产教程](../tutorials/02-pbr-assets.md)。
 
 ## 资源归属
 
 ```text
 assets/sources/shaders/pipeline/   正式 Pipeline 内置 Shader
 assets/sources/shaders/pbr/     示例、测试和工具共享的 PBR 参考 Shader
-examples/assets/        Model Viewer 的示例资产
+examples/assets/        教程与 Sample 的可再分发输入资产
 tests/fixtures/         测试与 Smoke 固定输入
 ```
 
 正式库源码不得反向依赖 `examples` 或 `tests`。公开示例不包含 Vulkan 头文件；预编译 Shader
 随仓库提供，普通构建不要求运行时 Shader 编译器。
 
-示例源码按职责分层：`examples/common` 按技术域保存多个示例共用的平台辅助代码，
+示例源码按职责分层：`examples/common` 按技术域保存多个示例共用的平台辅助代码；其中只读
+Asset Store 使用稳定逻辑路径，CMake 负责桌面复制和浏览器预载。
 `examples/samples` 保存各示例内容和自身目标声明。两者均为仓库私有实现，不随 SDK 安装。

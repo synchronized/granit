@@ -7,7 +7,10 @@
 
 _Static_assert(sizeof(granit_window_system_desc) == GRANIT_WINDOW_SYSTEM_DESC_VERSION_1_SIZE,
                "Window System V1 ABI 大小必须稳定");
-_Static_assert(sizeof(granit_window_desc) == 40, "Window ABI 大小必须稳定");
+_Static_assert(sizeof(granit_window_target_desc) == 32, "Window Target ABI 大小必须稳定");
+_Static_assert(GRANIT_WINDOW_TARGET_DESC_VERSION_1_SIZE == 28, "Window Target V1 最低尺寸必须稳定");
+_Static_assert(sizeof(granit_window_desc) == GRANIT_WINDOW_DESC_VERSION_2_SIZE,
+               "Window V2 ABI 大小必须稳定");
 _Static_assert(GRANIT_WINDOW_DESC_VERSION_1_SIZE == 36, "Window V1 最低尺寸必须稳定");
 _Static_assert(sizeof(granit_window_event) == GRANIT_WINDOW_EVENT_VERSION_1_SIZE,
                "Window Event V1 ABI 大小必须稳定");
@@ -17,6 +20,7 @@ _Static_assert(sizeof(granit_window_state) == GRANIT_WINDOW_STATE_VERSION_1_SIZE
 static granit_window_system granit_test_window_system;
 static granit_window granit_test_window;
 static granit_window_system_desc granit_test_window_system_desc = GRANIT_WINDOW_SYSTEM_DESC_INIT;
+static granit_window_target_desc granit_test_window_target_desc = GRANIT_WINDOW_TARGET_DESC_INIT;
 static granit_window_desc granit_test_window_desc = GRANIT_WINDOW_DESC_INIT;
 static granit_window_event granit_test_window_event = GRANIT_WINDOW_EVENT_INIT;
 static granit_window_state granit_test_window_state = GRANIT_WINDOW_STATE_INIT;
@@ -28,7 +32,10 @@ void granit_window_h_header_test(void) {
   (void)granit_test_window;
   granit_test_window_system_desc.backend = GRANIT_WINDOW_BACKEND_AUTO;
   granit_test_window_system_desc.backend = GRANIT_WINDOW_BACKEND_EMSCRIPTEN;
+  granit_test_window_system_desc.backend = GRANIT_WINDOW_BACKEND_SDL3;
   granit_test_window_desc.width = UINT32_C(640);
+  granit_test_window_target_desc.type = GRANIT_WINDOW_TARGET_CANVAS_SELECTOR;
+  granit_test_window_desc.target = &granit_test_window_target_desc;
   granit_test_window_event.type = GRANIT_WINDOW_EVENT_RESIZED;
   granit_test_window_state.width = UINT32_C(640);
 }

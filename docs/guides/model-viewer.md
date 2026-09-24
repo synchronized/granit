@@ -4,22 +4,43 @@
 # 运行跨后端模型查看器
 
 本指南说明如何使用同一套 CPU Scene、GPU Scene 和 Render Pipeline，在桌面 Vulkan 与浏览器
-Emscripten WebGPU 上显示 glTF 2.0 模型。桌面目标叠加 ImGui 调试面板；该示例及其 glTF 加载器
+Emscripten WebGPU 上显示 glTF 2.0 模型。两个目标叠加同一套 ImGui 调试面板；该示例及其 glTF 加载器
 不属于 Granit 安装 SDK。本指南只负责模型资产、桌面运行、性能和固定画面验收；Emscripten
 工具链、浏览器服务和通用浏览器测试见[浏览器 WebGPU 指南](webgpu-browser-example.md)。
 
+## 运行时边界
+
+桌面与浏览器入口使用同一个 `viewer_application` 状态机。它在 `application_host` 提供的 Window、
+Input、循环和 Asset System 上依次推进 Renderer、Surface/Swapchain、资产读取、CPU Scene 准备、
+GPU 上传、Pipeline 准备、运行帧和释放。`viewer_session` 拥有 Application Core 与模型加载状态；
+`render_runtime` 统一 Renderer、Surface、Swapchain、Pipeline、Scene 上传、质量切换、帧执行和释放；
+`render_service` 将这些操作与 `render_task_executor` 组合，统一帧与不可丢弃控制任务的执行语义。
+`viewer_frame_builder` 统一面板构造、输入消费、Viewer Tick、Canvas 捕获和帧包生成：
+
+- Desktop 入口只设置 SDL3/Vulkan、文件位置和专用线程策略；threaded Executor 为共用
+  Render Service 提供专用线程、异步上传和帧完成回执；普通帧允许替换，控制任务有序执行。
+- Web 入口只设置 Emscripten/WebGPU、URL 和主线程策略；inline Executor 调用同一个 Render Service，
+  Fetch 和资源上传在明确边界通过 Asyncify 让出事件循环。
+  正式 `pipeline_warmup` 只预热场景材质；临时 Shader、Compute 和资源生命周期探针仅编入浏览器
+  测试目标。
+
+两条路径共享完整生命周期、Surface 恢复和任务语义。平台差异只作为入口描述传入；线程策略由
+Executor 实现，文件与 Fetch 差异由 Asset System Source 处理，主循环差异由 Window 组件处理。
+这些类型属于 Sample 私有实现，不会进入 Granit 安装 SDK。
+
 ## 构建桌面查看器
 
-桌面目标依赖 SDL3 和 ImGui。当前 CMake 只在显式启用模型查看器、两个 Integration，并允许获取
-锁定集成依赖时生成 `granit_tutorial_10_model_viewer`：
+桌面目标通过 `granit::window` 的 SDL3 Backend 管理窗口和输入，并使用 ImGui Draw Data
+Integration。顶层源码构建启用 Examples 时会准备锁定的 SDL3 与 ImGui 依赖；无需启用
+`IntegrationSDL3`：
 
 ```powershell
 cmake -S . -B build/model-viewer -G Ninja `
   -DCMAKE_BUILD_TYPE=Release `
-  -DGRANIT_BUILD_INTEGRATION_SDL3=ON `
-  -DGRANIT_BUILD_INTEGRATION_IMGUI=ON `
+  -DGRANIT_BUILD_EXAMPLES=ON `
+  -DGRANIT_ENABLE_WINDOW_SDL3=ON `
   -DGRANIT_DEPENDENCY_POLICY=auto
-cmake --build build/model-viewer --target granit_tutorial_10_model_viewer
+cmake --build build/model-viewer --target granit_sample_model_viewer
 ```
 
 ## 获取验收模型
@@ -88,7 +109,8 @@ GPU 资源创建仍由拥有 Renderer 的线程执行，但纹理和几何数据
 与处理窗口事件。`--no-ui` 模式不绘制进度界面，但采用相同的异步提交路径。
 
 资产来自 Khronos glTF Sample Assets，模型使用 CC0-1.0。锁定版本和第三方通知见
-[`FlightHelmet.manifest.json`](../../examples/assets/FlightHelmet.manifest.json) 与
+[`FlightHelmet 清单`](../../examples/assets/samples/model_viewer/FlightHelmet.manifest.json)
+与
 [`THIRD_PARTY_NOTICES.md`](../../examples/common/gltf/THIRD_PARTY_NOTICES.md)。
 
 ## 运行
@@ -96,7 +118,7 @@ GPU 资源创建仍由拥有 Renderer 的线程执行，但纹理和几何数据
 使用 Vulkan：
 
 ```powershell
-build/model-viewer/bin/granit_tutorial_10_model_viewer.exe `
+build/model-viewer/bin/granit_sample_model_viewer.exe `
   --asset build/assets/FlightHelmet/glTF/FlightHelmet.gltf `
   --environment assets/generated/installed/environments/studio_small_03.grenv `
   --backend=vulkan --validation
@@ -123,7 +145,7 @@ Sampler 和材质绑定；创建失败时保留原配置。
 
 `--smoke-test` 与 `--profile-output` 用途不同，不能同时使用。
 
-离屏验收程序 `granit_tutorial_10_model_viewer_offscreen_acceptance` 额外接受 `--msaa=1|4`、
+离屏验收程序 `granit_sample_model_viewer_offscreen_acceptance` 额外接受 `--msaa=1|4`、
 `--fxaa=on|off`、`--specular-aa=on|off` 和 `--anisotropy=1|2|4|8|16`。它会通过公开的
 Renderer Limits 严格校验请求，不支持的配置直接失败而不会静默回退。桌面 Vulkan 与浏览器
 WebGPU 使用相同的公共配置语义。
@@ -135,7 +157,7 @@ Release、关闭 Validation，并分别采集 UI 开/关及 Immediate/FIFO。以
 Immediate、无 UI 的基线：
 
 ```powershell
-build/model-viewer/bin/granit_tutorial_10_model_viewer.exe `
+build/model-viewer/bin/granit_sample_model_viewer.exe `
   --asset build/assets/FlightHelmet/glTF/FlightHelmet.gltf `
   --backend=vulkan --present-mode=immediate --no-ui `
   --profile-output build/results/vulkan-immediate-no-ui.json
@@ -155,7 +177,7 @@ JSON 记录资产、实际后端、Adapter、呈现模式、UI 和 Validation �
 原始像素写入文件：
 
 ```powershell
-build/model-viewer/bin/granit_tutorial_10_model_viewer_offscreen_acceptance.exe `
+build/model-viewer/bin/granit_sample_model_viewer_offscreen_acceptance.exe `
   --asset build/assets/FlightHelmet/glTF/FlightHelmet.gltf `
   --environment assets/generated/installed/environments/studio_small_03.grenv `
   --output build/acceptance/flight-helmet-vulkan.rgba `
@@ -171,23 +193,24 @@ Adapter、资产路径及量化统计，供 Actions 一并上传。`.rgba` 文�
 
 ## 浏览器运行与验证
 
-Emscripten 构建生成面向使用者的 `granit_tutorial_10_model_viewer_web.html`，默认通过网络加载 Khronos
+Emscripten 构建生成面向使用者的 `granit_sample_model_viewer_web.html`，默认通过网络加载 Khronos
 Flight Helmet；`?model=<URL>` 可以覆盖模型地址。它与桌面目标复用同一个 Application Core、
 CPU/GPU Scene、PBR 和 Environment Map。详细构建及 URL 用法见
 [浏览器 WebGPU 示例](webgpu-browser-example.md)。该指南负责浏览器构建和通用验证；本页只保留
 模型查看器特有的页面行为说明。
 
-页面右上角的 DOM 工具面板可调整 MSAA、FXAA、Specular AA、各向异性，以及曝光、环境光和
-主方向光强度。光照控件直接修改共享 Viewer Core 的状态，因此与桌面 Lighting 面板采用相同的
-参数范围、校验和渲染结果；它不是独立的 CSS 预览效果。
+页面使用与桌面相同的 ImGui Scene、Inspector、Lighting、Renderer 和 Performance 面板；字体、
+材质预览纹理、输入捕获和 Draw Data 转换也走同一套实现。HTML 只保留 Canvas 以及 Renderer 和
+资产尚未就绪时的启动、进度、取消和错误状态，不再维护另一套 DOM 质量与光照控件。
 
-`granit_web_platform_smoke.html` 保留为自动化 Fixture。它验证模型 Fetch、PBR 绘制、60 帧循环、
+`granit_sample_model_viewer_web_test.html` 复用正式应用代码并额外编入测试控制接口与 Pipeline
+生命周期探针；`granit_web_platform_smoke.html` 继续覆盖更底层的平台能力。它们验证模型 Fetch、PBR 绘制、60 帧循环、
 输入、Resize、分阶段加载、取消回滚、错误资产诊断和退出时资源归零，并覆盖 WebGPU 资源传输与
 Mipmap。浏览器加载在 CPU 与 GPU 资源边界通过 Asyncify 让出事件循环，进度取自已完成工作项；
 Fixture 的 glTF
 是用于确定性测试的三角模型，因此 Smoke 页面显示三角形不表示正式查看器回退。自动化测试还会
 依次切换 1×/全关闭与 4×/FXAA/Specular AA 配置，按设备上限验证各向异性重建，并验证 Web
-光照控件写入共享 Viewer Core：
+光照状态写入共享 Viewer Core：
 
 ```powershell
 cmake --preset emscripten-release
@@ -195,12 +218,16 @@ cmake --build --preset emscripten-release
 cd tests/web
 npm ci
 $env:CHROME_PATH = "C:\Program Files\Google\Chrome\Application\chrome.exe"
-npm test -- ../../build/emscripten-release/web
+npm test -- ../../build/emscripten-release/web granit_sample_model_viewer_web.html `
+  model_viewer_fixture.gltf
+npm test -- ../../build/emscripten-release/web granit_sample_model_viewer_web_test.html `
+  model_viewer_fixture.gltf
 ```
 
 ## 常见问题
 
-- 没有生成桌面可执行文件：确认模型查看器、SDL3、ImGui 和依赖获取四个选项均已启用。
+- 没有生成桌面可执行文件：确认 `GRANIT_BUILD_EXAMPLES` 和 `GRANIT_ENABLE_WINDOW_SDL3` 已启用，
+  且依赖获取策略可以找到或下载 SDL3 与 ImGui。
 - 浏览器 WebGPU 不可用：确认使用锁定 emsdk 构建，并检查浏览器 WebGPU 支持与控制台诊断。
 - 模型加载失败：保持 `.gltf` 与其 `.bin`、纹理的相对目录结构；远程模型及依赖资源必须允许跨域
   访问。加载器仍会拒绝父目录跳转和不支持的 glTF 扩展。

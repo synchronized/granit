@@ -2,3 +2,4 @@
 # Copyright (c) 2026 Granit contributors
 
 add_subdirectory(imgui)
+add_subdirectory(model_viewer)

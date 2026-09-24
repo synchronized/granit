@@ -25,6 +25,7 @@ target_sources(
           input/platform_adapter.cpp
           input/platform_adapter.h
           input/state_utils.h
+          platform/backend.cpp
           $<$<PLATFORM_ID:Windows>:platform/win32/window.cpp>
           $<$<PLATFORM_ID:Windows>:platform/win32/input.cpp>
           $<$<BOOL:${GRANIT_HAS_XCB}>:platform/xcb/window.cpp>
@@ -34,6 +35,8 @@ target_sources(
           $<$<BOOL:${GRANIT_HAS_WAYLAND_SHELL}>:$<TARGET_OBJECTS:granit_xdg_shell_protocol>>
           $<$<BOOL:${GRANIT_IS_EMSCRIPTEN}>:platform/emscripten/window.cpp>
           $<$<BOOL:${GRANIT_IS_EMSCRIPTEN}>:platform/emscripten/input.cpp>
+          $<$<BOOL:${GRANIT_ENABLE_WINDOW_SDL3}>:platform/sdl3/window.cpp>
+          $<$<BOOL:${GRANIT_ENABLE_WINDOW_SDL3}>:platform/sdl3/input.cpp>
           "${PROJECT_SOURCE_DIR}/src/core/utf8.cpp"
   PUBLIC
     FILE_SET HEADERS
@@ -66,6 +69,7 @@ target_compile_definitions(
           $<$<BOOL:${GRANIT_HAS_XCB}>:GRANIT_WINDOW_HAS_XCB>
           $<$<BOOL:${GRANIT_HAS_WAYLAND_SHELL}>:GRANIT_WINDOW_HAS_WAYLAND>
           $<$<BOOL:${GRANIT_HAS_WAYLAND_INPUT}>:GRANIT_WINDOW_HAS_WAYLAND_INPUT>
+          $<$<BOOL:${GRANIT_ENABLE_WINDOW_SDL3}>:GRANIT_WINDOW_HAS_SDL3>
   PUBLIC $<$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>:GRANIT_WINDOW_STATIC_DEFINE>
 )
 target_include_directories(
@@ -83,6 +87,38 @@ target_link_libraries(
           $<$<BOOL:${GRANIT_HAS_WAYLAND_SHELL}>:${GRANIT_WAYLAND_LIBRARY}>
           $<$<BOOL:${GRANIT_HAS_WAYLAND_INPUT}>:${GRANIT_XKBCOMMON_LIBRARY}>
 )
+if(GRANIT_ENABLE_WINDOW_SDL3)
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.26)
+    target_link_libraries(granit_window PRIVATE "$<BUILD_LOCAL_INTERFACE:${GRANIT_SDL3_TARGET}>")
+  else()
+    # CMake 3.23--3.25 没有 BUILD_LOCAL_INTERFACE；用链接产物路径避免把源码树目标
+    # 写入安装导出，同时显式保留头文件传播和构建顺序。
+    target_include_directories(
+      granit_window SYSTEM PRIVATE
+      "$<TARGET_PROPERTY:${GRANIT_SDL3_TARGET},INTERFACE_INCLUDE_DIRECTORIES>"
+    )
+    target_link_libraries(
+      granit_window PRIVATE "$<BUILD_INTERFACE:$<TARGET_LINKER_FILE:${GRANIT_SDL3_TARGET}>>"
+    )
+    add_dependencies(granit_window "${GRANIT_SDL3_TARGET}")
+  endif()
+  if(NOT BUILD_SHARED_LIBS)
+    target_link_libraries(granit_window PRIVATE "$<INSTALL_INTERFACE:SDL3::SDL3>")
+  endif()
+endif()
+if(GRANIT_ENABLE_WINDOW_SDL3 AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  find_path(GRANIT_WINDOW_X11_XCB_INCLUDE_DIR X11/Xlib-xcb.h)
+  find_library(GRANIT_WINDOW_X11_XCB_LIBRARY NAMES X11-xcb)
+  if(GRANIT_WINDOW_X11_XCB_INCLUDE_DIR AND GRANIT_WINDOW_X11_XCB_LIBRARY)
+    target_compile_definitions(granit_window PRIVATE GRANIT_WINDOW_SDL3_HAS_X11)
+    target_include_directories(
+      granit_window SYSTEM PRIVATE "${GRANIT_WINDOW_X11_XCB_INCLUDE_DIR}"
+    )
+    target_link_libraries(granit_window PRIVATE "${GRANIT_WINDOW_X11_XCB_LIBRARY}")
+  else()
+    message(STATUS "Granit SDL3 Window: X11 Surface 路径禁用，未找到 X11-xcb")
+  endif()
+endif()
 granit_target_compile_warnings(granit_window)
 granit_target_output_directories(granit_window)
 set_target_properties(

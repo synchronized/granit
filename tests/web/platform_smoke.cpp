@@ -31,14 +31,13 @@
 #include <granit/renderer/texture.hpp>
 #include <granit/renderer/texture_asset.h>
 #include <granit/renderer/timestamp_query.h>
+#include <granit/window/native.hpp>
+#include <granit/window/window.hpp>
 
 #include "model_viewer/application_core.h"
-#include "model_viewer/frame_executor.h"
-#include "model_viewer/web/web_input.h"
-#include "web/fetch.h"
-#include "web/resource_fetch_batch.h"
-
+#include "model_viewer/render_task_executor.h"
 #include "model_viewer/web/application.h"
+#include "model_viewer/web/browser_test_hooks.h"
 #include "support/renderer_fixture.h"
 
 namespace {
@@ -662,6 +661,73 @@ granit_result validate_renderer(granit_renderer renderer, const granit_renderer_
 
 } // namespace
 
+extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_validate_multi_window() noexcept {
+  granit::window_system system;
+  auto result = system.initialize();
+  if (result.failed())
+    return granit::to_native(result);
+
+  const granit::window_desc secondary_desc{
+      .title = "Secondary",
+      .width = 320,
+      .height = 180,
+      .flags = granit::window_flag::visible | granit::window_flag::resizable,
+      .target = granit::window_target::canvas("#secondary-canvas"),
+  };
+  granit::window secondary;
+  result = secondary.initialize(system, secondary_desc);
+  if (result.failed())
+    return granit::to_native(result);
+
+  granit::window_state state;
+  result = secondary.get_state(state);
+  if (result.failed() || state.width != 320 || state.height != 180) {
+    std::fprintf(stderr, "GRANIT_WINDOW_TARGET:state:%d:%u:%u\n", granit::to_native(result),
+                 state.width, state.height);
+    return GRANIT_ERROR_INTERNAL;
+  }
+
+  granit::window_native_emscripten native = GRANIT_WINDOW_NATIVE_EMSCRIPTEN_INIT;
+  result = granit::get_native(system, secondary.ref(), native);
+  constexpr std::string_view expected_selector = "#secondary-canvas";
+  if (result.failed() || native.canvas_selector_length != expected_selector.size() ||
+      std::string_view{native.canvas_selector, native.canvas_selector_length} !=
+          expected_selector) {
+    std::fprintf(stderr, "GRANIT_WINDOW_TARGET:native:%d:%u\n", granit::to_native(result),
+                 native.canvas_selector_length);
+    return GRANIT_ERROR_INTERNAL;
+  }
+
+  granit::window duplicate;
+  const auto duplicate_result = duplicate.initialize(system, secondary_desc);
+  if (duplicate_result != granit::result::resource_in_use) {
+    std::fprintf(stderr, "GRANIT_WINDOW_TARGET:duplicate:%d\n",
+                 granit::to_native(duplicate_result));
+    return GRANIT_ERROR_INTERNAL;
+  }
+
+  granit::window automatic;
+  const granit::window_desc automatic_desc{
+      .title = "Automatic",
+      .width = 64,
+      .height = 64,
+      .flags = granit::window_flag::visible | granit::window_flag::resizable,
+      .target = {},
+  };
+  const auto automatic_result = automatic.initialize(system, automatic_desc);
+  if (automatic_result != granit::result::resource_in_use) {
+    std::fprintf(stderr, "GRANIT_WINDOW_TARGET:automatic:%d\n",
+                 granit::to_native(automatic_result));
+    return GRANIT_ERROR_INTERNAL;
+  }
+
+  result = secondary.reset();
+  if (result.failed())
+    return granit::to_native(result);
+  result = secondary.initialize(system, secondary_desc);
+  return granit::to_native(result);
+}
+
 int main() {
   if (!load_startup_resource() || !validate_fixture_assets() ||
       !validate_texture_asset_contract()) {
@@ -669,9 +735,8 @@ int main() {
                  GRANIT_ERROR_INITIALIZATION_FAILED);
     return 1;
   }
-  return granit::example::model_viewer::web::run_application({
-      .default_model_url = "model_viewer_fixture.gltf",
-      .renderer_ready = validate_renderer,
-      .presentation_ready = validate_presentation,
-  });
+  granit::example::model_viewer::web::browser_test::configure(
+      {.renderer_ready = validate_renderer, .presentation_ready = validate_presentation});
+  return granit::example::model_viewer::web::run_application(
+      {.default_model_url = "model_viewer_fixture.gltf"});
 }

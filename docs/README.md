@@ -12,16 +12,9 @@
 ### 从零构建渲染程序
 
 1. [教程系列说明](tutorials/README.md)
-2. [创建窗口并清屏](tutorials/01-window.md)
-3. [绘制三角形](tutorials/02-triangle.md)
-4. [添加纹理](tutorials/03-texture.md)
-5. [加入深度与相机](tutorials/04-depth-and-camera.md)
-6. [把几何组织为 Mesh](tutorials/05-mesh.md)
-7. [添加材质与光照](tutorials/06-material-and-lighting.md)
-8. [迁移到 Render Pipeline](tutorials/07-render-pipeline.md)
-9. [接入 ImGui 调试界面](tutorials/08-imgui.md)
-10. [加载 glTF 模型](tutorials/09-model-loading.md)
-11. [完成跨后端 Model Viewer](tutorials/10-model-viewer.md)
+2. [纹理立方体](tutorials/01-cube.md)
+3. [PBR 资产与参考渲染管线](tutorials/02-pbr-assets.md)
+4. [运行跨后端 Model Viewer](guides/model-viewer.md)
 
 ### 使用核心 Renderer
 
@@ -29,8 +22,9 @@
 2. [Renderer](reference/renderer.md)
 3. [资源类型](reference/resource-types.md)
 4. [Command Recorder](reference/command-recorder.md)
-5. [Frame Context](reference/frame-context.md)
-6. [线程安全](reference/thread-safety.md)
+5. [Frame 与命令录制分层](concepts/frame-and-command-lifecycle.md)
+6. [Frame Context](reference/frame-context.md)
+7. [线程安全](reference/thread-safety.md)
 
 ### 理解高级渲染层
 
@@ -45,8 +39,8 @@
 1. [开发规范](guides/development.md)
 2. [项目文档规范](../DOCUMENTATION_GUIDE.md)
 3. [路线图](roadmap.md)
-4. [0.29.0 发布验收记录](records/2026-09-23-v0.29.0-release-acceptance.md)
-5. [开发计划与完成历史](plans/README.md)
+4. [开发计划与完成历史](plans/README.md)
+5. [实施记录](records/README.md)
 6. [第三方依赖](../3rd/README.md)
 
 ## 操作指南
@@ -67,20 +61,12 @@
 
 ## 教程
 
-教程从窗口清屏开始，逐章扩展同一个应用；每章只增加一种主要能力。01～10 均已提供配套源码与
-自动验证，01、08 与 10 还覆盖浏览器 WebGPU。API 细节以对应 Reference 为准。
+教程以两个完整的可运行目标介绍低层 Renderer 与高级 Render Pipeline。章节顺序、配套源码和平台
+验证范围统一由教程系列说明维护；完整应用进入 Samples，API 细节以对应 Reference 为准。
 
 - [教程系列说明](tutorials/README.md)
-- [01：创建窗口并清屏](tutorials/01-window.md)
-- [02：绘制三角形](tutorials/02-triangle.md)
-- [03：添加纹理](tutorials/03-texture.md)
-- [04：加入深度与相机](tutorials/04-depth-and-camera.md)
-- [05：把几何组织为 Mesh](tutorials/05-mesh.md)
-- [06：添加材质与光照](tutorials/06-material-and-lighting.md)
-- [07：迁移到 Render Pipeline](tutorials/07-render-pipeline.md)
-- [08：接入 ImGui 调试界面](tutorials/08-imgui.md)
-- [09：加载 glTF 模型](tutorials/09-model-loading.md)
-- [10：完成跨后端 Model Viewer](tutorials/10-model-viewer.md)
+- [01：纹理立方体](tutorials/01-cube.md)
+- [02：PBR 资产与参考渲染管线](tutorials/02-pbr-assets.md)
 
 ## API 与行为参考
 
@@ -141,6 +127,7 @@
 ## 架构与原理
 
 - [总体架构、ABI 与渲染分层](concepts/architecture.md)
+- [Frame、Frame Context 与 Command Recorder 分层](concepts/frame-and-command-lifecycle.md)
 - [Vulkan Loader、Instance 与后端边界](concepts/vulkan-backend.md)
 - [第三方 UI 与字体适配边界](concepts/third-party-ui-adapter-boundary.md)
 - [分阶段路线图](roadmap.md)

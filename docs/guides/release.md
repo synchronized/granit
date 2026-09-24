@@ -65,8 +65,11 @@ ctest --preset <static-release-preset>
 目录。
 
 仓库的 `Release` Actions 采用单次受控发布：手动运行在固定的 `main` 提交上构建 Windows/Linux
-共享库和静态库安装包，运行测试与安装审计，生成 `SHA256SUMS` 和 manifest；全部成功后才为该
+共享库 SDK，运行测试与安装审计，生成 `SHA256SUMS` 和 manifest；全部成功后才为该
 提交创建 tag 和 GitHub Release，最后从公开 Release 重新下载同一批字节复验。
+
+正式 Release 不提供预构建静态库。项目仍支持静态源码构建，并在平台 CI 和安装 Consumer 中持续
+验证；需要静态链接的使用者应按[构建与安装](build.md)从对应 tag 的源码构建。
 
 发布分为两个阶段：版本准备负责产生可审查的 Git 提交；正式发布只读取已经进入 `main` 的提交，
 不会再修改源码。完整顺序如下：
@@ -185,11 +188,11 @@ PowerShell 使用：
 tag 唯一性，然后触发 `Release` 工作流并默认等待最终结果。传入 `--no-wait` 或 `-NoWait` 可以只触发
 不等待。直接从 Actions 页面运行时必须选择 `main` 并输入 `vX.Y.Z` 格式的 tag。
 
-工作流依次完成四套 SDK 构建、测试、安装审计、校验和与 manifest；全部通过后，`publish` job 才为
-同一 `GITHUB_SHA` 创建 tag 和 Release，随后执行公开下载复验。版本准备失败不会启动远端发布，远端
-构建失败也不会留下 tag。
+工作流依次完成两套共享库 SDK 构建、测试、安装审计、校验和与 manifest；全部通过后，`publish`
+job 才为同一 `GITHUB_SHA` 创建 tag 和 Release，随后执行公开下载复验。版本准备失败不会启动远端
+发布，远端构建失败也不会留下 tag。
 
-建议为 `release` Environment 配置 required reviewer，使四套 SDK 全部完成后由维护者批准 `publish`
+建议为 `release` Environment 配置 required reviewer，使两套 SDK 全部完成后由维护者批准 `publish`
 job；未配置保护规则时该 job 自动继续。仓库还可以启用 Immutable Releases，在发布后禁止修改 tag
 和资产。这两项均为 GitHub 仓库设置，不由源码隐式修改。
 
@@ -207,13 +210,13 @@ Release 创建后，同一工作流会从公开下载地址重新取得产物，
 
 1. 使用 `gh release download` 下载全部安装包和 `SHA256SUMS`。
 2. 重新计算每个压缩包的 SHA-256，并逐项与 `SHA256SUMS` 比较。
-3. 检查四个精确命名的安装包都存在，且每个压缩包只有一个顶层目录。
+3. 检查两个精确命名的共享库 SDK 都存在，且每个压缩包只有一个顶层目录。
 
 打包阶段已经对同一批字节执行安装导出审计以及全部 C11/C++20 Consumer；公开复验通过 SHA-256
 证明下载字节与已验证产物一致，因此不重复构建 Consumer。维护者仍应确认 Release 不是草稿、
-标签指向 manifest 中的提交，且四个安装包与 `SHA256SUMS` 均已公开。
+标签指向 manifest 中的提交，且两个共享库 SDK 与 `SHA256SUMS` 均已公开。
 
 任一步失败都应保留标签和失败证据，修复后发布新的修订版本；不得移动已公开标签或静默替换产物。
 
-首次稳定发布只有在 [S-06](../plans/S-06-compatibility-policy.md) 的稳定门槛和本清单全部满足后
+首次稳定发布只有在[版本与兼容策略](../reference/compatibility.md)的稳定门槛和本清单全部满足后
 才能执行。版本号、发布日期及稳定 component 仍需单独决策。

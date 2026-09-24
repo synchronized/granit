@@ -5,7 +5,7 @@ set_property(DIRECTORY APPEND PROPERTY LABELS browser integration)
 
 include(granit_web)
 
-add_executable(granit_web_platform_smoke platform_smoke.cpp)
+add_executable(granit_web_platform_smoke platform_smoke.cpp sdl3_window_smoke.cpp)
 target_compile_features(granit_web_platform_smoke PRIVATE cxx_std_20)
 target_link_libraries(granit_web_platform_smoke PRIVATE granit::granit)
 target_include_directories(
@@ -19,7 +19,7 @@ target_link_options(
     "--preload-file=${granit_test_shader_fixture_dir}/dynamic_uniform.vert.wgsl@/assets/dynamic_uniform.vert.wgsl"
     "--preload-file=${granit_test_shader_fixture_dir}/dynamic_uniform.frag.wgsl@/assets/dynamic_uniform.frag.wgsl"
 )
-target_link_libraries(granit_web_platform_smoke PRIVATE granit_web_model_viewer_platform)
+target_link_libraries(granit_web_platform_smoke PRIVATE granit_web_model_viewer_test_platform)
 set_target_properties(
   granit_web_platform_smoke
   PROPERTIES

@@ -3,8 +3,8 @@
 
 # Granit 示例
 
-本目录保存线性教程的可运行源码和面向使用者的完整应用。连续学习内容及其最终项目进入
-`tutorials`，独立集成示例进入 `samples`；单项 API、错误路径和平台能力验证进入 `tests`，不为
+本目录保存特性教程的可运行源码和面向使用者的完整应用。聚焦单条渲染路径的内容进入
+`tutorials`，完整应用与集成示例进入 `samples`；单项 API、错误路径和平台能力验证进入 `tests`，不为
 展示数量复制成独立示例。
 构建与运行命令见[示例程序指南](../docs/guides/examples.md)。
 
@@ -13,35 +13,36 @@
 | 入口 | 位置 | 目标 | 用途 |
 |---|---|---|---|
 | ImGui | `samples/imgui` | `granit_sdl3_imgui_example`、`granit_imgui_web` | 验证 SDL3、ImGui 和 Canvas 集成 |
-| Model Viewer | `tutorials/10_model_viewer` | `granit_tutorial_10_model_viewer`、Web 目标 | 展示完整跨后端 PBR 工具 |
+| Model Viewer | `samples/model_viewer` | `granit_sample_model_viewer`、Web 目标 | 展示完整跨后端 PBR 工具 |
 
-从窗口创建到第一个三角形等渐进内容位于 `tutorials`，其中 01 Window 和 02 Triangle 已取代旧的
-Minimal Renderer 与离屏 Triangle 示例。
+低层纹理立方体和 PBR 资产路径位于 `tutorials`，公共应用生命周期位于 `common/application`。
 
 ## 目录职责
 
 ```text
 examples/
-├─ assets/       可再分发的示例输入资产
+├─ assets/       按 tutorials/samples 组织的可再分发输入资产
 ├─ common/       多个示例共享、但不属于安装 SDK 的私有实现，按技术域分
-│  ├─ gltf/      许可适合再分发的 glTF 加载器与资源解析
-│  ├─ imgui/     ImGui 主题、Draw Data 捕获与 Texture ID 注册
+│  ├─ gltf/      glTF/GLB 文档资源编排、格式导入、图片解码与 CPU Scene 转换
+│  ├─ assets/    统一的 Desktop/Web 异步读取、资源批次、内存 Resolver 与运行时资产
+│  ├─ application/ 跨平台应用 Host、inline 呈现与异步资产服务生命周期
+│  ├─ imgui/     ImGui 输入、字体图集、Draw Data 捕获与 Texture ID 注册
 │  ├─ model_viewer/ 教程与完整查看器共用的 glTF → GPU Scene 映射
 │  ├─ sdl/       SDL3 窗口与 ImGui 生命周期 RAII
-│  ├─ validation/ 截图与视觉回归比较
-│  └─ web/       浏览器资源请求、资源包与批量 Fetch
+│  └─ validation/ 截图与视觉回归比较
 ├─ samples/      综合应用内容、平台入口及自身目标声明
-│  └─ imgui/      SDL3 + ImGui 完整集成
-└─ tutorials/    从 Window 到 Model Viewer 的线性教程源码
+│  ├─ imgui/      SDL3 + ImGui 完整集成
+│  └─ model_viewer/ 完整跨后端模型查看器
+└─ tutorials/    编号特性教程源码
 ```
 
 `common`、`samples` 与 `tutorials` 都是仓库私有实现，不安装、不导出，也不构成公共 SDK。
 `common` 只保存被至少一个示例复用的能力；只有被两个真实下游共同需要、所有权和线程语义稳定的
 能力，才应另行设计为 Granit 公共 API。
 
-Model Viewer 的内容、Core、工具和验收程序均位于 `tutorials/10_model_viewer`。桌面入口与 SDL3
-平台壳层位于其 `model_viewer/desktop` 子目录，浏览器入口和输入适配位于 `model_viewer/web`；
-跨教程复用的 GPU Scene 位于 `common/model_viewer`，浏览器资源支撑位于 `common/web`。
+Model Viewer 的内容、Core、工具和验收程序均位于 `samples/model_viewer`。桌面入口与 SDL3
+平台壳层位于其 `desktop` 子目录，浏览器入口和输入适配位于 `web`；
+跨教程复用的 GPU Scene 位于 `common/model_viewer`，跨平台资源读取位于 `common/assets`。
 
 ## 新增综合示例
 

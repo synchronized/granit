@@ -6,11 +6,30 @@
 ## 当前状态
 
 Window 是独立可选 component，CMake 使用者目标为 `granit::window`。当前已实现 Win32、XCB、
-Wayland 与 Emscripten Window System、显式事件处理、窗口与输入事件轮询和状态查询；桌面后端
-另提供显式原生值查询。
+Wayland、Emscripten 与可选 SDL3 Window System、显式事件处理、窗口与输入事件轮询和状态查询；
+原生平台后端另提供显式原生值查询。
 
 Window 公开依赖核心 Renderer，但不暴露 Vulkan。应用可以直接从 Granit Window 创建 Renderer
 Surface；外部窗口仍通过 Renderer 的原生 Surface 高级入口接入。
+
+## Backend 与 Target
+
+Window Backend 决定谁创建窗口并抽取事件，Window Target 决定窗口绑定的位置。`automatic` 在桌面
+选择 Granit 原生后端，在浏览器选择原生 Emscripten 后端，不会隐式选择 SDL3。SDL3 后端必须在
+构建时启用 `GRANIT_ENABLE_WINDOW_SDL3`，并由应用明确请求：
+
+```cpp
+granit::window_system windows;
+auto result = windows.initialize({.backend = granit::window_backend::sdl3});
+```
+
+未启用 SDL3 的构建仍保留稳定枚举值，但请求该后端返回 `GRANIT_ERROR_UNSUPPORTED`。SDL3 事件队列
+是进程级资源，因此当前同一进程只允许一个活动 SDL3 Window System；该 System 可以管理多个
+Window，并按 `SDL_WindowID` 路由事件和输入。
+
+桌面 SDL3 Window 使用自动 Target。Emscripten SDL3 Window 使用与原生后端相同的 Canvas selector
+Target，并把 selector 交给 SDL 创建属性；同一 System 内重复绑定返回资源占用。两种后端均通过
+统一 `granit_window_create_surface` 创建 Surface，应用不需要读取 SDL 原生属性。
 
 ## 创建与销毁
 
@@ -36,11 +55,28 @@ granit_window_system_destroy(system);
 
 宽高必须非零，标题是调用期间借用的 UTF-8 字节序列。当前标志支持初始可见、可调整尺寸和高 DPI；
 Win32 高 DPI 窗口创建期间临时使用 Per-Monitor V2 线程上下文，不永久改变应用线程的 DPI 设置。
-XCB 后端接受高 DPI 标志，但在桌面缩放协议明确前不产生 Scale 事件。Emscripten 后端将 Window
-绑定到页面的 `#canvas`，以描述宽高设置初始 CSS 尺寸；高 DPI 标志决定初始 Canvas 像素尺寸是否
-乘以 `devicePixelRatio`。当前每个页面只允许一个活动的 Granit Window。
+XCB 后端接受高 DPI 标志，但在桌面缩放协议明确前不产生 Scale 事件。Emscripten 后端默认将
+Window 绑定到页面的 `#canvas`，以描述宽高设置初始 CSS 尺寸；高 DPI 标志决定初始 Canvas
+像素尺寸是否乘以 `devicePixelRatio`。
 
-C++20 提供 move-only `granit::window_system` 和 `granit::window` RAII 包装，析构时调用对应 C API。
+浏览器多 Canvas 使用 Window Target：
+
+```c
+granit_window_target_desc target = GRANIT_WINDOW_TARGET_DESC_INIT;
+target.type = GRANIT_WINDOW_TARGET_CANVAS_SELECTOR;
+target.value = "#viewport-2";
+target.value_length = 11;
+window_desc.target = &target;
+```
+
+Target 描述和字符串只在 `granit_window_create` 调用期间借用，成功后 Window 保存副本。Canvas
+selector 必须为 1 到 4096 字节且不包含内嵌空字符；目标不可用返回
+`GRANIT_ERROR_BACKEND_UNAVAILABLE`，活动 Window 重复绑定同一 selector 返回
+`GRANIT_ERROR_RESOURCE_IN_USE`。第二个自动目标仍会尝试 `#canvas`，不会隐式生成 DOM ID。
+桌面原生后端不支持 Canvas Target，并返回 `GRANIT_ERROR_UNSUPPORTED`。
+
+C++20 提供 move-only `granit::window_system` 和 `granit::window` RAII 包装，析构时调用对应 C API；
+Canvas 目标通过 `granit::window_target::canvas("#viewport-2")` 构造。
 
 ## 当前状态查询
 
@@ -148,7 +184,8 @@ Window System 的顺序销毁。函数校验 Window System、Window 归属和创
 Wayland Window 可通过 `granit_window_get_native_wayland` 借用 `wl_display*` 和 `wl_surface*`。
 Window 拥有 xdg-shell 角色及原生 Surface，调用方不得自行销毁。自动后端在
 `WAYLAND_DISPLAY` 存在时优先选择 Wayland，否则选择 XCB；应用也可在 Window System 描述中明确
-指定后端。Emscripten 构建的自动后端固定选择 Emscripten，Surface 来源固定为 `#canvas`。
+指定后端。Emscripten 构建的自动后端固定选择 Emscripten，Surface 来源为该 Window 保存的 Canvas
+selector，自动 Target 对应 `#canvas`。
 `granit_window_get_native_emscripten` 返回借用的 Canvas selector 字节序列，不把 DOM 对象伪装成
 可跨 ABI 使用的指针。
 

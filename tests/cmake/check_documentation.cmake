@@ -84,8 +84,8 @@ granit_require_document_text(
   "独立安装 Consumer 执行命令"
 )
 granit_require_document_text(
-  "docs/tutorials/07-render-pipeline.md"
-  "granit.pipeline.render"
+  "docs/tutorials/02-pbr-assets.md"
+  "granit_tutorial_02_pbr_assets"
   "RenderPipeline 教程验证命令"
 )
 if(granit_project_version)

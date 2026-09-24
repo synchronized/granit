@@ -67,5 +67,5 @@ const auto result = shader.initialize(
 - 当前 Shader 只能用于后续 Pipeline，尚未提供独立执行或原生 Vulkan 互操作。
 - 公开句柄会校验类型、generation 和 Renderer domain。
 
-详细设计见 [D-01](../plans/D-01-shader-input.md)、[D-02](../plans/D-02-shader-module.md)和
-[S-23](../plans/S-23-0.8.0-runtime-shader-assets.md)。
+跨后端载荷、逻辑名称和归档生命周期见 [Shader Library](shader-library.md)，运行时资产边界的决策
+依据见 [ADR-006](../decisions/ADR-006-shader-library-runtime-asset.md)。

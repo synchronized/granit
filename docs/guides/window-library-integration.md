@@ -20,8 +20,12 @@
 | Wayland | `wl_display*`、`wl_surface*` | `surface_desc::wayland` | 无 |
 
 这些代码是平台直连示意，不属于稳定的第三方 Integration API。可选组件的当前接口见
-[SDL3 与 ImGui Integration](../reference/third-party-integrations.md)，后续阶段见
-[S-08 计划](../plans/S-08-third-party-integrations.md)。
+[SDL3 与 ImGui Integration](../reference/third-party-integrations.md)。
+
+如果应用希望由 Granit 创建 SDL3 Window，并通过统一 Window/Input API 管理生命周期、事件和
+Surface，不应使用本指南的外部窗口路径。请在源码构建时启用 `GRANIT_ENABLE_WINDOW_SDL3`，创建
+`window_backend::sdl3` 的 Window System；当前行为见 [Window component](../reference/window.md)。
+只有已经拥有 SDL/GLFW 窗口生命周期的应用才需要继续阅读下列原生接入步骤。
 
 ## 通用顺序
 

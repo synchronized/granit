@@ -96,6 +96,5 @@ Library。需要把 Library 借给 Material 等其他 C++ 组件时使用 `libra
 显式 C/C++ 互操作。高级内容身份路径使用 `create_shader_by_content_id()`。需要在创建前离线检查时
 可使用 `granit::inspect_shader_library()`。
 
-格式和架构决策见 [S-51](../plans/S-51-0.29.0-shader-library-logical-names.md)、
-[S-37](../plans/S-37-0.21.0-shader-library-and-material-boundary.md) 与
+格式和运行时资产边界的决策依据见
 [ADR-006](../decisions/ADR-006-shader-library-runtime-asset.md)。

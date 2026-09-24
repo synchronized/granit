@@ -53,8 +53,8 @@ Granit 采用“Bring Your Own Engine”边界，不接管使用者的 ECS、Sce
 
 ## 使用发布包
 
-[Granit 0.29.1 Release](https://github.com/synchronized/granit/releases/tag/v0.29.1) 提供 Windows 与
-Linux x64 的共享库、静态库安装包及 `SHA256SUMS`。下载后先验证校验和，再解压到固定目录；压缩包
+[Granit 0.29.1 Release](https://github.com/synchronized/granit/releases/tag/v0.29.1) 含 Windows/Linux x64 SDK 及 `SHA256SUMS`；
+普通使用者应选择 `-shared` 包，0.30.0 起只发布共享库 SDK。验证校验和并解压后，压缩包
 内的顶层目录就是 CMake package 前缀：
 
 ```sh
@@ -65,7 +65,7 @@ cmake --build <your-build>
 发布包只包含可分发 SDK；仓库示例及其资源需要从源码构建。
 共享库还需位于运行时搜索路径：Windows 将包内 `bin` 加入 `PATH`，Linux 将包内 `lib` 加入
 `LD_LIBRARY_PATH` 或按应用部署规则安装。源码构建、依赖要求和静态链接说明见
-[构建与安装](docs/guides/build.md)。
+[构建与安装](docs/guides/build.md)；需要静态库时请从源码构建。
 
 ## 快速开始
 
@@ -147,8 +147,9 @@ find_package(granit CONFIG REQUIRED COMPONENTS Window)
 target_link_libraries(your_target PRIVATE granit::granit granit::window)
 ```
 
-Window 不是核心 Renderer 的强制依赖，并直接提供窗口及输入事件。应用也可以自行接入 SDL3 或
-GLFW，具体边界见[窗口库接入](docs/guides/window-library-integration.md)；输入行为见
+Window 不是核心 Renderer 的强制依赖，并直接提供窗口及输入事件；源码构建还可启用由 Window
+System 管理生命周期的 SDL3 Backend。已经自行拥有 SDL3 或 GLFW 窗口的应用继续使用外部窗口
+接入路径，具体边界见[窗口库接入](docs/guides/window-library-integration.md)；输入行为见
 [Window 输入](docs/reference/input.md)。
 
 使用可选 SDL3 和 ImGui Integration：
@@ -162,8 +163,7 @@ target_link_libraries(
 
 SDL3 Integration 只负责创建 Granit Surface；ImGui Integration 只负责把 Draw Data 追加到 Canvas。
 源码树构建时两者默认关闭，安装使用时由父项目或 `find_package` 提供 SDL3 3.2+ 与 ImGui；完整
-启用方式、依赖和所有权边界见
-[SDL3 与 ImGui Integration](docs/reference/third-party-integrations.md)。
+启用方式、依赖和所有权边界见[SDL3 与 ImGui Integration](docs/reference/third-party-integrations.md)。
 组合示例同时覆盖字体 Atlas 与自定义 Texture ID，并通过 Canvas 的逐帧公共绑定及有界纹理绑定
 缓存录制；Canvas 的当前录制语义见 [Canvas Draw List](docs/reference/canvas-draw-list.md)。
 

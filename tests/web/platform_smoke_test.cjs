@@ -26,16 +26,17 @@ const contentTypes = new Map([
 function validateModelViewerPixels(png) {
   const image = decodePng(png);
   const center = pixelAt(image, Math.floor(image.width / 2), Math.floor(image.height / 2));
-  const corner = pixelAt(image, 4, 4);
+  // Model Viewer 的共享 ImGui 面板占据左右两侧，顶部中央仍是稳定的场景背景采样点。
+  const background = pixelAt(image, Math.floor(image.width / 2), 4);
   const linuxCanvasUnavailable =
     process.platform === "linux" &&
     (center[3] === 0 ||
       (center[0] === 255 &&
         center[1] === 255 &&
         center[2] === 255 &&
-        corner[0] === 255 &&
-        corner[1] === 255 &&
-        corner[2] === 255));
+        background[0] === 255 &&
+        background[1] === 255 &&
+        background[2] === 255));
   if (linuxCanvasUnavailable) {
     console.warn("Linux 无头 Chrome 未暴露 WebGPU Canvas 合成像素，跳过截图颜色断言");
     return;
@@ -45,12 +46,12 @@ function validateModelViewerPixels(png) {
   // 默认摄影棚背景经过交换链颜色空间转换后约为 (23, 36, 55)。这里保留量化与
   // 浏览器实现差异的容差，同时要求蓝色分量明显高于红色，避免纯黑清屏误通过。
   if (
-    Math.abs(corner[0] - 23) > 8 ||
-    Math.abs(corner[1] - 36) > 8 ||
-    Math.abs(corner[2] - 55) > 8 ||
-    corner[2] <= corner[0] + 20
+    Math.abs(background[0] - 23) > 8 ||
+    Math.abs(background[1] - 36) > 8 ||
+    Math.abs(background[2] - 55) > 8 ||
+    background[2] <= background[0] + 20
   )
-    throw new Error(`WebGPU 模型查看器背景像素异常：${corner.join(",")}`);
+    throw new Error(`WebGPU 模型查看器背景像素异常：${background.join(",")}`);
 }
 
 function startServer() {
@@ -132,6 +133,61 @@ async function main() {
     if (status !== "ready") {
       throw new Error(`WebGPU 平台启动失败，页面状态为 ${status}`);
     }
+    if (entryName === "granit_sample_model_viewer_web.html") {
+      validateModelViewerPixels(await page.locator("#canvas").screenshot({ type: "png" }));
+      const exposesTestApi = await page.evaluate(
+        () =>
+          typeof Module._granit_web_platform_status === "function" ||
+          typeof Module._granit_web_configure_render_quality === "function",
+      );
+      if (exposesTestApi)
+        throw new Error("正式 Model Viewer 产物仍导出浏览器测试控制接口");
+      const browserErrors = browserMessages.filter((message) =>
+        /pageerror|validation error|webgpu.*error/i.test(message),
+      );
+      if (browserErrors.length !== 0)
+        throw new Error(`正式浏览器页面报告错误：\n${browserErrors.join("\n")}`);
+      console.log("正式 Model Viewer 页面、共享 ImGui 与测试接口隔离验证通过");
+      return;
+    }
+    if (entryName === "granit_web_platform_smoke.html") {
+      await page.evaluate(() => {
+        const secondary = document.createElement("canvas");
+        secondary.id = "secondary-canvas";
+        secondary.tabIndex = 0;
+        secondary.style.position = "fixed";
+        secondary.style.left = "-10000px";
+        secondary.style.border = "none";
+        document.body.appendChild(secondary);
+        const sdlPrimary = document.createElement("canvas");
+        sdlPrimary.id = "sdl-primary-canvas";
+        sdlPrimary.tabIndex = 0;
+        const sdlSecondary = document.createElement("canvas");
+        sdlSecondary.id = "sdl-secondary-canvas";
+        sdlSecondary.tabIndex = 0;
+        for (const canvas of [sdlPrimary, sdlSecondary]) {
+          canvas.style.position = "fixed";
+          canvas.style.left = "-10000px";
+          canvas.style.border = "none";
+          document.body.appendChild(canvas);
+        }
+        sdlPrimary.style.width = "320px";
+        sdlPrimary.style.height = "180px";
+        sdlSecondary.style.width = "400px";
+        sdlSecondary.style.height = "200px";
+        try {
+          const result = Module._granit_web_validate_multi_window();
+          if (result !== 0) throw new Error(`浏览器多 Window Target 验证失败：${result}`);
+          const sdlResult = Module._granit_web_validate_sdl3_multi_window();
+          if (sdlResult !== 0)
+            throw new Error(`浏览器 SDL3 多 Window Target 验证失败：${sdlResult}`);
+        } finally {
+          secondary.remove();
+          sdlPrimary.remove();
+          sdlSecondary.remove();
+        }
+      });
+    }
     const rendererState = await page.evaluate(() => Module._granit_web_renderer_state());
     const failureResult = await page.evaluate(() => Module._granit_web_renderer_failure_result());
     const assetStatus = await page.evaluate(() => Module._granit_web_asset_status());
@@ -198,24 +254,11 @@ async function main() {
     );
     if (invalidLightingResult !== -2)
       throw new Error(`无效浏览器光照参数未被拒绝：${invalidLightingResult}`);
-    if (entryName === "granit_web_platform_smoke.html") {
-      // 平台页没有示例控制面板，通过同一运行层接口验证光照行为。
-      const result = await page.evaluate(() => Module._granit_web_configure_lighting(0.35, 0.45, 1.75));
-      if (result !== 0) throw new Error(`平台光照配置失败：${result}`);
-    } else {
-      await page.evaluate(() => {
-        const values = {
-          exposure: "0.35",
-          "environment-intensity": "0.45",
-          "key-light-intensity": "1.75",
-        };
-        for (const [id, value] of Object.entries(values)) {
-          const control = document.getElementById(id);
-          control.value = value;
-        }
-        document.getElementById("exposure").dispatchEvent(new Event("input", { bubbles: true }));
-      });
-    }
+    // 正式 Model Viewer 使用 Canvas 内的共享 ImGui；测试通过运行层控制接口精确设置数值。
+    const lightingResult = await page.evaluate(() =>
+      Module._granit_web_configure_lighting(0.35, 0.45, 1.75),
+    );
+    if (lightingResult !== 0) throw new Error(`平台光照配置失败：${lightingResult}`);
     await page.waitForFunction(
       (previous) => Module._granit_web_lighting_generation() === previous + 1,
       initialLighting.generation,
@@ -285,9 +328,10 @@ async function main() {
     const canvas = page.locator("#canvas");
     const box = await canvas.boundingBox();
     if (!box) throw new Error("无法获取 Canvas 布局范围");
-    await page.mouse.move(box.x + 32, box.y + 32);
+    // 避开左右两侧的共享 ImGui 面板，验证场景视口输入仍能到达 Viewer Core。
+    await page.mouse.move(box.x + box.width * 0.5, box.y + box.height * 0.5);
     await page.mouse.down({ button: "right" });
-    await page.mouse.move(box.x + 80, box.y + 56);
+    await page.mouse.move(box.x + box.width * 0.55, box.y + box.height * 0.54);
     await page.mouse.up({ button: "right" });
     await page.mouse.wheel(0, -120);
     await page.waitForFunction(

@@ -55,6 +55,7 @@ Canvas 尺寸并创建 Canvas Surface，形成第二套窗口和输入生命周�
 
 ## 当前限制
 
-- 浏览器固定使用 `#canvas`，多 Canvas 需要后续通过通用窗口目标描述单独设计。
+- 浏览器固定使用 `#canvas`，多 Canvas 的通用窗口目标描述由
+  [S-56](S-56-window-target-and-sdl3-backend.md)继续实施。
 - 浏览器文本输入只覆盖已提交的 `keypress` 文本，IME 组合阶段尚未进入公共事件模型。
 - 本地环境无法执行 Linux XCB/Wayland 构建，最终跨平台验收依赖 Linux CI。

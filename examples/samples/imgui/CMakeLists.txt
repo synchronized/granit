@@ -21,10 +21,11 @@ target_include_directories(
   granit_sdl3_imgui_example SYSTEM PRIVATE "${granit_imgui_SOURCE_DIR}"
 )
 target_link_libraries(
-  granit_sdl3_imgui_example PRIVATE granit::integration_sdl3 granit::integration_imgui
+  granit_sdl3_imgui_example
+  PRIVATE granit_example_sdl granit::integration_sdl3 granit::integration_imgui
 )
 target_link_libraries(
-  granit_sdl3_imgui_example PRIVATE ${GRANIT_IMGUI_DEMO_TARGET} ${GRANIT_IMGUI_BACKEND_SDL3_TARGET}
+  granit_sdl3_imgui_example PRIVATE ${GRANIT_IMGUI_DEMO_TARGET}
 )
 if(WIN32)
   add_custom_command(

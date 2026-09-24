@@ -44,13 +44,18 @@ Window 在 0.25.0 合并输入生命周期，并使用 0.25.0 完整符号快照
 |---|---|---|---|---|
 | Core（默认） | `granit::granit` | 无可选 Granit component | 稳定候选 | 优先收敛 C ABI、资源与提交契约 |
 | `RenderPipeline` | `granit::render_pipeline` | Core | 稳定候选 | 收敛材质、场景提交和参考管线边界 |
-| `Window` | `granit::window` | Core | 稳定候选 | 验证平台后端、输入与宿主循环契约 |
+| `Window` | `granit::window` | Core；可选私有 SDL3 | 稳定候选 | 验证 Backend、Target、输入与宿主循环契约 |
 | `AssetTools` | `granit::asset_tools` | Threads、可选离线工具链 | 实验性 | 统一离线资产构建、检查与 CLI |
 | `IntegrationSDL3` | `granit::integration_sdl3` | Core、SDL3 | 实验性 | 保持可选适配层，不进入 Core |
 | `IntegrationImGui` | `granit::integration_imgui` | Core、RP、ImGui | 实验性 | 可选；第三方 ABI 不稳定 |
 
 component 名、依赖和当前等级是安装 SDK 契约的一部分；底层 Vulkan/WebGPU 实现、示例私有代码、
 测试目标和 `src/` 内部模块不属于可安装 component。当前优先级和重新评估条件见[路线图](../roadmap.md)。
+
+Window 的 SDL3 Backend 是公共枚举可选择、构建时可裁剪的能力。关闭
+`GRANIT_ENABLE_WINDOW_SDL3` 不删除枚举或改变结构布局，请求该后端会稳定返回不支持；开启时
+SDL3 类型仍不进入 Granit 公共头。共享包把 SDL3 作为运行时部署依赖，静态包通过 CMake package
+解析 SDL3 最终链接依赖。这些依赖语义发生变化时必须按 component 兼容规则记录。
 
 ## 版本规则
 

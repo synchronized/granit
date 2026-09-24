@@ -26,7 +26,8 @@ enum class window_backend : std::uint32_t {
   win32 = GRANIT_WINDOW_BACKEND_WIN32,
   xcb = GRANIT_WINDOW_BACKEND_XCB,
   wayland = GRANIT_WINDOW_BACKEND_WAYLAND,
-  emscripten = GRANIT_WINDOW_BACKEND_EMSCRIPTEN
+  emscripten = GRANIT_WINDOW_BACKEND_EMSCRIPTEN,
+  sdl3 = GRANIT_WINDOW_BACKEND_SDL3
 };
 
 struct window_system_desc {
@@ -40,6 +41,20 @@ enum class window_flag : std::uint32_t {
   high_dpi = GRANIT_WINDOW_HIGH_DPI_BIT,
 };
 
+enum class window_target_type : std::uint32_t {
+  automatic = GRANIT_WINDOW_TARGET_AUTOMATIC,
+  canvas_selector = GRANIT_WINDOW_TARGET_CANVAS_SELECTOR,
+};
+
+struct window_target {
+  window_target_type type{window_target_type::automatic};
+  std::string_view value;
+
+  [[nodiscard]] static constexpr window_target canvas(std::string_view selector) noexcept {
+    return {.type = window_target_type::canvas_selector, .value = selector};
+  }
+};
+
 [[nodiscard]] constexpr window_flag operator|(window_flag left, window_flag right) noexcept {
   return static_cast<window_flag>(static_cast<std::uint32_t>(left) |
                                   static_cast<std::uint32_t>(right));
@@ -50,6 +65,7 @@ struct window_desc {
   std::uint32_t width{};
   std::uint32_t height{};
   window_flag flags{window_flag::visible | window_flag::resizable};
+  window_target target{};
 };
 
 enum class window_event_type : std::uint32_t {
@@ -187,10 +203,8 @@ public:
     granit_pointer_state native = GRANIT_POINTER_STATE_INIT;
     const auto value = granit_window_get_pointer_state(handle_, window.native_handle(), &native);
     if (value == GRANIT_SUCCESS) {
-      state = {.buttons = native.buttons,
-               .x = native.x,
-               .y = native.y,
-               .inside = native.inside != 0};
+      state = {
+          .buttons = native.buttons, .x = native.x, .y = native.y, .inside = native.inside != 0};
     }
     return from_native(value);
   }
@@ -228,8 +242,12 @@ public:
   }
 
   [[nodiscard]] result initialize(window_system& system, const window_desc& desc) noexcept {
-    if (valid() || desc.title.size() > UINT32_MAX)
+    if (valid() || desc.title.size() > UINT32_MAX || desc.target.value.size() > UINT32_MAX)
       return result::invalid_argument;
+    granit_window_target_desc native_target = GRANIT_WINDOW_TARGET_DESC_INIT;
+    native_target.type = static_cast<std::uint32_t>(desc.target.type);
+    native_target.value = desc.target.value.data();
+    native_target.value_length = static_cast<std::uint32_t>(desc.target.value.size());
     granit_window_desc native_desc{};
     native_desc.struct_size = sizeof(granit_window_desc);
     native_desc.title = desc.title.data();
@@ -237,6 +255,7 @@ public:
     native_desc.width = desc.width;
     native_desc.height = desc.height;
     native_desc.flags = static_cast<std::uint32_t>(desc.flags);
+    native_desc.target = &native_target;
     const auto value = granit_window_create(system.native_handle(), &native_desc, &handle_);
     if (value == GRANIT_SUCCESS)
       system_ = system.native_handle();

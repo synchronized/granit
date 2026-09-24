@@ -15,6 +15,7 @@
 #include <deque>
 #include <memory>
 #include <mutex>
+#include <string>
 #include <thread>
 #include <unordered_map>
 
@@ -38,6 +39,7 @@ struct wl_pointer;
 namespace granit::window::detail {
 
 struct window_system_record;
+struct backend_operations;
 
 struct window_loop_record {
   granit_window_system system{};
@@ -73,13 +75,20 @@ struct window_record {
 #endif
 #if defined(__EMSCRIPTEN__)
   std::uint32_t flags{};
+  std::string canvas_selector;
   bool focused{};
+#endif
+#if defined(GRANIT_WINDOW_HAS_SDL3)
+  void* sdl_window{};
+  std::uint32_t sdl_window_id{};
+  std::string sdl_canvas_selector;
 #endif
 };
 
 struct window_system_record {
   std::thread::id owner_thread;
   std::uint32_t backend{};
+  const backend_operations* operations{};
   std::unordered_map<granit_window, std::shared_ptr<window_record>> windows;
   std::deque<granit_window_event> events;
   std::deque<granit_input_event> input_events;
@@ -109,6 +118,9 @@ struct window_system_record {
   wl_pointer* pointer{};
   granit_window keyboard_window{};
   granit_window pointer_window{};
+#endif
+#if defined(GRANIT_WINDOW_HAS_SDL3)
+  std::unordered_map<std::uint32_t, granit_window> sdl_windows;
 #endif
 };
 

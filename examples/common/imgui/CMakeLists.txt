@@ -16,8 +16,12 @@ granit_target_compile_warnings(granit_example_imgui_canvas)
 if(TARGET granit::integration_imgui)
   add_library(
     granit_example_imgui STATIC
+    imgui_font_atlas.cpp
+    imgui_font_atlas.h
     imgui_frame_capture.cpp
     imgui_frame_capture.h
+    imgui_input.cpp
+    imgui_input.h
     imgui_texture_registry.cpp
     imgui_texture_registry.h
   )

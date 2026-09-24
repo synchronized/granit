@@ -5,17 +5,18 @@
 
 ## 当前能力
 
-Window component 内建键盘、已提交文本和指针的事件与状态，支持 Win32、XCB、Wayland 和
-Emscripten。应用只创建一个 Window System，不再创建独立 Input System，也不需要链接第二个
-动态库。
+Window component 内建键盘、已提交文本和指针的事件与状态，支持 Win32、XCB、Wayland、
+Emscripten，以及构建时启用的 SDL3 后端。应用只创建一个 Window System，不再创建独立 Input
+System，也不需要链接第二个 Granit 动态库。
 
 ```cmake
 find_package(granit CONFIG REQUIRED COMPONENTS Window)
 target_link_libraries(app PRIVATE granit::window)
 ```
 
-SDL3、GLFW、Qt 和完整引擎继续使用自身输入系统；Granit 不把外部窗口库的输入转换为 Window
-Input。
+由应用自行创建和拥有的 SDL3、GLFW、Qt 窗口继续使用各自输入系统；`IntegrationSDL3` 只创建
+Surface，不转换输入。只有明确选择 `window_backend::sdl3`、由 Granit Window System 创建的 SDL3
+Window 才会进入本页描述的统一 Input 队列和状态。
 
 ## 帧循环
 
@@ -106,10 +107,20 @@ Emscripten Window 在浏览器回调中将 DOM Keyboard、Mouse、Wheel 和 Focu
 表示向上或向左。DOM 回调直接写入队列，应用仍在每帧调用 `process_events` 后轮询，不需要注册
 自己的 Canvas 键鼠回调。
 
+## SDL3 语义
+
+SDL3 后端由一个 Window System 统一调用 `SDL_PollEvent`，再按 `SDL_WindowID` 将键盘、已提交文本、
+指针移动、按钮、滚轮和进入/离开事件转换为公共模型。SDL Scancode 映射为 USB HID 物理键，
+导航键和功能键同时提供逻辑键；事件与查询状态的生命周期仍由 Granit Window System 管理。
+
+该转换只属于 Granit 拥有窗口生命周期的 SDL3 Window Backend，不适用于应用通过
+`IntegrationSDL3` 接入的外部 `SDL_Window`。
+
 ## 当前限制
 
 - 不支持手柄、触摸、手写笔、相对鼠标、捕获、指针约束、剪贴板和拖放。
 - 不提供 IME 预编辑、候选窗或组合文本协议，只提供已经提交的文本。
 - 不提供 Action Mapping、快捷键系统或外部事件注入。
 - XCB 布局文本、Wayland 客户端按键重复和 Compose/IME 仍需单独实现、验证。
-- Emscripten 当前绑定固定的 `#canvas`，只提供 `keypress` 已提交文本，不覆盖浏览器 IME 组合阶段。
+- Emscripten 的键盘、指针与焦点回调按各 Window 的 Canvas selector 绑定；Canvas 必须可聚焦。
+  当前只提供 `keypress` 已提交文本，不覆盖浏览器 IME 组合阶段。

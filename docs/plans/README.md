@@ -9,7 +9,31 @@
 
 ## 当前计划
 
-当前没有正在实施的计划；下一项工作应根据真实使用反馈重新排定。
+- [S-63：Model Viewer Session 与平台壳收敛](S-63-model-viewer-session-platform-shells.md)——统一
+  Desktop/Web 的启动、加载、UI 帧构造和呈现恢复，只保留真实平台策略。
+- [S-62：Model Viewer 统一 Render Service](S-62-model-viewer-render-service.md)——统一 Desktop/Web
+  的渲染调用门面，并保留 threaded/inline 执行策略；本地实施与浏览器验证已经完成。
+- [S-61：Model Viewer 共享 ImGui 与浏览器测试边界](S-61-model-viewer-shared-imgui-browser-tests.md)
+  ——统一 Desktop/Web Viewer 面板，并分离正式浏览器产物与测试探针。
+- [S-60：Model Viewer 共享渲染运行时](S-60-model-viewer-shared-render-runtime.md)——提取同步 GPU
+  运行时，由 Desktop/Web 通过 threaded/inline executor 复用同一资源和帧执行逻辑。
+- [S-59：Model Viewer 渲染任务运行时](S-59-model-viewer-render-task-runtime.md)——以强类型任务统一
+  Desktop/Web 的 GPU 执行语义，并提取跨平台 Viewer 生命周期。
+- [S-58：统一 Example Asset System](S-58-unified-example-asset-system.md)——以逻辑 Mount、统一请求和
+  内部平台 Source 取代 Store/Loader 并列入口，并统一 Tutorial、glTF 与 Model Viewer 加载编排。
+- [S-57：Model Viewer 运行时架构](S-57-model-viewer-runtime-architecture.md)——保持现有目录和
+  Desktop/Web 执行语义，拆分平台组合入口、渲染执行、加载编排与浏览器验收边界。
+- [S-56：Window Target 与 SDL3 后端](S-56-window-target-and-sdl3-backend.md)——分离 Window
+  Backend 与绑定目标，支持原生 Emscripten 多 Canvas，并通过可选 SDL3 后端提供统一 Window API；
+  本地实施与浏览器、安装 Consumer 验证已完成，等待远端 Linux 矩阵。
+- [S-55：Example Common 架构整理](S-55-example-common-architecture.md)——保持现有短目录入口，
+  统一 SDL target，整理资产与 Web 资源边界，并专项分析 Model Viewer。
+- [S-54：0.30.0 特性教程与 Example Application](S-54-0.30.0-feature-tutorial-framework.md)——抽取
+  跨平台示例应用壳，将教程压缩为 Cube 与 PBR Assets，将完整 Model Viewer 移回 Samples，并删除
+  重复的最小加载应用；本地实施与浏览器验证已完成，等待远端矩阵。
+- [S-53：0.30.0 文档、教程与发布面收敛](S-53-0.30.0-documentation-tutorial-release.md)——建立
+  Frame 与命令录制分层 Concept，整理教程学习路径，并把正式 Release 收敛为 shared SDK；本地
+  实施与浏览器验证已完成，等待远端矩阵。
 
 ## 最近完成
 

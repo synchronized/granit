@@ -247,6 +247,21 @@ TEST_CASE("Window System 在当前平台直接拥有输入状态和事件队列"
   granit_input_event input_event = GRANIT_INPUT_EVENT_INIT;
   CHECK(granit_window_poll_input_event(window_system, &input_event) == GRANIT_ERROR_NOT_READY);
 
+#if !defined(__EMSCRIPTEN__)
+  granit_window_target_desc canvas_target = GRANIT_WINDOW_TARGET_DESC_INIT;
+  canvas_target.type = GRANIT_WINDOW_TARGET_CANVAS_SELECTOR;
+  canvas_target.value = "#canvas";
+  canvas_target.value_length = 7;
+  granit_window_desc canvas_window_desc = GRANIT_WINDOW_DESC_INIT;
+  canvas_window_desc.width = 96;
+  canvas_window_desc.height = 72;
+  canvas_window_desc.target = &canvas_target;
+  granit_window canvas_window = GRANIT_NULL_HANDLE;
+  CHECK(granit_window_create(window_system, &canvas_window_desc, &canvas_window) ==
+        GRANIT_ERROR_UNSUPPORTED);
+  CHECK(canvas_window == GRANIT_NULL_HANDLE);
+#endif
+
   REQUIRE(granit_window_destroy(window_system, window) == GRANIT_SUCCESS);
   keyboard.modifiers = UINT32_MAX;
   CHECK(granit_window_get_keyboard_state(window_system, window, &keyboard) ==
@@ -270,5 +285,35 @@ TEST_CASE("Window创建把空Window System归类为无效句柄", "[window][cont
   granit_window handle = UINT64_C(1);
   CHECK(granit_window_create(GRANIT_NULL_HANDLE, &desc, &handle) == GRANIT_ERROR_INVALID_HANDLE);
   CHECK(handle == GRANIT_NULL_HANDLE);
+}
 
+TEST_CASE("Window Target 在访问 Window System 前校验描述", "[window][target][abi]") {
+  granit_window_desc desc = GRANIT_WINDOW_DESC_INIT;
+  desc.width = 1;
+  desc.height = 1;
+  granit_window target_window = UINT64_C(1);
+
+  granit_window_target_desc target = GRANIT_WINDOW_TARGET_DESC_INIT;
+  desc.target = &target;
+  target.type = UINT32_MAX;
+  CHECK(granit_window_create(UINT64_MAX, &desc, &target_window) == GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(target_window == GRANIT_NULL_HANDLE);
+
+  target = GRANIT_WINDOW_TARGET_DESC_INIT;
+  target.type = GRANIT_WINDOW_TARGET_CANVAS_SELECTOR;
+  target.value = "";
+  CHECK(granit_window_create(UINT64_MAX, &desc, &target_window) == GRANIT_ERROR_INVALID_ARGUMENT);
+
+  const char invalid_selector[] = {'#', 'a', '\0', 'b'};
+  target.value = invalid_selector;
+  target.value_length = sizeof(invalid_selector);
+  CHECK(granit_window_create(UINT64_MAX, &desc, &target_window) == GRANIT_ERROR_INVALID_ARGUMENT);
+
+  target = GRANIT_WINDOW_TARGET_DESC_INIT;
+  target.value = "unexpected";
+  target.value_length = 10;
+  CHECK(granit_window_create(UINT64_MAX, &desc, &target_window) == GRANIT_ERROR_INVALID_ARGUMENT);
+
+  desc.struct_size = GRANIT_WINDOW_DESC_VERSION_1_SIZE;
+  CHECK(granit_window_create(UINT64_MAX, &desc, &target_window) == GRANIT_ERROR_INVALID_HANDLE);
 }

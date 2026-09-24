@@ -23,13 +23,88 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 | RenderPipeline | 可用，未冻结 | Scene Snapshot、Material、Forward PBR、Shadow、IBL、UI 与后处理 |
 | Window 与 Input | 可用，未冻结 | 单一 Window System 管理窗口、事件、输入状态和直接 Surface 创建 |
 | AssetTools | 实验性 | HLSL-first Shader Library、Material、Texture、Environment 构建与检查 |
-| SDK 与发布 | 可用 | Windows/Linux shared/static、安装审计与不可变候选晋级 |
+| SDK 与发布 | 可用 | Windows/Linux shared SDK、静态源码构建、安装审计与不可变候选晋级 |
 
 各能力的准确使用方式和限制以 [Reference](README.md#api-与行为参考) 为准。
 
 ## 当前计划
 
-当前没有正在实施的计划。下一项工作根据真实使用反馈重新排定，不预先承诺版本范围。
+### S-63：Model Viewer Session 与平台壳收敛
+
+**状态：实施中，P1。**
+
+[S-63](plans/S-63-model-viewer-session-platform-shells.md) 将 Desktop/Web 重复的启动、加载、UI 帧
+构造和呈现恢复收进共享 Session，并继续保留 threaded/inline 与宿主平台差异。
+
+### S-62：Model Viewer 统一 Render Service
+
+**状态：本地实施与浏览器验收完成，等待远端跨平台验收，P1。**
+
+[S-62](plans/S-62-model-viewer-render-service.md) 统一 Desktop/Web 对 Render Runtime 的调用门面，
+并把线程队列、帧替换和完成回执收窄为 Desktop 执行策略。
+
+### S-61：Model Viewer 共享 ImGui 与浏览器测试边界
+
+**状态：本地实施与浏览器验收完成，等待远端跨平台验收，P1。**
+
+[S-61](plans/S-61-model-viewer-shared-imgui-browser-tests.md) 让 Desktop/Web 使用同一套 ImGui Viewer
+面板，并把浏览器测试导出和 Pipeline C API 探针移出正式运行路径。
+
+### S-60：Model Viewer 共享渲染运行时
+
+**状态：本地实施与浏览器验收完成，等待远端跨平台验收，P1。**
+
+[S-60](plans/S-60-model-viewer-shared-render-runtime.md) 将 Desktop/Web 重复的 Renderer、Surface、
+Swapchain、Pipeline 和帧执行逻辑提取为同步 `render_runtime`，并由 threaded/inline executor 选择
+执行位置。
+
+### S-59：Model Viewer 渲染任务运行时
+
+**状态：本地实施与浏览器验收完成，等待远端跨平台验收，P1。**
+
+[S-59](plans/S-59-model-viewer-render-task-runtime.md) 将帧执行器提升为拥有型强类型渲染任务执行器，
+以 threaded/inline 两种策略统一 Desktop/Web 的 GPU 任务语义，并在其上收敛 Viewer 生命周期状态机。
+
+### S-58：统一 Example Asset System
+
+**状态：实施中，P1。**
+
+[S-58](plans/S-58-unified-example-asset-system.md) 将资产身份、来源与读取调度拆开，以逻辑 Mount 和
+统一请求隐藏 Desktop 目录、Emscripten 预加载文件系统与 Fetch 差异，并统一 Application Host、
+Tutorial、glTF 和 Model Viewer 的资产入口。
+
+### S-57：Model Viewer 运行时架构
+
+**状态：实施完成，等待远端 Linux 验收，P1。**
+
+[S-57](plans/S-57-model-viewer-runtime-architecture.md) 在保持 Desktop 渲染线程、Web inline/Asyncify
+和现有目录入口的前提下，拆分 Viewer Core 输出、执行包、桌面渲染服务与浏览器验收接口，使两个
+千行平台入口回到清晰的组合职责。
+
+### S-56：Window Target 与 SDL3 后端
+
+**状态：实施完成，等待远端 Linux 验收，P1。**
+
+[S-56](plans/S-56-window-target-and-sdl3-backend.md) 分离 Window Backend 与 Window Target，先让
+原生 Emscripten 支持多 Canvas，再以可选 SDL3 后端统一桌面与浏览器的 Window API。Windows、
+Emscripten、浏览器和安装 Consumer 本地验收已经通过，等待远端 Linux XCB/Wayland 与 SDL3 矩阵。
+
+### S-54：0.30.0 特性教程与 Example Application
+
+**状态：实施完成，等待远端验收，P1。**
+
+[S-54](plans/S-54-0.30.0-feature-tutorial-framework.md) 将以仓库私有 Application 统一示例生命周期，
+把线性教程压缩为 Cube 与 PBR Assets 两个特性入口，将完整 Model Viewer 移回 Samples，并删除
+重复的最小 Model Loading 应用。
+Windows、Emscripten 与浏览器本地验收已经通过，等待远端 Linux 与 Release 矩阵。
+
+### S-53：0.30.0 文档、教程与发布面收敛
+
+**状态：实施完成，等待远端验收，P1。**
+
+[S-53](plans/S-53-0.30.0-documentation-tutorial-release.md) 将明确 Frame Context 与 Command Recorder
+的分层，收敛文档和十章教程入口，并让正式 Release 只提供推荐的 shared SDK。静态源码构建和 CI
+验证继续保留。
 
 ## 最近完成
 

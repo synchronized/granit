@@ -21,6 +21,13 @@
 
 ## 稳定化与跨平台
 
+- [2026-09-24 S-62 Model Viewer 统一 Render Service 本地验收](2026-09-24-s62-model-viewer-render-service-local-acceptance.md)
+- [2026-09-24 S-60 Model Viewer 共享渲染运行时本地验收](2026-09-24-s60-shared-render-runtime-local-acceptance.md)
+- [2026-09-24 S-59 Model Viewer 渲染任务运行时本地验收](2026-09-24-s59-model-viewer-render-runtime-local-acceptance.md)
+- [2026-09-24 S-57 Model Viewer 运行时架构本地验收](2026-09-24-s57-model-viewer-runtime-local-acceptance.md)
+- [2026-09-24 S-56 Window Target 与 SDL3 后端本地验收](2026-09-24-s56-window-sdl3-local-acceptance.md)
+- [2026-09-23 S-54 特性教程与 Example Application 本地验收](2026-09-23-s54-feature-tutorial-acceptance.md)
+- [2026-09-23 S-53 文档、教程与发布面本地验收](2026-09-23-s53-documentation-tutorial-release-acceptance.md)
 - [2026-09-23 Granit 0.29.0 发布验收](2026-09-23-v0.29.0-release-acceptance.md)
 - [2026-09-23 S-52 0.29.0 本地验收](2026-09-23-s52-0.29-local-acceptance.md)
 - [2026-09-23 S-50 Model Viewer 教程迁移验收](2026-09-23-s50-model-viewer-tutorial-acceptance.md)
