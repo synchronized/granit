@@ -29,6 +29,14 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 
 ## 当前计划
 
+### S-60：Model Viewer 共享渲染运行时
+
+**状态：实施中，P1。**
+
+[S-60](plans/S-60-model-viewer-shared-render-runtime.md) 将 Desktop/Web 重复的 Renderer、Surface、
+Swapchain、Pipeline 和帧执行逻辑提取为同步 `render_runtime`，并由 threaded/inline executor 选择
+执行位置。
+
 ### S-59：Model Viewer 渲染任务运行时
 
 **状态：本地实施与浏览器验收完成，等待远端跨平台验收，P1。**
