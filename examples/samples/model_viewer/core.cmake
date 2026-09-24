@@ -44,7 +44,7 @@ target_include_directories(
 )
 target_link_libraries(
   granit_sample_model_viewer_core
-  PUBLIC granit_example_model_scene granit_example_imgui_canvas
+  PUBLIC granit::window granit_example_model_scene granit_example_imgui_canvas
 )
 set_target_properties(granit_sample_model_viewer_core PROPERTIES FOLDER "Examples/Samples")
 granit_target_compile_warnings(granit_sample_model_viewer_core)
