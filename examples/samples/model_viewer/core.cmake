@@ -9,8 +9,8 @@ add_library(
   application_core.h
   environment_ktx2.cpp
   environment_ktx2.h
-  frame_executor.cpp
-  frame_executor.h
+  render_task_executor.cpp
+  render_task_executor.h
   model_loading_session.cpp
   model_loading_session.h
   orbit_camera.cpp
@@ -60,7 +60,7 @@ if(GRANIT_HAS_NATIVE_WINDOW AND GRANIT_TESTING_ENABLED)
     granit_sample_model_viewer_support_test
     application_core_test.cpp
     environment_ktx2_test.cpp
-    frame_executor_test.cpp
+    render_task_executor_test.cpp
     gpu_scene_test.cpp
     model_loading_session_test.cpp
     orbit_camera_test.cpp

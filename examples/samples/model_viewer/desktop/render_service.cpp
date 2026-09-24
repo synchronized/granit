@@ -29,7 +29,7 @@ struct render_service_state {
   granit::texture_view font_view;
   granit::sampler font_sampler;
   granit::render_pipeline pipeline;
-  threaded_frame_executor executor;
+  threaded_render_task_executor executor;
   std::size_t next_canvas{};
   bool metrics_enabled{};
 
@@ -338,7 +338,9 @@ granit::result render_service::initialize(granit::window& window,
       }
     }
     if (result.ok())
-      result = state->executor.initialize(execute_frame, state.get());
+      result = state->executor.initialize([context = state.get()](auto&& packet, auto& output) {
+        return execute_frame(std::move(packet), output, context);
+      });
     if (result.failed())
       return result;
     state_ = std::move(state);
@@ -367,8 +369,8 @@ granit::result render_service::begin_gpu_upload(const gpu_upload_desc& desc) noe
   state_->upload_cancelled.store(false, std::memory_order_release);
   state_->upload_progress_result = granit::result::success;
   state_->displayed_percentage = 40;
-  const auto result =
-      state_->executor.submit_command(execute_gpu_upload, state_.get(), state_->upload_sequence);
+  const auto result = state_->executor.submit_task(
+      [context = state_.get()] { return execute_gpu_upload(context); }, state_->upload_sequence);
   state_->upload_active = result.ok();
   return result;
 }
@@ -376,8 +378,8 @@ granit::result render_service::begin_gpu_upload(const gpu_upload_desc& desc) noe
 bool render_service::try_finish_gpu_upload(granit::result& status) noexcept {
   if (!state_ || !state_->upload_active)
     return false;
-  render_command_completion completion;
-  if (!state_->executor.try_take_command_completion(completion))
+  render_task_completion completion;
+  if (!state_->executor.try_take_task_completion(completion))
     return false;
   if (completion.sequence != state_->upload_sequence) {
     status = granit::result::internal;
@@ -437,7 +439,8 @@ granit::result render_service::render_loading_frame(const imgui::frame_canvas_da
 granit::result render_service::finish_loading() noexcept {
   if (!state_)
     return granit::result::not_ready;
-  return state_->executor.run_command(desktop::finish_loading, state_.get());
+  return state_->executor.run_task(
+      [context = state_.get()] { return desktop::finish_loading(context); });
 }
 
 granit::result render_service::initialize_font_atlas(std::span<const std::byte> pixels,
@@ -447,7 +450,8 @@ granit::result render_service::initialize_font_atlas(std::span<const std::byte> 
     return granit::result::invalid_argument;
   font_atlas_context context{
       .state = state_.get(), .pixels = pixels, .width = width, .height = height};
-  return state_->executor.run_command(desktop::initialize_font_atlas, &context);
+  return state_->executor.run_task(
+      [&context] { return desktop::initialize_font_atlas(&context); });
 }
 
 granit::texture_view_ref render_service::font_view() const noexcept {
@@ -463,14 +467,14 @@ render_service::initialize_pipeline(const granit::render_pipeline_desc& desc) no
   if (!state_ || state_->upload_active)
     return granit::result::not_ready;
   pipeline_context context{.state = state_.get(), .desc = desc};
-  return state_->executor.run_command(replace_pipeline, &context);
+  return state_->executor.run_task([&context] { return replace_pipeline(&context); });
 }
 
 granit::result render_service::recreate_swapchain(const granit::swapchain_desc& desc) noexcept {
   if (!state_ || state_->upload_active)
     return granit::result::not_ready;
   swapchain_context context{.state = state_.get(), .desc = desc};
-  return state_->executor.run_command(desktop::recreate_swapchain, &context);
+  return state_->executor.run_task([&context] { return desktop::recreate_swapchain(&context); });
 }
 
 granit::result render_service::recreate_surface(granit::window& window,
@@ -502,7 +506,7 @@ granit::result render_service::change_quality(const granit::render_pipeline_desc
                            .desc = desc,
                            .sampler_anisotropy = sampler_anisotropy,
                            .reupload_scene = reupload_scene};
-  const auto result = state_->executor.run_command(replace_pipeline, &context);
+  const auto result = state_->executor.run_task([&context] { return replace_pipeline(&context); });
   output = {.scene_reuploaded = result.ok() && reupload_scene};
   return result;
 }
@@ -512,7 +516,7 @@ granit::result render_service::update_material(std::uint32_t material_index,
   if (!state_ || state_->upload_active)
     return granit::result::not_ready;
   material_context context{.state = state_.get(), .material_index = material_index, .edit = edit};
-  return state_->executor.run_command(desktop::update_material, &context);
+  return state_->executor.run_task([&context] { return desktop::update_material(&context); });
 }
 
 bool render_service::can_submit_frame() const noexcept {
@@ -551,7 +555,7 @@ granit::result render_service::shutdown() noexcept {
     static_cast<void>(try_finish_gpu_upload(upload_result));
   }
   shutdown_context context{.state = state_.get()};
-  const auto result = state_->executor.run_command(shutdown_renderer, &context);
+  const auto result = state_->executor.run_task([&context] { return shutdown_renderer(&context); });
   state_->executor.stop();
   return result;
 }

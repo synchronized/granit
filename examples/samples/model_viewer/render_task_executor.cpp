@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "frame_executor.h"
+#include "render_task_executor.h"
 
 #include <algorithm>
 #include <chrono>
@@ -14,28 +14,27 @@
 
 namespace granit::example::model_viewer {
 
-inline_frame_executor::inline_frame_executor(frame_execute_callback callback,
-                                             void* user_data) noexcept
-    : callback_(callback), user_data_(user_data) {}
+inline_render_task_executor::inline_render_task_executor(render_frame_callback callback) noexcept
+    : callback_(std::move(callback)) {}
 
-granit::result inline_frame_executor::submit(frame_packet packet, frame_execution_result& output) {
+granit::result inline_render_task_executor::submit(frame_packet packet,
+                                                   frame_execution_result& output) {
   output = {};
   if (callback_ == nullptr)
     return granit::result::invalid_argument;
-  return callback_(std::move(packet), output, user_data_);
+  return callback_(std::move(packet), output);
 }
 
-granit::result inline_frame_executor::flush() noexcept { return granit::result::success; }
+granit::result inline_render_task_executor::flush() noexcept { return granit::result::success; }
 
-struct threaded_frame_executor::state {
-  enum class task_kind { frame, command };
+struct threaded_render_task_executor::state {
+  enum class task_kind { frame, control };
 
   struct queued_task {
     task_kind kind{task_kind::frame};
     std::uint64_t sequence{};
     frame_packet packet;
-    render_command_callback command{};
-    void* command_user_data{};
+    render_control_task control;
     std::chrono::steady_clock::time_point enqueued_at{};
   };
 
@@ -44,10 +43,9 @@ struct threaded_frame_executor::state {
   std::condition_variable idle;
   std::deque<queued_task> pending;
   std::deque<frame_completion> completed;
-  std::deque<render_command_completion> completed_commands;
+  std::deque<render_task_completion> completed_tasks;
   std::thread worker;
-  frame_execute_callback callback{};
-  void* user_data{};
+  render_frame_callback callback;
   std::size_t maximum_pending_frames{3};
   std::uint64_t next_sequence{1};
   bool executing{};
@@ -57,7 +55,7 @@ struct threaded_frame_executor::state {
   void run() noexcept;
 };
 
-void threaded_frame_executor::state::run() noexcept {
+void threaded_render_task_executor::state::run() noexcept {
   for (;;) {
     queued_task queued;
     {
@@ -71,7 +69,7 @@ void threaded_frame_executor::state::run() noexcept {
     }
 
     frame_completion completion;
-    render_command_completion command_completion;
+    render_task_completion task_completion;
     if (queued.kind == task_kind::frame) {
       completion.sequence = queued.sequence;
       completion.execution.queue_wait_ms =
@@ -79,16 +77,16 @@ void threaded_frame_executor::state::run() noexcept {
                                                    queued.enqueued_at)
               .count();
       try {
-        completion.status = callback(std::move(queued.packet), completion.execution, user_data);
+        completion.status = callback(std::move(queued.packet), completion.execution);
       } catch (...) {
         completion.status = granit::result::internal;
       }
     } else {
-      command_completion.sequence = queued.sequence;
+      task_completion.sequence = queued.sequence;
       try {
-        command_completion.status = queued.command(queued.command_user_data);
+        task_completion.status = queued.control();
       } catch (...) {
-        command_completion.status = granit::result::internal;
+        task_completion.status = granit::result::internal;
       }
     }
     {
@@ -96,7 +94,7 @@ void threaded_frame_executor::state::run() noexcept {
       if (queued.kind == task_kind::frame)
         completed.push_back(std::move(completion));
       else
-        completed_commands.push_back(std::move(command_completion));
+        completed_tasks.push_back(std::move(task_completion));
       executing = false;
       if (pending.empty())
         idle.notify_all();
@@ -104,18 +102,17 @@ void threaded_frame_executor::state::run() noexcept {
   }
 }
 
-threaded_frame_executor::threaded_frame_executor() = default;
+threaded_render_task_executor::threaded_render_task_executor() = default;
 
-threaded_frame_executor::~threaded_frame_executor() { stop(); }
+threaded_render_task_executor::~threaded_render_task_executor() { stop(); }
 
-granit::result threaded_frame_executor::initialize(frame_execute_callback callback, void* user_data,
-                                                   std::size_t maximum_pending_frames) noexcept {
-  if (callback == nullptr || maximum_pending_frames == 0 || state_)
+granit::result threaded_render_task_executor::initialize(render_frame_callback callback,
+                                                         std::size_t maximum_pending_frames) noexcept {
+  if (!callback || maximum_pending_frames == 0 || state_)
     return granit::result::invalid_argument;
   try {
     auto candidate = std::make_unique<state>();
-    candidate->callback = callback;
-    candidate->user_data = user_data;
+    candidate->callback = std::move(callback);
     candidate->maximum_pending_frames = maximum_pending_frames;
     candidate->worker = std::thread(&state::run, candidate.get());
     state_ = std::move(candidate);
@@ -127,8 +124,8 @@ granit::result threaded_frame_executor::initialize(frame_execute_callback callba
   }
 }
 
-granit::result threaded_frame_executor::submit(frame_packet packet,
-                                               std::uint64_t& sequence) noexcept {
+granit::result threaded_render_task_executor::submit(frame_packet packet,
+                                                     std::uint64_t& sequence) noexcept {
   if (!state_)
     return granit::result::not_ready;
   try {
@@ -156,8 +153,7 @@ granit::result threaded_frame_executor::submit(frame_packet packet,
     state_->pending.push_back({.kind = state::task_kind::frame,
                                .sequence = sequence,
                                .packet = std::move(packet),
-                               .command = nullptr,
-                               .command_user_data = nullptr,
+                               .control = {},
                                .enqueued_at = std::chrono::steady_clock::now()});
     state_->stats.pending_high_watermark =
         std::max(state_->stats.pending_high_watermark, state_->pending.size());
@@ -170,12 +166,11 @@ granit::result threaded_frame_executor::submit(frame_packet packet,
   }
 }
 
-granit::result threaded_frame_executor::submit_command(render_command_callback callback,
-                                                       void* user_data,
-                                                       std::uint64_t& sequence) noexcept {
+granit::result threaded_render_task_executor::submit_task(render_control_task task,
+                                                          std::uint64_t& sequence) noexcept {
   if (!state_)
     return granit::result::not_ready;
-  if (callback == nullptr)
+  if (!task)
     return granit::result::invalid_argument;
   try {
     std::lock_guard lock(state_->mutex);
@@ -185,11 +180,10 @@ granit::result threaded_frame_executor::submit_command(render_command_callback c
     if (state_->pending.size() >= state_->maximum_pending_frames + 8)
       return granit::result::not_ready;
     sequence = state_->next_sequence++;
-    state_->pending.push_back({.kind = state::task_kind::command,
+    state_->pending.push_back({.kind = state::task_kind::control,
                                .sequence = sequence,
                                .packet = {},
-                               .command = callback,
-                               .command_user_data = user_data,
+                               .control = std::move(task),
                                .enqueued_at = std::chrono::steady_clock::now()});
     state_->stats.pending_high_watermark =
         std::max(state_->stats.pending_high_watermark, state_->pending.size());
@@ -202,7 +196,7 @@ granit::result threaded_frame_executor::submit_command(render_command_callback c
   }
 }
 
-bool threaded_frame_executor::can_submit_frame() const noexcept {
+bool threaded_render_task_executor::can_submit_frame() const noexcept {
   if (!state_)
     return false;
   std::lock_guard lock(state_->mutex);
@@ -213,7 +207,7 @@ bool threaded_frame_executor::can_submit_frame() const noexcept {
   return static_cast<std::size_t>(pending_frames) < state_->maximum_pending_frames;
 }
 
-void threaded_frame_executor::record_skipped_frame_build() noexcept {
+void threaded_render_task_executor::record_skipped_frame_build() noexcept {
   if (!state_)
     return;
   std::lock_guard lock(state_->mutex);
@@ -221,7 +215,7 @@ void threaded_frame_executor::record_skipped_frame_build() noexcept {
     ++state_->stats.skipped_frame_builds;
 }
 
-bool threaded_frame_executor::try_take_completion(frame_completion& completion) noexcept {
+bool threaded_render_task_executor::try_take_completion(frame_completion& completion) noexcept {
   if (!state_)
     return false;
   std::lock_guard lock(state_->mutex);
@@ -232,26 +226,26 @@ bool threaded_frame_executor::try_take_completion(frame_completion& completion) 
   return true;
 }
 
-bool threaded_frame_executor::try_take_command_completion(
-    render_command_completion& completion) noexcept {
+bool threaded_render_task_executor::try_take_task_completion(
+    render_task_completion& completion) noexcept {
   if (!state_)
     return false;
   std::lock_guard lock(state_->mutex);
-  if (state_->completed_commands.empty())
+  if (state_->completed_tasks.empty())
     return false;
-  completion = std::move(state_->completed_commands.front());
-  state_->completed_commands.pop_front();
+  completion = std::move(state_->completed_tasks.front());
+  state_->completed_tasks.pop_front();
   return true;
 }
 
-render_task_queue_stats threaded_frame_executor::query_queue_stats() const noexcept {
+render_task_queue_stats threaded_render_task_executor::query_queue_stats() const noexcept {
   if (!state_)
     return {};
   std::lock_guard lock(state_->mutex);
   return state_->stats;
 }
 
-granit::result threaded_frame_executor::flush() noexcept {
+granit::result threaded_render_task_executor::flush() noexcept {
   if (!state_)
     return granit::result::not_ready;
   std::unique_lock lock(state_->mutex);
@@ -259,10 +253,9 @@ granit::result threaded_frame_executor::flush() noexcept {
   return granit::result::success;
 }
 
-granit::result threaded_frame_executor::run_command(render_command_callback callback,
-                                                    void* user_data) noexcept {
+granit::result threaded_render_task_executor::run_task(render_control_task task) noexcept {
   std::uint64_t sequence{};
-  auto result = submit_command(callback, user_data, sequence);
+  auto result = submit_task(std::move(task), sequence);
   if (result.failed())
     return result;
   result = flush();
@@ -270,16 +263,16 @@ granit::result threaded_frame_executor::run_command(render_command_callback call
     return result;
   std::lock_guard lock(state_->mutex);
   const auto completion =
-      std::ranges::find_if(state_->completed_commands,
+      std::ranges::find_if(state_->completed_tasks,
                            [sequence](const auto& value) { return value.sequence == sequence; });
-  if (completion == state_->completed_commands.end())
+  if (completion == state_->completed_tasks.end())
     return granit::result::internal;
   const auto status = completion->status;
-  state_->completed_commands.erase(completion);
+  state_->completed_tasks.erase(completion);
   return status;
 }
 
-void threaded_frame_executor::stop() noexcept {
+void threaded_render_task_executor::stop() noexcept {
   if (!state_)
     return;
   static_cast<void>(flush());
@@ -293,7 +286,7 @@ void threaded_frame_executor::stop() noexcept {
   state_.reset();
 }
 
-bool threaded_frame_executor::running() const noexcept {
+bool threaded_render_task_executor::running() const noexcept {
   if (!state_)
     return false;
   std::lock_guard lock(state_->mutex);

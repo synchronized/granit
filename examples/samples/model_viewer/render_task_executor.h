@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_FRAME_EXECUTOR_H_
-#define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_FRAME_EXECUTOR_H_
+#ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_RENDER_TASK_EXECUTOR_H_
+#define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_RENDER_TASK_EXECUTOR_H_
 
 #include "imgui/frame_canvas_data.h"
 #include "model_viewer/application_core.h"
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
 
 namespace granit::example::model_viewer {
@@ -37,12 +38,12 @@ struct frame_completion {
   bool dropped{};
 };
 
-using frame_execute_callback = granit::result (*)(frame_packet&& packet,
-                                                  frame_execution_result& output, void* user_data);
-using render_command_callback = granit::result (*)(void* user_data);
+using render_frame_callback = std::function<granit::result(frame_packet&& packet,
+                                                           frame_execution_result& output)>;
+using render_control_task = std::function<granit::result()>;
 
 /** 不可丢弃命令的完成回执。 */
-struct render_command_completion {
+struct render_task_completion {
   std::uint64_t sequence{};
   granit::result status{granit::result::unknown};
 };
@@ -56,9 +57,9 @@ struct render_task_queue_stats {
 };
 
 /** 示例私有帧执行边界；实现负责完整消费传入的不可变帧包。 */
-class frame_executor {
+class render_task_executor {
 public:
-  virtual ~frame_executor() = default;
+  virtual ~render_task_executor() = default;
 
   [[nodiscard]] virtual granit::result submit(frame_packet packet,
                                               frame_execution_result& output) = 0;
@@ -66,41 +67,39 @@ public:
 };
 
 /** 在调用线程立即执行帧的实现，供同步平台和线程迁移前的桌面路径使用。 */
-class inline_frame_executor final : public frame_executor {
+class inline_render_task_executor final : public render_task_executor {
 public:
-  inline_frame_executor(frame_execute_callback callback, void* user_data) noexcept;
+  explicit inline_render_task_executor(render_frame_callback callback) noexcept;
 
   [[nodiscard]] granit::result submit(frame_packet packet, frame_execution_result& output) override;
   [[nodiscard]] granit::result flush() noexcept override;
 
 private:
-  frame_execute_callback callback_{};
-  void* user_data_{};
+  render_frame_callback callback_;
 };
 
 /** 桌面用有界异步执行器；所有回调只在其专用工作线程串行执行。 */
-class threaded_frame_executor final {
+class threaded_render_task_executor final {
 public:
-  threaded_frame_executor();
-  ~threaded_frame_executor();
-  threaded_frame_executor(const threaded_frame_executor&) = delete;
-  threaded_frame_executor& operator=(const threaded_frame_executor&) = delete;
+  threaded_render_task_executor();
+  ~threaded_render_task_executor();
+  threaded_render_task_executor(const threaded_render_task_executor&) = delete;
+  threaded_render_task_executor& operator=(const threaded_render_task_executor&) = delete;
 
-  [[nodiscard]] granit::result initialize(frame_execute_callback callback, void* user_data,
+  [[nodiscard]] granit::result initialize(render_frame_callback callback,
                                           std::size_t maximum_pending_frames = 3) noexcept;
   [[nodiscard]] granit::result submit(frame_packet packet, std::uint64_t& sequence) noexcept;
-  /** 提交资源或控制命令；队列已满时返回 not_ready，不替换已有任务。 */
-  [[nodiscard]] granit::result submit_command(render_command_callback callback, void* user_data,
-                                              std::uint64_t& sequence) noexcept;
-  /** 提交不可丢弃命令并等待其完成；调用方必须保证命令上下文在返回前有效。 */
-  [[nodiscard]] granit::result run_command(render_command_callback callback,
-                                           void* user_data) noexcept;
+  /** 提交拥有其捕获数据的控制任务；队列已满时返回 not_ready，不替换已有任务。 */
+  [[nodiscard]] granit::result submit_task(render_control_task task,
+                                           std::uint64_t& sequence) noexcept;
+  /** 提交不可丢弃控制任务并等待其完成。 */
+  [[nodiscard]] granit::result run_task(render_control_task task) noexcept;
   /** 返回当前是否有待处理帧容量；单生产者仍须处理 submit 的最终结果。 */
   [[nodiscard]] bool can_submit_frame() const noexcept;
   /** 记录调用方因容量不足而在构造前跳过的帧。 */
   void record_skipped_frame_build() noexcept;
   [[nodiscard]] bool try_take_completion(frame_completion& completion) noexcept;
-  [[nodiscard]] bool try_take_command_completion(render_command_completion& completion) noexcept;
+  [[nodiscard]] bool try_take_task_completion(render_task_completion& completion) noexcept;
   [[nodiscard]] render_task_queue_stats query_queue_stats() const noexcept;
   [[nodiscard]] granit::result flush() noexcept;
   void stop() noexcept;

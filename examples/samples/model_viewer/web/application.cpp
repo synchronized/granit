@@ -30,7 +30,7 @@
 
 #include "application/application_host.h"
 #include "model_viewer/application_core.h"
-#include "model_viewer/frame_executor.h"
+#include "model_viewer/render_task_executor.h"
 #include "model_viewer/model_loading_session.h"
 #include "model_viewer/viewer_input_accumulator.h"
 
@@ -340,8 +340,10 @@ granit_result render_model_viewer_frame() {
     result = granit::to_native(state.core.tick(input, output.viewer));
   if (result == GRANIT_SUCCESS) {
     web_frame_execution_context execution_context{&info};
-    granit::example::model_viewer::inline_frame_executor executor(execute_web_frame,
-                                                                  &execution_context);
+    granit::example::model_viewer::inline_render_task_executor executor(
+        [&execution_context](auto&& packet, auto& output) {
+          return execute_web_frame(std::move(packet), output, &execution_context);
+        });
     granit::example::model_viewer::frame_execution_result execution;
     result = granit::to_native(executor.submit(std::move(output), execution));
   }

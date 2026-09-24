@@ -11,7 +11,7 @@
 #include "imgui/imgui_texture_registry.h"
 #include "imgui/imgui_theme.h"
 #include "model_viewer/application_core.h"
-#include "model_viewer/frame_executor.h"
+#include "model_viewer/render_task_executor.h"
 #include "model_viewer/model_loading_session.h"
 #include "model_viewer/viewer_input_accumulator.h"
 #include "model_viewer/viewer_panels.h"

@@ -35,7 +35,7 @@
 #include <granit/window/window.hpp>
 
 #include "model_viewer/application_core.h"
-#include "model_viewer/frame_executor.h"
+#include "model_viewer/render_task_executor.h"
 #include "model_viewer/web/application.h"
 #include "support/renderer_fixture.h"
 

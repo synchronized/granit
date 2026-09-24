@@ -5,7 +5,7 @@
 #define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_DESKTOP_RENDER_SERVICE_H_
 
 #include "model_viewer/application_core.h"
-#include "model_viewer/frame_executor.h"
+#include "model_viewer/render_task_executor.h"
 
 #include <granit/granit.hpp>
 #include <granit/pipeline/canvas_draw_list.hpp>

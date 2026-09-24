@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "frame_executor.h"
+#include "render_task_executor.h"
 
 #include <catch2/catch_all.hpp>
 
@@ -60,7 +60,10 @@ granit::result execute_command(void* user_data) {
 
 TEST_CASE("同步帧执行器完整转发帧包和执行结果") {
   callback_state state;
-  granit::example::model_viewer::inline_frame_executor executor(execute_frame, &state);
+  granit::example::model_viewer::inline_render_task_executor executor(
+      [&state](auto&& packet, auto& output) {
+        return execute_frame(std::move(packet), output, &state);
+      });
   granit::example::model_viewer::frame_packet packet;
   packet.viewer.width = 1280;
   granit::example::model_viewer::frame_execution_result output;
@@ -74,7 +77,7 @@ TEST_CASE("同步帧执行器完整转发帧包和执行结果") {
 }
 
 TEST_CASE("同步帧执行器拒绝空回调") {
-  granit::example::model_viewer::inline_frame_executor executor(nullptr, nullptr);
+  granit::example::model_viewer::inline_render_task_executor executor({});
   granit::example::model_viewer::frame_execution_result output;
   output.needs_recreate = true;
 
@@ -85,8 +88,14 @@ TEST_CASE("同步帧执行器拒绝空回调") {
 TEST_CASE("线程帧执行器限制待处理队列并回报被替换帧") {
   using namespace granit::example::model_viewer;
   blocking_callback_state state;
-  threaded_frame_executor executor;
-  REQUIRE(executor.initialize(execute_blocking_frame, &state, 2).ok());
+  threaded_render_task_executor executor;
+  REQUIRE(executor
+              .initialize(
+                  [&state](auto&& packet, auto& output) {
+                    return execute_blocking_frame(std::move(packet), output, &state);
+                  },
+                  2)
+              .ok());
   CHECK(executor.running());
 
   std::uint64_t first{};
@@ -108,7 +117,7 @@ TEST_CASE("线程帧执行器限制待处理队列并回报被替换帧") {
   REQUIRE(executor.submit(std::move(packet), third).ok());
   CHECK_FALSE(executor.can_submit_frame());
   executor.record_skipped_frame_build();
-  REQUIRE(executor.submit_command(execute_command, &state, command).ok());
+  REQUIRE(executor.submit_task([&state] { return execute_command(&state); }, command).ok());
   packet.viewer.width = 4;
   REQUIRE(executor.submit(std::move(packet), fourth).ok());
   {
@@ -136,42 +145,51 @@ TEST_CASE("线程帧执行器限制待处理队列并回报被替换帧") {
   CHECK(queue_stats.render_lag_ms >= 0.0F);
   CHECK(completions.front().execution.queue_wait_ms >= 0.0F);
 
-  render_command_completion command_completion;
-  REQUIRE(executor.try_take_command_completion(command_completion));
+  render_task_completion command_completion;
+  REQUIRE(executor.try_take_task_completion(command_completion));
   CHECK(command_completion.sequence == command);
   CHECK(command_completion.status.ok());
-  CHECK_FALSE(executor.try_take_command_completion(command_completion));
+  CHECK_FALSE(executor.try_take_task_completion(command_completion));
 
   executor.stop();
   CHECK_FALSE(executor.running());
   CHECK_FALSE(executor.can_submit_frame());
   CHECK(executor.query_queue_stats().pending_high_watermark == 0);
   CHECK(executor.submit({}, first) == granit::result::not_ready);
-  CHECK(executor.submit_command(execute_command, &state, command) == granit::result::not_ready);
+  CHECK(executor.submit_task([&state] { return execute_command(&state); }, command) ==
+        granit::result::not_ready);
 }
 
 TEST_CASE("线程帧执行器拒绝空命令") {
   using namespace granit::example::model_viewer;
-  threaded_frame_executor executor;
-  REQUIRE(executor.initialize(execute_frame, nullptr).ok());
+  threaded_render_task_executor executor;
+  REQUIRE(executor
+              .initialize([](auto&& packet, auto& output) {
+                return execute_frame(std::move(packet), output, nullptr);
+              })
+              .ok());
   std::uint64_t sequence{};
-  CHECK(executor.submit_command(nullptr, nullptr, sequence) == granit::result::invalid_argument);
-  CHECK(executor.run_command(nullptr, nullptr) == granit::result::invalid_argument);
+  CHECK(executor.submit_task({}, sequence) == granit::result::invalid_argument);
+  CHECK(executor.run_task({}) == granit::result::invalid_argument);
 }
 
 TEST_CASE("线程帧执行器同步等待不可丢弃命令") {
   using namespace granit::example::model_viewer;
   blocking_callback_state state;
-  threaded_frame_executor executor;
-  REQUIRE(executor.initialize(execute_frame, nullptr).ok());
+  threaded_render_task_executor executor;
+  REQUIRE(executor
+              .initialize([](auto&& packet, auto& output) {
+                return execute_frame(std::move(packet), output, nullptr);
+              })
+              .ok());
 
   std::uint64_t earlier_sequence{};
-  REQUIRE(executor.submit_command(execute_command, &state, earlier_sequence).ok());
-  CHECK(executor.run_command(execute_command, &state).ok());
+  REQUIRE(executor.submit_task([&state] { return execute_command(&state); }, earlier_sequence).ok());
+  CHECK(executor.run_task([&state] { return execute_command(&state); }).ok());
   CHECK(state.executed_widths == std::vector<std::uint32_t>{99, 99});
-  render_command_completion completion;
-  REQUIRE(executor.try_take_command_completion(completion));
+  render_task_completion completion;
+  REQUIRE(executor.try_take_task_completion(completion));
   CHECK(completion.sequence == earlier_sequence);
   CHECK(completion.status.ok());
-  CHECK_FALSE(executor.try_take_command_completion(completion));
+  CHECK_FALSE(executor.try_take_task_completion(completion));
 }
