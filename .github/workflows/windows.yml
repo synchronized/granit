@@ -94,6 +94,8 @@ jobs:
             -DGRANIT_INSTALL_PREFIX="$prefix" `
             -DGRANIT_TEST_BINARY_DIR="$PWD/build/package/$preset" `
             -P tests/packaging/check_installed_package.cmake
+          ctest --test-dir "$PWD/build/package/$preset/standalone-window-clear" `
+            -C Release --output-on-failure
       - name: 构建并运行独立 C 和 C++ Consumer
         shell: pwsh
         run: |
