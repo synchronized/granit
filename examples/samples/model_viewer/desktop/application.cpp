@@ -6,13 +6,13 @@
 #include "model_viewer/desktop/render_service.h"
 
 #include "assets/asset_system.h"
-#include "gltf/document_loader.h"
 #include "imgui/imgui_frame_capture.h"
 #include "imgui/imgui_input.h"
 #include "imgui/imgui_texture_registry.h"
 #include "imgui/imgui_theme.h"
 #include "model_viewer/application_core.h"
 #include "model_viewer/frame_executor.h"
+#include "model_viewer/model_loading_session.h"
 #include "model_viewer/viewer_input_accumulator.h"
 #include "model_viewer/viewer_panels.h"
 
@@ -394,8 +394,8 @@ int granit::example::model_viewer::desktop::application::run() {
        !assets.mount_location(options.asset_path, model_mount, model_path))) {
     result = granit::result::invalid_argument;
   }
-  granit::example::gltf::document_loader document_loader;
-  if (result.ok() && !document_loader.start(assets, {model_mount, model_path}))
+  granit::example::model_viewer::model_loading_session model_loading;
+  if (result.ok() && !model_loading.start(assets, {model_mount, model_path}))
     result = granit::result::internal;
   std::shared_ptr<granit::example::assets::asset_request> environment_request;
   if (result.ok() && !options.environment_path.empty()) {
@@ -411,7 +411,7 @@ int granit::example::model_viewer::desktop::application::run() {
   bool loading_cancelled = false;
 
   while (result.ok() && !asset_bytes_ready && !loading_cancelled) {
-    document_loader.poll();
+    model_loading.poll();
     desktop_window_events events;
     result = pump_window_events(window_system, window, window_state, events);
     loading_cancelled = events.close_requested;
@@ -428,9 +428,10 @@ int granit::example::model_viewer::desktop::application::run() {
     if (result.failed() || loading_cancelled)
       break;
 
-    if (document_loader.status() == granit::example::gltf::document_load_status::failed) {
-      core.fail(granit::result::invalid_argument, std::string{document_loader.diagnostic()});
-      result = granit::result::invalid_argument;
+    if (model_loading.status() ==
+        granit::example::model_viewer::model_loading_status::failed) {
+      core.fail(model_loading.result(), model_loading.diagnostic());
+      result = model_loading.result();
       break;
     }
     if (environment_request &&
@@ -444,11 +445,12 @@ int granit::example::model_viewer::desktop::application::run() {
         !environment_request ||
         environment_request->status() == granit::example::assets::asset_request_status::ready;
     asset_bytes_ready =
-        document_loader.status() == granit::example::gltf::document_load_status::ready &&
+        model_loading.status() ==
+            granit::example::model_viewer::model_loading_status::assets_ready &&
         environment_ready;
 
     if (result.ok() && options.show_ui && !asset_bytes_ready) {
-      const auto progress = document_loader.progress().document;
+      const auto progress = model_loading.progress().document;
       const auto fraction = progress.total_bytes && *progress.total_bytes > 0
                                 ? static_cast<float>(progress.received_bytes) /
                                       static_cast<float>(*progress.total_bytes)
@@ -463,7 +465,7 @@ int granit::example::model_viewer::desktop::application::run() {
   }
 
   if (loading_cancelled) {
-    document_loader.cancel();
+    model_loading.cancel();
     if (environment_request)
       environment_request->cancel();
   }
@@ -477,26 +479,18 @@ int granit::example::model_viewer::desktop::application::run() {
     cpu_loading = std::async(std::launch::async, [&] {
       cpu_asset_result output;
       loading_stage.store(3, std::memory_order_release);
-      const auto loaded = granit::example::gltf::import_scene(
-          document_loader.document(), &document_loader.resolver(), output.scene);
-      if (!loaded) {
-        output.status = granit::result::invalid_argument;
-        output.diagnostic = loaded.diagnostic;
+      output.status = model_loading.prepare();
+      if (output.status.failed()) {
+        output.diagnostic = model_loading.diagnostic();
+        return output;
+      }
+      if (!model_loading.take(output.scene, output.gpu_plan)) {
+        output.status = granit::result::internal;
+        output.diagnostic = "无法取得已准备的模型资源";
         return output;
       }
       if (environment_request)
         output.environment_bytes = environment_request->bytes();
-      const auto planned =
-          granit::example::model_viewer::build_gpu_scene_plan(output.scene, output.gpu_plan);
-      if (planned != granit::example::model_viewer::gpu_scene_plan_error::none) {
-        output.status =
-            planned == granit::example::model_viewer::gpu_scene_plan_error::out_of_memory
-                ? granit::result::out_of_memory
-                : granit::result::invalid_argument;
-        output.diagnostic = "生成 GPU Scene 计划失败";
-        return output;
-      }
-      output.status = granit::result::success;
       loading_stage.store(4, std::memory_order_release);
       return output;
     });
@@ -528,6 +522,8 @@ int granit::example::model_viewer::desktop::application::run() {
       result = granit::result::success;
     std::this_thread::sleep_for(std::chrono::milliseconds{16});
   }
+  if (loading_cancelled)
+    model_loading.cancel();
   if (cpu_loading.valid()) {
     auto loaded = cpu_loading.get();
     if (result.ok() && loaded.status.failed()) {

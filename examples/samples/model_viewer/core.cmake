@@ -11,6 +11,8 @@ add_library(
   environment_ktx2.h
   frame_executor.cpp
   frame_executor.h
+  model_loading_session.cpp
+  model_loading_session.h
   orbit_camera.cpp
   orbit_camera.h
   performance_history.cpp
@@ -60,6 +62,7 @@ if(GRANIT_HAS_NATIVE_WINDOW AND GRANIT_TESTING_ENABLED)
     environment_ktx2_test.cpp
     frame_executor_test.cpp
     gpu_scene_test.cpp
+    model_loading_session_test.cpp
     orbit_camera_test.cpp
     performance_history_test.cpp
     viewer_state_test.cpp

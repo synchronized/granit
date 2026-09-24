@@ -29,9 +29,9 @@
 #include <granit/window.h>
 
 #include "application/application_host.h"
-#include "gltf/document_loader.h"
 #include "model_viewer/application_core.h"
 #include "model_viewer/frame_executor.h"
+#include "model_viewer/model_loading_session.h"
 #include "model_viewer/viewer_input_accumulator.h"
 
 #include "application.h"
@@ -66,7 +66,7 @@ struct web_platform_state {
   granit_result shutdown_result{GRANIT_SUCCESS};
   bool shutdown_complete{};
   granit::example::model_viewer::viewer_input_accumulator input;
-  granit::example::gltf::document_loader document_loader;
+  granit::example::model_viewer::model_loading_session model_loading;
   std::string asset_url;
   granit::example::assets::asset_mount asset_mount;
   std::string asset_path;
@@ -421,7 +421,7 @@ void update_web_application() noexcept {
     return;
   }
   try {
-    state.document_loader.poll();
+    state.model_loading.poll();
   } catch (const std::bad_alloc&) {
     fail("asset-allocation", GRANIT_ERROR_OUT_OF_MEMORY);
     return;
@@ -471,15 +471,13 @@ void update_web_application() noexcept {
     }
     state.core_renderer_ready = true;
   }
-  if (state.document_loader.status() == granit::example::gltf::document_load_status::failed) {
-    const auto* stage =
-        state.document_loader.error() == granit::example::gltf::document_load_error::resource_read
-            ? "asset-resource-fetch"
-            : "asset-fetch";
-    fail(stage, GRANIT_ERROR_INVALID_ARGUMENT);
+  if (state.model_loading.status() ==
+      granit::example::model_viewer::model_loading_status::failed) {
+    fail("asset-fetch", granit::to_native(state.model_loading.result()));
     return;
   }
-  if (state.document_loader.status() != granit::example::gltf::document_load_status::ready) {
+  if (state.model_loading.status() !=
+      granit::example::model_viewer::model_loading_status::assets_ready) {
     return;
   }
 
@@ -487,9 +485,13 @@ void update_web_application() noexcept {
     if (!state.asset_ready) {
       state.upload_active = true;
       state.upload_cancel_requested = false;
-      auto result =
-          state.core.load_asset(state.document_loader.document(), &state.document_loader.resolver(),
-                                report_load_progress, nullptr);
+      auto result = state.model_loading.prepare(report_load_progress, nullptr);
+      granit::example::gltf::scene scene;
+      granit::example::model_viewer::gpu_scene_plan plan;
+      if (result == granit::result::success && !state.model_loading.take(scene, plan))
+        result = granit::result::internal;
+      if (result == granit::result::success)
+        result = state.core.accept_scene(std::move(scene), std::move(plan));
       if (result != granit::result::success) {
         state.upload_active = false;
         fail("asset-load", granit::to_native(result));
@@ -592,7 +594,7 @@ void update_web_application() noexcept {
 }
 
 granit_result shutdown_web_resources() noexcept {
-  state.document_loader.cancel();
+  state.model_loading.cancel();
   state.core.reset();
 
   auto first_error = GRANIT_SUCCESS;
@@ -649,7 +651,7 @@ granit::result web_application_host::on_host_initialize() noexcept {
   try {
     state.asset_url = selected_model_url();
     if (!assets().mount_location(state.asset_url, state.asset_mount, state.asset_path) ||
-        !state.document_loader.start(assets(), {state.asset_mount, state.asset_path})) {
+        !state.model_loading.start(assets(), {state.asset_mount, state.asset_path})) {
       fail("asset-fetch-start");
       return granit::result::initialization_failed;
     }
