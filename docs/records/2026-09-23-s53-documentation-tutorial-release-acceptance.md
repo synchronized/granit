@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: MIT -->
 <!-- Copyright (c) 2026 Granit contributors -->
 
-# 2026-09-23 S-53 文档、教程与发布面本地验收
+# 2026-09-23 S-53 文档、教程与发布面验收
 
 ## 验收范围
 
@@ -30,7 +30,9 @@ shared-only 附件集合。公共 API、ABI、资产格式和静态源码构建�
 - Chrome WebGPU：Tutorial 01、08 行为测试通过；Tutorial 10 的多帧渲染、质量与光照切换、输入、
   Resize、Fetch、资源释放、异步 Pipeline、上传取消与缺失资源诊断通过。
 
-## 待远端验证
+## 远端与发布验证
 
-Windows MSVC、Linux shared/static、Emscripten Release 和正式 Release 打包仍由 Pull Request 与
-Release Actions 验证。正式发布前应确认附件只包含两个 shared SDK 和 `SHA256SUMS`。
+- Pull Request #85 的 Linux、Windows、Emscripten、Quick Check 与 Documentation 全部通过。
+- Release 工作流完成 Windows/Linux shared SDK 的构建、测试、安装、打包和消费端审计。
+- `v0.30.0` 已发布，附件精确包含 Windows/Linux x64 shared SDK 和 `SHA256SUMS`。
+- 工作流从公开 Release 重新下载全部附件并完成 SHA-256 复验。

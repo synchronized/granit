@@ -114,6 +114,7 @@
 - [S-50：0.29.0 Model Viewer 教程迁移](S-50-0.29.0-model-viewer-tutorial-migration.md)
 - [S-51：0.29.0 Shader Library 逻辑名称](S-51-0.29.0-shader-library-logical-names.md)
 - [S-52：0.29.0 版本收口与发布验收](S-52-0.29.0-release-acceptance.md)
+- [S-53：0.30.0 文档、教程与发布面收敛](S-53-0.30.0-documentation-tutorial-release.md)
 - [S-54：0.30.0 特性教程与 Example Application](S-54-0.30.0-feature-tutorial-framework.md)
 - [S-55：Example Common 架构整理](S-55-example-common-architecture.md)
 - [S-56：Window Target 与 SDL3 后端](S-56-window-target-and-sdl3-backend.md)

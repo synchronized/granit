@@ -9,15 +9,13 @@
 
 ## 当前计划
 
-- [S-53：0.30.0 文档、教程与发布面收敛](S-53-0.30.0-documentation-tutorial-release.md)——建立
-  Frame 与命令录制分层 Concept，整理教程学习路径，并把正式 Release 收敛为 shared SDK；功能与
-  跨平台矩阵已完成，等待 `0.30.0` 发布候选验收。
+当前没有正在实施的计划。新的公共能力或版本工作应先登记独立计划并明确验收边界。
 
 ## 最近完成
 
-- [S-54～S-63：0.30.0 教程、Window、资产与 Model Viewer 收敛](S-54-0.30.0-feature-tutorial-framework.md)
-  ——两个特性教程、Window Target/SDL3、统一 Example Asset System 与唯一 Model Viewer Application
-  已完成；各子计划保留独立设计和验收边界。
+- [S-53～S-63：0.30.0 文档、教程、Window、资产与 Model Viewer 收敛](S-53-0.30.0-documentation-tutorial-release.md)
+  ——完成 Frame 生命周期文档、两个特性教程、Window Target/SDL3、统一 Example Asset System、
+  唯一 Model Viewer Application 与 shared-only Release，并发布 `v0.30.0`。
 - [S-52：0.29.0 版本收口与发布验收](S-52-0.29.0-release-acceptance.md)——完成迁移说明、
   跨平台矩阵、四套 SDK 候选包、校验和与正式发布复验。
 - [S-51：0.29.0 Shader Library 逻辑名称](S-51-0.29.0-shader-library-logical-names.md)——把
