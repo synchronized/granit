@@ -17,8 +17,8 @@ add_library(
   render_runtime.h
   model_loading_session.cpp
   model_loading_session.h
-  model_viewer_runtime.cpp
-  model_viewer_runtime.h
+  viewer_session.cpp
+  viewer_session.h
   orbit_camera.cpp
   orbit_camera.h
   performance_history.cpp
@@ -70,7 +70,7 @@ if(GRANIT_HAS_NATIVE_WINDOW AND GRANIT_TESTING_ENABLED)
     render_task_executor_test.cpp
     gpu_scene_test.cpp
     model_loading_session_test.cpp
-    model_viewer_runtime_test.cpp
+    viewer_session_test.cpp
     orbit_camera_test.cpp
     performance_history_test.cpp
     presentation_recovery_test.cpp

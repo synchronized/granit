@@ -3,6 +3,8 @@
 
 #include "model_viewer/render_runtime.h"
 
+#include "model_viewer/viewer_session.h"
+
 #include <array>
 #include <chrono>
 #include <new>
@@ -17,7 +19,7 @@ struct render_runtime::state {
   granit::surface surface;
   granit::swapchain swapchain;
   granit::swapchain_info swapchain_info;
-  application_core* core{};
+  viewer_session* session{};
   granit::frame_context loading_frame_context;
   granit::canvas_draw_list loading_canvas;
   std::array<granit::canvas_draw_list, 3> frame_canvases;
@@ -34,7 +36,7 @@ render_runtime::render_runtime() = default;
 render_runtime::~render_runtime() { static_cast<void>(shutdown()); }
 
 granit::result render_runtime::initialize_renderer(const granit::renderer_desc& desc,
-                                                   application_core& core) noexcept {
+                                                   viewer_session& session) noexcept {
   if (state_)
     return granit::result::invalid_argument;
   try {
@@ -42,7 +44,7 @@ granit::result render_runtime::initialize_renderer(const granit::renderer_desc& 
     const auto result = state->renderer_owner.initialize(desc);
     if (result.failed())
       return result;
-    state->core = &core;
+    state->session = &session;
     state_ = std::move(state);
     return granit::result::success;
   } catch (const std::bad_alloc&) {
@@ -97,8 +99,8 @@ granit::result render_runtime::upload_scene(std::span<const std::byte> environme
                                             float sampler_anisotropy,
                                             gpu_scene_upload_callback progress,
                                             void* progress_user_data) {
-  return state_ ? state_->core->upload(state_->renderer_owner, environment_bytes,
-                                       sampler_anisotropy, progress, progress_user_data)
+  return state_ ? state_->session->upload(state_->renderer_owner.ref(), environment_bytes,
+                                          sampler_anisotropy, progress, progress_user_data)
                 : granit::result::not_ready;
 }
 
@@ -257,7 +259,7 @@ granit::result render_runtime::change_quality(const granit::render_pipeline_desc
       result = metrics_result;
   }
   if (result.ok() && reupload_scene)
-    result = state_->core->reupload_scene(state_->renderer_owner, sampler_anisotropy);
+    result = state_->session->reupload_scene(state_->renderer_owner.ref(), sampler_anisotropy);
   if (result.ok()) {
     state_->pipeline = std::move(replacement);
     state_->metrics_enabled = metrics_enabled;
@@ -268,8 +270,7 @@ granit::result render_runtime::change_quality(const granit::render_pipeline_desc
 
 granit::result render_runtime::update_material(std::uint32_t material_index,
                                                const material_factor_edit& edit) noexcept {
-  return state_ ? state_->core->scene_gpu().update_material_factors(state_->core->cpu_scene(),
-                                                                    material_index, edit)
+  return state_ ? state_->session->update_material(material_index, edit)
                 : granit::result::not_ready;
 }
 
@@ -312,7 +313,7 @@ granit::result render_runtime::shutdown(granit::renderer_resource_stats* final_s
       first_failure = value;
   };
   collect(state_->pipeline.reset());
-  state_->core->reset();
+  state_->session->reset();
   for (auto& canvas : state_->frame_canvases)
     collect(canvas.destroy());
   collect(state_->loading_canvas.destroy());

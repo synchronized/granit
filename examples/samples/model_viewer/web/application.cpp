@@ -13,13 +13,12 @@
 #include <emscripten/html5.h>
 
 #include "application/application_host.h"
-#include "model_viewer/application_core.h"
-#include "model_viewer/model_viewer_runtime.h"
 #include "model_viewer/presentation_recovery.h"
 #include "model_viewer/render_service.h"
 #include "model_viewer/render_task_executor.h"
 #include "model_viewer/viewer_input_accumulator.h"
 #include "model_viewer/viewer_panels.h"
+#include "model_viewer/viewer_session.h"
 #include "model_viewer/viewer_texture_previews.h"
 #include "model_viewer/viewer_ui.h"
 
@@ -41,6 +40,7 @@ granit::example::model_viewer::web::browser_test::hooks test_hooks;
 enum class startup_status : int { failed = -1, starting, provider_pending, ready, stopped };
 
 struct web_platform_state {
+  granit::example::model_viewer::viewer_session session;
   granit::example::model_viewer::inline_render_task_executor executor;
   granit::example::model_viewer::render_service rendering;
   granit::example::model_viewer::web::pipeline_warmup pipeline_warmup;
@@ -66,13 +66,10 @@ struct web_platform_state {
   bool recreate_swapchain{};
   bool recreate_surface{};
   granit::example::model_viewer::viewer_input_accumulator input;
-  granit::example::model_viewer::model_loading_session model_loading;
   std::string asset_url;
   granit::example::assets::asset_mount asset_mount;
   std::string asset_path;
-  granit::example::model_viewer::application_core core;
-  granit::example::model_viewer::model_viewer_runtime runtime{core, model_loading};
-  bool core_renderer_ready{};
+  bool session_renderer_ready{};
   bool asset_ready{};
   bool upload_active{};
   bool upload_cancel_requested{};
@@ -249,7 +246,7 @@ const char* present_mode_label(granit::present_mode mode) noexcept {
 }
 
 granit::result rebuild_previews() {
-  return state.previews.rebuild(state.core.cpu_scene(), state.core.scene_gpu(), state.ui);
+  return state.previews.rebuild(state.session.cpu_scene(), state.session.scene_gpu(), state.ui);
 }
 
 granit_result render_model_viewer_frame(float delta_seconds) {
@@ -283,14 +280,14 @@ granit_result render_model_viewer_frame(float delta_seconds) {
       .present_wait_ms = state.latest_performance.present_wait_ms,
       .gpu_frame_ms = state.latest_performance.gpu_frame_ms,
       .gpu_timing_available = state.latest_performance.gpu_timing_available,
-      .history = state.core.performance().summarize()};
+      .history = state.session.performance().summarize()};
   const granit::example::model_viewer::render_quality_config quality{
       .sample_count = state.sample_count,
       .enable_fxaa = state.enable_fxaa != 0,
       .enable_specular_aa = state.enable_specular_aa != 0,
       .sampler_anisotropy = static_cast<float>(state.sampler_anisotropy)};
   const auto changes = granit::example::model_viewer::draw_viewer_panels(
-      state.core.cpu_scene(), state.core.state(), panel_renderer, panel_performance, quality,
+      state.session.cpu_scene(), state.session.state(), panel_renderer, panel_performance, quality,
       state.previews.items());
   if (changes.quality) {
     result = execute_render_quality_change(
@@ -317,13 +314,13 @@ granit_result render_model_viewer_frame(float delta_seconds) {
   input.height = swapchain_info.height;
   input.performance = state.latest_performance;
   if (result == GRANIT_SUCCESS)
-    result = granit::to_native(state.core.tick(input, output.viewer));
+    result = granit::to_native(state.session.tick(input, output.viewer));
   if (result == GRANIT_SUCCESS)
     result = granit::to_native(state.ui.capture(output.canvas));
   if (result == GRANIT_SUCCESS && changes.material &&
-      state.core.state().selected_material() != granit::example::gltf::invalid_index) {
-    result = granit::to_native(
-        state.rendering.update_material(state.core.state().selected_material(), *changes.material));
+      state.session.state().selected_material() != granit::example::gltf::invalid_index) {
+    result = granit::to_native(state.rendering.update_material(
+        state.session.state().selected_material(), *changes.material));
   }
   if (result != GRANIT_SUCCESS)
     return result;
@@ -402,10 +399,10 @@ granit_result configure_lighting(float exposure_ev, float environment_intensity,
   granit::example::model_viewer::viewer_change change;
   change.exposure_ev = exposure_ev;
   change.environment_intensity = environment_intensity;
-  auto light = state.core.state().directional_light();
+  auto light = state.session.state().directional_light();
   light.radiance = {key_light_intensity, key_light_intensity, key_light_intensity};
   change.directional_light = light;
-  if (state.core.state().apply(state.core.cpu_scene(), change) !=
+  if (state.session.state().apply(state.session.cpu_scene(), change) !=
       granit::example::model_viewer::viewer_state_error::none)
     return GRANIT_ERROR_INVALID_ARGUMENT;
 
@@ -419,7 +416,7 @@ void update_web_application() noexcept {
     return;
   }
   try {
-    state.runtime.poll_loading();
+    state.session.poll_loading();
   } catch (const std::bad_alloc&) {
     fail("asset-allocation", GRANIT_ERROR_OUT_OF_MEMORY);
     return;
@@ -461,26 +458,26 @@ void update_web_application() noexcept {
   if (renderer_status.state != granit::renderer_state::ready) {
     return;
   }
-  if (state.runtime.loading_status() ==
+  if (state.session.loading_status() ==
       granit::example::model_viewer::model_loading_status::failed) {
-    const auto stage = state.runtime.loading_error() ==
+    const auto stage = state.session.loading_error() ==
                                granit::example::model_viewer::model_loading_error::resource_read
                            ? "asset-resource-fetch"
                            : "asset-fetch";
-    fail(stage, granit::to_native(state.runtime.loading_result()));
+    fail(stage, granit::to_native(state.session.loading_result()));
     return;
   }
-  if (!state.core_renderer_ready) {
+  if (!state.session_renderer_ready) {
     auto result = state.rendering.complete_renderer_initialization();
     if (result.ok())
-      result = state.runtime.renderer_ready();
+      result = state.session.renderer_ready();
     if (result != granit::result::success) {
       fail("core-renderer-ready", granit::to_native(result));
       return;
     }
-    state.core_renderer_ready = true;
+    state.session_renderer_ready = true;
   }
-  if (state.runtime.loading_status() !=
+  if (state.session.loading_status() !=
       granit::example::model_viewer::model_loading_status::assets_ready) {
     return;
   }
@@ -489,7 +486,7 @@ void update_web_application() noexcept {
     if (!state.asset_ready) {
       state.upload_active = true;
       state.upload_cancel_requested = false;
-      auto result = state.runtime.prepare_scene(report_load_progress, nullptr);
+      auto result = state.session.prepare_scene(report_load_progress, nullptr);
       if (result != granit::result::success) {
         state.upload_active = false;
         fail("asset-load", granit::to_native(result));
@@ -501,7 +498,7 @@ void update_web_application() noexcept {
         fail("asset-upload", granit::to_native(result));
         return;
       }
-      if (state.core.phase() != granit::example::model_viewer::application_phase::ready) {
+      if (state.session.phase() != granit::example::model_viewer::application_phase::ready) {
         fail("asset-core-phase", GRANIT_ERROR_INTERNAL);
         return;
       }
@@ -556,7 +553,7 @@ void update_web_application() noexcept {
       state.upload_active = true;
       state.upload_cancel_requested = false;
       const auto begin_result = state.pipeline_warmup.begin(
-          state.rendering.renderer(), state.core.scene_gpu(), swapchain_info.format,
+          state.rendering.renderer(), state.session.scene_gpu(), swapchain_info.format,
           static_cast<granit::sample_count>(state.sample_count));
       if (begin_result.failed()) {
         state.upload_active = false;
@@ -644,7 +641,7 @@ void update_web_application() noexcept {
 granit_result destroy_web_render_resources() noexcept {
   state.previews.clear(state.ui);
   state.ui.clear_textures();
-  state.runtime.reset();
+  state.session.reset();
   state.pipeline_warmup.reset();
 #if defined(GRANIT_MODEL_VIEWER_BROWSER_TESTS)
   state.pipeline_validation.reset();
@@ -664,7 +661,7 @@ granit_result destroy_web_render_resources() noexcept {
 granit_result shutdown_web_resources() noexcept {
   if (state.shutdown_complete)
     return state.shutdown_result;
-  state.runtime.cancel_loading();
+  state.session.cancel_loading();
   return destroy_web_render_resources();
 }
 
@@ -676,12 +673,12 @@ granit::result web_application_host::on_host_initialize() noexcept {
   }
   const auto result = state.rendering.initialize_renderer(
       state.executor, {.presentation = granit::presentation_mode::enabled, .diagnostics = diagnose},
-      state.core);
+      state.session);
   if (result.failed()) {
     fail("provider-open", granit::to_native(result));
     return result;
   }
-  const auto core_result = state.runtime.begin_renderer();
+  const auto core_result = state.session.begin_renderer();
   if (core_result != granit::result::success) {
     fail("core-renderer-begin", granit::to_native(core_result));
     return core_result;
@@ -689,7 +686,7 @@ granit::result web_application_host::on_host_initialize() noexcept {
   try {
     state.asset_url = selected_model_url();
     if (!assets().mount_location(state.asset_url, state.asset_mount, state.asset_path) ||
-        !state.runtime.start_loading(assets(), {state.asset_mount, state.asset_path})) {
+        !state.session.start_loading(assets(), {state.asset_mount, state.asset_path})) {
       fail("asset-fetch-start");
       return granit::result::initialization_failed;
     }
@@ -788,15 +785,15 @@ unsigned granit::example::model_viewer::web::browser_test_control::lighting_gene
 }
 
 float granit::example::model_viewer::web::browser_test_control::exposure_ev() noexcept {
-  return state.core.state().exposure_ev();
+  return state.session.state().exposure_ev();
 }
 
 float granit::example::model_viewer::web::browser_test_control::environment_intensity() noexcept {
-  return state.core.state().environment_intensity();
+  return state.session.state().environment_intensity();
 }
 
 float granit::example::model_viewer::web::browser_test_control::key_light_intensity() noexcept {
-  return state.core.state().directional_light().radiance.x;
+  return state.session.state().directional_light().radiance.x;
 }
 
 unsigned

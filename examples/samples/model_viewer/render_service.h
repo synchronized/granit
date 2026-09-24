@@ -10,6 +10,8 @@
 
 namespace granit::example::model_viewer {
 
+class viewer_session;
+
 /** Desktop/Web 共用的渲染调用门面；执行位置由外部 executor 决定。 */
 class render_service final {
 public:
@@ -21,7 +23,7 @@ public:
   /** executor 不转移所有权，必须保持到 shutdown 或本对象析构之后。 */
   [[nodiscard]] granit::result initialize_renderer(render_task_executor& executor,
                                                    const granit::renderer_desc& desc,
-                                                   application_core& core) noexcept;
+                                                   viewer_session& session) noexcept;
   [[nodiscard]] granit::result complete_renderer_initialization() noexcept;
   [[nodiscard]] granit::result initialize_presentation(granit::window& window,
                                                        const granit::swapchain_desc& desc,

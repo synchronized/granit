@@ -10,9 +10,9 @@ Emscripten WebGPU 上显示 glTF 2.0 模型。两个目标叠加同一套 ImGui 
 
 ## 运行时边界
 
-桌面与浏览器入口共享 `model_viewer_runtime`、`application_core`、`render_runtime`、`viewer_ui`、
-glTF CPU Scene、GPU Scene、Viewer 状态和纯渲染帧数据。Viewer Runtime 统一 Renderer 阶段、资产加载状态、CPU
-导入、Scene/GPU 计划交接、失败同步、取消和重置；Render Runtime 统一 Renderer、Surface、
+桌面与浏览器入口共享 `viewer_session`、`render_runtime`、`viewer_ui`、glTF CPU Scene、GPU Scene、
+Viewer 状态和纯渲染帧数据。Viewer Session 拥有 Application Core 与模型加载状态，统一 Renderer
+阶段、CPU 导入、Scene/GPU 计划交接、失败同步、取消和重置；Render Runtime 统一 Renderer、Surface、
 Swapchain、Pipeline、Scene 上传、质量切换、帧执行和释放；`render_service` 将这些操作与
 `render_task_executor` 组合，统一帧与不可丢弃控制任务的执行语义：
 

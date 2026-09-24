@@ -18,6 +18,8 @@
 
 namespace granit::example::model_viewer {
 
+class viewer_session;
+
 struct render_quality_change_result {
   bool scene_reuploaded{};
 };
@@ -31,7 +33,7 @@ public:
   render_runtime& operator=(const render_runtime&) = delete;
 
   [[nodiscard]] granit::result initialize_renderer(const granit::renderer_desc& desc,
-                                                   application_core& core) noexcept;
+                                                   viewer_session& session) noexcept;
   /** Renderer 进入 ready 后查询稳定属性；异步后端由平台循环决定调用时机。 */
   [[nodiscard]] granit::result complete_renderer_initialization() noexcept;
   [[nodiscard]] granit::result initialize_presentation(granit::window& window,

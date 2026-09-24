@@ -4,6 +4,7 @@
 #include "threaded_render_service.h"
 
 #include "model_viewer/render_service.h"
+#include "model_viewer/viewer_session.h"
 
 #include <algorithm>
 #include <atomic>
@@ -110,17 +111,17 @@ threaded_render_service::~threaded_render_service() {
 granit::result threaded_render_service::initialize(granit::window& window,
                                                    const granit::renderer_desc& renderer_desc,
                                                    const granit::swapchain_desc& swapchain_desc,
-                                                   application_core& core,
+                                                   viewer_session& session,
                                                    bool enable_ui) noexcept {
   if (state_)
     return granit::result::invalid_argument;
   try {
     auto state = std::make_unique<threaded_render_service_state>();
-    auto result = state->service.initialize_renderer(state->executor, renderer_desc, core);
+    auto result = state->service.initialize_renderer(state->executor, renderer_desc, session);
     if (result.ok())
       result = state->service.complete_renderer_initialization();
     if (result.ok())
-      result = core.renderer_ready();
+      result = session.renderer_ready();
     if (result.ok())
       result = state->service.initialize_presentation(window, swapchain_desc, enable_ui);
     if (result.failed())

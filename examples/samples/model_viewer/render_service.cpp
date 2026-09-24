@@ -22,12 +22,12 @@ render_service::~render_service() {
 
 granit::result render_service::initialize_renderer(render_task_executor& executor,
                                                    const granit::renderer_desc& desc,
-                                                   application_core& core) noexcept {
+                                                   viewer_session& session) noexcept {
   if (state_)
     return granit::result::invalid_argument;
   try {
     auto state = std::make_unique<render_service::state>();
-    auto result = state->runtime.initialize_renderer(desc, core);
+    auto result = state->runtime.initialize_renderer(desc, session);
     if (result.ok()) {
       result = executor.initialize([context = state.get()](auto&& packet, auto& output) {
         return context->runtime.render(std::move(packet), output);

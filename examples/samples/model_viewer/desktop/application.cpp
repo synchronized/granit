@@ -5,12 +5,11 @@
 #include "model_viewer/desktop/threaded_render_service.h"
 
 #include "assets/asset_system.h"
-#include "model_viewer/application_core.h"
-#include "model_viewer/model_viewer_runtime.h"
 #include "model_viewer/presentation_recovery.h"
 #include "model_viewer/render_task_executor.h"
 #include "model_viewer/viewer_input_accumulator.h"
 #include "model_viewer/viewer_panels.h"
+#include "model_viewer/viewer_session.h"
 #include "model_viewer/viewer_texture_previews.h"
 #include "model_viewer/viewer_ui.h"
 
@@ -282,10 +281,8 @@ int granit::example::model_viewer::desktop::application::run() {
   viewer_ui ui;
   if (options.show_ui)
     result = ui.initialize();
-  application_core core;
-  granit::example::model_viewer::model_loading_session model_loading;
-  granit::example::model_viewer::model_viewer_runtime runtime(core, model_loading);
-  result = runtime.begin_renderer();
+  viewer_session session;
+  result = session.begin_renderer();
   granit::window_state window_state;
   if (result.ok())
     result = window.get_state(window_state);
@@ -307,7 +304,7 @@ int granit::example::model_viewer::desktop::application::run() {
                                   {.width = static_cast<std::uint32_t>(pixel_width),
                                    .height = static_cast<std::uint32_t>(pixel_height),
                                    .presentation = options.presentation},
-                                  core, options.show_ui);
+                                  session, options.show_ui);
   }
   granit::renderer_info renderer_info;
   granit::renderer_limits renderer_limits;
@@ -348,7 +345,7 @@ int granit::example::model_viewer::desktop::application::run() {
                       !assets.mount_location(options.asset_path, model_mount, model_path))) {
     result = granit::result::invalid_argument;
   }
-  if (result.ok() && !runtime.start_loading(assets, {model_mount, model_path}))
+  if (result.ok() && !session.start_loading(assets, {model_mount, model_path}))
     result = granit::result::internal;
   std::shared_ptr<granit::example::assets::asset_request> environment_request;
   if (result.ok() && !options.environment_path.empty()) {
@@ -364,7 +361,7 @@ int granit::example::model_viewer::desktop::application::run() {
   bool loading_cancelled = false;
 
   while (result.ok() && !asset_bytes_ready && !loading_cancelled) {
-    runtime.poll_loading();
+    session.poll_loading();
     desktop_window_events events;
     result = pump_window_events(window_system, window, window_state, events,
                                 options.show_ui ? &ui : nullptr);
@@ -382,13 +379,14 @@ int granit::example::model_viewer::desktop::application::run() {
     if (result.failed() || loading_cancelled)
       break;
 
-    if (runtime.loading_status() == granit::example::model_viewer::model_loading_status::failed) {
-      result = runtime.loading_result();
+    if (session.loading_status() == granit::example::model_viewer::model_loading_status::failed) {
+      result = session.loading_result();
       break;
     }
     if (environment_request &&
         environment_request->status() == granit::example::assets::asset_request_status::failed) {
-      core.fail(granit::result::invalid_argument, std::string{environment_request->diagnostic()});
+      session.fail(granit::result::invalid_argument,
+                   std::string{environment_request->diagnostic()});
       result = granit::result::invalid_argument;
       break;
     }
@@ -396,12 +394,12 @@ int granit::example::model_viewer::desktop::application::run() {
     const bool environment_ready =
         !environment_request ||
         environment_request->status() == granit::example::assets::asset_request_status::ready;
-    asset_bytes_ready = runtime.loading_status() ==
+    asset_bytes_ready = session.loading_status() ==
                             granit::example::model_viewer::model_loading_status::assets_ready &&
                         environment_ready;
 
     if (result.ok() && options.show_ui && !asset_bytes_ready) {
-      const auto progress = runtime.loading_progress().document;
+      const auto progress = session.loading_progress().document;
       const auto fraction = progress.total_bytes && *progress.total_bytes > 0
                                 ? static_cast<float>(progress.received_bytes) /
                                       static_cast<float>(*progress.total_bytes)
@@ -416,7 +414,7 @@ int granit::example::model_viewer::desktop::application::run() {
   }
 
   if (loading_cancelled) {
-    runtime.cancel_loading();
+    session.cancel_loading();
     if (environment_request)
       environment_request->cancel();
   }
@@ -430,9 +428,9 @@ int granit::example::model_viewer::desktop::application::run() {
     cpu_loading = std::async(std::launch::async, [&] {
       cpu_asset_result output;
       loading_stage.store(3, std::memory_order_release);
-      output.status = runtime.prepare_scene();
+      output.status = session.prepare_scene();
       if (output.status.failed()) {
-        output.diagnostic = core.diagnostic();
+        output.diagnostic = session.diagnostic();
         return output;
       }
       if (environment_request)
@@ -469,11 +467,11 @@ int granit::example::model_viewer::desktop::application::run() {
     std::this_thread::sleep_for(std::chrono::milliseconds{16});
   }
   if (loading_cancelled)
-    runtime.cancel_loading();
+    session.cancel_loading();
   if (cpu_loading.valid()) {
     auto loaded = cpu_loading.get();
     if (result.ok() && loaded.status.failed()) {
-      core.fail(loaded.status, std::move(loaded.diagnostic));
+      session.fail(loaded.status, std::move(loaded.diagnostic));
       result = loaded.status;
     }
     if (result.ok())
@@ -545,7 +543,7 @@ int granit::example::model_viewer::desktop::application::run() {
     result = rendering.initialize_pipeline(pipeline_desc);
   viewer_texture_previews previews;
   if (result.ok() && options.show_ui)
-    result = previews.rebuild(core.cpu_scene(), core.scene_gpu(), ui);
+    result = previews.rebuild(session.cpu_scene(), session.scene_gpu(), ui);
   if (result.ok() && options.show_ui)
     result =
         render_loading_frame(rendering, window_state, swapchain_info, ui, "Loading complete", 1.0F);
@@ -558,8 +556,8 @@ int granit::example::model_viewer::desktop::application::run() {
       static_cast<void>(rendering.shutdown());
     }
     std::cerr << "模型查看器初始化失败：" << granit::result_message(result);
-    if (!core.diagnostic().empty())
-      std::cerr << "（" << core.diagnostic() << "）";
+    if (!session.diagnostic().empty())
+      std::cerr << "（" << session.diagnostic() << "）";
     std::cerr << '\n';
     return 1;
   }
@@ -696,8 +694,8 @@ int granit::example::model_viewer::desktop::application::run() {
           .skipped_frame_builds = queue_stats.skipped_frame_builds,
           .merged_input_frames = input_adapter.merged_input_frames(),
           .render_lag_ms = queue_stats.render_lag_ms,
-          .history = core.performance().summarize()};
-      changes = draw_viewer_panels(core.cpu_scene(), core.state(), panel_renderer,
+          .history = session.performance().summarize()};
+      changes = draw_viewer_panels(session.cpu_scene(), session.state(), panel_renderer,
                                    panel_performance, render_quality, previews.items());
       result = ui.capture(ui_frame);
     }
@@ -715,7 +713,7 @@ int granit::example::model_viewer::desktop::application::run() {
           changes.quality->sampler_anisotropy != render_quality.sampler_anisotropy, quality_result);
       if (result.ok() && quality_result.scene_reuploaded) {
         if (result.ok() && options.show_ui)
-          result = previews.rebuild(core.cpu_scene(), core.scene_gpu(), ui);
+          result = previews.rebuild(session.cpu_scene(), session.scene_gpu(), ui);
         ui_frame.clear();
       }
       if (result.ok()) {
@@ -735,13 +733,13 @@ int granit::example::model_viewer::desktop::application::run() {
     if (has_pending_sample)
       tick_input.performance = latest_sample;
     if (result.ok())
-      result = core.tick(tick_input, tick_output.viewer);
+      result = session.tick(tick_input, tick_output.viewer);
     if (result.ok())
       tick_output.canvas = std::move(ui_frame);
     if (result.ok()) {
       if (changes.material &&
-          core.state().selected_material() != granit::example::gltf::invalid_index) {
-        result = rendering.update_material(core.state().selected_material(), *changes.material);
+          session.state().selected_material() != granit::example::gltf::invalid_index) {
+        result = rendering.update_material(session.state().selected_material(), *changes.material);
       }
     }
     if (result.failed())

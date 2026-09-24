@@ -46,8 +46,10 @@ C++ RAII。Surface 和主循环的具体实现保持在平台壳，恢复决策�
    C++ RAII，把 Web 原生句柄回调移入测试专用接口。
 2. **S-63B Present 恢复（完成）**：共享结果分类和恢复状态，补齐 Web 对 `needs_recreate`、
    `out_of_date` 与 `surface_lost` 的处理。
-3. **S-63C Viewer Session（实施中）**：统一 Renderer/资产/CPU Scene/质量与帧构造状态机。
-4. **S-63D 平台壳迁移（待开始）**：Desktop 接入 `application_host`，两端只实现平台策略。
+3. **S-63C Viewer Session（完成）**：用拥有型 `viewer_session` 组合 Application Core 与模型加载，
+   统一 Renderer 阶段、CPU Scene 交接、失败、取消、重置及 GPU 操作入口；Render Runtime 只借用
+   Session，平台入口不再并列维护三套生命周期对象。
+4. **S-63D 平台壳迁移（实施中）**：Desktop 接入 `application_host`，两端只实现平台策略。
 5. **S-63E 帧完成协议与层次收尾（待开始）**：统一同步/异步 completion，收窄或删除
    `threaded_render_service`，整理 Runtime/Service 命名。
 6. **S-63F 验收与文档（待开始）**：验证 Windows、Emscripten、Chrome、Linux 和文档。

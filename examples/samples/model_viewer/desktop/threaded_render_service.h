@@ -4,7 +4,6 @@
 #ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_DESKTOP_THREADED_RENDER_SERVICE_H_
 #define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_DESKTOP_THREADED_RENDER_SERVICE_H_
 
-#include "model_viewer/application_core.h"
 #include "model_viewer/render_task_executor.h"
 
 #include <granit/granit.hpp>
@@ -17,6 +16,10 @@
 #include <cstdint>
 #include <memory>
 #include <span>
+
+namespace granit::example::model_viewer {
+class viewer_session;
+}
 
 namespace granit::example::model_viewer::desktop {
 
@@ -46,7 +49,7 @@ public:
   [[nodiscard]] granit::result initialize(granit::window& window,
                                           const granit::renderer_desc& renderer_desc,
                                           const granit::swapchain_desc& swapchain_desc,
-                                          application_core& core, bool enable_ui) noexcept;
+                                          viewer_session& session, bool enable_ui) noexcept;
   [[nodiscard]] const granit::renderer_info& renderer_info() const noexcept;
   [[nodiscard]] const granit::renderer_limits& renderer_limits() const noexcept;
   [[nodiscard]] const granit::swapchain_info& swapchain_info() const noexcept;
