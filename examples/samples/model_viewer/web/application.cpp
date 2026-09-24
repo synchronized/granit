@@ -31,11 +31,12 @@
 #include <granit/renderer/timestamp_query.h>
 #include <granit/window.h>
 
+#include "assets/asset_batch.h"
+#include "assets/asset_loader.h"
+#include "assets/memory_resource_resolver.h"
 #include "model_viewer/application_core.h"
 #include "model_viewer/frame_executor.h"
 #include "model_viewer/web/web_input.h"
-#include "web/fetch.h"
-#include "web/resource_fetch_batch.h"
 
 #include "application.h"
 
@@ -75,10 +76,10 @@ struct web_platform_state {
   std::uint64_t shutdown_live_resource_count{};
   std::uint64_t shutdown_pending_retirement_count{};
   granit::example::model_viewer::web::web_input input;
-  std::shared_ptr<granit::example::web::asset_request> asset_request{
-      std::make_shared<granit::example::web::asset_request>()};
-  granit::example::web::resource_fetch_batch resource_batch;
-  granit::example::web::resource_bundle resource_bundle;
+  granit::example::assets::asset_loader asset_loader;
+  std::shared_ptr<granit::example::assets::asset_request> asset_request;
+  granit::example::assets::asset_batch resource_batch;
+  granit::example::assets::memory_resource_resolver resource_resolver;
   std::string asset_url;
   granit::example::model_viewer::application_core core;
   bool core_renderer_ready{};
@@ -159,18 +160,6 @@ std::string selected_model_url() {
       "new URLSearchParams(globalThis.location.search).get('model') || ''");
   return selected == nullptr || *selected == '\0' ? std::string{options.default_model_url}
                                                   : std::string{selected};
-}
-
-std::string resolve_resource_url(std::string_view model_url, std::string_view resource) {
-  if (resource.starts_with("http://") || resource.starts_with("https://") ||
-      resource.starts_with('/'))
-    return std::string{resource};
-  const auto separator = model_url.find_last_of('/');
-  if (separator == std::string_view::npos)
-    return std::string{resource};
-  auto result = std::string{model_url.substr(0, separator + 1)};
-  result.append(resource);
-  return result;
 }
 
 granit_result begin_public_pipeline_validation(granit_texture_format model_color_format) {
@@ -667,9 +656,8 @@ granit_result configure_render_quality(granit_sample_count sample_count, unsigne
   if (result != GRANIT_SUCCESS)
     return result;
   if (sampler_anisotropy != state.sampler_anisotropy) {
-    result = granit::to_native(
-        state.core.reupload_scene(granit::renderer_ref::from_native(state.renderer),
-                                  static_cast<float>(sampler_anisotropy)));
+    result = granit::to_native(state.core.reupload_scene(
+        granit::renderer_ref::from_native(state.renderer), static_cast<float>(sampler_anisotropy)));
     if (result != GRANIT_SUCCESS) {
       static_cast<void>(granit_render_pipeline_destroy(state.renderer, replacement));
       return result;
@@ -712,6 +700,7 @@ void tick(void*) noexcept {
   if (state.status == startup_status::failed) {
     return;
   }
+  state.asset_loader.poll();
   const auto window_result = process_window_events();
   if (window_result != GRANIT_SUCCESS) {
     fail("window-events", window_result);
@@ -759,11 +748,11 @@ void tick(void*) noexcept {
     }
     state.core_renderer_ready = true;
   }
-  if (state.asset_request->status() == granit::example::web::asset_request_status::failed) {
+  if (state.asset_request->status() == granit::example::assets::asset_request_status::failed) {
     fail("asset-fetch");
     return;
   }
-  if (state.asset_request->status() != granit::example::web::asset_request_status::ready) {
+  if (state.asset_request->status() != granit::example::assets::asset_request_status::ready) {
     return;
   }
 
@@ -777,35 +766,35 @@ void tick(void*) noexcept {
         return;
       }
       for (const auto& resource : resources) {
-        if (!state.resource_batch.add(resource, resolve_resource_url(state.asset_url, resource))) {
+        std::string location;
+        if (!granit::example::assets::resolve_asset_location(state.asset_url, resource, location) ||
+            !state.resource_batch.add(resource, std::move(location))) {
           fail("asset-batch-add", GRANIT_ERROR_INVALID_ARGUMENT);
           return;
         }
       }
-      for (const auto& entry : state.resource_batch.entries()) {
-        if (!granit::example::web::start_fetch(entry.request, entry.url)) {
-          fail("asset-resource-fetch-start");
-          return;
-        }
+      if (!state.resource_batch.start(state.asset_loader)) {
+        fail("asset-resource-fetch-start");
+        return;
       }
       state.resource_batch_started = true;
     }
 
     const auto batch_status = state.resource_batch.status();
-    if (batch_status == granit::example::web::resource_fetch_batch_status::failed) {
+    if (batch_status == granit::example::assets::asset_batch_status::failed) {
       fail("asset-resource-fetch");
       return;
     }
-    if (batch_status != granit::example::web::resource_fetch_batch_status::ready)
+    if (batch_status != granit::example::assets::asset_batch_status::ready)
       return;
     if (!state.asset_ready) {
-      if (!state.resource_batch.commit(state.resource_bundle)) {
+      if (!state.resource_batch.commit(state.resource_resolver)) {
         fail("asset-bundle-commit", GRANIT_ERROR_INTERNAL);
         return;
       }
       state.upload_active = true;
       state.upload_cancel_requested = false;
-      auto result = state.core.load_asset(state.asset_request->bytes(), &state.resource_bundle,
+      auto result = state.core.load_asset(state.asset_request->bytes(), &state.resource_resolver,
                                           report_load_progress, nullptr);
       if (result != granit::result::success) {
         state.upload_active = false;
@@ -998,12 +987,10 @@ extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_shutdown() noexcept {
   if (state.status == startup_status::stopped)
     return GRANIT_SUCCESS;
   emscripten_cancel_main_loop();
-  state.asset_request->cancel();
-  for (const auto& entry : state.resource_batch.entries())
-    entry.request->cancel();
+  if (state.asset_request)
+    state.asset_request->cancel();
   state.resource_batch.clear();
-  granit::example::web::resource_bundle empty_bundle;
-  state.resource_bundle.swap(empty_bundle);
+  state.resource_resolver.clear();
   state.core.reset();
 
   auto first_error = GRANIT_SUCCESS;
@@ -1112,7 +1099,9 @@ int granit::example::model_viewer::web::run_application(const application_option
     return 1;
   }
   state.asset_url = selected_model_url();
-  if (!granit::example::web::start_fetch(state.asset_request, state.asset_url)) {
+  state.asset_request = state.asset_loader.load(state.asset_url);
+  if (!state.asset_request ||
+      state.asset_request->status() == granit::example::assets::asset_request_status::failed) {
     fail("asset-fetch-start");
     return 1;
   }

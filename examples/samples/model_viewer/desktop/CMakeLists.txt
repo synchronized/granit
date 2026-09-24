@@ -13,11 +13,7 @@ add_library(
 target_sources(granit_sample_model_viewer_desktop_shell PRIVATE sdl3_input.cpp sdl3_input.h)
 target_link_libraries(granit_sample_model_viewer_desktop_shell PUBLIC "${GRANIT_SDL3_TARGET}")
 
-add_executable(
-  granit_sample_model_viewer
-  main.cpp
-  "${granit_imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp"
-)
+add_executable(granit_sample_model_viewer main.cpp)
 target_include_directories(
   granit_sample_model_viewer
   PRIVATE "${PROJECT_SOURCE_DIR}/examples" "${PROJECT_SOURCE_DIR}/examples/common"
@@ -28,7 +24,7 @@ target_include_directories(
 target_link_libraries(
   granit_sample_model_viewer
   PRIVATE granit_sample_model_viewer_desktop_shell granit_sample_model_viewer_imgui
-          granit::integration_sdl3
+          granit_example_assets granit_example_sdl granit::integration_sdl3
 )
 if(WIN32)
   add_custom_command(

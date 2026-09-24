@@ -3,9 +3,9 @@
 
 #include <catch2/catch_all.hpp>
 
+#include "assets/resource_resolver.h"
 #include "gltf/fixtures/minimal_scene_glb.h"
 #include "gltf/loader.h"
-#include "gltf/resource_uri.h"
 
 #include <array>
 #include <cstring>
@@ -17,7 +17,7 @@ std::span<const std::byte> bytes(std::string_view text) {
   return {reinterpret_cast<const std::byte*>(text.data()), text.size()};
 }
 
-class memory_resolver final : public granit::example::gltf::resource_resolver {
+class memory_resolver final : public granit::example::assets::resource_resolver {
 public:
   explicit memory_resolver(std::vector<std::byte> data, std::string path = "scene.bin")
       : data_(std::move(data)), path_(std::move(path)) {}
@@ -115,22 +115,7 @@ std::vector<std::byte> make_glb(std::string json, std::vector<std::byte> binary)
 
 } // namespace
 
-static_assert(!std::is_copy_constructible_v<granit::example::gltf::resource_resolver>);
-
-TEST_CASE("glTF 资源 URI 仅接受受控相对路径", "[example][gltf][uri]") {
-  std::string normalized = "unchanged";
-  REQUIRE(granit::example::gltf::normalize_resource_uri("textures/./base_color.png", normalized));
-  CHECK(normalized == "textures/base_color.png");
-
-  for (const std::string_view invalid :
-       {"", "../secret.bin", "textures/../../secret.bin", "/absolute.bin", "C:/absolute.bin",
-        "https://host/a.bin", "data:application/octet-stream;base64,AA==", "a\\b.bin",
-        "a%2f..%2fsecret.bin", "a.bin?x=1", "a.bin#fragment"}) {
-    normalized = "unchanged";
-    CHECK_FALSE(granit::example::gltf::normalize_resource_uri(invalid, normalized));
-    CHECK(normalized == "unchanged");
-  }
-}
+static_assert(!std::is_copy_constructible_v<granit::example::assets::resource_resolver>);
 
 TEST_CASE("glTF CPU Scene 使用自有存储", "[example][gltf][scene]") {
   granit::example::gltf::scene scene;

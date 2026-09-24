@@ -5,6 +5,9 @@
 #include "model_viewer/desktop/presentation_policy.h"
 #include "model_viewer/desktop/sdl3_input.h"
 
+#include "assets/asset_batch.h"
+#include "assets/asset_loader.h"
+#include "assets/memory_resource_resolver.h"
 #include "imgui/imgui_frame_capture.h"
 #include "imgui/imgui_texture_registry.h"
 #include "imgui/imgui_theme.h"
@@ -109,35 +112,6 @@ granit::result upload_font_atlas(granit::renderer& renderer, granit::texture& te
                                            .address_w = granit::address_mode::clamp_to_edge});
   return result;
 }
-
-bool read_file(const std::filesystem::path& path, std::vector<std::byte>& output) {
-  std::ifstream stream(path, std::ios::binary | std::ios::ate);
-  if (!stream)
-    return false;
-  const auto end = stream.tellg();
-  if (end < 0 || static_cast<std::uintmax_t>(end) > std::numeric_limits<std::size_t>::max())
-    return false;
-  std::vector<std::byte> candidate(static_cast<std::size_t>(end));
-  stream.seekg(0);
-  if (!candidate.empty() &&
-      !stream.read(reinterpret_cast<char*>(candidate.data()), static_cast<std::streamsize>(end))) {
-    return false;
-  }
-  output = std::move(candidate);
-  return true;
-}
-
-class file_resolver final : public granit::example::gltf::resource_resolver {
-public:
-  explicit file_resolver(std::filesystem::path base) : base_(std::move(base)) {}
-
-  [[nodiscard]] bool resolve(std::string_view path, std::vector<std::byte>& bytes) const override {
-    return read_file(base_ / std::filesystem::path(path), bytes);
-  }
-
-private:
-  std::filesystem::path base_;
-};
 
 struct profile_metric {
   float p50{};
@@ -409,9 +383,9 @@ bool update_gpu_upload_status(
 granit::result execute_gpu_upload(void* user_data) {
   const auto& context = *static_cast<gpu_upload_command_context*>(user_data);
   try {
-    const auto result = context.core->upload(context.renderer, context.environment_bytes,
-                                             context.sampler_anisotropy,
-                                             update_gpu_upload_status, user_data);
+    const auto result =
+        context.core->upload(context.renderer, context.environment_bytes,
+                             context.sampler_anisotropy, update_gpu_upload_status, user_data);
     return result == granit::result::not_ready && context.render_result.failed()
                ? context.render_result
                : result;
@@ -693,8 +667,7 @@ int main(int argc, char** argv) {
     result = core.renderer_ready();
 
   if (result.ok())
-    result =
-        granit::integration::sdl3::create_surface(renderer, window.get(), surface);
+    result = granit::integration::sdl3::create_surface(renderer, window.get(), surface);
   int pixel_width = 0;
   int pixel_height = 0;
   if (result.ok() && !SDL_GetWindowSizeInPixels(window.get(), &pixel_width, &pixel_height)) {
@@ -744,34 +717,143 @@ int main(int argc, char** argv) {
   }
 
   const std::filesystem::path asset_path(options.asset_path);
+  granit::example::assets::asset_loader asset_loader;
+  auto asset_request = result.ok() ? asset_loader.load(asset_path.string()) : nullptr;
+  std::shared_ptr<granit::example::assets::asset_request> environment_request;
+  if (result.ok() && !options.environment_path.empty())
+    environment_request = asset_loader.load(options.environment_path);
+  granit::example::assets::asset_batch resource_batch;
+  granit::example::assets::memory_resource_resolver resource_resolver;
+  bool resource_batch_started = false;
+  bool asset_bytes_ready = false;
+  bool loading_cancelled = false;
+
+  while (result.ok() && !asset_bytes_ready && !loading_cancelled) {
+    asset_loader.poll();
+    SDL_Event event{};
+    while (SDL_PollEvent(&event)) {
+      ImGui_ImplSDL3_ProcessEvent(&event);
+      if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) {
+        loading_cancelled = true;
+      } else if (event.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
+        pixel_width = event.window.data1;
+        pixel_height = event.window.data2;
+        if (pixel_width > 0 && pixel_height > 0) {
+          result = swapchain.recreate({.width = static_cast<std::uint32_t>(pixel_width),
+                                       .height = static_cast<std::uint32_t>(pixel_height),
+                                       .presentation = options.presentation});
+          if (result.ok())
+            result = swapchain.query_info(swapchain_info);
+        }
+      }
+    }
+    if (result.failed() || loading_cancelled)
+      break;
+
+    if (!asset_request ||
+        asset_request->status() == granit::example::assets::asset_request_status::failed) {
+      const auto diagnostic =
+          asset_request ? std::string{asset_request->diagnostic()} : "无法创建模型资产请求";
+      core.fail(granit::result::invalid_argument, diagnostic);
+      result = granit::result::invalid_argument;
+      break;
+    }
+    if (environment_request &&
+        environment_request->status() == granit::example::assets::asset_request_status::failed) {
+      core.fail(granit::result::invalid_argument, std::string{environment_request->diagnostic()});
+      result = granit::result::invalid_argument;
+      break;
+    }
+
+    if (!resource_batch_started &&
+        asset_request->status() == granit::example::assets::asset_request_status::ready) {
+      std::vector<std::string> resources;
+      const auto discovery =
+          granit::example::gltf::discover_external_resources(asset_request->bytes(), resources);
+      if (!discovery) {
+        core.fail(granit::result::invalid_argument, discovery.diagnostic);
+        result = granit::result::invalid_argument;
+        break;
+      }
+      for (const auto& resource : resources) {
+        std::string location;
+        if (!granit::example::assets::resolve_asset_location(options.asset_path, resource,
+                                                             location) ||
+            !resource_batch.add(resource, std::move(location))) {
+          core.fail(granit::result::invalid_argument, "外部资源位置无效");
+          result = granit::result::invalid_argument;
+          break;
+        }
+      }
+      if (result.failed())
+        break;
+      resource_batch_started = resource_batch.start(asset_loader);
+      if (!resource_batch_started) {
+        core.fail(granit::result::internal, "无法启动外部资源批次");
+        result = granit::result::internal;
+        break;
+      }
+    }
+
+    const auto batch_status = resource_batch.status();
+    if (batch_status == granit::example::assets::asset_batch_status::failed) {
+      core.fail(granit::result::invalid_argument, "读取外部资源失败");
+      result = granit::result::invalid_argument;
+      break;
+    }
+    const bool environment_ready =
+        !environment_request ||
+        environment_request->status() == granit::example::assets::asset_request_status::ready;
+    asset_bytes_ready =
+        asset_request->status() == granit::example::assets::asset_request_status::ready &&
+        environment_ready && resource_batch_started &&
+        batch_status == granit::example::assets::asset_batch_status::ready;
+
+    if (result.ok() && options.show_ui && !asset_bytes_ready) {
+      const auto progress = asset_request->progress();
+      const auto fraction = progress.total_bytes && *progress.total_bytes > 0
+                                ? static_cast<float>(progress.received_bytes) /
+                                      static_cast<float>(*progress.total_bytes)
+                                : 0.0F;
+      result = render_loading_frame(swapchain, swapchain_info, loading_frame_context, canvas,
+                                    textures, "Loading asset resources...",
+                                    0.05F + std::min(fraction, 1.0F) * 0.20F);
+      if (result == granit::result::out_of_date)
+        result = granit::result::success;
+    }
+    SDL_Delay(16);
+  }
+
+  if (loading_cancelled) {
+    if (asset_request)
+      asset_request->cancel();
+    if (environment_request)
+      environment_request->cancel();
+    resource_batch.cancel();
+  }
+  if (result.ok() && loading_cancelled)
+    result = granit::result::not_ready;
+  if (result.ok() && !resource_batch.commit(resource_resolver)) {
+    core.fail(granit::result::internal, "无法提交外部资源批次");
+    result = granit::result::internal;
+  }
+
   std::vector<std::byte> environment_bytes;
   std::atomic<unsigned> loading_stage{0};
   std::future<cpu_asset_result> cpu_loading;
   if (result.ok()) {
     cpu_loading = std::async(std::launch::async, [&] {
       cpu_asset_result output;
-      loading_stage.store(1, std::memory_order_release);
-      std::vector<std::byte> asset_bytes;
-      if (!read_file(asset_path, asset_bytes)) {
-        output.status = granit::result::invalid_argument;
-        output.diagnostic = "读取模型文件失败";
-        return output;
-      }
-      loading_stage.store(2, std::memory_order_release);
-      if (!options.environment_path.empty() &&
-          !read_file(options.environment_path, output.environment_bytes)) {
-        output.status = granit::result::invalid_argument;
-        output.diagnostic = "读取环境资源失败";
-        return output;
-      }
       loading_stage.store(3, std::memory_order_release);
-      file_resolver resolver(asset_path.parent_path());
-      const auto loaded = granit::example::gltf::load(asset_bytes, &resolver, output.scene);
+      const auto loaded =
+          granit::example::gltf::load(asset_request->bytes(), &resource_resolver, output.scene);
       if (!loaded) {
         output.status = granit::result::invalid_argument;
         output.diagnostic = loaded.diagnostic;
         return output;
       }
+      if (environment_request)
+        output.environment_bytes = environment_request->bytes();
       const auto planned =
           granit::example::model_viewer::build_gpu_scene_plan(output.scene, output.gpu_plan);
       if (planned != granit::example::model_viewer::gpu_scene_plan_error::none) {
@@ -787,7 +869,6 @@ int main(int argc, char** argv) {
       return output;
     });
   }
-  bool loading_cancelled = false;
   while (result.ok() && cpu_loading.valid() &&
          cpu_loading.wait_for(std::chrono::milliseconds{0}) != std::future_status::ready) {
     SDL_Event event{};
@@ -810,10 +891,9 @@ int main(int argc, char** argv) {
     if (result.failed() || loading_cancelled || !options.show_ui)
       break;
     const auto stage = loading_stage.load(std::memory_order_acquire);
-    const char* label = stage <= 1   ? "Reading model file..."
-                        : stage == 2 ? "Reading environment resources..."
-                                     : "Parsing glTF and decoding textures...";
-    const auto progress = stage <= 1 ? 0.10F : stage == 2 ? 0.20F : 0.35F;
+    const char* label =
+        stage < 4 ? "Parsing glTF and decoding textures..." : "Planning GPU resources...";
+    const auto progress = stage < 4 ? 0.30F : 0.38F;
     result = render_loading_frame(swapchain, swapchain_info, loading_frame_context, canvas,
                                   textures, label, progress);
     if (result == granit::result::out_of_date)
@@ -831,8 +911,6 @@ int main(int argc, char** argv) {
     if (result.ok())
       environment_bytes = std::move(loaded.environment_bytes);
   }
-  if (result.ok() && loading_cancelled)
-    result = granit::result::not_ready;
   if (result.ok() && options.show_ui)
     result = render_loading_frame(swapchain, swapchain_info, loading_frame_context, canvas,
                                   textures, "Preparing GPU upload...", 0.40F);

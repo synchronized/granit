@@ -4,6 +4,7 @@
 #ifndef GRANIT_EXAMPLES_COMMON_GLTF_LOADER_H_
 #define GRANIT_EXAMPLES_COMMON_GLTF_LOADER_H_
 
+#include "assets/resource_resolver.h"
 #include "gltf/scene.h"
 
 #include <cstddef>
@@ -40,18 +41,6 @@ struct load_progress {
 /** 返回 false 可在阶段边界取消加载。 */
 using load_progress_callback = bool (*)(const load_progress& progress, void* user_data);
 
-class resource_resolver {
-public:
-  resource_resolver() = default;
-  virtual ~resource_resolver() = default;
-  resource_resolver(const resource_resolver&) = delete;
-  resource_resolver& operator=(const resource_resolver&) = delete;
-
-  /** 返回资源自有字节；路径已经过规范化且不包含父目录跳转。 */
-  [[nodiscard]] virtual bool resolve(std::string_view path,
-                                     std::vector<std::byte>& bytes) const = 0;
-};
-
 struct load_result {
   load_error error{load_error::none};
   std::string diagnostic;
@@ -65,7 +54,7 @@ struct load_result {
 
 /** 解析 GLB 或 glTF；失败时 output 保持不变。 */
 [[nodiscard]] load_result load(std::span<const std::byte> document,
-                               const resource_resolver* resolver, scene& output,
+                               const assets::resource_resolver* resolver, scene& output,
                                load_progress_callback progress = nullptr,
                                void* progress_user_data = nullptr);
 

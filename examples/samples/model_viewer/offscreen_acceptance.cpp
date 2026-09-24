@@ -44,7 +44,8 @@ struct options {
 };
 
 void print_usage() {
-  std::cerr << "用法：granit_sample_model_viewer_offscreen_acceptance --asset <文件> --output <文件.rgba> "
+  std::cerr << "用法：granit_sample_model_viewer_offscreen_acceptance --asset <文件> --output "
+               "<文件.rgba> "
                "[--environment <文件.grenv>] [--expected <文件.rgba>] "
                "[--debug-display=shaded|base-color|normals|metallic|roughness|"
                "geometric-normals|sampled-normals|vertex-normals|vertex-tangents] "
@@ -210,7 +211,7 @@ std::filesystem::path sidecar_path(const std::filesystem::path& output, std::str
   return result;
 }
 
-class file_resolver final : public granit::example::gltf::resource_resolver {
+class file_resolver final : public granit::example::assets::resource_resolver {
 public:
   explicit file_resolver(std::filesystem::path base) : base_(std::move(base)) {}
 
@@ -367,12 +368,11 @@ int main(int argc, char** argv) {
   granit::texture_view output_view;
   if (result.ok()) {
     stage = "创建离屏颜色纹理";
-    result = output_texture.initialize(
-        renderer,
-        {.format = granit::texture_format::rgba8_unorm,
-         .usage = granit::texture_usage::color_attachment | granit::texture_usage::transfer_source,
-         .width = render_size,
-         .height = render_size});
+    result = output_texture.initialize(renderer, {.format = granit::texture_format::rgba8_unorm,
+                                                  .usage = granit::texture_usage::color_attachment |
+                                                           granit::texture_usage::transfer_source,
+                                                  .width = render_size,
+                                                  .height = render_size});
   }
   if (result.ok()) {
     stage = "创建离屏颜色视图";
@@ -405,8 +405,7 @@ int main(int argc, char** argv) {
     if (result.ok()) {
       stage = "渲染离屏帧";
       tick.clear_color = {0.0F, 0.0F, 0.0F, 1.0F};
-      const auto render =
-          tick.render_desc(output_view.ref(), granit::texture_format::rgba8_unorm);
+      const auto render = tick.render_desc(output_view.ref(), granit::texture_format::rgba8_unorm);
       result = pipeline.render(render);
     }
   }

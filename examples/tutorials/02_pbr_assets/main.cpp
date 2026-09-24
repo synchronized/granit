@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "application/application.h"
-#include "assets/gltf_resolver.h"
+#include "assets/asset_store_resolver.h"
 #include "gltf/loader.h"
 #include "imgui/imgui_font_atlas.h"
 #include "imgui/imgui_input.h"
@@ -139,7 +139,7 @@ private:
       return granit::result::invalid_argument;
     }
 
-    granit::example::assets::gltf_resolver resolver{assets(), "tutorials/02_pbr_assets"};
+    granit::example::assets::asset_store_resolver resolver{assets(), "tutorials/02_pbr_assets"};
     const auto loaded = granit::example::gltf::load(document, &resolver, model_scene_);
     if (!loaded) {
       std::cerr << "Failed to load Suzanne model: " << loaded.diagnostic << '\n';

@@ -73,7 +73,7 @@ granit::result application_core::renderer_ready() noexcept {
 }
 
 granit::result application_core::load_asset(std::span<const std::byte> bytes,
-                                            const gltf::resource_resolver* resolver,
+                                            const assets::resource_resolver* resolver,
                                             gltf::load_progress_callback progress,
                                             void* progress_user_data) {
   if (phase_ != application_phase::asset_loading)

@@ -3,8 +3,8 @@
 
 #include "gltf/loader.h"
 
+#include "assets/resource_path.h"
 #include "gltf/image_decoder.h"
-#include "gltf/resource_uri.h"
 
 #define CGLTF_IMPLEMENTATION
 #include <cgltf.h>
@@ -87,7 +87,7 @@ load_result append_external_uri(const char* uri, std::vector<std::string>& resou
   if (uri == nullptr || is_embedded_data_uri(uri))
     return {};
   std::string normalized;
-  if (!normalize_resource_uri(uri, normalized))
+  if (!assets::normalize_resource_path(uri, normalized))
     return failure(load_error::invalid_resource_uri, "glTF 外部资源 URI 不安全");
   if (std::ranges::find(resources, normalized) == resources.end())
     resources.push_back(std::move(normalized));
@@ -108,7 +108,7 @@ bool to_index(const void* pointer, const void* base, std::size_t count, std::siz
   return true;
 }
 
-load_result load_external_buffers(cgltf_data& data, const resource_resolver* resolver,
+load_result load_external_buffers(cgltf_data& data, const assets::resource_resolver* resolver,
                                   std::vector<std::vector<std::byte>>& storage) {
   storage.reserve(data.buffers_count);
   for (cgltf_size index = 0; index < data.buffers_count; ++index) {
@@ -134,7 +134,7 @@ load_result load_external_buffers(cgltf_data& data, const resource_resolver* res
     if (resolver == nullptr)
       return failure(load_error::missing_resource, "glTF 外部 Buffer 缺失");
     std::string path;
-    if (!normalize_resource_uri(buffer.uri, path))
+    if (!assets::normalize_resource_path(buffer.uri, path))
       return failure(load_error::invalid_resource_uri, "glTF Buffer URI 不安全");
     storage.emplace_back();
     if (!resolver->resolve(path, storage.back()))
@@ -409,8 +409,9 @@ load_result convert_samplers(const cgltf_data& data, scene& output) {
   return {};
 }
 
-load_result convert_images(const cgltf_data& data, const resource_resolver* resolver, scene& output,
-                           load_progress_callback progress, void* progress_user_data) {
+load_result convert_images(const cgltf_data& data, const assets::resource_resolver* resolver,
+                           scene& output, load_progress_callback progress,
+                           void* progress_user_data) {
   output.images.reserve(data.images_count);
   for (cgltf_size index = 0; index < data.images_count; ++index) {
     const auto& source = data.images[index];
@@ -420,7 +421,7 @@ load_result convert_images(const cgltf_data& data, const resource_resolver* reso
       if (resolver == nullptr)
         return failure(load_error::missing_resource, "glTF 外部 Image 缺失");
       std::string path;
-      if (!normalize_resource_uri(source.uri, path))
+      if (!assets::normalize_resource_path(source.uri, path))
         return failure(load_error::invalid_resource_uri, "glTF Image URI 不安全");
       if (!resolver->resolve(path, owned_bytes))
         return failure(load_error::missing_resource, "无法解析 glTF 外部 Image");
@@ -559,7 +560,7 @@ load_result discover_external_resources(std::span<const std::byte> document,
   }
 }
 
-load_result load(std::span<const std::byte> document, const resource_resolver* resolver,
+load_result load(std::span<const std::byte> document, const assets::resource_resolver* resolver,
                  scene& output, load_progress_callback progress, void* progress_user_data) {
   if (document.empty())
     return failure(load_error::truncated_data, "glTF 文档为空");

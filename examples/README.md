@@ -23,14 +23,13 @@
 examples/
 ├─ assets/       按 tutorials/samples 组织的可再分发输入资产
 ├─ common/       多个示例共享、但不属于安装 SDK 的私有实现，按技术域分
-│  ├─ gltf/      许可适合再分发的 glTF 加载器与资源解析
-│  ├─ assets/    只读逻辑路径、运行时目录与 glTF 资源适配
+│  ├─ gltf/      基于通用资产接口的 glTF/GLB 导入、图片解码与 CPU Scene 转换
+│  ├─ assets/    统一的 Desktop/Web 异步读取、资源批次、内存 Resolver 与运行时资产
 │  ├─ application/ Window、Renderer 与 Swapchain 示例生命周期
 │  ├─ imgui/     ImGui 输入、字体图集、Draw Data 捕获与 Texture ID 注册
 │  ├─ model_viewer/ 教程与完整查看器共用的 glTF → GPU Scene 映射
 │  ├─ sdl/       SDL3 窗口与 ImGui 生命周期 RAII
-│  ├─ validation/ 截图与视觉回归比较
-│  └─ web/       浏览器资源请求、资源包与批量 Fetch
+│  └─ validation/ 截图与视觉回归比较
 ├─ samples/      综合应用内容、平台入口及自身目标声明
 │  ├─ imgui/      SDL3 + ImGui 完整集成
 │  └─ model_viewer/ 完整跨后端模型查看器
@@ -43,7 +42,7 @@ examples/
 
 Model Viewer 的内容、Core、工具和验收程序均位于 `samples/model_viewer`。桌面入口与 SDL3
 平台壳层位于其 `desktop` 子目录，浏览器入口和输入适配位于 `web`；
-跨教程复用的 GPU Scene 位于 `common/model_viewer`，浏览器资源支撑位于 `common/web`。
+跨教程复用的 GPU Scene 位于 `common/model_viewer`，跨平台资源读取位于 `common/assets`。
 
 ## 新增综合示例
 

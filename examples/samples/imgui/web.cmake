@@ -38,5 +38,5 @@ set_target_properties(
 granit_target_compile_warnings(granit_imgui_web)
 
 granit_target_web_page(
-  granit_imgui_web "${PROJECT_SOURCE_DIR}/examples/common/web/imgui_shell.html"
+  granit_imgui_web "${CMAKE_CURRENT_LIST_DIR}/imgui_shell.html"
 )

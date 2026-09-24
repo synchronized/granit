@@ -60,7 +60,7 @@ public:
   [[nodiscard]] granit::result begin_renderer() noexcept;
   [[nodiscard]] granit::result renderer_ready() noexcept;
   [[nodiscard]] granit::result load_asset(std::span<const std::byte> bytes,
-                                          const gltf::resource_resolver* resolver,
+                                          const assets::resource_resolver* resolver,
                                           gltf::load_progress_callback progress = nullptr,
                                           void* progress_user_data = nullptr);
   [[nodiscard]] granit::result accept_scene(gltf::scene scene);

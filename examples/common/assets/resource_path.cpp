@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "gltf/resource_uri.h"
+#include "assets/resource_path.h"
 
 #include <utility>
 
-namespace granit::example::gltf {
+namespace granit::example::assets {
 
-bool normalize_resource_uri(std::string_view source, std::string& normalized) {
+bool normalize_resource_path(std::string_view source, std::string& normalized) {
   if (source.empty() || source.front() == '/' || source.front() == '\\' ||
       source.find_first_of(":?#%\\") != std::string_view::npos) {
     return false;
@@ -37,4 +37,4 @@ bool normalize_resource_uri(std::string_view source, std::string& normalized) {
   return true;
 }
 
-} // namespace granit::example::gltf
+} // namespace granit::example::assets

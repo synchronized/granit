@@ -9,6 +9,8 @@
 
 ## 当前计划
 
+- [S-55：Example Common 架构整理](S-55-example-common-architecture.md)——保持现有短目录入口，
+  统一 SDL target，整理资产与 Web 资源边界，并专项分析 Model Viewer。
 - [S-54：0.30.0 特性教程与 Example Application](S-54-0.30.0-feature-tutorial-framework.md)——抽取
   跨平台示例应用壳，将教程压缩为 Cube 与 PBR Assets，将完整 Model Viewer 移回 Samples，并删除
   重复的最小加载应用；本地实施与浏览器验证已完成，等待远端矩阵。

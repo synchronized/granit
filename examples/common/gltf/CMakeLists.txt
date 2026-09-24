@@ -82,7 +82,7 @@ target_link_libraries(
 )
 set_target_properties(granit_example_gltf_dependencies PROPERTIES FOLDER "Examples/Third Party")
 
-add_library(granit_example_gltf_support STATIC image_decoder.cpp loader.cpp resource_uri.cpp)
+add_library(granit_example_gltf_support STATIC image_decoder.cpp loader.cpp)
 if(MSVC OR WIN32)
   target_compile_definitions(granit_example_gltf_support PRIVATE _CRT_SECURE_NO_WARNINGS)
 endif()
@@ -91,13 +91,13 @@ target_include_directories(granit_example_gltf_support PUBLIC "${CMAKE_CURRENT_S
 target_link_libraries(
   granit_example_gltf_support
   PRIVATE granit_example_gltf_dependencies
-  PUBLIC granit::granit
+  PUBLIC granit_example_assets granit::granit
 )
 set_target_properties(granit_example_gltf_support PROPERTIES FOLDER "Examples")
 granit_target_compile_warnings(granit_example_gltf_support)
 
 if(GRANIT_HAS_NATIVE_WINDOW AND GRANIT_TESTING_ENABLED)
-  add_executable(granit_example_gltf_support_test resource_uri_test.cpp)
+  add_executable(granit_example_gltf_support_test loader_test.cpp)
   target_link_libraries(
     granit_example_gltf_support_test
     PRIVATE granit_example_gltf_support Catch2::Catch2WithMain

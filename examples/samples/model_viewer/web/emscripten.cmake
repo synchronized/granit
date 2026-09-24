@@ -7,8 +7,6 @@ add_library(
   granit_web_model_viewer_platform STATIC
   "${CMAKE_CURRENT_LIST_DIR}/application.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/application.h"
-  "${PROJECT_SOURCE_DIR}/examples/common/web/fetch.cpp"
-  "${PROJECT_SOURCE_DIR}/examples/common/web/fetch.h"
   "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/web/web_input.cpp"
   "${PROJECT_SOURCE_DIR}/examples/samples/model_viewer/web/web_input.h"
 )
@@ -20,14 +18,14 @@ target_include_directories(
 )
 target_link_libraries(
   granit_web_model_viewer_platform
-  PUBLIC granit::granit granit::window granit_sample_model_viewer_support granit_example_web
+  PUBLIC granit::granit granit::window granit_sample_model_viewer_support granit_example_assets
 )
 granit_target_webgpu(granit_web_model_viewer_platform)
 granit_target_compile_warnings(granit_web_model_viewer_platform)
 
 target_link_options(
   granit_web_model_viewer_platform INTERFACE
-    "-sFETCH=1" "-sASYNCIFY=1"
+    "-sASYNCIFY=1"
 )
 
 # 面向使用者的浏览器模型查看器默认加载 Khronos Flight Helmet；`?model=<URL>` 可覆盖资产。

@@ -6,7 +6,7 @@ if(NOT GRANIT_HAS_NATIVE_WINDOW)
   return()
 endif()
 
-# Model Viewer 的浏览器输入支撑层。浏览器资源加载已迁入 examples/common/web。
+# Model Viewer 的浏览器输入支撑层。跨平台资源加载位于 examples/common/assets。
 
 add_library(granit_sample_model_viewer_web_shell STATIC web_input.cpp web_input.h)
 target_compile_features(granit_sample_model_viewer_web_shell PUBLIC cxx_std_20)
