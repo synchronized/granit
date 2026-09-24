@@ -5,7 +5,8 @@
 
 ## 状态
 
-**实施中，P1。** 本计划延续 S-59 的统一任务语义，把 Desktop `render_service` 与 Web 平台入口中
+**本地实施与浏览器验收完成，等待远端跨平台验收，P1。** 本计划延续 S-59 的统一任务语义，把
+Desktop 原 `render_service` 与 Web 平台入口中
 重复的 Renderer、Surface、Swapchain、Pipeline 和帧执行逻辑收敛到单一同步 `render_runtime`。
 该实现只服务仓库 Sample，不进入 Granit 公共 SDK，也不改变 API/ABI。
 
@@ -41,12 +42,15 @@ Desktop 平台壳持有 threaded executor；Web 平台壳持有 inline executor�
 
 ## 实施顺序
 
-1. **S-60A 契约基线（实施中）**：登记所有权、线程、异步和平台边界。
-2. **S-60B 同步运行时**：从 Desktop `render_service` 提取 GPU 状态与同步操作，补充生命周期测试。
-3. **S-60C Desktop 迁移**：以 threaded executor 调用共享运行时，删除过渡服务中的重复状态。
-4. **S-60D Web 迁移**：以 inline executor 调用共享运行时，保留 Fetch、Asyncify 与浏览器导出。
-5. **S-60E 清理与验收**：删除 `desktop/render_service.*`，更新 Guide，完成 Windows、Emscripten、
-   Chrome 与文档验证。
+1. **S-60A 契约基线（已完成）**：已登记所有权、线程、异步和平台边界。
+2. **S-60B 同步运行时（已完成）**：已从 Desktop 原 `render_service` 提取 GPU 状态与同步操作。
+3. **S-60C Desktop 迁移（已完成）**：Desktop 以 threaded executor 调用共享运行时；剩余队列、
+   取消和回执门面已改名为 `render_thread`。
+4. **S-60D Web 迁移（已完成）**：Web 以 inline executor 调用共享运行时，只保留 Fetch、Asyncify、
+   Pipeline 预热与浏览器导出。
+5. **S-60E 清理与验收（本地完成）**：已删除 `desktop/render_service.*`，更新 Guide，并完成 Windows、
+   Emscripten、Chrome 与文档验证。详细结果见
+   [S-60 本地验收记录](../records/2026-09-24-s60-shared-render-runtime-local-acceptance.md)。
 
 ## 测试与验收
 
