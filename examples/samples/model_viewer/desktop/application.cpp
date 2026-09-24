@@ -11,6 +11,7 @@
 #include "model_viewer/render_task_executor.h"
 #include "model_viewer/viewer_input_accumulator.h"
 #include "model_viewer/viewer_panels.h"
+#include "model_viewer/viewer_texture_previews.h"
 #include "model_viewer/viewer_ui.h"
 
 #include <imgui.h>
@@ -542,42 +543,9 @@ int granit::example::model_viewer::desktop::application::run() {
       .enable_specular_aa = render_quality.enable_specular_aa != 0};
   if (result.ok())
     result = rendering.initialize_pipeline(pipeline_desc);
-  std::vector<texture_preview> previews;
-  const auto register_preview = [&](const granit::example::gltf::texture_reference& reference,
-                                    bool srgb) {
-    if (reference.image == granit::example::gltf::invalid_index)
-      return granit::result::success;
-    ImTextureID existing = ImTextureID_Invalid;
-    if (find_texture_preview(reference, srgb, previews, existing))
-      return granit::result::success;
-    granit::texture_view_ref view;
-    granit::sampler_ref sampler;
-    auto preview_result = core.scene_gpu().texture_binding(reference, srgb, view, sampler);
-    ImTextureID texture = ImTextureID_Invalid;
-    if (preview_result.ok())
-      preview_result = ui.register_texture(view, sampler, texture);
-    if (preview_result.ok())
-      previews.push_back({reference.image, reference.sampler, srgb, texture});
-    return preview_result;
-  };
-  const auto rebuild_previews = [&]() {
-    for (const auto& preview : previews)
-      static_cast<void>(ui.unregister_texture(preview.texture));
-    previews.clear();
-    for (const auto& material : core.cpu_scene().materials) {
-      granit::result preview_result;
-      if ((preview_result = register_preview(material.base_color_texture, true)).failed() ||
-          (preview_result = register_preview(material.emissive_texture, true)).failed() ||
-          (preview_result = register_preview(material.metallic_roughness_texture, false))
-              .failed() ||
-          (preview_result = register_preview(material.normal_texture, false)).failed() ||
-          (preview_result = register_preview(material.occlusion_texture, false)).failed())
-        return preview_result;
-    }
-    return granit::result::success;
-  };
+  viewer_texture_previews previews;
   if (result.ok() && options.show_ui)
-    result = rebuild_previews();
+    result = previews.rebuild(core.cpu_scene(), core.scene_gpu(), ui);
   if (result.ok() && options.show_ui)
     result =
         render_loading_frame(rendering, window_state, swapchain_info, ui, "Loading complete", 1.0F);
@@ -730,7 +698,7 @@ int granit::example::model_viewer::desktop::application::run() {
           .render_lag_ms = queue_stats.render_lag_ms,
           .history = core.performance().summarize()};
       changes = draw_viewer_panels(core.cpu_scene(), core.state(), panel_renderer,
-                                   panel_performance, render_quality, previews);
+                                   panel_performance, render_quality, previews.items());
       result = ui.capture(ui_frame);
     }
     if (result.failed())
@@ -747,7 +715,7 @@ int granit::example::model_viewer::desktop::application::run() {
           changes.quality->sampler_anisotropy != render_quality.sampler_anisotropy, quality_result);
       if (result.ok() && quality_result.scene_reuploaded) {
         if (result.ok() && options.show_ui)
-          result = rebuild_previews();
+          result = previews.rebuild(core.cpu_scene(), core.scene_gpu(), ui);
         ui_frame.clear();
       }
       if (result.ok()) {

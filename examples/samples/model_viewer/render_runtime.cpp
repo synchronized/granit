@@ -363,4 +363,8 @@ granit_swapchain render_runtime::native_swapchain() const noexcept {
 
 bool render_runtime::valid() const noexcept { return state_ && state_->renderer_owner.valid(); }
 
+bool render_runtime::presentation_valid() const noexcept {
+  return state_ && state_->surface.valid() && state_->swapchain.valid();
+}
+
 } // namespace granit::example::model_viewer

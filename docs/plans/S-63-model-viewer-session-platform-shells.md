@@ -16,7 +16,7 @@ S-58～S-62 已统一资产、Core、ImGui、Render Runtime 和 Render Service�
 
 本阶段完成以下收敛：
 
-- 生产代码优先使用 C++ RAII 和强类型引用，删除无调用方的原生句柄回调；
+- 生产代码优先使用 C++ RAII 和强类型引用，把 C ABI 验收回调隔离到测试目标；
 - 统一材质纹理预览和 Present 结果恢复策略；
 - 将 CPU 生命周期、模型与环境资产、质量配置和帧构造组合为共享 `viewer_session`；
 - Desktop/Web 都由 `application_host` 驱动，平台壳只保留 threaded/inline、命令行、浏览器预热和
@@ -42,9 +42,9 @@ C++ RAII。Surface 和主循环的具体实现保持在平台壳，恢复决策�
 
 ## 实施顺序
 
-1. **S-63A 强类型生产路径与共享小组件（实施中）**：统一纹理预览，迁移 Pipeline Warmup 到
-   C++ RAII，删除未使用的 Web 原生句柄回调和正式路径 native getter。
-2. **S-63B Present 恢复（待开始）**：共享结果分类和恢复状态，补齐 Web 对 `needs_recreate`、
+1. **S-63A 强类型生产路径与共享小组件（完成）**：统一纹理预览，迁移 Pipeline Warmup 到
+   C++ RAII，把 Web 原生句柄回调移入测试专用接口。
+2. **S-63B Present 恢复（实施中）**：共享结果分类和恢复状态，补齐 Web 对 `needs_recreate`、
    `out_of_date` 与 `surface_lost` 的处理。
 3. **S-63C Viewer Session（待开始）**：统一 Renderer/资产/CPU Scene/质量与帧构造状态机。
 4. **S-63D 平台壳迁移（待开始）**：Desktop 接入 `application_host`，两端只实现平台策略。

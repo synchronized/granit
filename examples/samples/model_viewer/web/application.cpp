@@ -19,18 +19,23 @@
 #include "model_viewer/render_task_executor.h"
 #include "model_viewer/viewer_input_accumulator.h"
 #include "model_viewer/viewer_panels.h"
+#include "model_viewer/viewer_texture_previews.h"
 #include "model_viewer/viewer_ui.h"
 
 #include "application.h"
 #include "pipeline_warmup.h"
 #if defined(GRANIT_MODEL_VIEWER_BROWSER_TESTS)
 #include "browser_test_control.h"
+#include "browser_test_hooks.h"
 #include "pipeline_validation.h"
 #endif
 
 namespace {
 
 granit::example::model_viewer::web::application_options options;
+#if defined(GRANIT_MODEL_VIEWER_BROWSER_TESTS)
+granit::example::model_viewer::web::browser_test::hooks test_hooks;
+#endif
 
 enum class startup_status : int { failed = -1, starting, provider_pending, ready, stopped };
 
@@ -72,7 +77,7 @@ struct web_platform_state {
   double pipeline_warmup_started_ms{};
   granit::example::model_viewer::gpu_scene_upload_progress upload_progress{};
   granit::example::model_viewer::performance_sample latest_performance{};
-  std::vector<granit::example::model_viewer::texture_preview> previews;
+  granit::example::model_viewer::viewer_texture_previews previews;
 };
 
 web_platform_state state;
@@ -184,7 +189,7 @@ granit_result create_presentation_resources() {
     return result.ok() ? GRANIT_ERROR_INITIALIZATION_FAILED : granit::to_native(result);
   }
 #if defined(GRANIT_MODEL_VIEWER_BROWSER_TESTS)
-  if (options.presentation_ready != nullptr) {
+  if (test_hooks.presentation_ready != nullptr) {
     const granit_swapchain_info native_info{
         .struct_size = sizeof(granit_swapchain_info),
         .width = info.width,
@@ -193,8 +198,8 @@ granit_result create_presentation_resources() {
         .present_mode = static_cast<granit_present_mode>(info.presentation),
         .format = static_cast<granit_texture_format>(info.format),
     };
-    return options.presentation_ready(state.rendering.native_renderer(),
-                                      state.rendering.native_swapchain(), native_info);
+    return test_hooks.presentation_ready(state.rendering.native_renderer(),
+                                         state.rendering.native_swapchain(), native_info);
   }
 #endif
   return GRANIT_SUCCESS;
@@ -233,37 +238,7 @@ const char* present_mode_label(granit::present_mode mode) noexcept {
 }
 
 granit::result rebuild_previews() {
-  for (const auto& preview : state.previews)
-    static_cast<void>(state.ui.unregister_texture(preview.texture));
-  state.previews.clear();
-  const auto register_preview = [](const granit::example::gltf::texture_reference& reference,
-                                   bool srgb) {
-    using namespace granit::example::model_viewer;
-    if (reference.image == granit::example::gltf::invalid_index)
-      return granit::result::success;
-    ImTextureID existing = ImTextureID_Invalid;
-    if (find_texture_preview(reference, srgb, state.previews, existing))
-      return granit::result::success;
-    granit::texture_view_ref view;
-    granit::sampler_ref sampler;
-    auto result = state.core.scene_gpu().texture_binding(reference, srgb, view, sampler);
-    ImTextureID texture = ImTextureID_Invalid;
-    if (result.ok())
-      result = state.ui.register_texture(view, sampler, texture);
-    if (result.ok())
-      state.previews.push_back({reference.image, reference.sampler, srgb, texture});
-    return result;
-  };
-  for (const auto& material : state.core.cpu_scene().materials) {
-    granit::result result;
-    if ((result = register_preview(material.base_color_texture, true)).failed() ||
-        (result = register_preview(material.emissive_texture, true)).failed() ||
-        (result = register_preview(material.metallic_roughness_texture, false)).failed() ||
-        (result = register_preview(material.normal_texture, false)).failed() ||
-        (result = register_preview(material.occlusion_texture, false)).failed())
-      return result;
-  }
-  return granit::result::success;
+  return state.previews.rebuild(state.core.cpu_scene(), state.core.scene_gpu(), state.ui);
 }
 
 granit_result render_model_viewer_frame(float delta_seconds) {
@@ -303,7 +278,7 @@ granit_result render_model_viewer_frame(float delta_seconds) {
       .sampler_anisotropy = static_cast<float>(state.sampler_anisotropy)};
   const auto changes = granit::example::model_viewer::draw_viewer_panels(
       state.core.cpu_scene(), state.core.state(), panel_renderer, panel_performance, quality,
-      state.previews);
+      state.previews.items());
   if (changes.quality) {
     result = execute_render_quality_change(
         changes.quality->sample_count, changes.quality->enable_fxaa ? 1U : 0U,
@@ -526,7 +501,7 @@ void update_web_application() noexcept {
       return;
     }
 #if defined(GRANIT_MODEL_VIEWER_BROWSER_TESTS)
-    if (options.renderer_ready != nullptr) {
+    if (test_hooks.renderer_ready != nullptr) {
       granit_renderer_limits native_limits = GRANIT_RENDERER_LIMITS_INIT;
       native_limits.uniform_buffer_offset_alignment = limits.uniform_buffer_offset_alignment;
       native_limits.max_uniform_buffer_binding_size = limits.max_uniform_buffer_binding_size;
@@ -534,7 +509,7 @@ void update_web_application() noexcept {
       native_limits.max_sampler_anisotropy = limits.max_sampler_anisotropy;
       native_limits.supported_features = limits.supported_features;
       const auto validation_result =
-          options.renderer_ready(state.rendering.native_renderer(), native_limits);
+          test_hooks.renderer_ready(state.rendering.native_renderer(), native_limits);
       if (validation_result != GRANIT_SUCCESS) {
         fail("renderer-validation", validation_result);
         return;
@@ -543,7 +518,7 @@ void update_web_application() noexcept {
 #endif
   }
   try {
-    if (state.rendering.native_swapchain() == GRANIT_NULL_HANDLE) {
+    if (!state.rendering.presentation_valid()) {
       const auto create_result = create_presentation_resources();
       if (create_result != GRANIT_SUCCESS) {
         fail("presentation-create", create_result);
@@ -559,36 +534,36 @@ void update_web_application() noexcept {
       state.upload_active = true;
       state.upload_cancel_requested = false;
       const auto begin_result = state.pipeline_warmup.begin(
-          state.rendering.native_renderer(), state.core.scene_gpu(),
-          static_cast<granit_texture_format>(swapchain_info.format), state.sample_count);
-      if (begin_result != GRANIT_SUCCESS) {
+          state.rendering.renderer(), state.core.scene_gpu(), swapchain_info.format,
+          static_cast<granit::sample_count>(state.sample_count));
+      if (begin_result.failed()) {
         state.upload_active = false;
-        fail("renderer-pipeline", begin_result);
+        fail("renderer-pipeline", granit::to_native(begin_result));
         return;
       }
       state.pipeline_warmup_started_ms = emscripten_get_now();
     }
     auto pipeline_result = state.pipeline_warmup.poll();
-    while (pipeline_result == GRANIT_ERROR_NOT_READY && !state.upload_cancel_requested &&
+    while (pipeline_result == granit::result::not_ready && !state.upload_cancel_requested &&
            emscripten_get_now() - state.pipeline_warmup_started_ms < 30000.0) {
       // Asyncify 允许浏览器交付 WaitAnyOnly Pipeline Future；某些 Emscripten 主循环不会在
       // 当前回调包含前序 Asyncify 上传后再次调度 tick，因此在同一启动阶段显式让出并轮询。
       emscripten_sleep(0);
-      pipeline_result = granit::to_native(state.rendering.process_renderer_events());
-      if (pipeline_result == GRANIT_SUCCESS)
+      pipeline_result = state.rendering.process_renderer_events();
+      if (pipeline_result.ok())
         pipeline_result = state.pipeline_warmup.poll();
     }
-    if (pipeline_result == GRANIT_ERROR_NOT_READY && state.upload_cancel_requested)
-      pipeline_result = GRANIT_ERROR_CANCELLED;
+    if (pipeline_result == granit::result::not_ready && state.upload_cancel_requested)
+      pipeline_result = granit::result::cancelled;
     state.upload_active = false;
-    if (pipeline_result != GRANIT_SUCCESS) {
-      fail("renderer-pipeline", pipeline_result);
+    if (pipeline_result.failed()) {
+      fail("renderer-pipeline", granit::to_native(pipeline_result));
       return;
     }
 #if defined(GRANIT_MODEL_VIEWER_BROWSER_TESTS)
     if (!state.pipeline_validation.started()) {
       const auto validation_begin =
-          state.pipeline_validation.begin(state.rendering.native_renderer());
+          state.pipeline_validation.begin(state.rendering.renderer().native_handle());
       if (validation_begin != GRANIT_SUCCESS) {
         fail("renderer-pipeline-validation", validation_begin);
         return;
@@ -645,8 +620,8 @@ void update_web_application() noexcept {
 }
 
 granit_result destroy_web_render_resources() noexcept {
+  state.previews.clear(state.ui);
   state.ui.clear_textures();
-  state.previews.clear();
   state.runtime.reset();
   state.pipeline_warmup.reset();
 #if defined(GRANIT_MODEL_VIEWER_BROWSER_TESTS)
@@ -746,6 +721,10 @@ void web_application_host::on_host_shutdown(granit::result) noexcept {
 } // namespace
 
 #if defined(GRANIT_MODEL_VIEWER_BROWSER_TESTS)
+void granit::example::model_viewer::web::browser_test::configure(hooks value) noexcept {
+  test_hooks = value;
+}
+
 int granit::example::model_viewer::web::browser_test_control::platform_status() noexcept {
   return static_cast<int>(state.status);
 }

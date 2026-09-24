@@ -100,6 +100,8 @@ if(TARGET granit::integration_imgui)
     viewer_ui.h
     viewer_panels.cpp
     viewer_panels.h
+    viewer_texture_previews.cpp
+    viewer_texture_previews.h
   )
   target_compile_features(granit_sample_model_viewer_imgui PUBLIC cxx_std_20)
   target_include_directories(

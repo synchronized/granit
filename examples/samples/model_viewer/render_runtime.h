@@ -73,9 +73,12 @@ public:
   [[nodiscard]] granit::texture_view_ref font_view() const noexcept;
   [[nodiscard]] granit::sampler_ref font_sampler() const noexcept;
   [[nodiscard]] granit::renderer_ref renderer() const noexcept;
+  /** 仅供浏览器 C ABI 验收钩子使用。 */
   [[nodiscard]] granit_renderer native_renderer() const noexcept;
+  /** 仅供浏览器 C ABI 验收钩子使用。 */
   [[nodiscard]] granit_swapchain native_swapchain() const noexcept;
   [[nodiscard]] bool valid() const noexcept;
+  [[nodiscard]] bool presentation_valid() const noexcept;
 
 private:
   struct state;

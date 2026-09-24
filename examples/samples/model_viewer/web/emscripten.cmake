@@ -36,6 +36,7 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     "${CMAKE_CURRENT_LIST_DIR}/application.h"
     "${CMAKE_CURRENT_LIST_DIR}/browser_test_api.cpp"
     "${CMAKE_CURRENT_LIST_DIR}/browser_test_control.h"
+    "${CMAKE_CURRENT_LIST_DIR}/browser_test_hooks.h"
     "${CMAKE_CURRENT_LIST_DIR}/pipeline_validation.cpp"
     "${CMAKE_CURRENT_LIST_DIR}/pipeline_validation.h"
     "${CMAKE_CURRENT_LIST_DIR}/pipeline_warmup.cpp"

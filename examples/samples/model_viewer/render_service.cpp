@@ -215,6 +215,10 @@ granit_swapchain render_service::native_swapchain() const noexcept {
 
 bool render_service::valid() const noexcept { return state_ && state_->runtime.valid(); }
 
+bool render_service::presentation_valid() const noexcept {
+  return state_ && state_->runtime.presentation_valid();
+}
+
 bool render_service::running() const noexcept {
   return state_ && state_->executor && state_->executor->running();
 }

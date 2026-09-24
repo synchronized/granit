@@ -37,6 +37,7 @@
 #include "model_viewer/application_core.h"
 #include "model_viewer/render_task_executor.h"
 #include "model_viewer/web/application.h"
+#include "model_viewer/web/browser_test_hooks.h"
 #include "support/renderer_fixture.h"
 
 namespace {
@@ -734,9 +735,8 @@ int main() {
                  GRANIT_ERROR_INITIALIZATION_FAILED);
     return 1;
   }
-  return granit::example::model_viewer::web::run_application({
-      .default_model_url = "model_viewer_fixture.gltf",
-      .renderer_ready = validate_renderer,
-      .presentation_ready = validate_presentation,
-  });
+  granit::example::model_viewer::web::browser_test::configure(
+      {.renderer_ready = validate_renderer, .presentation_ready = validate_presentation});
+  return granit::example::model_viewer::web::run_application(
+      {.default_model_url = "model_viewer_fixture.gltf"});
 }
