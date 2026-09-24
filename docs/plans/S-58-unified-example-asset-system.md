@@ -93,8 +93,9 @@ examples/common/assets/
 1. **S-58A 地址与路径契约（已完成）**：外部地址解析已从 `asset_loader.h` 移入
    `asset_location.*`，打包资产和 glTF 资源复用 `normalize_resource_path()`；URL、文件路径、NUL、
    父目录逃逸、相对资源和失败时输出不变测试已经通过。
-2. **S-58B Asset System 核心**：增加类型安全 Mount、`asset_key` 和统一请求入口；请求继续复用现有
-   `asset_request` 状态、进度、取消与 generation 保护。
+2. **S-58B Asset System 核心（已完成）**：已增加类型安全 Mount、`asset_key` 和统一请求入口；
+   打包资产可立即完成，外部根继续异步读取，二者复用同一 `asset_request` 状态、进度、取消与
+   generation 保护。Windows 与 Emscripten 资产测试通过。
 3. **S-58C 内部 Source**：接入 Desktop packaged/filesystem 与 Web MEMFS/Fetch；平台 Source 只在
    构建期选择，不进入业务头文件。
 4. **S-58D Application 与教程迁移**：Application Host 改为单一 Asset System；Cube、PBR Assets、

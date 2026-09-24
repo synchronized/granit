@@ -14,6 +14,8 @@ add_library(
   asset_store.h
   asset_store_resolver.cpp
   asset_store_resolver.h
+  asset_system.cpp
+  asset_system.h
   memory_resource_resolver.cpp
   memory_resource_resolver.h
   resource_path.cpp
@@ -37,6 +39,7 @@ if(GRANIT_TESTING_ENABLED)
     asset_batch_test.cpp
     asset_location_test.cpp
     asset_request_test.cpp
+    asset_system_test.cpp
     memory_resource_resolver_test.cpp
     resource_path_test.cpp
   )
