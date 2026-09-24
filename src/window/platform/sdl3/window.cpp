@@ -208,8 +208,10 @@ granit_result refresh_window(window_record& window) noexcept {
   window.height = static_cast<std::uint32_t>(height);
   window.framebuffer_width = static_cast<std::uint32_t>(framebuffer_width);
   window.framebuffer_height = static_cast<std::uint32_t>(framebuffer_height);
-  window.content_scale_horizontal = static_cast<float>(framebuffer_width) / width;
-  window.content_scale_vertical = static_cast<float>(framebuffer_height) / height;
+  window.content_scale_horizontal =
+      static_cast<float>(framebuffer_width) / static_cast<float>(width);
+  window.content_scale_vertical =
+      static_cast<float>(framebuffer_height) / static_cast<float>(height);
   return GRANIT_SUCCESS;
 }
 

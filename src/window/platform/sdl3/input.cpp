@@ -36,7 +36,8 @@ void handle_sdl3_input(granit_window window, const granit_window_input_native_ev
   case GRANIT_WINDOW_INPUT_SDL3_KEY_DOWN:
   case GRANIT_WINDOW_INPUT_SDL3_KEY_UP: {
     const bool pressed = event.type == GRANIT_WINDOW_INPUT_SDL3_KEY_DOWN;
-    const auto physical = event.detail < 256 ? event.detail : GRANIT_PHYSICAL_KEY_UNKNOWN;
+    const auto physical =
+        event.detail < 256 ? event.detail : static_cast<std::uint32_t>(GRANIT_PHYSICAL_KEY_UNKNOWN);
     auto& state = sink.keyboard(sink.user_data, window);
     set_key(state, physical, pressed);
     state.modifiers = event.state;
