@@ -8,6 +8,10 @@
 展示数量复制成独立示例。
 构建与运行命令见[示例程序指南](../docs/guides/examples.md)。
 
+只使用安装后 SDK 的最小外部工程位于
+[`standalone/window_clear`](standalone/window_clear)。它不参与 Granit 主工程构建，用于验证普通
+Consumer 能独立创建窗口、清屏和呈现。
+
 ## 当前综合入口
 
 | 入口 | 位置 | 目标 | 用途 |
@@ -22,6 +26,7 @@
 ```text
 examples/
 ├─ assets/       按 tutorials/samples 组织的可再分发输入资产
+├─ standalone/   只依赖安装 SDK 的独立 Consumer 工程
 ├─ common/       多个示例共享、但不属于安装 SDK 的私有实现，按技术域分
 │  ├─ gltf/      glTF/GLB 文档资源编排、格式导入、图片解码与 CPU Scene 转换
 │  ├─ assets/    统一的 Desktop/Web 异步读取、资源批次、内存 Resolver 与运行时资产
