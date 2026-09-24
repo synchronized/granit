@@ -3,38 +3,14 @@
 
 #include "assets/asset_store.h"
 
+#include "assets/resource_path.h"
+
 #include <cstdint>
 #include <fstream>
 #include <limits>
 #include <string>
 
 namespace granit::example::assets {
-namespace {
-
-bool valid_logical_path(std::string_view path) noexcept {
-  if (path.empty() || path.front() == '/' || path.front() == '\\' || path.find(':') != path.npos ||
-      path.find('\0') != path.npos) {
-    return false;
-  }
-  std::size_t segment_begin = 0;
-  while (segment_begin < path.size()) {
-    const auto segment_end = path.find('/', segment_begin);
-    const auto length =
-        (segment_end == std::string_view::npos ? path.size() : segment_end) - segment_begin;
-    const auto segment = path.substr(segment_begin, length);
-    if (segment.empty() || segment == "." || segment == ".." ||
-        segment.find('\\') != segment.npos) {
-      return false;
-    }
-    if (segment_end == std::string_view::npos)
-      break;
-    segment_begin = segment_end + 1;
-  }
-  return true;
-}
-
-} // namespace
-
 bool asset_store::initialize(std::string_view executable_path) {
 #if defined(__EMSCRIPTEN__)
   static_cast<void>(executable_path);
@@ -52,10 +28,11 @@ bool asset_store::initialize(std::string_view executable_path) {
 }
 
 bool asset_store::read(std::string_view logical_path, std::vector<std::byte>& output) const {
-  if (root_.empty() || !valid_logical_path(logical_path))
+  std::string normalized;
+  if (root_.empty() || !normalize_resource_path(logical_path, normalized))
     return false;
 
-  const auto path = root_ / std::filesystem::path{std::string{logical_path}};
+  const auto path = root_ / std::filesystem::path{normalized};
   std::ifstream stream{path, std::ios::binary | std::ios::ate};
   if (!stream)
     return false;

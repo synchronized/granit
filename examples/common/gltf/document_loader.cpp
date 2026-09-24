@@ -3,6 +3,7 @@
 
 #include "gltf/document_loader.h"
 
+#include "assets/asset_location.h"
 #include "assets/asset_request.h"
 #include "gltf/document_manifest.h"
 

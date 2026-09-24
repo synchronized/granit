@@ -26,11 +26,14 @@ TEST_CASE("Example Asset Store resolves paths beside the executable") {
   std::vector<std::byte> bytes;
   CHECK(assets.read("tutorials/fixture.bin", bytes));
   CHECK(bytes.size() == 6);
+  CHECK(assets.read("tutorials/./fixture.bin", bytes));
+  CHECK(bytes.size() == 6);
   CHECK_FALSE(assets.read("../fixture.bin", bytes));
   CHECK_FALSE(assets.read("tutorials/../fixture.bin", bytes));
   CHECK_FALSE(assets.read("tutorials\\fixture.bin", bytes));
   CHECK_FALSE(assets.read("C:/fixture.bin", bytes));
   CHECK_FALSE(assets.read("/tutorials/fixture.bin", bytes));
+  CHECK_FALSE(assets.read("tutorials/fixture.bin?version=1", bytes));
   CHECK(bytes.size() == 6);
 
   std::error_code error;

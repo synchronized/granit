@@ -8,7 +8,6 @@
 
 #include <memory>
 #include <string>
-#include <string_view>
 
 namespace granit::example::assets {
 
@@ -31,10 +30,6 @@ private:
   struct implementation;
   std::unique_ptr<implementation> implementation_;
 };
-
-/** 根据主资产位置解析其相对资源位置。 */
-[[nodiscard]] bool resolve_asset_location(std::string_view base, std::string_view relative,
-                                          std::string& output);
 
 } // namespace granit::example::assets
 

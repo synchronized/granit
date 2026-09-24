@@ -90,8 +90,9 @@ examples/common/assets/
 
 ## 实施顺序
 
-1. **S-58A 地址与路径契约**：把外部地址解析从 `asset_loader.h` 移入 `asset_location.*`，让所有受控
-   逻辑路径复用 `normalize_resource_path()`；补充绝对路径、URL、NUL、父目录和相对资源测试。
+1. **S-58A 地址与路径契约（已完成）**：外部地址解析已从 `asset_loader.h` 移入
+   `asset_location.*`，打包资产和 glTF 资源复用 `normalize_resource_path()`；URL、文件路径、NUL、
+   父目录逃逸、相对资源和失败时输出不变测试已经通过。
 2. **S-58B Asset System 核心**：增加类型安全 Mount、`asset_key` 和统一请求入口；请求继续复用现有
    `asset_request` 状态、进度、取消与 generation 保护。
 3. **S-58C 内部 Source**：接入 Desktop packaged/filesystem 与 Web MEMFS/Fetch；平台 Source 只在

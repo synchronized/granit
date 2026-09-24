@@ -58,16 +58,6 @@ TEST_CASE("资产请求报告进度、失败和取消", "[example][assets]") {
   CHECK(request.bytes().empty());
 }
 
-TEST_CASE("资产位置解析同时支持 URL 和文件路径", "[example][assets]") {
-  std::string output;
-  CHECK(
-      assets::resolve_asset_location("https://example.com/models/a.gltf?x=1", "mesh.bin", output));
-  CHECK(output == "https://example.com/models/mesh.bin");
-
-  CHECK(assets::resolve_asset_location("models/a.gltf", "textures/base.png", output));
-  CHECK(std::filesystem::path{output} == std::filesystem::path{"models"} / "textures" / "base.png");
-}
-
 TEST_CASE("资产 Loader 拒绝无效位置", "[example][assets]") {
   assets::asset_loader loader;
   const auto request = loader.load({});
