@@ -9,6 +9,8 @@
 
 ## 当前计划
 
+- [S-58：统一 Example Asset System](S-58-unified-example-asset-system.md)——以逻辑 Mount、统一请求和
+  内部平台 Source 取代 Store/Loader 并列入口，并统一 Tutorial、glTF 与 Model Viewer 加载编排。
 - [S-57：Model Viewer 运行时架构](S-57-model-viewer-runtime-architecture.md)——保持现有目录和
   Desktop/Web 执行语义，拆分平台组合入口、渲染执行、加载编排与浏览器验收边界。
 - [S-56：Window Target 与 SDL3 后端](S-56-window-target-and-sdl3-backend.md)——分离 Window

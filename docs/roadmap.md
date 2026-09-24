@@ -29,6 +29,14 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 
 ## 当前计划
 
+### S-58：统一 Example Asset System
+
+**状态：实施中，P1。**
+
+[S-58](plans/S-58-unified-example-asset-system.md) 将资产身份、来源与读取调度拆开，以逻辑 Mount 和
+统一请求隐藏 Desktop 目录、Emscripten 预加载文件系统与 Fetch 差异，并统一 Application Host、
+Tutorial、glTF 和 Model Viewer 的资产入口。
+
 ### S-57：Model Viewer 运行时架构
 
 **状态：实施完成，等待远端 Linux 验收，P1。**
