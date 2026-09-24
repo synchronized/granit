@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_WEB_PIPELINE_WARMUP_H_
-#define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_WEB_PIPELINE_WARMUP_H_
+#ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_PIPELINE_PREPARE_H_
+#define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_PIPELINE_PREPARE_H_
 
 #include <granit/renderer/pipeline_warmup.hpp>
 
@@ -10,13 +10,11 @@
 #include <vector>
 
 namespace granit::example::model_viewer {
+
 class gpu_scene;
-}
 
-namespace granit::example::model_viewer::web {
-
-/** 异步预热当前场景材质所需的 WebGPU Pipeline。 */
-class pipeline_warmup final {
+/** 跨后端异步准备当前场景材质所需的 Pipeline。 */
+class pipeline_prepare final {
 public:
   [[nodiscard]] granit::result begin(granit::renderer_ref renderer, gpu_scene& scene,
                                      granit::texture_format color_format,
@@ -35,6 +33,6 @@ private:
   phase phase_{phase::idle};
 };
 
-} // namespace granit::example::model_viewer::web
+} // namespace granit::example::model_viewer
 
-#endif // GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_WEB_PIPELINE_WARMUP_H_
+#endif // GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_PIPELINE_PREPARE_H_

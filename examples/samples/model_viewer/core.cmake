@@ -23,6 +23,8 @@ add_library(
   orbit_camera.h
   performance_history.cpp
   performance_history.h
+  pipeline_prepare.cpp
+  pipeline_prepare.h
   presentation_recovery.h
   viewer_state.cpp
   viewer_state.h

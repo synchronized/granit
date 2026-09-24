@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "pipeline_warmup.h"
+#include "model_viewer/pipeline_prepare.h"
 
 #include "model_viewer/gpu_scene.h"
 
 #include <cstdio>
 
-namespace granit::example::model_viewer::web {
+namespace granit::example::model_viewer {
 
-granit::result pipeline_warmup::begin(granit::renderer_ref renderer, gpu_scene& scene,
-                                      granit::texture_format color_format,
-                                      granit::sample_count samples) {
+granit::result pipeline_prepare::begin(granit::renderer_ref renderer, gpu_scene& scene,
+                                       granit::texture_format color_format,
+                                       granit::sample_count samples) {
   if (!renderer || phase_ != phase::idle)
     return granit::result::invalid_argument;
   auto result = batch_.create(renderer);
@@ -28,7 +28,7 @@ granit::result pipeline_warmup::begin(granit::renderer_ref renderer, gpu_scene& 
   return granit::result::success;
 }
 
-granit::result pipeline_warmup::poll() {
+granit::result pipeline_prepare::poll() {
   if (phase_ == phase::complete)
     return granit::result::success;
   if (phase_ != phase::running)
@@ -77,11 +77,11 @@ granit::result pipeline_warmup::poll() {
   return granit::result::success;
 }
 
-void pipeline_warmup::reset() noexcept {
+void pipeline_prepare::reset() noexcept {
   static_cast<void>(operation_.reset());
   static_cast<void>(batch_.reset_handle());
   material_indices_.clear();
   phase_ = phase::idle;
 }
 
-} // namespace granit::example::model_viewer::web
+} // namespace granit::example::model_viewer

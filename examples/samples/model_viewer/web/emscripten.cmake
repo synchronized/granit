@@ -7,8 +7,6 @@ add_library(
   granit_web_model_viewer_platform STATIC
   "${CMAKE_CURRENT_LIST_DIR}/application.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/application.h"
-  "${CMAKE_CURRENT_LIST_DIR}/pipeline_warmup.cpp"
-  "${CMAKE_CURRENT_LIST_DIR}/pipeline_warmup.h"
 )
 function(granit_configure_web_model_viewer_platform target)
   target_compile_features(${target} PUBLIC cxx_std_20)
@@ -39,8 +37,6 @@ if(GRANIT_BUILD_TESTING AND BUILD_TESTING)
     "${CMAKE_CURRENT_LIST_DIR}/browser_test_hooks.h"
     "${CMAKE_CURRENT_LIST_DIR}/pipeline_validation.cpp"
     "${CMAKE_CURRENT_LIST_DIR}/pipeline_validation.h"
-    "${CMAKE_CURRENT_LIST_DIR}/pipeline_warmup.cpp"
-    "${CMAKE_CURRENT_LIST_DIR}/pipeline_warmup.h"
   )
   target_compile_definitions(
     granit_web_model_viewer_test_platform PRIVATE GRANIT_MODEL_VIEWER_BROWSER_TESTS=1

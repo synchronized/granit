@@ -24,7 +24,7 @@
 #include "model_viewer/viewer_ui.h"
 
 #include "application.h"
-#include "pipeline_warmup.h"
+#include "model_viewer/pipeline_prepare.h"
 #if defined(GRANIT_MODEL_VIEWER_BROWSER_TESTS)
 #include "browser_test_control.h"
 #include "browser_test_hooks.h"
@@ -44,7 +44,7 @@ struct web_platform_state {
   granit::example::model_viewer::viewer_session session;
   granit::example::model_viewer::inline_render_task_executor executor;
   granit::example::model_viewer::render_service rendering;
-  granit::example::model_viewer::web::pipeline_warmup pipeline_warmup;
+  granit::example::model_viewer::pipeline_prepare pipeline_warmup;
 #if defined(GRANIT_MODEL_VIEWER_BROWSER_TESTS)
   granit::example::model_viewer::web::pipeline_validation pipeline_validation;
 #endif
