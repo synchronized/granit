@@ -118,8 +118,10 @@ examples/samples/model_viewer/
    `browser_api.cpp` 已保留稳定 C 导出、异常转换和参数转发，并通过私有控制接口访问运行时；
    `pipeline_validation.*` 持有预热资源、异步状态、软件适配器回退与失败清理。Emscripten 构建及
    Chrome 的渲染、控制、取消、缺失 Buffer 和资源释放验收已经通过。
-5. **S-57E 重复审计**：完成拆分后再比较 Desktop/Web 的加载阶段、质量设置和呈现恢复。只有存在
-   相同所有权与失败语义的逻辑才提升到 Sample Core；不为减少行数制造跨平台虚基类。
+5. **S-57E 重复审计（已完成）**：Desktop/Web 已共用 glTF 导入、GPU Scene、Viewer 状态、输入累积
+   和帧数据生成。其余相似流程具有不同所有权：Desktop 使用 CPU 规划任务、渲染线程上传和 Surface
+   线程交接，Web 使用 Fetch、Asyncify、inline 上传和 Canvas Swapchain；质量修改也分别通过有序渲染
+   命令与浏览器 C 导出执行。因此不再增加跨平台基类或状态机。
 6. **S-57F 验证与文档**：补齐状态转换、线程命令、失败回滚和重复 Shutdown 测试，运行 Desktop、
    Emscripten、浏览器与安装边界检查，并更新 Model Viewer 指南及实施记录。
 
