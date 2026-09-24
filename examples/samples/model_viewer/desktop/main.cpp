@@ -410,7 +410,6 @@ int main(int argc, char** argv) {
   granit::texture_view font_view;
   granit::sampler font_sampler;
   granit::canvas_draw_list canvas;
-  std::array<granit::canvas_draw_list, 3> frame_canvases;
   granit::example::imgui::texture_registry textures;
   application_core core;
   result = core.begin_renderer();
@@ -478,10 +477,6 @@ int main(int argc, char** argv) {
     ImGui::GetIO().Fonts->SetTexID(font_texture_id);
     ImGui::GetIO().Fonts->TexRef._TexData->SetStatus(ImTextureStatus_OK);
     result = canvas.initialize(renderer);
-    for (auto& frame_canvas : frame_canvases) {
-      if (result.ok())
-        result = frame_canvas.initialize(renderer);
-    }
   }
 
   const std::filesystem::path asset_path(options.asset_path);
@@ -640,7 +635,7 @@ int main(int argc, char** argv) {
   }
   if (result.ok())
     result =
-        render_service.initialize(renderer.ref(), swapchain, swapchain_info, core, frame_canvases);
+        render_service.initialize(renderer.ref(), swapchain, swapchain_info, core, options.show_ui);
   bool upload_resize_pending = false;
   if (result.ok()) {
     gpu_upload_progress_context upload_context{

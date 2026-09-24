@@ -42,10 +42,10 @@ public:
   render_service(const render_service&) = delete;
   render_service& operator=(const render_service&) = delete;
 
-  [[nodiscard]] granit::result
-  initialize(granit::renderer_ref renderer, granit::swapchain& swapchain,
-             granit::swapchain_info& swapchain_info, application_core& core,
-             std::array<granit::canvas_draw_list, 3>& frame_canvases) noexcept;
+  [[nodiscard]] granit::result initialize(granit::renderer_ref renderer,
+                                          granit::swapchain& swapchain,
+                                          granit::swapchain_info& swapchain_info,
+                                          application_core& core, bool enable_ui) noexcept;
   /** 开始不可丢弃上传；desc 中的视图和用户数据必须保持到完成回执。 */
   [[nodiscard]] granit::result begin_gpu_upload(const gpu_upload_desc& desc) noexcept;
   [[nodiscard]] bool try_finish_gpu_upload(granit::result& status) noexcept;

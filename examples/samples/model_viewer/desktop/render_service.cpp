@@ -16,7 +16,7 @@ struct render_service_state {
   granit::swapchain* swapchain{};
   granit::swapchain_info* swapchain_info{};
   application_core* core{};
-  std::array<granit::canvas_draw_list, 3>* frame_canvases{};
+  std::array<granit::canvas_draw_list, 3> frame_canvases;
   granit::render_pipeline pipeline;
   threaded_frame_executor executor;
   std::size_t next_canvas{};
@@ -122,8 +122,8 @@ granit::result execute_frame(frame_packet&& packet, frame_execution_result& outp
   if (result.ok()) {
     granit::canvas_draw_list_ref canvas;
     if (!packet.canvas.empty()) {
-      auto& canvas_slot = (*state.frame_canvases)[state.next_canvas];
-      state.next_canvas = (state.next_canvas + 1) % state.frame_canvases->size();
+      auto& canvas_slot = state.frame_canvases[state.next_canvas];
+      state.next_canvas = (state.next_canvas + 1) % state.frame_canvases.size();
       result = canvas_slot.clear();
       if (result.ok())
         result = packet.canvas.append_to(canvas_slot);
@@ -235,7 +235,7 @@ granit::result shutdown_renderer(void* user_data) {
   };
   collect(context.state->pipeline.reset());
   context.state->core->reset();
-  for (auto& canvas : *context.state->frame_canvases)
+  for (auto& canvas : context.state->frame_canvases)
     collect(canvas.destroy());
   collect(context.loading_canvas->destroy());
   collect(context.font_sampler->reset());
@@ -256,10 +256,10 @@ render_service::~render_service() {
     state_->executor.stop();
 }
 
-granit::result
-render_service::initialize(granit::renderer_ref renderer, granit::swapchain& swapchain,
-                           granit::swapchain_info& swapchain_info, application_core& core,
-                           std::array<granit::canvas_draw_list, 3>& frame_canvases) noexcept {
+granit::result render_service::initialize(granit::renderer_ref renderer,
+                                          granit::swapchain& swapchain,
+                                          granit::swapchain_info& swapchain_info,
+                                          application_core& core, bool enable_ui) noexcept {
   if (state_)
     return granit::result::invalid_argument;
   try {
@@ -268,8 +268,15 @@ render_service::initialize(granit::renderer_ref renderer, granit::swapchain& swa
     state->swapchain = &swapchain;
     state->swapchain_info = &swapchain_info;
     state->core = &core;
-    state->frame_canvases = &frame_canvases;
-    const auto result = state->executor.initialize(execute_frame, state.get());
+    auto result = granit::result::success;
+    if (enable_ui) {
+      for (auto& canvas : state->frame_canvases) {
+        if (result.ok())
+          result = canvas.initialize(renderer);
+      }
+    }
+    if (result.ok())
+      result = state->executor.initialize(execute_frame, state.get());
     if (result.failed())
       return result;
     state_ = std::move(state);
