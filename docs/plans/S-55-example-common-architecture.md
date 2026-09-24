@@ -85,8 +85,8 @@ validation ──────────────────┘
 5. **S-55E Model Viewer 专项分析（已完成）**：`application_core`、CPU Scene、GPU 上传与 Frame
    Packet 已经保持后端无关；重复主要位于主文档/外部资源编排、窗口呈现和输入适配。Desktop 使用
    带背压的独立渲染线程，Web 使用 inline executor 并承担 C ABI 浏览器验收，不能直接套用当前
-   单线程 `application` 而丢失执行语义。后续 S-56 已将两端输入状态机和 Window/Input 事件映射
-   收敛为共享控制器。
+   单线程 `application` 而丢失执行语义。S-56 已将两端输入状态机和 Window/Input 事件映射收敛为
+   Viewer 私有输入累积器；进一步的运行时职责拆分转入 [S-57](S-57-model-viewer-runtime-architecture.md)。
 6. **S-55F glTF 文档资源收敛（已完成）**：`document_manifest` 只扫描外部 URI，
    `document_loader` 统一主文档读取、批量加载、Resolver 提交、取消、进度和结构化失败，
    `importer` 专门将完整文档导入 CPU Scene；Desktop/Web Model Viewer 不再各自维护资源状态机。
@@ -94,8 +94,8 @@ validation ──────────────────┘
    统一 Window、事件循环和异步资产服务；现有 `application` 在其上提供可配置的 inline
    Renderer/Swapchain 与不依赖 Acquire 的 update hook。Web Model Viewer 已接入 Host，同时保留
    自身 inline executor 和浏览器验收接口。Desktop 已经通过 `granit::window` 的 SDL3 后端屏蔽
-   平台事件和 Surface 差异，同时保留 threaded executor；是否接入 Host 留待单独处理，不以删除
-   渲染线程换取表面统一。
+   平台事件和 Surface 差异，同时保留 threaded executor。当前不把 Desktop 强行接入 Host；S-57
+   将在不扩大通用 Host 职责的前提下整理其独立线程壳层。
 8. **S-55H 验证与文档收口（进行中）**：资产、glTF 和 Model Viewer 相关 Windows 测试、
    Emscripten 构建、浏览器 Smoke 与两个教程的浏览器测试已经通过；Linux、Windows 静态配置和
    Desktop Host 取舍留待完整任务收口。`application/`、`gltf/`、`validation/` 的路径保持不变。

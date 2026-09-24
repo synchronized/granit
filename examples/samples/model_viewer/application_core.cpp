@@ -40,7 +40,7 @@ camera_bounds scene_bounds(const gpu_scene_plan& plan, std::uint32_t selected_no
 } // namespace
 
 granit::render_pipeline_render_desc
-frame_packet::render_desc(granit::texture_view_ref output, granit::texture_format output_format,
+viewer_frame::render_desc(granit::texture_view_ref output, granit::texture_format output_format,
                           const granit::acquired_frame* frame,
                           granit::canvas_draw_list_ref canvas_list) const noexcept {
   granit::render_pipeline_render_desc desc;
@@ -163,7 +163,7 @@ granit::result application_core::reupload_scene(granit::renderer_ref renderer,
   return gpu_scene_.initialize(renderer, cpu_scene_, sampler_anisotropy);
 }
 
-granit::result application_core::tick(const application_tick_input& input, frame_packet& output) {
+granit::result application_core::tick(const application_tick_input& input, viewer_frame& output) {
   if (phase_ != application_phase::ready)
     return granit::result::invalid_argument;
   if (input.width == 0 || input.height == 0)
@@ -213,7 +213,7 @@ granit::result application_core::tick(const application_tick_input& input, frame
       .radiance = light_state.radiance,
       .layer_mask = std::numeric_limits<std::uint64_t>::max()};
 
-  frame_packet candidate;
+  viewer_frame candidate;
   const auto snapshot_result = gpu_scene_.create_snapshot(std::span{&view, 1}, std::span{&light, 1},
                                                           {}, {}, candidate.snapshot);
   if (snapshot_result.failed())

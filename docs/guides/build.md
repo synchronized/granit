@@ -24,6 +24,7 @@
 | `GRANIT_BUILD_TOOLS` | `OFF` | 单独构建离线工具；示例或 benchmark 会自动构建所需工具 |
 | `GRANIT_BUILD_ASSET_TOOLS` | `OFF` | 构建并安装可供编辑器链接的 AssetTools SDK |
 | `GRANIT_BUILD_INTEGRATION_SDL3` | `OFF` | 构建 SDL3 Surface 集成组件 |
+| `GRANIT_ENABLE_WINDOW_SDL3` | 跟随 `GRANIT_BUILD_EXAMPLES` | 在 Window component 中启用 SDL3 后端 |
 | `GRANIT_BUILD_INTEGRATION_IMGUI` | `OFF` | 构建 ImGui Draw Data 集成组件 |
 | `GRANIT_DEPENDENCY_POLICY` | `auto` | 第三方依赖默认获取策略：`system`（只用系统包）/ `auto`（先系统后下载）/ `download`（强制下载锁定版） |
 | `GRANIT_ENABLE_XCB` | Linux 上 `ON` | 找到 XCB 开发头时启用私有 XCB Surface 后端 |
@@ -43,6 +44,12 @@ Wayland Window 需要 `wayland-client`、`wayland-scanner` 和 `wayland-protocol
 查找 `libxkbcommon`。缺少 `libxkbcommon` 时禁用 Wayland 输入，XCB 输入和 Wayland 窗口仍可
 构建。上述库均不进入 Granit 公共头文件；静态链接 Window 且启用 Wayland 输入时，最终应用仍需
 链接系统 `libxkbcommon`。
+
+SDL3 Window Backend 与 `IntegrationSDL3` 是独立选项。前者让 `granit::window` 创建窗口并统一
+事件、输入和 Surface；后者只把应用拥有的 `SDL_Window` 接到 Renderer Surface。启用 SDL3 Window
+Backend 时，SDL3 仍是 Window 的私有编译依赖，不进入公共头文件。共享安装需要随应用部署 SDL3
+运行库；静态安装的 `granitConfig.cmake` 会通过 `find_dependency(SDL3 3.2 CONFIG)` 解析最终链接
+依赖。使用下载策略时，安装步骤会同时安装锁定版本的 SDL3 运行库、头文件和 CMake 包配置。
 
 桌面平台只构建 Vulkan 后端，不需要 Dawn SDK。浏览器 WebGPU 由 Emscripten 构建静态接入，
 其环境和运行方法见[浏览器 WebGPU 示例](webgpu-browser-example.md)。

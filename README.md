@@ -147,8 +147,9 @@ find_package(granit CONFIG REQUIRED COMPONENTS Window)
 target_link_libraries(your_target PRIVATE granit::granit granit::window)
 ```
 
-Window 不是核心 Renderer 的强制依赖，并直接提供窗口及输入事件。应用也可以自行接入 SDL3 或
-GLFW，具体边界见[窗口库接入](docs/guides/window-library-integration.md)；输入行为见
+Window 不是核心 Renderer 的强制依赖，并直接提供窗口及输入事件；源码构建还可启用由 Window
+System 管理生命周期的 SDL3 Backend。已经自行拥有 SDL3 或 GLFW 窗口的应用继续使用外部窗口
+接入路径，具体边界见[窗口库接入](docs/guides/window-library-integration.md)；输入行为见
 [Window 输入](docs/reference/input.md)。
 
 使用可选 SDL3 和 ImGui Integration：
@@ -162,8 +163,7 @@ target_link_libraries(
 
 SDL3 Integration 只负责创建 Granit Surface；ImGui Integration 只负责把 Draw Data 追加到 Canvas。
 源码树构建时两者默认关闭，安装使用时由父项目或 `find_package` 提供 SDL3 3.2+ 与 ImGui；完整
-启用方式、依赖和所有权边界见
-[SDL3 与 ImGui Integration](docs/reference/third-party-integrations.md)。
+启用方式、依赖和所有权边界见[SDL3 与 ImGui Integration](docs/reference/third-party-integrations.md)。
 组合示例同时覆盖字体 Atlas 与自定义 Texture ID，并通过 Canvas 的逐帧公共绑定及有界纹理绑定
 缓存录制；Canvas 的当前录制语义见 [Canvas Draw List](docs/reference/canvas-draw-list.md)。
 

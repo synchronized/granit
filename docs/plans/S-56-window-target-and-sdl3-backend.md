@@ -5,9 +5,10 @@
 
 ## 状态
 
-**实施中。** 通用 Target、原生与 SDL3 Emscripten 多 Canvas、后端操作表和桌面 SDL3 Window
-后端已经完成。Model Viewer 的 Desktop/Web 已共用 Viewer 输入累积器；
-shared/static 安装 Consumer 已验证，剩余重点是文档发布与跨平台收口。
+**实施完成，等待远端 Linux 验收。** 通用 Target、原生与 SDL3 Emscripten 多 Canvas、后端操作表、
+桌面 SDL3 Window 后端、Model Viewer 消费者迁移和当前行为文档已经完成。Windows shared/static、
+SDL3 开关、安装 Consumer、Emscripten 编译与 Chrome 运行已在本地验证；当前机器没有 WSL 或容器
+环境，Linux XCB/Wayland 与 SDL3 路径留给 Pull Request Actions 验收。
 
 ## 背景与目标
 
@@ -85,8 +86,12 @@ Window System
    `viewer_input_accumulator`，统一拖动、滚轮、快捷键、焦点、UI 捕获和背压语义。Desktop 已改用
    `granit::window` SDL3 后端、统一 Surface API 和 Granit Input → ImGuiIO 适配，同时保持独立
    渲染线程与 Frame Packet 语义不变；原 SDL Event 翻译层已删除。
-6. **S-56F 文档与发布收口**：更新 Window、Input、Integration、Compatibility 和 Architecture
-   的当前行为，补充安装组件与迁移说明，并完成跨平台验证。
+6. **S-56F 文档与发布收口（本地完成，待远端）**：Window、Input、Integration、Compatibility、
+   Architecture、构建和 Model Viewer 文档已同步；本地平台矩阵已通过，剩余 Linux XCB/Wayland
+   与 SDL3 组合由远端矩阵验收。
+
+本地实施和验证结果见
+[S-56 Window Target 与 SDL3 后端本地验收](../records/2026-09-24-s56-window-sdl3-local-acceptance.md)。
 
 ## 测试与验收
 

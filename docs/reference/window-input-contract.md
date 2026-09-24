@@ -12,6 +12,8 @@
 - Window System 同时拥有窗口、Window Event、Input Event、键盘状态和指针状态。
 - 输入值类型位于 `<granit/window/input.h>` 与 `<granit/window/input.hpp>`。
 - 平台适配与 xkbcommon 保持为私有实现，不进入公共头文件。
+- SDL3 Window Backend 为可选实现依赖，不向公共头传播 SDL 头文件或类型；禁用时请求 SDL3 后端
+  返回 `GRANIT_ERROR_UNSUPPORTED`。
 - Window 公开依赖 Core Renderer 以直接创建 Surface；Renderer 和 RenderPipeline 不依赖 Window，
   外部窗口所有者可以绕过 Window component。
 
@@ -23,6 +25,8 @@
 - 窗口状态查询只复制尺寸与缩放值；原生窗口、Display、Connection 和 Surface 查询只借出值，
   不转移所有权。
 - 不存在独立 Input System、Input 句柄或额外销毁顺序。
+- Window Backend 与 Window Target 相互独立：Backend 决定窗口和事件实现，Target 只描述创建时
+  绑定的位置。Target 描述及字符串只借用到创建调用返回。
 
 ## 事件处理
 

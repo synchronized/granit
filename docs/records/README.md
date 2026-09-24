@@ -21,6 +21,7 @@
 
 ## 稳定化与跨平台
 
+- [2026-09-24 S-56 Window Target 与 SDL3 后端本地验收](2026-09-24-s56-window-sdl3-local-acceptance.md)
 - [2026-09-23 S-54 特性教程与 Example Application 本地验收](2026-09-23-s54-feature-tutorial-acceptance.md)
 - [2026-09-23 S-53 文档、教程与发布面本地验收](2026-09-23-s53-documentation-tutorial-release-acceptance.md)
 - [2026-09-23 Granit 0.29.0 发布验收](2026-09-23-v0.29.0-release-acceptance.md)

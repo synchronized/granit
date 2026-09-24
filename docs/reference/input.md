@@ -5,17 +5,18 @@
 
 ## 当前能力
 
-Window component 内建键盘、已提交文本和指针的事件与状态，支持 Win32、XCB、Wayland 和
-Emscripten。应用只创建一个 Window System，不再创建独立 Input System，也不需要链接第二个
-动态库。
+Window component 内建键盘、已提交文本和指针的事件与状态，支持 Win32、XCB、Wayland、
+Emscripten，以及构建时启用的 SDL3 后端。应用只创建一个 Window System，不再创建独立 Input
+System，也不需要链接第二个 Granit 动态库。
 
 ```cmake
 find_package(granit CONFIG REQUIRED COMPONENTS Window)
 target_link_libraries(app PRIVATE granit::window)
 ```
 
-SDL3、GLFW、Qt 和完整引擎继续使用自身输入系统；Granit 不把外部窗口库的输入转换为 Window
-Input。
+由应用自行创建和拥有的 SDL3、GLFW、Qt 窗口继续使用各自输入系统；`IntegrationSDL3` 只创建
+Surface，不转换输入。只有明确选择 `window_backend::sdl3`、由 Granit Window System 创建的 SDL3
+Window 才会进入本页描述的统一 Input 队列和状态。
 
 ## 帧循环
 
@@ -105,6 +106,15 @@ Emscripten Window 在浏览器回调中将 DOM Keyboard、Mouse、Wheel 和 Focu
 浏览器像素滚轮按每 100 像素一个公共滚轮单位换算，行滚轮按每 3 行一个单位换算，并统一为正值
 表示向上或向左。DOM 回调直接写入队列，应用仍在每帧调用 `process_events` 后轮询，不需要注册
 自己的 Canvas 键鼠回调。
+
+## SDL3 语义
+
+SDL3 后端由一个 Window System 统一调用 `SDL_PollEvent`，再按 `SDL_WindowID` 将键盘、已提交文本、
+指针移动、按钮、滚轮和进入/离开事件转换为公共模型。SDL Scancode 映射为 USB HID 物理键，
+导航键和功能键同时提供逻辑键；事件与查询状态的生命周期仍由 Granit Window System 管理。
+
+该转换只属于 Granit 拥有窗口生命周期的 SDL3 Window Backend，不适用于应用通过
+`IntegrationSDL3` 接入的外部 `SDL_Window`。
 
 ## 当前限制
 

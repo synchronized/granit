@@ -10,14 +10,15 @@ Emscripten WebGPU 上显示 glTF 2.0 模型。桌面目标叠加 ImGui 调试面
 
 ## 构建桌面查看器
 
-桌面目标依赖 SDL3 和 ImGui。当前 CMake 只在显式启用模型查看器、两个 Integration，并允许获取
-锁定集成依赖时生成 `granit_sample_model_viewer`：
+桌面目标通过 `granit::window` 的 SDL3 Backend 管理窗口和输入，并使用 ImGui Draw Data
+Integration。顶层源码构建启用 Examples 时会准备锁定的 SDL3 与 ImGui 依赖；无需启用
+`IntegrationSDL3`：
 
 ```powershell
 cmake -S . -B build/model-viewer -G Ninja `
   -DCMAKE_BUILD_TYPE=Release `
-  -DGRANIT_BUILD_INTEGRATION_SDL3=ON `
-  -DGRANIT_BUILD_INTEGRATION_IMGUI=ON `
+  -DGRANIT_BUILD_EXAMPLES=ON `
+  -DGRANIT_ENABLE_WINDOW_SDL3=ON `
   -DGRANIT_DEPENDENCY_POLICY=auto
 cmake --build build/model-viewer --target granit_sample_model_viewer
 ```
@@ -201,7 +202,8 @@ npm test -- ../../build/emscripten-release/web
 
 ## 常见问题
 
-- 没有生成桌面可执行文件：确认模型查看器、SDL3、ImGui 和依赖获取四个选项均已启用。
+- 没有生成桌面可执行文件：确认 `GRANIT_BUILD_EXAMPLES` 和 `GRANIT_ENABLE_WINDOW_SDL3` 已启用，
+  且依赖获取策略可以找到或下载 SDL3 与 ImGui。
 - 浏览器 WebGPU 不可用：确认使用锁定 emsdk 构建，并检查浏览器 WebGPU 支持与控制台诊断。
 - 模型加载失败：保持 `.gltf` 与其 `.bin`、纹理的相对目录结构；远程模型及依赖资源必须允许跨域
   访问。加载器仍会拒绝父目录跳转和不支持的 glTF 扩展。

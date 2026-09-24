@@ -21,7 +21,7 @@ granit::result execute_frame(granit::example::model_viewer::frame_packet&& packe
                              void* user_data) {
   auto& state = *static_cast<callback_state*>(user_data);
   state.called = true;
-  state.width = packet.width;
+  state.width = packet.viewer.width;
   output.needs_recreate = true;
   output.acquire_wait_ms = 2.0F;
   return granit::result::not_ready;
@@ -40,8 +40,8 @@ granit::result execute_blocking_frame(granit::example::model_viewer::frame_packe
                                       void* user_data) {
   auto& state = *static_cast<blocking_callback_state*>(user_data);
   std::unique_lock lock(state.mutex);
-  state.executed_widths.push_back(packet.width);
-  if (packet.width == 1) {
+  state.executed_widths.push_back(packet.viewer.width);
+  if (packet.viewer.width == 1) {
     state.first_started = true;
     state.condition.notify_all();
     state.condition.wait(lock, [&] { return state.release_first; });
@@ -62,7 +62,7 @@ TEST_CASE("同步帧执行器完整转发帧包和执行结果") {
   callback_state state;
   granit::example::model_viewer::inline_frame_executor executor(execute_frame, &state);
   granit::example::model_viewer::frame_packet packet;
-  packet.width = 1280;
+  packet.viewer.width = 1280;
   granit::example::model_viewer::frame_execution_result output;
 
   CHECK(executor.submit(std::move(packet), output) == granit::result::not_ready);
@@ -91,7 +91,7 @@ TEST_CASE("线程帧执行器限制待处理队列并回报被替换帧") {
 
   std::uint64_t first{};
   frame_packet packet;
-  packet.width = 1;
+  packet.viewer.width = 1;
   REQUIRE(executor.submit(std::move(packet), first).ok());
   {
     std::unique_lock lock(state.mutex);
@@ -102,14 +102,14 @@ TEST_CASE("线程帧执行器限制待处理队列并回报被替换帧") {
   std::uint64_t third{};
   std::uint64_t fourth{};
   std::uint64_t command{};
-  packet.width = 2;
+  packet.viewer.width = 2;
   REQUIRE(executor.submit(std::move(packet), second).ok());
-  packet.width = 3;
+  packet.viewer.width = 3;
   REQUIRE(executor.submit(std::move(packet), third).ok());
   CHECK_FALSE(executor.can_submit_frame());
   executor.record_skipped_frame_build();
   REQUIRE(executor.submit_command(execute_command, &state, command).ok());
-  packet.width = 4;
+  packet.viewer.width = 4;
   REQUIRE(executor.submit(std::move(packet), fourth).ok());
   {
     std::lock_guard lock(state.mutex);

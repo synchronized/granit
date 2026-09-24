@@ -26,8 +26,21 @@ cmake -S . -B build/integrations \
 
 当前锁定 SDL 3.4.10 与 ImGui 1.92.9。下载模式用于源码树编译、测试和示例验证；为避免把下载的
 第三方目标混入 Granit 安装导出，该模式不安装 Integration 目标。需要安装 Integration component
-时，应由父项目提供依赖目标，或安装可由 `find_package` 找到的依赖包。禁用两个组件时，基础构建
-和安装包不依赖 SDL3 或 ImGui。
+时，应由父项目提供依赖目标，或安装可由 `find_package` 找到的依赖包。禁用两个 Integration 时
+不会因此引入 SDL3 或 ImGui；SDL3 Window Backend 的独立依赖规则见[构建与安装](../guides/build.md)。
+
+## SDL3 的两种接入方式
+
+SDL3 Window Backend 与 `IntegrationSDL3` 解决不同的所有权场景：
+
+| 场景 | 构建开关 | 窗口与事件所有者 | Granit 输入 |
+|---|---|---|---|
+| Granit 创建 SDL3 Window | `GRANIT_ENABLE_WINDOW_SDL3` | `granit::window_system` | 进入统一 Input API |
+| 应用已有 `SDL_Window` | `GRANIT_BUILD_INTEGRATION_SDL3` | 应用和 SDL | 不转换，继续使用 SDL 事件 |
+
+新应用若不需要直接访问 SDL API，优先使用 Window Backend；已有 SDL 生命周期、编辑器宿主或第三方
+框架应保留 Integration 路径。两者可以在同一源码树构建中同时启用，但不能用 Integration 再包装
+由 Granit SDL3 Window Backend 创建的窗口。
 
 ## SDL3 Surface
 

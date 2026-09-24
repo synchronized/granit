@@ -29,12 +29,21 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 
 ## 当前计划
 
-### S-56：Window Target 与 SDL3 后端
+### S-57：Model Viewer 运行时架构
 
 **状态：实施中，P1。**
 
+[S-57](plans/S-57-model-viewer-runtime-architecture.md) 在保持 Desktop 渲染线程、Web inline/Asyncify
+和现有目录入口的前提下，拆分 Viewer Core 输出、执行包、桌面渲染服务与浏览器验收接口，使两个
+千行平台入口回到清晰的组合职责。
+
+### S-56：Window Target 与 SDL3 后端
+
+**状态：实施完成，等待远端 Linux 验收，P1。**
+
 [S-56](plans/S-56-window-target-and-sdl3-backend.md) 分离 Window Backend 与 Window Target，先让
-原生 Emscripten 支持多 Canvas，再以可选 SDL3 后端统一桌面与浏览器的 Window API。
+原生 Emscripten 支持多 Canvas，再以可选 SDL3 后端统一桌面与浏览器的 Window API。Windows、
+Emscripten、浏览器和安装 Consumer 本地验收已经通过，等待远端 Linux XCB/Wayland 与 SDL3 矩阵。
 
 ### S-54：0.30.0 特性教程与 Example Application
 

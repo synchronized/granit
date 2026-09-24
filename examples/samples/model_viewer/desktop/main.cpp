@@ -616,7 +616,7 @@ granit::result execute_desktop_frame(granit::example::model_viewer::frame_packet
       return result;
     }
     const auto render =
-        packet.render_desc(backbuffer.view, context.swapchain_info->format, &frame, canvas);
+        packet.viewer.render_desc(backbuffer.view, context.swapchain_info->format, &frame, canvas);
     result = context.pipeline->render(render);
   }
   if (result.failed()) {
@@ -1223,7 +1223,7 @@ int main(int argc, char** argv) {
     if (has_pending_sample)
       tick_input.performance = latest_sample;
     if (result.ok())
-      result = core.tick(tick_input, tick_output);
+      result = core.tick(tick_input, tick_output.viewer);
     if (result.ok())
       tick_output.canvas = std::move(ui_frame);
     if (result.ok()) {

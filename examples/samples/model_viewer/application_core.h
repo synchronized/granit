@@ -5,7 +5,6 @@
 #define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_APPLICATION_CORE_H_
 
 #include "gltf/importer.h"
-#include "imgui/frame_canvas_data.h"
 #include "model_viewer/gpu_scene.h"
 #include "model_viewer/performance_history.h"
 #include "model_viewer/viewer_state.h"
@@ -37,9 +36,8 @@ struct application_tick_input {
   std::optional<performance_sample> performance;
 };
 
-/** Core 生成的单帧不可变提交包；其数组和环境数据不借用下一帧可变状态。 */
-struct frame_packet {
-  imgui::frame_canvas_data canvas;
+/** Core 生成的单帧不可变渲染数据；其数组和环境数据不借用下一帧可变状态。 */
+struct viewer_frame {
   granit::scene_snapshot snapshot;
   granit::render_pipeline_environment environment;
   std::vector<granit::render_pipeline_draw_binding> draw_bindings;
@@ -87,7 +85,7 @@ public:
                                               float sampler_anisotropy) {
     return reupload_scene(renderer.ref(), sampler_anisotropy);
   }
-  [[nodiscard]] granit::result tick(const application_tick_input& input, frame_packet& output);
+  [[nodiscard]] granit::result tick(const application_tick_input& input, viewer_frame& output);
   void fail(granit::result result, std::string diagnostic);
   void reset() noexcept;
 

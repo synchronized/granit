@@ -85,7 +85,7 @@ TEST_CASE("模型查看器 Core 生成后端无关单帧描述", "[tutorial][mod
   CHECK(core.reupload_scene(renderer, 0.0F) == granit::result::invalid_argument);
   CHECK(core.scene_gpu().meshes().front().native_handle() == rebuilt_mesh);
 
-  frame_packet output;
+  viewer_frame output;
   application_tick_input zero_sized;
   zero_sized.height = 480;
   CHECK(core.tick(zero_sized, output) == granit::result::not_ready);

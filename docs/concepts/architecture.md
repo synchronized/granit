@@ -182,16 +182,18 @@ Vulkan 与 WebGPU 不必提供完全对称的内部能力。共同语义由 Regi
 ### 操作系统平台层
 
 `src/window` 按 Window component 组织通用句柄与生命周期、输入状态和 Win32、XCB、Wayland、
-Emscripten 后端。Window System 独占平台事件入口，同时维护窗口与输入的独立事件队列；输入没有
-第二套 System 或动态库。通用 UTF-8 处理位于 `src/core`，平台解码与窗口生命周期位于各后端编译
-单元。桌面后端管理原生顶层窗口，Emscripten 后端按 Window Target 管理 Canvas 与 DOM 回调。
-Backend 决定窗口实现，Target 决定窗口绑定位置，两者保持正交。Renderer 只通过公共 Surface API
-接收 Window 创建的输出连接，不反向依赖 Window。该边界见
+Emscripten、SDL3 后端。Window System 创建时固定一张私有 Backend 操作表，并独占对应平台事件
+入口，同时维护窗口与输入的独立事件队列；输入没有第二套 System 或动态库。通用 UTF-8 处理位于
+`src/core`，平台解码与窗口生命周期位于各后端编译单元。原生桌面后端管理平台顶层窗口，
+Emscripten 与 SDL3 后端按 Window Target 管理 Canvas。Backend 决定窗口实现，Target 决定窗口
+绑定位置，两者保持正交。Renderer 只通过公共 Surface API 接收 Window 创建的输出连接，不反向
+依赖 Window。该边界见
 [ADR-007](../decisions/ADR-007-window-backend-and-target.md)。
 
-`src/integrations` 不承担操作系统抽象，只保存 SDL3、ImGui 等第三方库与 Granit 公共接口之间的
-可选适配。平台层不得依赖这些集成目标；集成层可以调用 Granit 的 Window 或 Renderer
-公共 API。
+`src/integrations` 不承担操作系统抽象，只保存外部所有者的 SDL3 Window、ImGui 等第三方对象与
+Granit 公共接口之间的可选适配。Window 内部 SDL3 Backend 拥有窗口生命周期，不依赖
+`IntegrationSDL3`；Integration 路径只借用应用已有窗口。平台层不得依赖这些集成目标；集成层
+可以调用 Granit 的 Window 或 Renderer 公共 API。
 
 ## 数学值类型与内部运算
 

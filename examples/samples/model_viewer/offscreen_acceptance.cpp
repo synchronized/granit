@@ -394,7 +394,7 @@ int main(int argc, char** argv) {
   granit::example::model_viewer::viewer_change diagnostic_change{};
   diagnostic_change.debug_display = arguments.debug_display;
   for (std::uint32_t frame = 0; frame < 3 && result.ok(); ++frame) {
-    granit::example::model_viewer::frame_packet tick;
+    granit::example::model_viewer::viewer_frame tick;
     stage = "更新固定相机场景";
     result = core.tick({.input = {},
                         .change = diagnostic_change,

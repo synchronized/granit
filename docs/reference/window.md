@@ -6,11 +6,30 @@
 ## 当前状态
 
 Window 是独立可选 component，CMake 使用者目标为 `granit::window`。当前已实现 Win32、XCB、
-Wayland 与 Emscripten Window System、显式事件处理、窗口与输入事件轮询和状态查询；桌面后端
-另提供显式原生值查询。
+Wayland、Emscripten 与可选 SDL3 Window System、显式事件处理、窗口与输入事件轮询和状态查询；
+原生平台后端另提供显式原生值查询。
 
 Window 公开依赖核心 Renderer，但不暴露 Vulkan。应用可以直接从 Granit Window 创建 Renderer
 Surface；外部窗口仍通过 Renderer 的原生 Surface 高级入口接入。
+
+## Backend 与 Target
+
+Window Backend 决定谁创建窗口并抽取事件，Window Target 决定窗口绑定的位置。`automatic` 在桌面
+选择 Granit 原生后端，在浏览器选择原生 Emscripten 后端，不会隐式选择 SDL3。SDL3 后端必须在
+构建时启用 `GRANIT_ENABLE_WINDOW_SDL3`，并由应用明确请求：
+
+```cpp
+granit::window_system windows;
+auto result = windows.initialize({.backend = granit::window_backend::sdl3});
+```
+
+未启用 SDL3 的构建仍保留稳定枚举值，但请求该后端返回 `GRANIT_ERROR_UNSUPPORTED`。SDL3 事件队列
+是进程级资源，因此当前同一进程只允许一个活动 SDL3 Window System；该 System 可以管理多个
+Window，并按 `SDL_WindowID` 路由事件和输入。
+
+桌面 SDL3 Window 使用自动 Target。Emscripten SDL3 Window 使用与原生后端相同的 Canvas selector
+Target，并把 selector 交给 SDL 创建属性；同一 System 内重复绑定返回资源占用。两种后端均通过
+统一 `granit_window_create_surface` 创建 Surface，应用不需要读取 SDL 原生属性。
 
 ## 创建与销毁
 

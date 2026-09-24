@@ -4,6 +4,7 @@
 #ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_FRAME_EXECUTOR_H_
 #define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_FRAME_EXECUTOR_H_
 
+#include "imgui/frame_canvas_data.h"
 #include "model_viewer/application_core.h"
 
 #include <cstddef>
@@ -11,6 +12,12 @@
 #include <memory>
 
 namespace granit::example::model_viewer {
+
+/** 执行层拥有的完整帧包；在 Core 渲染数据之外携带可选 UI Canvas。 */
+struct frame_packet {
+  viewer_frame viewer;
+  imgui::frame_canvas_data canvas;
+};
 
 /** 单帧执行完成后返回给平台主循环的数据。 */
 struct frame_execution_result {
