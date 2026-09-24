@@ -10,9 +10,10 @@
 
 namespace granit::example::assets {
 
-bool asset_batch::add(std::string_view path, std::string location) {
+bool asset_batch::add(std::string_view path, asset_mount mount, std::string asset_path) {
   std::string normalized_path;
-  if (started_ || location.empty() || location.find('\0') != std::string::npos ||
+  if (started_ || !mount.valid() || asset_path.empty() ||
+      asset_path.find('\0') != std::string::npos ||
       !normalize_resource_path(path, normalized_path)) {
     return false;
   }
@@ -21,17 +22,19 @@ bool asset_batch::add(std::string_view path, std::string location) {
       })) {
     return false;
   }
-  entries_.push_back(
-      {.path = std::move(normalized_path), .location = std::move(location), .request = {}});
+  entries_.push_back({.path = std::move(normalized_path),
+                      .mount = mount,
+                      .asset_path = std::move(asset_path),
+                      .request = {}});
   return true;
 }
 
-bool asset_batch::start(asset_loader& loader) {
+bool asset_batch::start(asset_system& assets) {
   if (started_)
     return false;
   started_ = true;
   for (auto& entry : entries_)
-    entry.request = loader.load(entry.location);
+    entry.request = assets.request({entry.mount, entry.asset_path});
   return true;
 }
 

@@ -5,7 +5,7 @@
 #include "model_viewer/desktop/presentation_policy.h"
 #include "model_viewer/desktop/render_service.h"
 
-#include "assets/asset_loader.h"
+#include "assets/asset_system.h"
 #include "gltf/document_loader.h"
 #include "imgui/imgui_frame_capture.h"
 #include "imgui/imgui_input.h"
@@ -386,20 +386,32 @@ int granit::example::model_viewer::desktop::application::run() {
     ImGui::GetIO().Fonts->TexRef._TexData->SetStatus(ImTextureStatus_OK);
   }
 
-  const std::filesystem::path asset_path(options.asset_path);
+  granit::example::assets::asset_system assets;
+  granit::example::assets::asset_mount model_mount;
+  std::string model_path;
+  if (result.ok() &&
+      (!assets.initialize(options.asset_path) ||
+       !assets.mount_location(options.asset_path, model_mount, model_path))) {
+    result = granit::result::invalid_argument;
+  }
   granit::example::gltf::document_loader document_loader;
-  if (result.ok() && !document_loader.start(asset_path.string()))
+  if (result.ok() && !document_loader.start(assets, {model_mount, model_path}))
     result = granit::result::internal;
-  granit::example::assets::asset_loader asset_loader;
   std::shared_ptr<granit::example::assets::asset_request> environment_request;
-  if (result.ok() && !options.environment_path.empty())
-    environment_request = asset_loader.load(options.environment_path);
+  if (result.ok() && !options.environment_path.empty()) {
+    granit::example::assets::asset_mount environment_mount;
+    std::string environment_path;
+    if (!assets.mount_location(options.environment_path, environment_mount, environment_path)) {
+      result = granit::result::invalid_argument;
+    } else {
+      environment_request = assets.request({environment_mount, environment_path});
+    }
+  }
   bool asset_bytes_ready = false;
   bool loading_cancelled = false;
 
   while (result.ok() && !asset_bytes_ready && !loading_cancelled) {
     document_loader.poll();
-    asset_loader.poll();
     desktop_window_events events;
     result = pump_window_events(window_system, window, window_state, events);
     loading_cancelled = events.close_requested;

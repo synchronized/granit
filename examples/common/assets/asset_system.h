@@ -47,6 +47,10 @@ public:
   /** 挂载外部目录或 URL 根；失败时 output 保持不变。 */
   [[nodiscard]] bool mount(std::string root_location, asset_mount& output);
 
+  /** 将一个外部文件或 URL 拆为挂载与逻辑路径；失败时两个输出保持不变。 */
+  [[nodiscard]] bool mount_location(std::string location, asset_mount& output_mount,
+                                    std::string& output_path);
+
   /** 发起完整 Blob 请求；无效 Key 也返回带诊断的失败请求。 */
   [[nodiscard]] std::shared_ptr<asset_request> request(asset_key key);
 

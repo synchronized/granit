@@ -79,6 +79,13 @@ TEST_CASE("Asset System 以统一请求读取打包和外部资产", "[example][
   }
   CHECK(external->status() == assets::asset_request_status::ready);
   CHECK(external->bytes().size() == 3);
+
+  assets::asset_mount file_mount;
+  std::string file_path;
+  REQUIRE(system.mount_location((fixture.root / "content" / "external.bin").string(), file_mount,
+                                file_path));
+  CHECK(file_mount.valid());
+  CHECK(file_path == "external.bin");
 }
 #endif
 
@@ -97,6 +104,10 @@ TEST_CASE("Asset System 将无效 Key 转换为失败请求", "[example][assets]
   CHECK(invalid_path->error() == assets::asset_request_error::invalid_location);
 
   assets::asset_mount unchanged;
+  std::string unchanged_path{"committed"};
   CHECK_FALSE(system.mount({}, unchanged));
+  CHECK_FALSE(system.mount_location("https://example.com/model.gltf?token=secret", unchanged,
+                                    unchanged_path));
   CHECK_FALSE(unchanged.valid());
+  CHECK(unchanged_path == "committed");
 }

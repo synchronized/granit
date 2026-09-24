@@ -50,20 +50,23 @@ document_load_error manifest_error(document_manifest_error error) noexcept {
 
 } // namespace
 
-bool document_loader::start(std::string location) {
+bool document_loader::start(assets::asset_system& assets, assets::asset_key document) {
   if (status_ == document_load_status::loading_document ||
       status_ == document_load_status::loading_resources) {
     return false;
   }
   reset();
-  location_ = std::move(location);
-  document_request_ = loader_.load(location_);
+  assets_ = &assets;
+  mount_ = document.mount;
+  location_ = document.path;
+  document_request_ = assets_->request({mount_, location_});
   status_ = document_load_status::loading_document;
   return true;
 }
 
 void document_loader::poll() {
-  loader_.poll();
+  if (assets_)
+    assets_->poll();
   if (status_ == document_load_status::loading_document) {
     if (!document_request_) {
       fail(document_load_error::out_of_memory, "无法创建 glTF 文档请求");
@@ -94,14 +97,14 @@ void document_loader::poll() {
         return;
       }
       for (const auto& resource : resources) {
-        std::string resource_location;
-        if (!assets::resolve_asset_location(location_, resource, resource_location) ||
-            !resource_batch_.add(resource, std::move(resource_location))) {
+        std::string resource_path;
+        if (!assets::resolve_asset_location(location_, resource, resource_path) ||
+            !resource_batch_.add(resource, mount_, std::move(resource_path))) {
           fail(document_load_error::invalid_location, "glTF 外部资源位置无效");
           return;
         }
       }
-      if (!resource_batch_.start(loader_)) {
+      if (!assets_ || !resource_batch_.start(*assets_)) {
         fail(document_load_error::resource_read, "无法启动 glTF 外部资源批次");
         return;
       }
@@ -152,6 +155,8 @@ void document_loader::reset() noexcept {
   document_request_.reset();
   resource_batch_.clear();
   resolver_.clear();
+  assets_ = nullptr;
+  mount_ = {};
   location_.clear();
   diagnostic_.clear();
   status_ = document_load_status::idle;

@@ -68,6 +68,8 @@ struct web_platform_state {
   granit::example::model_viewer::viewer_input_accumulator input;
   granit::example::gltf::document_loader document_loader;
   std::string asset_url;
+  granit::example::assets::asset_mount asset_mount;
+  std::string asset_path;
   granit::example::model_viewer::application_core core;
   bool core_renderer_ready{};
   bool asset_ready{};
@@ -646,7 +648,8 @@ granit::result web_application_host::on_host_initialize() noexcept {
   }
   try {
     state.asset_url = selected_model_url();
-    if (!state.document_loader.start(state.asset_url)) {
+    if (!assets().mount_location(state.asset_url, state.asset_mount, state.asset_path) ||
+        !state.document_loader.start(assets(), {state.asset_mount, state.asset_path})) {
       fail("asset-fetch-start");
       return granit::result::initialization_failed;
     }

@@ -4,7 +4,7 @@
 #ifndef GRANIT_EXAMPLES_COMMON_ASSETS_ASSET_BATCH_H_
 #define GRANIT_EXAMPLES_COMMON_ASSETS_ASSET_BATCH_H_
 
-#include "assets/asset_loader.h"
+#include "assets/asset_system.h"
 #include "assets/memory_resource_resolver.h"
 
 #include <cstddef>
@@ -28,15 +28,16 @@ struct asset_batch_progress {
 
 struct asset_batch_entry {
   std::string path;
-  std::string location;
+  asset_mount mount;
+  std::string asset_path;
   std::shared_ptr<asset_request> request;
 };
 
 /** 并行读取一组资源，并在全部完成后原子构造内存 resolver。 */
 class asset_batch {
 public:
-  [[nodiscard]] bool add(std::string_view path, std::string location);
-  [[nodiscard]] bool start(asset_loader& loader);
+  [[nodiscard]] bool add(std::string_view path, asset_mount mount, std::string asset_path);
+  [[nodiscard]] bool start(asset_system& assets);
   [[nodiscard]] asset_batch_status status() const noexcept;
   [[nodiscard]] asset_batch_progress progress() const noexcept;
   [[nodiscard]] bool commit(memory_resource_resolver& resolver) const;

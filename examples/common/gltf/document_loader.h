@@ -5,7 +5,6 @@
 #define GRANIT_EXAMPLES_COMMON_GLTF_DOCUMENT_LOADER_H_
 
 #include "assets/asset_batch.h"
-#include "assets/asset_loader.h"
 #include "assets/memory_resource_resolver.h"
 
 #include <memory>
@@ -50,7 +49,7 @@ public:
   document_loader& operator=(const document_loader&) = delete;
 
   /** 启动新请求；当前请求未结束时返回 false。 */
-  [[nodiscard]] bool start(std::string location);
+  [[nodiscard]] bool start(assets::asset_system& assets, assets::asset_key document);
   /** 推进平台读取并发布状态变化。 */
   void poll();
   void cancel() noexcept;
@@ -67,7 +66,8 @@ public:
 private:
   void fail(document_load_error error, std::string diagnostic);
 
-  assets::asset_loader loader_;
+  assets::asset_system* assets_{};
+  assets::asset_mount mount_;
   std::shared_ptr<assets::asset_request> document_request_;
   assets::asset_batch resource_batch_;
   assets::memory_resource_resolver resolver_;

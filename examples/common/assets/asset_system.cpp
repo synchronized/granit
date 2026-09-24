@@ -86,6 +86,40 @@ bool asset_system::mount(std::string root_location, asset_mount& output) {
   return true;
 }
 
+bool asset_system::mount_location(std::string location, asset_mount& output_mount,
+                                  std::string& output_path) {
+  if (location.empty() || location.find('\0') != std::string::npos)
+    return false;
+
+  std::string root;
+  std::string path;
+  if (location.starts_with("http://") || location.starts_with("https://")) {
+    if (location.find_first_of("?#") != std::string::npos)
+      return false;
+    const auto separator = location.find_last_of('/');
+    if (separator == std::string::npos || separator + 1 >= location.size())
+      return false;
+    root = location.substr(0, separator);
+    path = location.substr(separator + 1);
+  } else {
+    const std::filesystem::path file{std::move(location)};
+    path = file.filename().string();
+    root = file.parent_path().string();
+    if (root.empty())
+      root = ".";
+  }
+
+  std::string normalized;
+  if (!normalize_resource_path(path, normalized))
+    return false;
+  asset_mount mounted;
+  if (!mount(std::move(root), mounted))
+    return false;
+  output_mount = mounted;
+  output_path = std::move(normalized);
+  return true;
+}
+
 std::shared_ptr<asset_request> asset_system::request(asset_key key) {
   std::string normalized;
   if (!normalize_resource_path(key.path, normalized)) {
