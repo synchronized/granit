@@ -115,6 +115,8 @@ examples/samples/model_viewer/
    Window 循环，不扩展通用 Application Host。
 4. **S-57D Web 职责拆分**：将 Pipeline 预热和公共 C API 生命周期验收移出运行时文件，将
    JavaScript 导出集中为只校验参数并转发状态/控制的边界；Host 和 inline 帧执行行为不变。
+   `browser_api.cpp` 已保留稳定 C 导出、异常转换和参数转发，并通过私有控制接口访问运行时；
+   下一步提取 Pipeline 验收状态与算法。
 5. **S-57E 重复审计**：完成拆分后再比较 Desktop/Web 的加载阶段、质量设置和呈现恢复。只有存在
    相同所有权与失败语义的逻辑才提升到 Sample Core；不为减少行数制造跨平台虚基类。
 6. **S-57F 验证与文档**：补齐状态转换、线程命令、失败回滚和重复 Shutdown 测试，运行 Desktop、

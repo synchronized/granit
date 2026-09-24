@@ -38,6 +38,7 @@
 #include "model_viewer/viewer_input_accumulator.h"
 
 #include "application.h"
+#include "runtime_control.h"
 
 namespace {
 
@@ -902,71 +903,59 @@ void web_application_host::on_host_shutdown(granit::result) noexcept {
 
 } // namespace
 
-extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_platform_status() noexcept {
+int granit::example::model_viewer::web::runtime_control::platform_status() noexcept {
   return static_cast<int>(state.status);
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_input_event_count() noexcept {
+unsigned granit::example::model_viewer::web::runtime_control::input_event_count() noexcept {
   return state.input_event_count;
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_rendered_frame_count() noexcept {
+unsigned granit::example::model_viewer::web::runtime_control::rendered_frame_count() noexcept {
   return state.rendered_frame_count;
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_applied_input_count() noexcept {
+unsigned granit::example::model_viewer::web::runtime_control::applied_input_count() noexcept {
   return state.applied_input_count;
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_resize_count() noexcept {
+unsigned granit::example::model_viewer::web::runtime_control::resize_count() noexcept {
   return state.resize_count;
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE int
-granit_web_configure_render_quality(unsigned sample_count, unsigned enable_fxaa,
-                                    unsigned enable_specular_aa,
-                                    unsigned sampler_anisotropy) noexcept {
-  try {
-    return configure_render_quality(static_cast<granit_sample_count>(sample_count), enable_fxaa,
+int granit::example::model_viewer::web::runtime_control::configure_render_quality(
+    unsigned sample_count, unsigned enable_fxaa, unsigned enable_specular_aa,
+    unsigned sampler_anisotropy) {
+  return ::configure_render_quality(static_cast<granit_sample_count>(sample_count), enable_fxaa,
                                     enable_specular_aa, sampler_anisotropy);
-  } catch (const std::bad_alloc&) {
-    return GRANIT_ERROR_OUT_OF_MEMORY;
-  } catch (...) {
-    return GRANIT_ERROR_INTERNAL;
-  }
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_quality_generation() noexcept {
+unsigned granit::example::model_viewer::web::runtime_control::quality_generation() noexcept {
   return state.quality_generation;
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE int
-granit_web_configure_lighting(float exposure_ev, float environment_intensity,
-                              float key_light_intensity) noexcept {
-  try {
-    return configure_lighting(exposure_ev, environment_intensity, key_light_intensity);
-  } catch (...) {
-    return GRANIT_ERROR_INTERNAL;
-  }
+int granit::example::model_viewer::web::runtime_control::configure_lighting(
+    float exposure_ev, float environment_intensity, float key_light_intensity) {
+  return ::configure_lighting(exposure_ev, environment_intensity, key_light_intensity);
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_lighting_generation() noexcept {
+unsigned granit::example::model_viewer::web::runtime_control::lighting_generation() noexcept {
   return state.lighting_generation;
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE float granit_web_exposure_ev() noexcept {
+float granit::example::model_viewer::web::runtime_control::exposure_ev() noexcept {
   return state.core.state().exposure_ev();
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE float granit_web_environment_intensity() noexcept {
+float granit::example::model_viewer::web::runtime_control::environment_intensity() noexcept {
   return state.core.state().environment_intensity();
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE float granit_web_key_light_intensity() noexcept {
+float granit::example::model_viewer::web::runtime_control::key_light_intensity() noexcept {
   return state.core.state().directional_light().radiance.x;
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_max_sampler_anisotropy() noexcept {
+unsigned granit::example::model_viewer::web::runtime_control::max_sampler_anisotropy() noexcept {
   if (state.renderer == GRANIT_NULL_HANDLE)
     return 0;
   granit_renderer_limits limits = GRANIT_RENDERER_LIMITS_INIT;
@@ -975,17 +964,17 @@ extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_max_sampler_anisotropy() noe
   return static_cast<unsigned>(limits.max_sampler_anisotropy);
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE unsigned long long
-granit_web_shutdown_live_resource_count() noexcept {
+unsigned long long
+granit::example::model_viewer::web::runtime_control::shutdown_live_resource_count() noexcept {
   return state.shutdown_live_resource_count;
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE unsigned long long
-granit_web_shutdown_pending_retirement_count() noexcept {
+unsigned long long
+granit::example::model_viewer::web::runtime_control::shutdown_pending_retirement_count() noexcept {
   return state.shutdown_pending_retirement_count;
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_shutdown() noexcept {
+int granit::example::model_viewer::web::runtime_control::shutdown() noexcept {
   if (state.shutdown_complete)
     return state.shutdown_result;
   const auto result = shutdown_web_resources();
@@ -993,37 +982,37 @@ extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_shutdown() noexcept {
   return result;
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_asset_status() noexcept {
+unsigned granit::example::model_viewer::web::runtime_control::asset_status() noexcept {
   if (state.status == startup_status::failed)
     return 3;
   return state.asset_ready ? 2U : 1U;
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_upload_stage() noexcept {
+unsigned granit::example::model_viewer::web::runtime_control::upload_stage() noexcept {
   return static_cast<unsigned>(state.upload_progress.stage);
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_upload_completed() noexcept {
+unsigned granit::example::model_viewer::web::runtime_control::upload_completed() noexcept {
   return state.upload_progress.completed;
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_upload_total() noexcept {
+unsigned granit::example::model_viewer::web::runtime_control::upload_total() noexcept {
   return state.upload_progress.total;
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_cancel_loading() noexcept {
+int granit::example::model_viewer::web::runtime_control::cancel_loading() noexcept {
   if (!state.upload_active)
     return GRANIT_ERROR_NOT_READY;
   state.upload_cancel_requested = true;
   return GRANIT_SUCCESS;
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_renderer_state() noexcept {
+unsigned granit::example::model_viewer::web::runtime_control::renderer_state() noexcept {
   granit_renderer_status status = GRANIT_RENDERER_STATUS_INIT;
   return granit_renderer_get_status(state.renderer, &status) == GRANIT_SUCCESS ? status.state : 0;
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_renderer_failure_result() noexcept {
+int granit::example::model_viewer::web::runtime_control::renderer_failure_result() noexcept {
   granit_renderer_status status = GRANIT_RENDERER_STATUS_INIT;
   return granit_renderer_get_status(state.renderer, &status) == GRANIT_SUCCESS
              ? status.failure_result
@@ -1031,6 +1020,7 @@ extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_renderer_failure_result() noexcep
 }
 
 int granit::example::model_viewer::web::run_application(const application_options& configuration) {
+  runtime_control::ensure_browser_api_linked();
   options = configuration;
   double width = 0.0;
   double height = 0.0;
