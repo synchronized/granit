@@ -160,7 +160,7 @@ granit::result threaded_render_service::begin_gpu_upload(const gpu_upload_desc& 
   state_->upload_cancelled.store(false, std::memory_order_release);
   state_->upload_progress_result = granit::result::success;
   state_->displayed_percentage = 40;
-  const auto result = state_->executor.submit_task(
+  const auto result = state_->executor.submit_control(
       [context = state_.get()] { return execute_gpu_upload(*context); }, state_->upload_sequence);
   state_->upload_active = result.ok();
   return result;
@@ -170,7 +170,7 @@ bool threaded_render_service::try_finish_gpu_upload(granit::result& status) noex
   if (!state_ || !state_->upload_active)
     return false;
   render_task_completion completion;
-  if (!state_->executor.try_take_task_completion(completion))
+  if (!state_->executor.try_take_control_completion(completion))
     return false;
   status =
       completion.sequence == state_->upload_sequence ? completion.status : granit::result::internal;
@@ -263,12 +263,13 @@ void threaded_render_service::record_skipped_frame_build() noexcept {
 
 granit::result threaded_render_service::submit(frame_packet packet,
                                                std::uint64_t& sequence) noexcept {
-  return state_ && !state_->upload_active ? state_->executor.submit(std::move(packet), sequence)
-                                          : granit::result::not_ready;
+  return state_ && !state_->upload_active
+             ? state_->executor.submit_frame(std::move(packet), sequence)
+             : granit::result::not_ready;
 }
 
 bool threaded_render_service::try_take_completion(frame_completion& completion) noexcept {
-  return state_ && state_->executor.try_take_completion(completion);
+  return state_ && state_->executor.try_take_frame_completion(completion);
 }
 
 render_task_queue_stats threaded_render_service::query_queue_stats() const noexcept {

@@ -122,6 +122,32 @@ TEST_CASE("帧执行策略通过统一接口保持相同行为") {
     CHECK(state.called);
     CHECK(state.width == 640);
     CHECK(output.needs_recreate);
+    frame_packet queued;
+    queued.viewer.width = 800;
+    std::uint64_t frame_sequence{};
+    REQUIRE(executor.submit_frame(std::move(queued), frame_sequence).ok());
+    std::uint64_t control_sequence{};
+    REQUIRE(executor
+                .submit_control(
+                    [&state] {
+                      state.width = 900;
+                      return granit::result::success;
+                    },
+                    control_sequence)
+                .ok());
+    REQUIRE(executor.flush().ok());
+    frame_completion frame_result;
+    REQUIRE(executor.try_take_frame_completion(frame_result));
+    CHECK(frame_result.sequence == frame_sequence);
+    CHECK(frame_result.status == granit::result::not_ready);
+    CHECK(frame_result.execution.needs_recreate);
+    render_task_completion control_result;
+    REQUIRE(executor.try_take_control_completion(control_result));
+    CHECK(control_result.sequence == control_sequence);
+    CHECK(control_result.status.ok());
+    CHECK(state.width == 900);
+    CHECK(executor.can_submit_frame());
+    CHECK(executor.query_queue_stats().pending_high_watermark >= 1);
     CHECK(executor.running());
     executor.stop();
     CHECK_FALSE(executor.running());
@@ -153,7 +179,7 @@ TEST_CASE("线程帧执行器限制待处理队列并回报被替换帧") {
   std::uint64_t first{};
   frame_packet packet;
   packet.viewer.width = 1;
-  REQUIRE(executor.submit(std::move(packet), first).ok());
+  REQUIRE(executor.submit_frame(std::move(packet), first).ok());
   {
     std::unique_lock lock(state.mutex);
     state.condition.wait(lock, [&] { return state.first_started; });
@@ -164,14 +190,14 @@ TEST_CASE("线程帧执行器限制待处理队列并回报被替换帧") {
   std::uint64_t fourth{};
   std::uint64_t command{};
   packet.viewer.width = 2;
-  REQUIRE(executor.submit(std::move(packet), second).ok());
+  REQUIRE(executor.submit_frame(std::move(packet), second).ok());
   packet.viewer.width = 3;
-  REQUIRE(executor.submit(std::move(packet), third).ok());
+  REQUIRE(executor.submit_frame(std::move(packet), third).ok());
   CHECK_FALSE(executor.can_submit_frame());
   executor.record_skipped_frame_build();
-  REQUIRE(executor.submit_task([&state] { return execute_command(&state); }, command).ok());
+  REQUIRE(executor.submit_control([&state] { return execute_command(&state); }, command).ok());
   packet.viewer.width = 4;
-  REQUIRE(executor.submit(std::move(packet), fourth).ok());
+  REQUIRE(executor.submit_frame(std::move(packet), fourth).ok());
   {
     std::lock_guard lock(state.mutex);
     state.release_first = true;
@@ -181,7 +207,7 @@ TEST_CASE("线程帧执行器限制待处理队列并回报被替换帧") {
 
   std::vector<frame_completion> completions;
   frame_completion completion;
-  while (executor.try_take_completion(completion))
+  while (executor.try_take_frame_completion(completion))
     completions.push_back(completion);
   REQUIRE(completions.size() == 4);
   CHECK(std::ranges::count_if(completions, [](const auto& value) { return value.dropped; }) == 1);
@@ -198,17 +224,17 @@ TEST_CASE("线程帧执行器限制待处理队列并回报被替换帧") {
   CHECK(completions.front().execution.queue_wait_ms >= 0.0F);
 
   render_task_completion command_completion;
-  REQUIRE(executor.try_take_task_completion(command_completion));
+  REQUIRE(executor.try_take_control_completion(command_completion));
   CHECK(command_completion.sequence == command);
   CHECK(command_completion.status.ok());
-  CHECK_FALSE(executor.try_take_task_completion(command_completion));
+  CHECK_FALSE(executor.try_take_control_completion(command_completion));
 
   executor.stop();
   CHECK_FALSE(executor.running());
   CHECK_FALSE(executor.can_submit_frame());
   CHECK(executor.query_queue_stats().pending_high_watermark == 0);
-  CHECK(executor.submit({}, first) == granit::result::not_ready);
-  CHECK(executor.submit_task([&state] { return execute_command(&state); }, command) ==
+  CHECK(executor.submit_frame({}, first) == granit::result::not_ready);
+  CHECK(executor.submit_control([&state] { return execute_command(&state); }, command) ==
         granit::result::not_ready);
 }
 
@@ -221,7 +247,7 @@ TEST_CASE("线程帧执行器拒绝空命令") {
               })
               .ok());
   std::uint64_t sequence{};
-  CHECK(executor.submit_task({}, sequence) == granit::result::invalid_argument);
+  CHECK(executor.submit_control({}, sequence) == granit::result::invalid_argument);
   CHECK(executor.run_task({}) == granit::result::invalid_argument);
 }
 
@@ -237,12 +263,12 @@ TEST_CASE("线程帧执行器同步等待不可丢弃命令") {
 
   std::uint64_t earlier_sequence{};
   REQUIRE(
-      executor.submit_task([&state] { return execute_command(&state); }, earlier_sequence).ok());
+      executor.submit_control([&state] { return execute_command(&state); }, earlier_sequence).ok());
   CHECK(executor.run_task([&state] { return execute_command(&state); }).ok());
   CHECK(state.executed_widths == std::vector<std::uint32_t>{99, 99});
   render_task_completion completion;
-  REQUIRE(executor.try_take_task_completion(completion));
+  REQUIRE(executor.try_take_control_completion(completion));
   CHECK(completion.sequence == earlier_sequence);
   CHECK(completion.status.ok());
-  CHECK_FALSE(executor.try_take_task_completion(completion));
+  CHECK_FALSE(executor.try_take_control_completion(completion));
 }

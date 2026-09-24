@@ -32,6 +32,80 @@ granit::result inline_render_task_executor::submit(frame_packet packet,
   return callback_(std::move(packet), output);
 }
 
+granit::result inline_render_task_executor::submit_frame(frame_packet packet,
+                                                         std::uint64_t& sequence) noexcept {
+  if (!callback_)
+    return granit::result::not_ready;
+  try {
+    frame_completion completion;
+    completion.sequence = next_sequence_++;
+    completion.status = callback_(std::move(packet), completion.execution);
+    sequence = completion.sequence;
+    completed_frames_.push_back(std::move(completion));
+    stats_.pending_high_watermark = std::max<std::size_t>(stats_.pending_high_watermark, 1);
+    return granit::result::success;
+  } catch (const std::bad_alloc&) {
+    return granit::result::out_of_memory;
+  } catch (...) {
+    return granit::result::internal;
+  }
+}
+
+granit::result inline_render_task_executor::submit_control(render_control_task task,
+                                                           std::uint64_t& sequence) noexcept {
+  if (!callback_)
+    return granit::result::not_ready;
+  if (!task)
+    return granit::result::invalid_argument;
+  try {
+    render_task_completion completion;
+    completion.sequence = next_sequence_++;
+    try {
+      completion.status = task();
+    } catch (const std::bad_alloc&) {
+      completion.status = granit::result::out_of_memory;
+    } catch (...) {
+      completion.status = granit::result::internal;
+    }
+    sequence = completion.sequence;
+    completed_controls_.push_back(completion);
+    stats_.pending_high_watermark = std::max<std::size_t>(stats_.pending_high_watermark, 1);
+    return granit::result::success;
+  } catch (const std::bad_alloc&) {
+    return granit::result::out_of_memory;
+  }
+}
+
+bool inline_render_task_executor::try_take_frame_completion(frame_completion& completion) noexcept {
+  if (completed_frames_.empty())
+    return false;
+  completion = std::move(completed_frames_.front());
+  completed_frames_.pop_front();
+  return true;
+}
+
+bool inline_render_task_executor::try_take_control_completion(
+    render_task_completion& completion) noexcept {
+  if (completed_controls_.empty())
+    return false;
+  completion = std::move(completed_controls_.front());
+  completed_controls_.pop_front();
+  return true;
+}
+
+bool inline_render_task_executor::can_submit_frame() const noexcept {
+  return static_cast<bool>(callback_);
+}
+
+void inline_render_task_executor::record_skipped_frame_build() noexcept {
+  if (callback_)
+    ++stats_.skipped_frame_builds;
+}
+
+render_task_queue_stats inline_render_task_executor::query_queue_stats() const noexcept {
+  return callback_ ? stats_ : render_task_queue_stats{};
+}
+
 granit::result inline_render_task_executor::run_task(render_control_task task) noexcept {
   if (!task)
     return granit::result::invalid_argument;
@@ -46,7 +120,12 @@ granit::result inline_render_task_executor::run_task(render_control_task task) n
 
 granit::result inline_render_task_executor::flush() noexcept { return granit::result::success; }
 
-void inline_render_task_executor::stop() noexcept { callback_ = {}; }
+void inline_render_task_executor::stop() noexcept {
+  callback_ = {};
+  completed_frames_.clear();
+  completed_controls_.clear();
+  stats_ = {};
+}
 
 bool inline_render_task_executor::running() const noexcept { return static_cast<bool>(callback_); }
 
@@ -152,8 +231,8 @@ threaded_render_task_executor::initialize(render_frame_callback callback,
   }
 }
 
-granit::result threaded_render_task_executor::submit(frame_packet packet,
-                                                     std::uint64_t& sequence) noexcept {
+granit::result threaded_render_task_executor::submit_frame(frame_packet packet,
+                                                           std::uint64_t& sequence) noexcept {
   if (!state_)
     return granit::result::not_ready;
   try {
@@ -210,8 +289,8 @@ granit::result threaded_render_task_executor::submit(frame_packet packet,
   }
 }
 
-granit::result threaded_render_task_executor::submit_task(render_control_task task,
-                                                          std::uint64_t& sequence) noexcept {
+granit::result threaded_render_task_executor::submit_control(render_control_task task,
+                                                             std::uint64_t& sequence) noexcept {
   if (!state_)
     return granit::result::not_ready;
   if (!task)
@@ -259,7 +338,8 @@ void threaded_render_task_executor::record_skipped_frame_build() noexcept {
     ++state_->stats.skipped_frame_builds;
 }
 
-bool threaded_render_task_executor::try_take_completion(frame_completion& completion) noexcept {
+bool threaded_render_task_executor::try_take_frame_completion(
+    frame_completion& completion) noexcept {
   if (!state_)
     return false;
   std::lock_guard lock(state_->mutex);
@@ -270,7 +350,7 @@ bool threaded_render_task_executor::try_take_completion(frame_completion& comple
   return true;
 }
 
-bool threaded_render_task_executor::try_take_task_completion(
+bool threaded_render_task_executor::try_take_control_completion(
     render_task_completion& completion) noexcept {
   if (!state_)
     return false;
@@ -299,7 +379,7 @@ granit::result threaded_render_task_executor::flush() noexcept {
 
 granit::result threaded_render_task_executor::run_task(render_control_task task) noexcept {
   std::uint64_t sequence{};
-  auto result = submit_task(std::move(task), sequence);
+  auto result = submit_control(std::move(task), sequence);
   if (result.failed())
     return result;
   result = flush();

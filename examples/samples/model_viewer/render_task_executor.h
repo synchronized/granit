@@ -9,6 +9,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <functional>
 #include <memory>
 #include <type_traits>
@@ -66,6 +67,16 @@ public:
   [[nodiscard]] virtual granit::result initialize(render_frame_callback callback) noexcept = 0;
   [[nodiscard]] virtual granit::result submit(frame_packet packet,
                                               frame_execution_result& output) = 0;
+  [[nodiscard]] virtual granit::result submit_frame(frame_packet packet,
+                                                    std::uint64_t& sequence) noexcept = 0;
+  [[nodiscard]] virtual granit::result submit_control(render_control_task task,
+                                                      std::uint64_t& sequence) noexcept = 0;
+  [[nodiscard]] virtual bool try_take_frame_completion(frame_completion& completion) noexcept = 0;
+  [[nodiscard]] virtual bool
+  try_take_control_completion(render_task_completion& completion) noexcept = 0;
+  [[nodiscard]] virtual bool can_submit_frame() const noexcept = 0;
+  virtual void record_skipped_frame_build() noexcept = 0;
+  [[nodiscard]] virtual render_task_queue_stats query_queue_stats() const noexcept = 0;
   [[nodiscard]] virtual granit::result run_task(render_control_task task) noexcept = 0;
   [[nodiscard]] virtual granit::result flush() noexcept = 0;
   virtual void stop() noexcept = 0;
@@ -80,6 +91,16 @@ public:
 
   [[nodiscard]] granit::result initialize(render_frame_callback callback) noexcept override;
   [[nodiscard]] granit::result submit(frame_packet packet, frame_execution_result& output) override;
+  [[nodiscard]] granit::result submit_frame(frame_packet packet,
+                                            std::uint64_t& sequence) noexcept override;
+  [[nodiscard]] granit::result submit_control(render_control_task task,
+                                              std::uint64_t& sequence) noexcept override;
+  [[nodiscard]] bool try_take_frame_completion(frame_completion& completion) noexcept override;
+  [[nodiscard]] bool
+  try_take_control_completion(render_task_completion& completion) noexcept override;
+  [[nodiscard]] bool can_submit_frame() const noexcept override;
+  void record_skipped_frame_build() noexcept override;
+  [[nodiscard]] render_task_queue_stats query_queue_stats() const noexcept override;
   [[nodiscard]] granit::result run_task(render_control_task task) noexcept override;
   template <typename Task>
     requires(!std::is_same_v<std::remove_cvref_t<Task>, render_control_task>)
@@ -98,6 +119,10 @@ public:
 
 private:
   render_frame_callback callback_;
+  std::deque<frame_completion> completed_frames_;
+  std::deque<render_task_completion> completed_controls_;
+  std::uint64_t next_sequence_{1};
+  render_task_queue_stats stats_;
 };
 
 /** 桌面用有界异步执行器；所有回调只在其专用工作线程串行执行。 */
@@ -112,15 +137,16 @@ public:
                                           std::size_t maximum_pending_frames) noexcept;
   [[nodiscard]] granit::result initialize(render_frame_callback callback) noexcept override;
   [[nodiscard]] granit::result submit(frame_packet packet, frame_execution_result& output) override;
-  [[nodiscard]] granit::result submit(frame_packet packet, std::uint64_t& sequence) noexcept;
+  [[nodiscard]] granit::result submit_frame(frame_packet packet,
+                                            std::uint64_t& sequence) noexcept override;
   /** 提交拥有其捕获数据的控制任务；队列已满时返回 not_ready，不替换已有任务。 */
-  [[nodiscard]] granit::result submit_task(render_control_task task,
-                                           std::uint64_t& sequence) noexcept;
+  [[nodiscard]] granit::result submit_control(render_control_task task,
+                                              std::uint64_t& sequence) noexcept override;
   template <typename Task>
     requires(!std::is_same_v<std::remove_cvref_t<Task>, render_control_task>)
-  [[nodiscard]] granit::result submit_task(Task&& task, std::uint64_t& sequence) noexcept {
+  [[nodiscard]] granit::result submit_control(Task&& task, std::uint64_t& sequence) noexcept {
     try {
-      return submit_task(render_control_task{std::forward<Task>(task)}, sequence);
+      return submit_control(render_control_task{std::forward<Task>(task)}, sequence);
     } catch (const std::bad_alloc&) {
       return granit::result::out_of_memory;
     } catch (...) {
@@ -141,12 +167,13 @@ public:
     }
   }
   /** 返回当前是否有待处理帧容量；单生产者仍须处理 submit 的最终结果。 */
-  [[nodiscard]] bool can_submit_frame() const noexcept;
+  [[nodiscard]] bool can_submit_frame() const noexcept override;
   /** 记录调用方因容量不足而在构造前跳过的帧。 */
-  void record_skipped_frame_build() noexcept;
-  [[nodiscard]] bool try_take_completion(frame_completion& completion) noexcept;
-  [[nodiscard]] bool try_take_task_completion(render_task_completion& completion) noexcept;
-  [[nodiscard]] render_task_queue_stats query_queue_stats() const noexcept;
+  void record_skipped_frame_build() noexcept override;
+  [[nodiscard]] bool try_take_frame_completion(frame_completion& completion) noexcept override;
+  [[nodiscard]] bool
+  try_take_control_completion(render_task_completion& completion) noexcept override;
+  [[nodiscard]] render_task_queue_stats query_queue_stats() const noexcept override;
   [[nodiscard]] granit::result flush() noexcept override;
   void stop() noexcept override;
   [[nodiscard]] bool running() const noexcept override;
