@@ -9,6 +9,8 @@
 
 ## 当前计划
 
+- [S-61：Model Viewer 共享 ImGui 与浏览器测试边界](S-61-model-viewer-shared-imgui-browser-tests.md)
+  ——统一 Desktop/Web Viewer 面板，并分离正式浏览器产物与测试探针。
 - [S-60：Model Viewer 共享渲染运行时](S-60-model-viewer-shared-render-runtime.md)——提取同步 GPU
   运行时，由 Desktop/Web 通过 threaded/inline executor 复用同一资源和帧执行逻辑。
 - [S-59：Model Viewer 渲染任务运行时](S-59-model-viewer-render-task-runtime.md)——以强类型任务统一
