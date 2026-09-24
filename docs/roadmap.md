@@ -29,24 +29,19 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 
 ## 当前计划
 
-### S-53：0.30.0 文档、教程与发布面收敛
-
-**状态：功能与跨平台矩阵完成，等待发布候选验收，P1。**
-
-[S-53](plans/S-53-0.30.0-documentation-tutorial-release.md) 已完成 Frame Context 与 Command Recorder
-分层、文档与教程收敛以及 shared-only Release 配置。Pull Request #85 的 Linux、Windows、
-Emscripten、Quick Check 与 Documentation 已通过，下一步验证 `0.30.0` 发布候选和公开产物。
+当前没有正在实施的计划。新的公共能力或版本工作应先登记独立计划并明确验收边界。
 
 ## 最近完成
 
-### S-54～S-63：0.30.0 教程、Window、资产与 Model Viewer 收敛
+### S-53～S-63：0.30.0 文档、教程、Window、资产与 Model Viewer 收敛
 
 **状态：已完成，P1。**
 
-[S-54](plans/S-54-0.30.0-feature-tutorial-framework.md) 至
+[S-53](plans/S-53-0.30.0-documentation-tutorial-release.md) 至
 [S-63](plans/S-63-model-viewer-session-platform-shells.md) 已交付 Cube 与 PBR Assets 特性教程、
 Window Target/SDL3、统一 Example Asset System，以及 Desktop/Web 共用的 Model Viewer Application、
-ImGui、Render Service、Render Runtime 和任务执行语义。完整远端跨平台矩阵已经通过。
+ImGui、Render Service、Render Runtime 和任务执行语义；Frame 生命周期文档和 shared-only Release
+也已完成。完整远端跨平台矩阵和公开产物复验已经通过，并发布 `v0.30.0`。
 
 ### S-52：0.29.0 版本收口与发布验收
 
