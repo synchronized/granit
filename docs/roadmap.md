@@ -29,7 +29,13 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 
 ## 当前计划
 
-当前没有正在实施的计划。新的公共能力或版本工作应先登记独立计划并明确验收边界。
+### S-64：0.31.0 SDK-first 示例与资产入口
+
+**状态：实施中，P1。**
+
+[S-64](plans/S-64-0.31.0-sdk-first-examples.md) 将增加只依赖安装后 CMake package 的 Window
+Quickstart，把它接入 shared SDK 端到端验收，并明确 Tutorials、Samples、Example Common 与统一
+资产入口的边界；本版本不新增公共 VFS 或渲染特性。
 
 ## 最近完成
 
