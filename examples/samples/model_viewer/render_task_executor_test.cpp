@@ -95,12 +95,46 @@ TEST_CASE("同步渲染任务执行器持久初始化并执行控制任务") {
               })
               .ok());
   CHECK(executor.initialize({}) == granit::result::invalid_argument);
-  CHECK(executor.run_task([&state] {
-          state.width = 99;
-          return granit::result::success;
-        }).ok());
+  CHECK(executor
+            .run_task([&state] {
+              state.width = 99;
+              return granit::result::success;
+            })
+            .ok());
   CHECK(state.width == 99);
   CHECK(executor.run_task({}) == granit::result::invalid_argument);
+}
+
+TEST_CASE("帧执行策略通过统一接口保持相同行为") {
+  using namespace granit::example::model_viewer;
+  callback_state state;
+
+  const auto verify = [&state](render_task_executor& executor) {
+    REQUIRE(executor
+                .initialize([&state](auto&& packet, auto& output) {
+                  return execute_frame(std::move(packet), output, &state);
+                })
+                .ok());
+    frame_packet packet;
+    packet.viewer.width = 640;
+    frame_execution_result output;
+    CHECK(executor.submit(std::move(packet), output) == granit::result::not_ready);
+    CHECK(state.called);
+    CHECK(state.width == 640);
+    CHECK(output.needs_recreate);
+    CHECK(executor.running());
+    executor.stop();
+    CHECK_FALSE(executor.running());
+  };
+
+  SECTION("调用线程执行") {
+    inline_render_task_executor executor;
+    verify(executor);
+  }
+  SECTION("专用线程执行") {
+    threaded_render_task_executor executor;
+    verify(executor);
+  }
 }
 
 TEST_CASE("线程帧执行器限制待处理队列并回报被替换帧") {
@@ -202,7 +236,8 @@ TEST_CASE("线程帧执行器同步等待不可丢弃命令") {
               .ok());
 
   std::uint64_t earlier_sequence{};
-  REQUIRE(executor.submit_task([&state] { return execute_command(&state); }, earlier_sequence).ok());
+  REQUIRE(
+      executor.submit_task([&state] { return execute_command(&state); }, earlier_sequence).ok());
   CHECK(executor.run_task([&state] { return execute_command(&state); }).ok());
   CHECK(state.executed_widths == std::vector<std::uint32_t>{99, 99});
   render_task_completion completion;

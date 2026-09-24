@@ -15,7 +15,7 @@
 #include "application/application_host.h"
 #include "model_viewer/application_core.h"
 #include "model_viewer/model_viewer_runtime.h"
-#include "model_viewer/render_runtime.h"
+#include "model_viewer/render_service.h"
 #include "model_viewer/render_task_executor.h"
 #include "model_viewer/viewer_input_accumulator.h"
 #include "model_viewer/viewer_panels.h"
@@ -35,8 +35,8 @@ granit::example::model_viewer::web::application_options options;
 enum class startup_status : int { failed = -1, starting, provider_pending, ready, stopped };
 
 struct web_platform_state {
-  granit::example::model_viewer::render_runtime rendering;
   granit::example::model_viewer::inline_render_task_executor executor;
+  granit::example::model_viewer::render_service rendering;
   granit::example::model_viewer::web::pipeline_warmup pipeline_warmup;
 #if defined(GRANIT_MODEL_VIEWER_BROWSER_TESTS)
   granit::example::model_viewer::web::pipeline_validation pipeline_validation;
@@ -217,11 +217,6 @@ granit_result resize_swapchain_if_needed() {
   return granit::to_native(result);
 }
 
-granit::result execute_web_frame(granit::example::model_viewer::frame_packet&& packet,
-                                 granit::example::model_viewer::frame_execution_result& output) {
-  return state.rendering.render(std::move(packet), output);
-}
-
 granit_result execute_render_quality_change(granit_sample_count sample_count, unsigned enable_fxaa,
                                             unsigned enable_specular_aa,
                                             unsigned sampler_anisotropy);
@@ -344,7 +339,7 @@ granit_result render_model_viewer_frame(float delta_seconds) {
   }
   if (result == GRANIT_SUCCESS) {
     granit::example::model_viewer::frame_execution_result execution;
-    result = granit::to_native(state.executor.submit(std::move(output), execution));
+    result = granit::to_native(state.rendering.submit(std::move(output), execution));
     if (result == GRANIT_SUCCESS) {
       state.latest_performance = {.frames_per_second =
                                       delta_seconds > 0.0F ? 1.0F / delta_seconds : 0.0F,
@@ -398,10 +393,8 @@ granit_result execute_render_quality_change(granit_sample_count sample_count, un
 granit_result configure_render_quality(granit_sample_count sample_count, unsigned enable_fxaa,
                                        unsigned enable_specular_aa,
                                        unsigned sampler_anisotropy) noexcept {
-  return granit::to_native(state.executor.run_task([=] {
-    return granit::from_native(execute_render_quality_change(
-        sample_count, enable_fxaa, enable_specular_aa, sampler_anisotropy));
-  }));
+  return execute_render_quality_change(sample_count, enable_fxaa, enable_specular_aa,
+                                       sampler_anisotropy);
 }
 
 granit_result configure_lighting(float exposure_ev, float environment_intensity,
@@ -471,6 +464,15 @@ void update_web_application() noexcept {
   if (renderer_status.state != granit::renderer_state::ready) {
     return;
   }
+  if (state.runtime.loading_status() ==
+      granit::example::model_viewer::model_loading_status::failed) {
+    const auto stage = state.runtime.loading_error() ==
+                               granit::example::model_viewer::model_loading_error::resource_read
+                           ? "asset-resource-fetch"
+                           : "asset-fetch";
+    fail(stage, granit::to_native(state.runtime.loading_result()));
+    return;
+  }
   if (!state.core_renderer_ready) {
     auto result = state.rendering.complete_renderer_initialization();
     if (result.ok())
@@ -480,15 +482,6 @@ void update_web_application() noexcept {
       return;
     }
     state.core_renderer_ready = true;
-  }
-  if (state.runtime.loading_status() ==
-      granit::example::model_viewer::model_loading_status::failed) {
-    const auto stage = state.runtime.loading_error() ==
-                               granit::example::model_viewer::model_loading_error::resource_read
-                           ? "asset-resource-fetch"
-                           : "asset-fetch";
-    fail(stage, granit::to_native(state.runtime.loading_result()));
-    return;
   }
   if (state.runtime.loading_status() !=
       granit::example::model_viewer::model_loading_status::assets_ready) {
@@ -505,8 +498,7 @@ void update_web_application() noexcept {
         fail("asset-load", granit::to_native(result));
         return;
       }
-      result = state.executor.run_task(
-          [] { return state.rendering.upload_scene({}, 8.0F, report_upload_progress, nullptr); });
+      result = state.rendering.upload_scene({}, 8.0F, report_upload_progress, nullptr);
       state.upload_active = false;
       if (result != granit::result::success) {
         fail("asset-upload", granit::to_native(result));
@@ -673,9 +665,10 @@ granit_result destroy_web_render_resources() noexcept {
 }
 
 granit_result shutdown_web_resources() noexcept {
+  if (state.shutdown_complete)
+    return state.shutdown_result;
   state.runtime.cancel_loading();
-  return granit::to_native(
-      state.executor.run_task([] { return granit::from_native(destroy_web_render_resources()); }));
+  return destroy_web_render_resources();
 }
 
 granit::result web_application_host::on_host_initialize() noexcept {
@@ -685,15 +678,11 @@ granit::result web_application_host::on_host_initialize() noexcept {
     return ui_result;
   }
   const auto result = state.rendering.initialize_renderer(
-      {.presentation = granit::presentation_mode::enabled, .diagnostics = diagnose}, state.core);
+      state.executor, {.presentation = granit::presentation_mode::enabled, .diagnostics = diagnose},
+      state.core);
   if (result.failed()) {
     fail("provider-open", granit::to_native(result));
     return result;
-  }
-  const auto executor_result = state.executor.initialize(execute_web_frame);
-  if (executor_result.failed()) {
-    fail("executor-initialize", granit::to_native(executor_result));
-    return executor_result;
   }
   const auto core_result = state.runtime.begin_renderer();
   if (core_result != granit::result::success) {

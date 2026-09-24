@@ -21,6 +21,7 @@
 
 ## 稳定化与跨平台
 
+- [2026-09-24 S-62 Model Viewer 统一 Render Service 本地验收](2026-09-24-s62-model-viewer-render-service-local-acceptance.md)
 - [2026-09-24 S-60 Model Viewer 共享渲染运行时本地验收](2026-09-24-s60-shared-render-runtime-local-acceptance.md)
 - [2026-09-24 S-59 Model Viewer 渲染任务运行时本地验收](2026-09-24-s59-model-viewer-render-runtime-local-acceptance.md)
 - [2026-09-24 S-57 Model Viewer 运行时架构本地验收](2026-09-24-s57-model-viewer-runtime-local-acceptance.md)

@@ -31,7 +31,7 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 
 ### S-62：Model Viewer 统一 Render Service
 
-**状态：实施中，P1。**
+**状态：本地实施与浏览器验收完成，等待远端跨平台验收，P1。**
 
 [S-62](plans/S-62-model-viewer-render-service.md) 统一 Desktop/Web 对 Render Runtime 的调用门面，
 并把线程队列、帧替换和完成回执收窄为 Desktop 执行策略。

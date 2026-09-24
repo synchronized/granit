@@ -10,7 +10,7 @@
 ## 当前计划
 
 - [S-62：Model Viewer 统一 Render Service](S-62-model-viewer-render-service.md)——统一 Desktop/Web
-  的渲染调用门面，并保留 threaded/inline 执行策略。
+  的渲染调用门面，并保留 threaded/inline 执行策略；本地实施与浏览器验证已经完成。
 - [S-61：Model Viewer 共享 ImGui 与浏览器测试边界](S-61-model-viewer-shared-imgui-browser-tests.md)
   ——统一 Desktop/Web Viewer 面板，并分离正式浏览器产物与测试探针。
 - [S-60：Model Viewer 共享渲染运行时](S-60-model-viewer-shared-render-runtime.md)——提取同步 GPU

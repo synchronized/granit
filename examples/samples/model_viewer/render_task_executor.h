@@ -40,8 +40,8 @@ struct frame_completion {
   bool dropped{};
 };
 
-using render_frame_callback = std::function<granit::result(frame_packet&& packet,
-                                                           frame_execution_result& output)>;
+using render_frame_callback =
+    std::function<granit::result(frame_packet&& packet, frame_execution_result& output)>;
 using render_control_task = std::function<granit::result()>;
 
 /** 不可丢弃命令的完成回执。 */
@@ -63,10 +63,13 @@ class render_task_executor {
 public:
   virtual ~render_task_executor() = default;
 
+  [[nodiscard]] virtual granit::result initialize(render_frame_callback callback) noexcept = 0;
   [[nodiscard]] virtual granit::result submit(frame_packet packet,
                                               frame_execution_result& output) = 0;
   [[nodiscard]] virtual granit::result run_task(render_control_task task) noexcept = 0;
   [[nodiscard]] virtual granit::result flush() noexcept = 0;
+  virtual void stop() noexcept = 0;
+  [[nodiscard]] virtual bool running() const noexcept = 0;
 };
 
 /** 在调用线程立即执行帧的实现，供同步平台和线程迁移前的桌面路径使用。 */
@@ -75,7 +78,7 @@ public:
   inline_render_task_executor() = default;
   explicit inline_render_task_executor(render_frame_callback callback) noexcept;
 
-  [[nodiscard]] granit::result initialize(render_frame_callback callback) noexcept;
+  [[nodiscard]] granit::result initialize(render_frame_callback callback) noexcept override;
   [[nodiscard]] granit::result submit(frame_packet packet, frame_execution_result& output) override;
   [[nodiscard]] granit::result run_task(render_control_task task) noexcept override;
   template <typename Task>
@@ -90,13 +93,15 @@ public:
     }
   }
   [[nodiscard]] granit::result flush() noexcept override;
+  void stop() noexcept override;
+  [[nodiscard]] bool running() const noexcept override;
 
 private:
   render_frame_callback callback_;
 };
 
 /** 桌面用有界异步执行器；所有回调只在其专用工作线程串行执行。 */
-class threaded_render_task_executor final {
+class threaded_render_task_executor final : public render_task_executor {
 public:
   threaded_render_task_executor();
   ~threaded_render_task_executor();
@@ -104,7 +109,9 @@ public:
   threaded_render_task_executor& operator=(const threaded_render_task_executor&) = delete;
 
   [[nodiscard]] granit::result initialize(render_frame_callback callback,
-                                          std::size_t maximum_pending_frames = 3) noexcept;
+                                          std::size_t maximum_pending_frames) noexcept;
+  [[nodiscard]] granit::result initialize(render_frame_callback callback) noexcept override;
+  [[nodiscard]] granit::result submit(frame_packet packet, frame_execution_result& output) override;
   [[nodiscard]] granit::result submit(frame_packet packet, std::uint64_t& sequence) noexcept;
   /** 提交拥有其捕获数据的控制任务；队列已满时返回 not_ready，不替换已有任务。 */
   [[nodiscard]] granit::result submit_task(render_control_task task,
@@ -121,7 +128,7 @@ public:
     }
   }
   /** 提交不可丢弃控制任务并等待其完成。 */
-  [[nodiscard]] granit::result run_task(render_control_task task) noexcept;
+  [[nodiscard]] granit::result run_task(render_control_task task) noexcept override;
   template <typename Task>
     requires(!std::is_same_v<std::remove_cvref_t<Task>, render_control_task>)
   [[nodiscard]] granit::result run_task(Task&& task) noexcept {
@@ -140,9 +147,9 @@ public:
   [[nodiscard]] bool try_take_completion(frame_completion& completion) noexcept;
   [[nodiscard]] bool try_take_task_completion(render_task_completion& completion) noexcept;
   [[nodiscard]] render_task_queue_stats query_queue_stats() const noexcept;
-  [[nodiscard]] granit::result flush() noexcept;
-  void stop() noexcept;
-  [[nodiscard]] bool running() const noexcept;
+  [[nodiscard]] granit::result flush() noexcept override;
+  void stop() noexcept override;
+  [[nodiscard]] bool running() const noexcept override;
 
 private:
   struct state;

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_DESKTOP_RENDER_SERVICE_H_
-#define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_DESKTOP_RENDER_SERVICE_H_
+#ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_DESKTOP_THREADED_RENDER_SERVICE_H_
+#define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_DESKTOP_THREADED_RENDER_SERVICE_H_
 
 #include "model_viewer/application_core.h"
 #include "model_viewer/render_task_executor.h"
@@ -20,7 +20,7 @@
 
 namespace granit::example::model_viewer::desktop {
 
-struct render_thread_state;
+struct threaded_render_service_state;
 
 using upload_progress_callback = granit::result (*)(unsigned percentage, void* user_data);
 
@@ -35,13 +35,13 @@ struct quality_change_result {
   bool scene_reuploaded{};
 };
 
-/** Desktop GPU 命令与帧执行边界；公开方法由主线程调用。 */
-class render_thread {
+/** 为共用 render_service 增加 Desktop 异步上传、帧队列和完成回执。 */
+class threaded_render_service {
 public:
-  render_thread();
-  ~render_thread();
-  render_thread(const render_thread&) = delete;
-  render_thread& operator=(const render_thread&) = delete;
+  threaded_render_service();
+  ~threaded_render_service();
+  threaded_render_service(const threaded_render_service&) = delete;
+  threaded_render_service& operator=(const threaded_render_service&) = delete;
 
   [[nodiscard]] granit::result initialize(granit::window& window,
                                           const granit::renderer_desc& renderer_desc,
@@ -85,9 +85,9 @@ public:
   [[nodiscard]] bool running() const noexcept;
 
 private:
-  std::unique_ptr<render_thread_state> state_;
+  std::unique_ptr<threaded_render_service_state> state_;
 };
 
 } // namespace granit::example::model_viewer::desktop
 
-#endif
+#endif // GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_DESKTOP_THREADED_RENDER_SERVICE_H_

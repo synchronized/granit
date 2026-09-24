@@ -46,6 +46,10 @@ granit::result inline_render_task_executor::run_task(render_control_task task) n
 
 granit::result inline_render_task_executor::flush() noexcept { return granit::result::success; }
 
+void inline_render_task_executor::stop() noexcept { callback_ = {}; }
+
+bool inline_render_task_executor::running() const noexcept { return static_cast<bool>(callback_); }
+
 struct threaded_render_task_executor::state {
   enum class task_kind { frame, control };
 
@@ -125,8 +129,13 @@ threaded_render_task_executor::threaded_render_task_executor() = default;
 
 threaded_render_task_executor::~threaded_render_task_executor() { stop(); }
 
-granit::result threaded_render_task_executor::initialize(render_frame_callback callback,
-                                                         std::size_t maximum_pending_frames) noexcept {
+granit::result threaded_render_task_executor::initialize(render_frame_callback callback) noexcept {
+  return initialize(std::move(callback), 3);
+}
+
+granit::result
+threaded_render_task_executor::initialize(render_frame_callback callback,
+                                          std::size_t maximum_pending_frames) noexcept {
   if (!callback || maximum_pending_frames == 0 || state_)
     return granit::result::invalid_argument;
   try {
@@ -178,6 +187,22 @@ granit::result threaded_render_task_executor::submit(frame_packet packet,
         std::max(state_->stats.pending_high_watermark, state_->pending.size());
     state_->work_ready.notify_one();
     return granit::result::success;
+  } catch (const std::bad_alloc&) {
+    return granit::result::out_of_memory;
+  } catch (...) {
+    return granit::result::internal;
+  }
+}
+
+granit::result threaded_render_task_executor::submit(frame_packet packet,
+                                                     frame_execution_result& output) {
+  if (!state_)
+    return granit::result::not_ready;
+  try {
+    auto owned = std::make_shared<frame_packet>(std::move(packet));
+    return run_task([context = state_.get(), owned = std::move(owned), &output]() mutable {
+      return context->callback(std::move(*owned), output);
+    });
   } catch (const std::bad_alloc&) {
     return granit::result::out_of_memory;
   } catch (...) {

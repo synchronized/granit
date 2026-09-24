@@ -11,6 +11,8 @@ add_library(
   environment_ktx2.h
   render_task_executor.cpp
   render_task_executor.h
+  render_service.cpp
+  render_service.h
   render_runtime.cpp
   render_runtime.h
   model_loading_session.cpp

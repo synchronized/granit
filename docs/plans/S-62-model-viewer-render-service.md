@@ -5,8 +5,8 @@
 
 ## 状态
 
-**实施中，P1。** 本计划统一 Desktop/Web 对 `render_runtime` 的调用门面，同时保留 threaded 与
-inline 两种执行策略。
+**本地实施与浏览器验收完成，等待远端跨平台验收，P1。** Desktop/Web 已通过同一个
+`render_service` 使用 `render_runtime`，并分别保留 threaded 与 inline 执行策略。
 
 ## 背景与目标
 
@@ -32,10 +32,10 @@ inline 两种执行策略。
 
 ## 实施顺序
 
-1. **S-62A 服务契约（实施中）**：定义共享操作、执行器所有权和直接执行边界。
-2. **S-62B Desktop 迁移**：让线程门面复用服务，只保留队列特有逻辑。
-3. **S-62C Web 迁移**：以 inline executor 初始化服务并移除直接 Runtime 调用。
-4. **S-62D 验收与文档**：验证 Windows、Emscripten、Chrome 和文档。
+1. **S-62A 服务契约（完成）**：定义共享操作、执行器所有权和直接执行边界。
+2. **S-62B Desktop 迁移（完成）**：线程门面复用服务，只保留队列特有逻辑。
+3. **S-62C Web 迁移（完成）**：以 inline executor 初始化服务并移除直接 Runtime 调用。
+4. **S-62D 本地验收与文档（完成）**：Windows、Emscripten、Chrome 和文档验证通过。
 
 ## 约束
 
@@ -46,6 +46,9 @@ threaded executor 工作线程内再次同步排队造成死锁。
 ## 验收
 
 - Desktop/Web 应用层都通过 `render_service` 使用 GPU Runtime；
-- `render_thread` 不再直接拥有 `render_runtime`；
+- `threaded_render_service` 不再直接拥有 `render_runtime`；
 - Web 状态不再并列保存 Runtime 与 executor 回调；
 - 既有 Desktop Model Viewer 测试、Vulkan 冒烟、正式/测试 Web 页面和 platform smoke 通过。
+
+本地验收结果见
+[S-62 Model Viewer 统一 Render Service 本地验收](../records/2026-09-24-s62-model-viewer-render-service-local-acceptance.md)。
