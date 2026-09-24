@@ -19,6 +19,9 @@ struct render_service_state {
   granit::frame_context loading_frame_context;
   granit::canvas_draw_list loading_canvas;
   std::array<granit::canvas_draw_list, 3> frame_canvases;
+  granit::texture font_texture;
+  granit::texture_view font_view;
+  granit::sampler font_sampler;
   granit::render_pipeline pipeline;
   threaded_frame_executor executor;
   std::size_t next_canvas{};
@@ -222,10 +225,39 @@ struct shutdown_context {
   render_service_state* state{};
   granit::renderer* renderer{};
   granit::surface* surface{};
-  granit::texture* font_texture{};
-  granit::texture_view* font_view{};
-  granit::sampler* font_sampler{};
 };
+
+struct font_atlas_context {
+  render_service_state* state{};
+  std::span<const std::byte> pixels;
+  std::uint32_t width{};
+  std::uint32_t height{};
+};
+
+granit::result initialize_font_atlas(void* user_data) {
+  auto& context = *static_cast<font_atlas_context*>(user_data);
+  auto& state = *context.state;
+  auto result = state.font_texture.initialize(
+      state.renderer,
+      {.format = granit::texture_format::rgba8_unorm,
+       .usage = granit::texture_usage::sampled | granit::texture_usage::transfer_destination,
+       .width = context.width,
+       .height = context.height});
+  if (result.ok()) {
+    result = state.font_texture.write(
+        context.pixels, {.bytes_per_row = context.width * 4, .rows_per_image = context.height},
+        {.width = context.width, .height = context.height});
+  }
+  if (result.ok())
+    result = state.font_view.initialize(state.renderer, state.font_texture.ref());
+  if (result.ok()) {
+    result = state.font_sampler.initialize(state.renderer,
+                                           {.address_u = granit::address_mode::clamp_to_edge,
+                                            .address_v = granit::address_mode::clamp_to_edge,
+                                            .address_w = granit::address_mode::clamp_to_edge});
+  }
+  return result;
+}
 
 granit::result finish_loading(void* user_data) {
   auto& state = *static_cast<render_service_state*>(user_data);
@@ -247,9 +279,9 @@ granit::result shutdown_renderer(void* user_data) {
     collect(canvas.destroy());
   collect(context.state->loading_canvas.destroy());
   collect(context.state->loading_frame_context.reset());
-  collect(context.font_sampler->reset());
-  collect(context.font_view->reset());
-  collect(context.font_texture->reset());
+  collect(context.state->font_sampler.reset());
+  collect(context.state->font_view.reset());
+  collect(context.state->font_texture.reset());
   collect(context.state->swapchain->reset());
   collect(context.surface->reset());
   collect(context.renderer->reset());
@@ -378,6 +410,24 @@ granit::result render_service::finish_loading() noexcept {
   return state_->executor.run_command(desktop::finish_loading, state_.get());
 }
 
+granit::result render_service::initialize_font_atlas(std::span<const std::byte> pixels,
+                                                     std::uint32_t width,
+                                                     std::uint32_t height) noexcept {
+  if (!state_ || pixels.empty() || width == 0 || height == 0)
+    return granit::result::invalid_argument;
+  font_atlas_context context{
+      .state = state_.get(), .pixels = pixels, .width = width, .height = height};
+  return state_->executor.run_command(desktop::initialize_font_atlas, &context);
+}
+
+granit::texture_view_ref render_service::font_view() const noexcept {
+  return state_ ? state_->font_view.ref() : granit::texture_view_ref{};
+}
+
+granit::sampler_ref render_service::font_sampler() const noexcept {
+  return state_ ? state_->font_sampler.ref() : granit::sampler_ref{};
+}
+
 granit::result
 render_service::initialize_pipeline(const granit::render_pipeline_desc& desc) noexcept {
   if (!state_ || state_->upload_active)
@@ -441,10 +491,8 @@ granit::result render_service::flush() noexcept {
   return state_ ? state_->executor.flush() : granit::result::not_ready;
 }
 
-granit::result render_service::shutdown(granit::renderer& renderer, granit::surface& surface,
-                                        granit::texture& font_texture,
-                                        granit::texture_view& font_view,
-                                        granit::sampler& font_sampler) noexcept {
+granit::result render_service::shutdown(granit::renderer& renderer,
+                                        granit::surface& surface) noexcept {
   if (!state_)
     return granit::result::not_ready;
   if (state_->upload_active) {
@@ -453,12 +501,7 @@ granit::result render_service::shutdown(granit::renderer& renderer, granit::surf
     granit::result upload_result;
     static_cast<void>(try_finish_gpu_upload(upload_result));
   }
-  shutdown_context context{.state = state_.get(),
-                           .renderer = &renderer,
-                           .surface = &surface,
-                           .font_texture = &font_texture,
-                           .font_view = &font_view,
-                           .font_sampler = &font_sampler};
+  shutdown_context context{.state = state_.get(), .renderer = &renderer, .surface = &surface};
   const auto result = state_->executor.run_command(shutdown_renderer, &context);
   state_->executor.stop();
   return result;

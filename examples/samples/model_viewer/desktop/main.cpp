@@ -121,8 +121,8 @@ constexpr std::string_view present_mode_label(granit::present_mode mode) noexcep
   }
 }
 
-granit::result upload_font_atlas(granit::renderer& renderer, granit::texture& texture,
-                                 granit::texture_view& view, granit::sampler& sampler) {
+granit::result capture_font_atlas(std::vector<std::byte>& output, std::uint32_t& output_width,
+                                  std::uint32_t& output_height) {
   unsigned char* pixels = nullptr;
   int width = 0;
   int height = 0;
@@ -132,34 +132,18 @@ granit::result upload_font_atlas(granit::renderer& renderer, granit::texture& te
   const auto pixel_count = static_cast<std::uint64_t>(width) * static_cast<std::uint64_t>(height);
   if (pixel_count > std::numeric_limits<std::size_t>::max() / 4)
     return granit::result::out_of_memory;
-  std::vector<std::byte> premultiplied(static_cast<std::size_t>(pixel_count) * 4);
-  for (std::size_t offset = 0; offset < premultiplied.size(); offset += 4) {
+  output.resize(static_cast<std::size_t>(pixel_count) * 4);
+  for (std::size_t offset = 0; offset < output.size(); offset += 4) {
     const auto alpha = pixels[offset + 3];
     for (std::size_t channel = 0; channel < 3; ++channel) {
-      premultiplied[offset + channel] = static_cast<std::byte>(
+      output[offset + channel] = static_cast<std::byte>(
           (static_cast<std::uint32_t>(pixels[offset + channel]) * alpha + 127U) / 255U);
     }
-    premultiplied[offset + 3] = static_cast<std::byte>(alpha);
+    output[offset + 3] = static_cast<std::byte>(alpha);
   }
-  auto result = texture.initialize(renderer, {.format = granit::texture_format::rgba8_unorm,
-                                              .usage = granit::texture_usage::sampled |
-                                                       granit::texture_usage::transfer_destination,
-                                              .width = static_cast<std::uint32_t>(width),
-                                              .height = static_cast<std::uint32_t>(height)});
-  if (result.ok()) {
-    result = texture.write(
-        premultiplied,
-        {.bytes_per_row = static_cast<std::uint32_t>(width) * 4,
-         .rows_per_image = static_cast<std::uint32_t>(height)},
-        {.width = static_cast<std::uint32_t>(width), .height = static_cast<std::uint32_t>(height)});
-  }
-  if (result.ok())
-    result = view.initialize(renderer, texture);
-  if (result.ok())
-    result = sampler.initialize(renderer, {.address_u = granit::address_mode::clamp_to_edge,
-                                           .address_v = granit::address_mode::clamp_to_edge,
-                                           .address_w = granit::address_mode::clamp_to_edge});
-  return result;
+  output_width = static_cast<std::uint32_t>(width);
+  output_height = static_cast<std::uint32_t>(height);
+  return granit::result::success;
 }
 
 struct profile_metric {
@@ -352,9 +336,6 @@ int main(int argc, char** argv) {
   granit::renderer renderer;
   granit::surface surface;
   granit::swapchain swapchain;
-  granit::texture font_texture;
-  granit::texture_view font_view;
-  granit::sampler font_sampler;
   granit::example::imgui::texture_registry textures;
   application_core core;
   result = core.begin_renderer();
@@ -412,11 +393,18 @@ int main(int argc, char** argv) {
   if (result.ok())
     result =
         render_service.initialize(renderer.ref(), swapchain, swapchain_info, core, options.show_ui);
-  if (result.ok() && options.show_ui)
-    result = upload_font_atlas(renderer, font_texture, font_view, font_sampler);
+  if (result.ok() && options.show_ui) {
+    std::vector<std::byte> font_pixels;
+    std::uint32_t font_width{};
+    std::uint32_t font_height{};
+    result = capture_font_atlas(font_pixels, font_width, font_height);
+    if (result.ok())
+      result = render_service.initialize_font_atlas(font_pixels, font_width, font_height);
+  }
   ImTextureID font_texture_id = ImTextureID_Invalid;
   if (result.ok() && options.show_ui) {
-    result = textures.register_texture(font_view.ref(), font_sampler.ref(), font_texture_id);
+    result = textures.register_texture(render_service.font_view(), render_service.font_sampler(),
+                                       font_texture_id);
   }
   if (result.ok() && options.show_ui) {
     ImGui::GetIO().Fonts->SetTexID(font_texture_id);
@@ -672,8 +660,7 @@ int main(int argc, char** argv) {
   if (result.failed()) {
     if (render_service.running()) {
       textures.clear();
-      static_cast<void>(
-          render_service.shutdown(renderer, surface, font_texture, font_view, font_sampler));
+      static_cast<void>(render_service.shutdown(renderer, surface));
     }
     std::cerr << "模型查看器初始化失败：" << granit::result_message(result);
     if (!core.diagnostic().empty())
@@ -884,8 +871,7 @@ int main(int argc, char** argv) {
 
   if (render_service.running()) {
     textures.clear();
-    const auto shutdown_result =
-        render_service.shutdown(renderer, surface, font_texture, font_view, font_sampler);
+    const auto shutdown_result = render_service.shutdown(renderer, surface);
     if (result.ok())
       result = shutdown_result;
   }

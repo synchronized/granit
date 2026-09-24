@@ -53,6 +53,11 @@ public:
   /** 调用方保证没有并发帧任务；上传开始后只能从渲染线程调用。 */
   [[nodiscard]] granit::result render_loading_frame(const imgui::frame_canvas_data& data) noexcept;
   [[nodiscard]] granit::result finish_loading() noexcept;
+  [[nodiscard]] granit::result initialize_font_atlas(std::span<const std::byte> pixels,
+                                                     std::uint32_t width,
+                                                     std::uint32_t height) noexcept;
+  [[nodiscard]] granit::texture_view_ref font_view() const noexcept;
+  [[nodiscard]] granit::sampler_ref font_sampler() const noexcept;
 
   [[nodiscard]] granit::result
   initialize_pipeline(const granit::render_pipeline_desc& desc) noexcept;
@@ -70,10 +75,8 @@ public:
   [[nodiscard]] render_task_queue_stats query_queue_stats() const noexcept;
   [[nodiscard]] granit::result flush() noexcept;
 
-  [[nodiscard]] granit::result shutdown(granit::renderer& renderer, granit::surface& surface,
-                                        granit::texture& font_texture,
-                                        granit::texture_view& font_view,
-                                        granit::sampler& font_sampler) noexcept;
+  [[nodiscard]] granit::result shutdown(granit::renderer& renderer,
+                                        granit::surface& surface) noexcept;
   [[nodiscard]] bool running() const noexcept;
 
 private:

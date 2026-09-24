@@ -106,8 +106,8 @@ examples/samples/model_viewer/
    Context 结构。不可丢弃命令的“提交、刷新、定位自身回执”已封装为 executor 的同步操作，
    且不会消费其他命令的完成回执。`desktop/render_service.*` 已统一 GPU 上传、Pipeline
    替换、材质更新、Swapchain 重建、帧队列和有序销毁。三槽帧 Canvas 以及加载期 Frame
-   Context/Canvas 也已改由服务创建和销毁；下一步把 Renderer、Swapchain 及字体 GPU 资源的
-   所有权从入口转入服务，并单独保留 Surface 的主线程交接。
+   Context/Canvas 以及字体 Texture/View/Sampler 也已改由服务创建和销毁；下一步把
+   Renderer 与 Swapchain 的所有权从入口转入服务，并单独保留 Surface 的主线程交接。
 3. **S-57C Desktop 应用壳**：把加载阶段、窗口事件、UI 帧、呈现恢复和性能采样整理为可测试的
    Desktop application；`main.cpp` 只装配 options、application 并返回运行结果。保留直接 Window
    循环，不扩展通用 Application Host。
