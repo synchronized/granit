@@ -445,24 +445,6 @@ granit::result execute_gpu_upload(void* user_data) {
   }
 }
 
-granit::result run_render_command(granit::example::model_viewer::threaded_frame_executor& executor,
-                                  granit::example::model_viewer::render_command_callback callback,
-                                  void* user_data) {
-  std::uint64_t sequence{};
-  auto result = executor.submit_command(callback, user_data, sequence);
-  if (result.failed())
-    return result;
-  result = executor.flush();
-  if (result.failed())
-    return result;
-  granit::example::model_viewer::render_command_completion completion;
-  while (executor.try_take_command_completion(completion)) {
-    if (completion.sequence == sequence)
-      return completion.status;
-  }
-  return granit::result::internal;
-}
-
 struct swapchain_recreate_context {
   granit::swapchain* swapchain{};
   granit::swapchain_info* info{};
@@ -969,7 +951,7 @@ int main(int argc, char** argv) {
           .desc = {.width = static_cast<std::uint32_t>(pixel_width),
                    .height = static_cast<std::uint32_t>(pixel_height),
                    .presentation = options.presentation}};
-      result = run_render_command(frame_executor, execute_swapchain_recreate, &resize_context);
+      result = frame_executor.run_command(execute_swapchain_recreate, &resize_context);
     }
   }
   if (result.ok() && options.show_ui)
@@ -982,7 +964,7 @@ int main(int argc, char** argv) {
   pipeline_initialize_context pipeline_context{
       .renderer = renderer.ref(), .pipeline = &pipeline, .desc = pipeline_desc};
   if (result.ok())
-    result = run_render_command(frame_executor, execute_pipeline_initialize, &pipeline_context);
+    result = frame_executor.run_command(execute_pipeline_initialize, &pipeline_context);
   bool gpu_metrics_enabled = pipeline_context.metrics_enabled;
   execution_context.metrics_enabled = gpu_metrics_enabled;
   std::vector<texture_preview> previews;
@@ -1130,7 +1112,7 @@ int main(int argc, char** argv) {
           .desc = {.width = static_cast<std::uint32_t>(pixel_width),
                    .height = static_cast<std::uint32_t>(pixel_height),
                    .presentation = options.presentation}};
-      result = run_render_command(frame_executor, execute_swapchain_recreate, &resize_context);
+      result = frame_executor.run_command(execute_swapchain_recreate, &resize_context);
       if (result == granit::result::not_ready)
         continue;
       if (result.failed())
@@ -1198,7 +1180,7 @@ int main(int argc, char** argv) {
           .sampler_anisotropy = changes.quality->sampler_anisotropy,
           .reupload_scene =
               changes.quality->sampler_anisotropy != render_quality.sampler_anisotropy};
-      result = run_render_command(frame_executor, execute_quality_change, &quality_context);
+      result = frame_executor.run_command(execute_quality_change, &quality_context);
       if (result.ok() && quality_context.reupload_scene) {
         if (result.ok() && options.show_ui)
           result = rebuild_previews();
@@ -1232,7 +1214,7 @@ int main(int argc, char** argv) {
         material_update_context material_context{.core = &core,
                                                  .material_index = core.state().selected_material(),
                                                  .edit = *changes.material};
-        result = run_render_command(frame_executor, execute_material_update, &material_context);
+        result = frame_executor.run_command(execute_material_update, &material_context);
       }
     }
     if (result.failed())
@@ -1263,7 +1245,7 @@ int main(int argc, char** argv) {
                                                .frame_canvases = &frame_canvases,
                                                .core = &core};
     const auto shutdown_result =
-        run_render_command(frame_executor, execute_renderer_shutdown, &shutdown_context);
+        frame_executor.run_command(execute_renderer_shutdown, &shutdown_context);
     if (result.ok())
       result = shutdown_result;
     frame_executor.stop();

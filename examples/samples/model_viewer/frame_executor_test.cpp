@@ -156,4 +156,22 @@ TEST_CASE("线程帧执行器拒绝空命令") {
   REQUIRE(executor.initialize(execute_frame, nullptr).ok());
   std::uint64_t sequence{};
   CHECK(executor.submit_command(nullptr, nullptr, sequence) == granit::result::invalid_argument);
+  CHECK(executor.run_command(nullptr, nullptr) == granit::result::invalid_argument);
+}
+
+TEST_CASE("线程帧执行器同步等待不可丢弃命令") {
+  using namespace granit::example::model_viewer;
+  blocking_callback_state state;
+  threaded_frame_executor executor;
+  REQUIRE(executor.initialize(execute_frame, nullptr).ok());
+
+  std::uint64_t earlier_sequence{};
+  REQUIRE(executor.submit_command(execute_command, &state, earlier_sequence).ok());
+  CHECK(executor.run_command(execute_command, &state).ok());
+  CHECK(state.executed_widths == std::vector<std::uint32_t>{99, 99});
+  render_command_completion completion;
+  REQUIRE(executor.try_take_command_completion(completion));
+  CHECK(completion.sequence == earlier_sequence);
+  CHECK(completion.status.ok());
+  CHECK_FALSE(executor.try_take_command_completion(completion));
 }

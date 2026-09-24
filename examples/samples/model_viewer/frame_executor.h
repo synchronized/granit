@@ -92,6 +92,9 @@ public:
   /** 提交资源或控制命令；队列已满时返回 not_ready，不替换已有任务。 */
   [[nodiscard]] granit::result submit_command(render_command_callback callback, void* user_data,
                                               std::uint64_t& sequence) noexcept;
+  /** 提交不可丢弃命令并等待其完成；调用方必须保证命令上下文在返回前有效。 */
+  [[nodiscard]] granit::result run_command(render_command_callback callback,
+                                           void* user_data) noexcept;
   /** 返回当前是否有待处理帧容量；单生产者仍须处理 submit 的最终结果。 */
   [[nodiscard]] bool can_submit_frame() const noexcept;
   /** 记录调用方因容量不足而在构造前跳过的帧。 */

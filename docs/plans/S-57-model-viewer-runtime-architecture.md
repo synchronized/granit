@@ -103,7 +103,8 @@ examples/samples/model_viewer/
    和 Executor 已迁移，并通过 Windows 测试、桌面 smoke、Emscripten 构建与 Chrome 验收。
 2. **S-57B Desktop 渲染服务**：把 GPU 上传、Pipeline 创建/替换、材质更新、Swapchain 帧执行、
    指标查询和有序销毁收进明确的渲染服务；服务内部使用 threaded executor，入口不再维护成组裸
-   Context 结构。
+   Context 结构。不可丢弃命令的“提交、刷新、定位自身回执”已封装为 executor 的同步操作，
+   且不会消费其他命令的完成回执；下一步提取资源所有权和命令上下文。
 3. **S-57C Desktop 应用壳**：把加载阶段、窗口事件、UI 帧、呈现恢复和性能采样整理为可测试的
    Desktop application；`main.cpp` 只装配 options、application 并返回运行结果。保留直接 Window
    循环，不扩展通用 Application Host。
