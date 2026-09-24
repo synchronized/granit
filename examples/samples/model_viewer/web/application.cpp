@@ -79,6 +79,7 @@ struct web_platform_state {
   bool upload_active{};
   bool upload_cancel_requested{};
   double renderer_initialization_started_ms{};
+  double pipeline_warmup_started_ms{};
   granit::example::model_viewer::gpu_scene_upload_progress upload_progress{};
 };
 
@@ -560,10 +561,20 @@ void update_web_application() noexcept {
         fail("renderer-pipeline", begin_result);
         return;
       }
+      state.pipeline_warmup_started_ms = emscripten_get_now();
     }
-    const auto pipeline_result = state.pipeline_validation.poll();
-    if (pipeline_result == GRANIT_ERROR_NOT_READY)
-      return;
+    auto pipeline_result = state.pipeline_validation.poll();
+    while (pipeline_result == GRANIT_ERROR_NOT_READY && !state.upload_cancel_requested &&
+           emscripten_get_now() - state.pipeline_warmup_started_ms < 30000.0) {
+      // Asyncify 允许浏览器交付 WaitAnyOnly Pipeline Future；某些 Emscripten 主循环不会在
+      // 当前回调包含前序 Asyncify 上传后再次调度 tick，因此在同一启动阶段显式让出并轮询。
+      emscripten_sleep(0);
+      pipeline_result = granit_renderer_process_events(state.renderer);
+      if (pipeline_result == GRANIT_SUCCESS)
+        pipeline_result = state.pipeline_validation.poll();
+    }
+    if (pipeline_result == GRANIT_ERROR_NOT_READY && state.upload_cancel_requested)
+      pipeline_result = GRANIT_ERROR_CANCELLED;
     state.upload_active = false;
     if (pipeline_result != GRANIT_SUCCESS) {
       fail("renderer-pipeline", pipeline_result);
