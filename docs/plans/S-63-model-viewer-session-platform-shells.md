@@ -5,8 +5,8 @@
 
 ## 状态
 
-**实施中，P1。** 本计划把 Desktop/Web 重复的启动、加载、UI 帧构造和呈现恢复收进共享 Session，
-让平台壳只保留真实的调度与宿主差异。
+**本地实施与验收完成，等待远端跨平台验收，P1。** Desktop/Web 重复的启动、加载、UI 帧构造和
+呈现恢复已收进唯一 Application 状态机，平台入口只保留配置和浏览器测试观察器。
 
 ## 背景与目标
 
@@ -34,11 +34,11 @@ S-58～S-62 已统一资产、Core、ImGui、Render Runtime 和 Render Service�
 ## 已确认边界
 
 `viewer_session` 不拥有 Window、事件循环或执行线程。它只消费统一输入、推进 CPU/资产状态并产生
-平台无关的帧包与下一步动作。`render_service` 继续拥有 GPU 资源，executor 继续决定调用线程。
-平台壳负责执行 Session 动作并把结果送回 Session。
+平台无关的帧包与下一步动作。`viewer_application` 负责统一执行这些动作，`render_service` 继续拥有
+GPU 资源，executor 只决定调用线程。
 
 测试专用 `pipeline_validation` 保留直接 C API 调用，用于覆盖 C ABI；正式 Pipeline Warmup 改用
-C++ RAII。Surface 和主循环的具体实现保持在平台壳，恢复决策使用共用分类。
+C++ RAII。Surface 恢复由 Application 状态机统一处理，Window 组件负责平台主循环实现。
 
 ## 实施顺序
 
@@ -53,9 +53,11 @@ C++ RAII。Surface 和主循环的具体实现保持在平台壳，恢复决策�
    GPU 上传通过共用 Render Service 提交，并删除 `threaded_render_service`。
 5. **S-63E 统一异步准备（完成）**：共享 Pipeline Prepare 与 CPU Scene Prepare Task，GPU 上传
    统一通过 Render Service 的控制任务协议执行；线程和浏览器主循环差异留在任务实现内。
-6. **S-63F 唯一 Application（待开始）**：实现一个 `viewer_application` 状态机，Desktop/Web
-   入口只负责解析参数并构造描述。
-7. **S-63G 验收与文档（待开始）**：验证 Windows、Emscripten、Chrome、Linux 和文档。
+6. **S-63F 唯一 Application（完成）**：`viewer_application` 统一 Renderer、Presentation、资产、
+   CPU/GPU/Pipeline 准备、运行帧、恢复和释放；Desktop/Web 入口只构造描述，浏览器测试通过观察器
+   接入，不分叉正式业务流程。
+7. **S-63G 验收与文档（本地完成）**：Windows Desktop、Emscripten 正式/测试产物和 Chrome
+   浏览器验收通过；远端 Linux/Emscripten 矩阵待分支推送后执行。
 
 ## 验收
 

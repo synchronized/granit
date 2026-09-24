@@ -24,8 +24,7 @@ target_include_directories(
 )
 target_link_libraries(
   granit_sample_model_viewer
-  PRIVATE granit_sample_model_viewer_desktop_shell granit_sample_model_viewer_imgui
-          granit_example_assets granit::window
+  PRIVATE granit_sample_model_viewer_desktop_shell granit_sample_model_viewer_application
 )
 if(WIN32)
   add_custom_command(

@@ -127,6 +127,29 @@ if(TARGET granit::integration_imgui)
   )
   granit_target_compile_warnings(granit_sample_model_viewer_imgui)
 
+  add_library(
+    granit_sample_model_viewer_application STATIC
+    viewer_application.cpp
+    viewer_application.h
+  )
+  target_compile_features(granit_sample_model_viewer_application PUBLIC cxx_std_20)
+  target_include_directories(
+    granit_sample_model_viewer_application
+    PUBLIC "${PROJECT_SOURCE_DIR}/examples/samples"
+           "${PROJECT_SOURCE_DIR}/examples/common"
+  )
+  target_include_directories(
+    granit_sample_model_viewer_application SYSTEM PRIVATE "${granit_imgui_SOURCE_DIR}"
+  )
+  target_link_libraries(
+    granit_sample_model_viewer_application
+    PUBLIC granit_sample_model_viewer_imgui granit_example_application
+  )
+  set_target_properties(
+    granit_sample_model_viewer_application PROPERTIES FOLDER "Examples/Samples"
+  )
+  granit_target_compile_warnings(granit_sample_model_viewer_application)
+
   if(GRANIT_HAS_NATIVE_WINDOW AND GRANIT_TESTING_ENABLED)
     add_executable(
       granit_sample_model_viewer_imgui_test

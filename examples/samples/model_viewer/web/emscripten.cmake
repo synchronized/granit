@@ -17,8 +17,7 @@ function(granit_configure_web_model_viewer_platform target)
   )
   target_link_libraries(
     ${target}
-    PUBLIC granit::granit granit_sample_model_viewer_support granit_sample_model_viewer_imgui
-           granit_example_application
+    PUBLIC granit::granit granit_sample_model_viewer_application
   )
   granit_target_webgpu(${target})
   granit_target_compile_warnings(${target})
