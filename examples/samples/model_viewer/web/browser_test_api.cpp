@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "runtime_control.h"
+#include "browser_test_control.h"
 
 #include <new>
 
@@ -9,7 +9,7 @@
 
 #include <granit/core/result.h>
 
-namespace control = granit::example::model_viewer::web::runtime_control;
+namespace control = granit::example::model_viewer::web::browser_test_control;
 
 void control::ensure_browser_api_linked() noexcept {}
 

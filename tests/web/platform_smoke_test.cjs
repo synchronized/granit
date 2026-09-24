@@ -133,6 +133,23 @@ async function main() {
     if (status !== "ready") {
       throw new Error(`WebGPU 平台启动失败，页面状态为 ${status}`);
     }
+    if (entryName === "granit_sample_model_viewer_web.html") {
+      validateModelViewerPixels(await page.locator("#canvas").screenshot({ type: "png" }));
+      const exposesTestApi = await page.evaluate(
+        () =>
+          typeof Module._granit_web_platform_status === "function" ||
+          typeof Module._granit_web_configure_render_quality === "function",
+      );
+      if (exposesTestApi)
+        throw new Error("正式 Model Viewer 产物仍导出浏览器测试控制接口");
+      const browserErrors = browserMessages.filter((message) =>
+        /pageerror|validation error|webgpu.*error/i.test(message),
+      );
+      if (browserErrors.length !== 0)
+        throw new Error(`正式浏览器页面报告错误：\n${browserErrors.join("\n")}`);
+      console.log("正式 Model Viewer 页面、共享 ImGui 与测试接口隔离验证通过");
+      return;
+    }
     if (entryName === "granit_web_platform_smoke.html") {
       await page.evaluate(() => {
         const secondary = document.createElement("canvas");

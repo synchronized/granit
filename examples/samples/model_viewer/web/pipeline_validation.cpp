@@ -3,18 +3,11 @@
 
 #include "pipeline_validation.h"
 
-#include "model_viewer/gpu_scene.h"
-
-#include <granit/core/result.hpp>
-#include <granit/renderer/pipeline_warmup.hpp>
-
 #include <cstdio>
 
 namespace granit::example::model_viewer::web {
 
-granit_result pipeline_validation::begin(granit_renderer renderer, gpu_scene& scene,
-                                         granit_texture_format model_color_format,
-                                         granit_sample_count samples) {
+granit_result pipeline_validation::begin(granit_renderer renderer) {
   if (renderer == GRANIT_NULL_HANDLE || phase_ != phase::idle)
     return GRANIT_ERROR_INVALID_ARGUMENT;
 
@@ -86,12 +79,6 @@ granit_result pipeline_validation::begin(granit_renderer renderer, gpu_scene& sc
     result =
         granit_pipeline_warmup_batch_add_compute(renderer_, batch_, &compute_desc, &compute_index_);
   }
-  if (result == GRANIT_SUCCESS) {
-    result = granit::to_native(
-        scene.add_pipeline_warmups(granit::pipeline_warmup_batch_ref::from_native(batch_),
-                                   static_cast<granit::texture_format>(model_color_format),
-                                   static_cast<granit::sample_count>(samples), material_indices_));
-  }
   if (result != GRANIT_SUCCESS)
     std::fprintf(stderr, "GRANIT_DIAGNOSTIC:Pipeline 预热批次构建失败：%d\n", result);
   if (result == GRANIT_SUCCESS)
@@ -101,7 +88,6 @@ granit_result pipeline_validation::begin(granit_renderer renderer, gpu_scene& sc
     reset();
     return result;
   }
-  std::printf("GRANIT_PROGRESS:pipelines:0:%zu\n", material_indices_.size() + 2);
   phase_ = phase::running;
   return GRANIT_SUCCESS;
 }
@@ -138,21 +124,8 @@ granit_result pipeline_validation::poll() {
       result = accept_software_adapter_failure(graphics_info.result);
     if (result == GRANIT_SUCCESS)
       result = accept_software_adapter_failure(compute_info.result);
-    for (const auto index : material_indices_) {
-      granit_pipeline_warmup_result_info material_info = GRANIT_PIPELINE_WARMUP_RESULT_INFO_INIT;
-      if (result == GRANIT_SUCCESS) {
-        result = granit_pipeline_warmup_operation_get_result(renderer_, operation_, index,
-                                                             &material_info);
-      }
-      if (result == GRANIT_SUCCESS)
-        result = accept_software_adapter_failure(material_info.result);
-    }
   } else if (result == GRANIT_SUCCESS) {
     result = status.result == GRANIT_ERROR_NOT_READY ? GRANIT_ERROR_NOT_READY : status.result;
-  }
-  if (result == GRANIT_SUCCESS) {
-    std::printf("GRANIT_PROGRESS:pipelines:%zu:%zu\n", material_indices_.size() + 2,
-                material_indices_.size() + 2);
   }
   if (software_adapter_fallback) {
     std::fprintf(stderr,
@@ -208,7 +181,6 @@ granit_result pipeline_validation::poll() {
     return result == GRANIT_SUCCESS ? GRANIT_ERROR_INTERNAL : result;
   }
 
-  material_indices_.clear();
   phase_ = phase::complete;
   return GRANIT_SUCCESS;
 }
@@ -237,7 +209,6 @@ void pipeline_validation::reset() noexcept {
   operation_ = GRANIT_NULL_HANDLE;
   graphics_index_ = 0;
   compute_index_ = 0;
-  material_indices_.clear();
   phase_ = phase::idle;
 }
 

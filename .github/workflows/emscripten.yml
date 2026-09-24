@@ -56,7 +56,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for name in granit_web_platform_smoke granit_sample_model_viewer_web; do
+          for name in granit_web_platform_smoke granit_sample_model_viewer_web \
+            granit_sample_model_viewer_web_test; do
             output="build/emscripten-release/web/${name}"
             test -s "${output}.html"
             test -s "${output}.js"
@@ -78,6 +79,7 @@ jobs:
           path: |
             build/emscripten-release/web/granit_web_platform_smoke.*
             build/emscripten-release/web/granit_sample_model_viewer_web.*
+            build/emscripten-release/web/granit_sample_model_viewer_web_test.*
             build/emscripten-release/web/granit_imgui_web.*
             build/emscripten-release/web/granit_tutorial_01_cube.*
             build/emscripten-release/web/granit_tutorial_02_pbr_assets.*
@@ -101,6 +103,12 @@ jobs:
             script: test
             arguments: >-
               ../../build/emscripten-release/web granit_sample_model_viewer_web.html
+              model_viewer_fixture.gltf
+            expect_software_fallback: "0"
+          - name: model-viewer-runtime
+            script: test
+            arguments: >-
+              ../../build/emscripten-release/web granit_sample_model_viewer_web_test.html
               model_viewer_fixture.gltf
             expect_software_fallback: "0"
           - name: imgui

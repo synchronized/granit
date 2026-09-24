@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_WEB_RUNTIME_CONTROL_H_
-#define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_WEB_RUNTIME_CONTROL_H_
+#ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_WEB_BROWSER_TEST_CONTROL_H_
+#define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_WEB_BROWSER_TEST_CONTROL_H_
 
-namespace granit::example::model_viewer::web::runtime_control {
+namespace granit::example::model_viewer::web::browser_test_control {
 
 /** 保证静态库链接时保留浏览器导出编译单元。 */
 void ensure_browser_api_linked() noexcept;
@@ -35,6 +35,6 @@ void ensure_browser_api_linked() noexcept;
 [[nodiscard]] unsigned renderer_state() noexcept;
 [[nodiscard]] int renderer_failure_result() noexcept;
 
-} // namespace granit::example::model_viewer::web::runtime_control
+} // namespace granit::example::model_viewer::web::browser_test_control
 
 #endif

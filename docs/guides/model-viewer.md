@@ -20,8 +20,8 @@ Swapchain、Pipeline、Scene 上传、质量切换、帧执行和释放；`rende
   Render Runtime；普通帧允许替换，上传、质量修改、重建和销毁通过不可丢弃的拥有型任务有序执行。
 - Web 持久使用浏览器主线程 inline 执行器调用同一个 Render Runtime，并将 Window/Input 事件交给
   同一个 `viewer_ui`；Fetch 和资源上传在明确边界通过 Asyncify 让出事件循环。
-  `pipeline_validation` 单独负责 WebGPU 异步 Pipeline 预热与公共 C API 生命周期验收，浏览器导出只
-  校验参数并转发运行时状态和控制操作。
+  正式 `pipeline_warmup` 只预热场景材质；临时 Shader、Compute 和资源生命周期探针仅编入浏览器
+  测试目标。
 
 两条路径共享生命周期和任务语义，但不共享线程策略、Surface 恢复、文件/Fetch 来源或窗口循环。
 这些类型属于 Sample 私有实现，不会进入 Granit 安装 SDK。
@@ -201,7 +201,8 @@ CPU/GPU Scene、PBR 和 Environment Map。详细构建及 URL 用法见
 材质预览纹理、输入捕获和 Draw Data 转换也走同一套实现。HTML 只保留 Canvas 以及 Renderer 和
 资产尚未就绪时的启动、进度、取消和错误状态，不再维护另一套 DOM 质量与光照控件。
 
-`granit_web_platform_smoke.html` 保留为自动化 Fixture。它验证模型 Fetch、PBR 绘制、60 帧循环、
+`granit_sample_model_viewer_web_test.html` 复用正式应用代码并额外编入测试控制接口与 Pipeline
+生命周期探针；`granit_web_platform_smoke.html` 继续覆盖更底层的平台能力。它们验证模型 Fetch、PBR 绘制、60 帧循环、
 输入、Resize、分阶段加载、取消回滚、错误资产诊断和退出时资源归零，并覆盖 WebGPU 资源传输与
 Mipmap。浏览器加载在 CPU 与 GPU 资源边界通过 Asyncify 让出事件循环，进度取自已完成工作项；
 Fixture 的 glTF
@@ -216,6 +217,8 @@ cd tests/web
 npm ci
 $env:CHROME_PATH = "C:\Program Files\Google\Chrome\Application\chrome.exe"
 npm test -- ../../build/emscripten-release/web granit_sample_model_viewer_web.html `
+  model_viewer_fixture.gltf
+npm test -- ../../build/emscripten-release/web granit_sample_model_viewer_web_test.html `
   model_viewer_fixture.gltf
 ```
 

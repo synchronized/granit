@@ -19,7 +19,7 @@ target_link_options(
     "--preload-file=${granit_test_shader_fixture_dir}/dynamic_uniform.vert.wgsl@/assets/dynamic_uniform.vert.wgsl"
     "--preload-file=${granit_test_shader_fixture_dir}/dynamic_uniform.frag.wgsl@/assets/dynamic_uniform.frag.wgsl"
 )
-target_link_libraries(granit_web_platform_smoke PRIVATE granit_web_model_viewer_platform)
+target_link_libraries(granit_web_platform_smoke PRIVATE granit_web_model_viewer_test_platform)
 set_target_properties(
   granit_web_platform_smoke
   PROPERTIES

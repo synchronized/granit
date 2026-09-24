@@ -22,8 +22,11 @@
 #include "model_viewer/viewer_ui.h"
 
 #include "application.h"
+#include "pipeline_warmup.h"
+#if defined(GRANIT_MODEL_VIEWER_BROWSER_TESTS)
+#include "browser_test_control.h"
 #include "pipeline_validation.h"
-#include "runtime_control.h"
+#endif
 
 namespace {
 
@@ -34,7 +37,10 @@ enum class startup_status : int { failed = -1, starting, provider_pending, ready
 struct web_platform_state {
   granit::example::model_viewer::render_runtime rendering;
   granit::example::model_viewer::inline_render_task_executor executor;
+  granit::example::model_viewer::web::pipeline_warmup pipeline_warmup;
+#if defined(GRANIT_MODEL_VIEWER_BROWSER_TESTS)
   granit::example::model_viewer::web::pipeline_validation pipeline_validation;
+#endif
   granit::example::model_viewer::viewer_ui ui;
   startup_status status{startup_status::starting};
   unsigned input_event_count{};
@@ -177,6 +183,7 @@ granit_result create_presentation_resources() {
   if (result.failed() || info.width == 0 || info.height == 0 || info.image_count == 0) {
     return result.ok() ? GRANIT_ERROR_INITIALIZATION_FAILED : granit::to_native(result);
   }
+#if defined(GRANIT_MODEL_VIEWER_BROWSER_TESTS)
   if (options.presentation_ready != nullptr) {
     const granit_swapchain_info native_info{
         .struct_size = sizeof(granit_swapchain_info),
@@ -189,6 +196,7 @@ granit_result create_presentation_resources() {
     return options.presentation_ready(state.rendering.native_renderer(),
                                       state.rendering.native_swapchain(), native_info);
   }
+#endif
   return GRANIT_SUCCESS;
 }
 
@@ -386,6 +394,7 @@ granit_result execute_render_quality_change(granit_sample_count sample_count, un
   return GRANIT_SUCCESS;
 }
 
+#if defined(GRANIT_MODEL_VIEWER_BROWSER_TESTS)
 granit_result configure_render_quality(granit_sample_count sample_count, unsigned enable_fxaa,
                                        unsigned enable_specular_aa,
                                        unsigned sampler_anisotropy) noexcept {
@@ -413,6 +422,7 @@ granit_result configure_lighting(float exposure_ev, float environment_intensity,
   ++state.lighting_generation;
   return GRANIT_SUCCESS;
 }
+#endif
 
 void update_web_application() noexcept {
   if (state.status == startup_status::failed) {
@@ -516,13 +526,14 @@ void update_web_application() noexcept {
     return;
   }
 
-  if (!state.pipeline_validation.started()) {
+  if (!state.pipeline_warmup.started()) {
     const auto& limits = state.rendering.renderer_limits();
     if (limits.uniform_buffer_offset_alignment == 0 ||
         limits.max_uniform_buffer_binding_size == 0) {
       fail("renderer-limits", GRANIT_ERROR_INTERNAL);
       return;
     }
+#if defined(GRANIT_MODEL_VIEWER_BROWSER_TESTS)
     if (options.renderer_ready != nullptr) {
       granit_renderer_limits native_limits = GRANIT_RENDERER_LIMITS_INIT;
       native_limits.uniform_buffer_offset_alignment = limits.uniform_buffer_offset_alignment;
@@ -537,6 +548,7 @@ void update_web_application() noexcept {
         return;
       }
     }
+#endif
   }
   try {
     if (state.rendering.native_swapchain() == GRANIT_NULL_HANDLE) {
@@ -551,10 +563,10 @@ void update_web_application() noexcept {
       fail("presentation-info", GRANIT_ERROR_INITIALIZATION_FAILED);
       return;
     }
-    if (!state.pipeline_validation.started()) {
+    if (!state.pipeline_warmup.started()) {
       state.upload_active = true;
       state.upload_cancel_requested = false;
-      const auto begin_result = state.pipeline_validation.begin(
+      const auto begin_result = state.pipeline_warmup.begin(
           state.rendering.native_renderer(), state.core.scene_gpu(),
           static_cast<granit_texture_format>(swapchain_info.format), state.sample_count);
       if (begin_result != GRANIT_SUCCESS) {
@@ -564,7 +576,7 @@ void update_web_application() noexcept {
       }
       state.pipeline_warmup_started_ms = emscripten_get_now();
     }
-    auto pipeline_result = state.pipeline_validation.poll();
+    auto pipeline_result = state.pipeline_warmup.poll();
     while (pipeline_result == GRANIT_ERROR_NOT_READY && !state.upload_cancel_requested &&
            emscripten_get_now() - state.pipeline_warmup_started_ms < 30000.0) {
       // Asyncify 允许浏览器交付 WaitAnyOnly Pipeline Future；某些 Emscripten 主循环不会在
@@ -572,7 +584,7 @@ void update_web_application() noexcept {
       emscripten_sleep(0);
       pipeline_result = granit::to_native(state.rendering.process_renderer_events());
       if (pipeline_result == GRANIT_SUCCESS)
-        pipeline_result = state.pipeline_validation.poll();
+        pipeline_result = state.pipeline_warmup.poll();
     }
     if (pipeline_result == GRANIT_ERROR_NOT_READY && state.upload_cancel_requested)
       pipeline_result = GRANIT_ERROR_CANCELLED;
@@ -581,6 +593,28 @@ void update_web_application() noexcept {
       fail("renderer-pipeline", pipeline_result);
       return;
     }
+#if defined(GRANIT_MODEL_VIEWER_BROWSER_TESTS)
+    if (!state.pipeline_validation.started()) {
+      const auto validation_begin =
+          state.pipeline_validation.begin(state.rendering.native_renderer());
+      if (validation_begin != GRANIT_SUCCESS) {
+        fail("renderer-pipeline-validation", validation_begin);
+        return;
+      }
+    }
+    auto validation_result = state.pipeline_validation.poll();
+    while (validation_result == GRANIT_ERROR_NOT_READY && !state.upload_cancel_requested &&
+           emscripten_get_now() - state.pipeline_warmup_started_ms < 30000.0) {
+      emscripten_sleep(0);
+      validation_result = granit::to_native(state.rendering.process_renderer_events());
+      if (validation_result == GRANIT_SUCCESS)
+        validation_result = state.pipeline_validation.poll();
+    }
+    if (validation_result != GRANIT_SUCCESS) {
+      fail("renderer-pipeline-validation", validation_result);
+      return;
+    }
+#endif
     const auto pipeline_create_result = state.rendering.initialize_pipeline({});
     if (pipeline_create_result.failed()) {
       fail("pipeline-create", granit::to_native(pipeline_create_result));
@@ -622,7 +656,10 @@ granit_result destroy_web_render_resources() noexcept {
   state.ui.clear_textures();
   state.previews.clear();
   state.runtime.reset();
+  state.pipeline_warmup.reset();
+#if defined(GRANIT_MODEL_VIEWER_BROWSER_TESTS)
   state.pipeline_validation.reset();
+#endif
   granit::renderer_resource_stats stats;
   auto result = state.rendering.shutdown(&stats);
   state.shutdown_live_resource_count = stats.total_live_count;
@@ -719,75 +756,77 @@ void web_application_host::on_host_shutdown(granit::result) noexcept {
 
 } // namespace
 
-int granit::example::model_viewer::web::runtime_control::platform_status() noexcept {
+#if defined(GRANIT_MODEL_VIEWER_BROWSER_TESTS)
+int granit::example::model_viewer::web::browser_test_control::platform_status() noexcept {
   return static_cast<int>(state.status);
 }
 
-unsigned granit::example::model_viewer::web::runtime_control::input_event_count() noexcept {
+unsigned granit::example::model_viewer::web::browser_test_control::input_event_count() noexcept {
   return state.input_event_count;
 }
 
-unsigned granit::example::model_viewer::web::runtime_control::rendered_frame_count() noexcept {
+unsigned granit::example::model_viewer::web::browser_test_control::rendered_frame_count() noexcept {
   return state.rendered_frame_count;
 }
 
-unsigned granit::example::model_viewer::web::runtime_control::applied_input_count() noexcept {
+unsigned granit::example::model_viewer::web::browser_test_control::applied_input_count() noexcept {
   return state.applied_input_count;
 }
 
-unsigned granit::example::model_viewer::web::runtime_control::resize_count() noexcept {
+unsigned granit::example::model_viewer::web::browser_test_control::resize_count() noexcept {
   return state.resize_count;
 }
 
-int granit::example::model_viewer::web::runtime_control::configure_render_quality(
+int granit::example::model_viewer::web::browser_test_control::configure_render_quality(
     unsigned sample_count, unsigned enable_fxaa, unsigned enable_specular_aa,
     unsigned sampler_anisotropy) {
   return ::configure_render_quality(static_cast<granit_sample_count>(sample_count), enable_fxaa,
                                     enable_specular_aa, sampler_anisotropy);
 }
 
-unsigned granit::example::model_viewer::web::runtime_control::quality_generation() noexcept {
+unsigned granit::example::model_viewer::web::browser_test_control::quality_generation() noexcept {
   return state.quality_generation;
 }
 
-int granit::example::model_viewer::web::runtime_control::configure_lighting(
+int granit::example::model_viewer::web::browser_test_control::configure_lighting(
     float exposure_ev, float environment_intensity, float key_light_intensity) {
   return ::configure_lighting(exposure_ev, environment_intensity, key_light_intensity);
 }
 
-unsigned granit::example::model_viewer::web::runtime_control::lighting_generation() noexcept {
+unsigned granit::example::model_viewer::web::browser_test_control::lighting_generation() noexcept {
   return state.lighting_generation;
 }
 
-float granit::example::model_viewer::web::runtime_control::exposure_ev() noexcept {
+float granit::example::model_viewer::web::browser_test_control::exposure_ev() noexcept {
   return state.core.state().exposure_ev();
 }
 
-float granit::example::model_viewer::web::runtime_control::environment_intensity() noexcept {
+float granit::example::model_viewer::web::browser_test_control::environment_intensity() noexcept {
   return state.core.state().environment_intensity();
 }
 
-float granit::example::model_viewer::web::runtime_control::key_light_intensity() noexcept {
+float granit::example::model_viewer::web::browser_test_control::key_light_intensity() noexcept {
   return state.core.state().directional_light().radiance.x;
 }
 
-unsigned granit::example::model_viewer::web::runtime_control::max_sampler_anisotropy() noexcept {
+unsigned
+granit::example::model_viewer::web::browser_test_control::max_sampler_anisotropy() noexcept {
   if (!state.rendering.valid())
     return 0;
   return static_cast<unsigned>(state.rendering.renderer_limits().max_sampler_anisotropy);
 }
 
 unsigned long long
-granit::example::model_viewer::web::runtime_control::shutdown_live_resource_count() noexcept {
+granit::example::model_viewer::web::browser_test_control::shutdown_live_resource_count() noexcept {
   return state.shutdown_live_resource_count;
 }
 
-unsigned long long
-granit::example::model_viewer::web::runtime_control::shutdown_pending_retirement_count() noexcept {
+unsigned long long granit::example::model_viewer::web::browser_test_control::
+    shutdown_pending_retirement_count() noexcept {
   return state.shutdown_pending_retirement_count;
 }
 
-int granit::example::model_viewer::web::runtime_control::shutdown() noexcept {
+int granit::example::model_viewer::web::browser_test_control::shutdown() noexcept {
   if (state.shutdown_complete)
     return state.shutdown_result;
   const auto result = shutdown_web_resources();
@@ -795,46 +834,49 @@ int granit::example::model_viewer::web::runtime_control::shutdown() noexcept {
   return result;
 }
 
-unsigned granit::example::model_viewer::web::runtime_control::asset_status() noexcept {
+unsigned granit::example::model_viewer::web::browser_test_control::asset_status() noexcept {
   if (state.status == startup_status::failed)
     return 3;
   return state.asset_ready ? 2U : 1U;
 }
 
-unsigned granit::example::model_viewer::web::runtime_control::upload_stage() noexcept {
+unsigned granit::example::model_viewer::web::browser_test_control::upload_stage() noexcept {
   return static_cast<unsigned>(state.upload_progress.stage);
 }
 
-unsigned granit::example::model_viewer::web::runtime_control::upload_completed() noexcept {
+unsigned granit::example::model_viewer::web::browser_test_control::upload_completed() noexcept {
   return state.upload_progress.completed;
 }
 
-unsigned granit::example::model_viewer::web::runtime_control::upload_total() noexcept {
+unsigned granit::example::model_viewer::web::browser_test_control::upload_total() noexcept {
   return state.upload_progress.total;
 }
 
-int granit::example::model_viewer::web::runtime_control::cancel_loading() noexcept {
+int granit::example::model_viewer::web::browser_test_control::cancel_loading() noexcept {
   if (!state.upload_active)
     return GRANIT_ERROR_NOT_READY;
   state.upload_cancel_requested = true;
   return GRANIT_SUCCESS;
 }
 
-unsigned granit::example::model_viewer::web::runtime_control::renderer_state() noexcept {
+unsigned granit::example::model_viewer::web::browser_test_control::renderer_state() noexcept {
   granit::renderer_status status;
   return state.rendering.query_renderer_status(status).ok() ? static_cast<unsigned>(status.state)
                                                             : 0;
 }
 
-int granit::example::model_viewer::web::runtime_control::renderer_failure_result() noexcept {
+int granit::example::model_viewer::web::browser_test_control::renderer_failure_result() noexcept {
   granit::renderer_status status;
   return state.rendering.query_renderer_status(status).ok()
              ? granit::to_native(status.failure_result)
              : GRANIT_ERROR_INVALID_HANDLE;
 }
+#endif
 
 int granit::example::model_viewer::web::run_application(const application_options& configuration) {
-  runtime_control::ensure_browser_api_linked();
+#if defined(GRANIT_MODEL_VIEWER_BROWSER_TESTS)
+  browser_test_control::ensure_browser_api_linked();
+#endif
   options = configuration;
   double width = 0.0;
   double height = 0.0;

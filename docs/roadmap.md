@@ -31,7 +31,7 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 
 ### S-61：Model Viewer 共享 ImGui 与浏览器测试边界
 
-**状态：实施中，P1。**
+**状态：本地实施与浏览器验收完成，等待远端跨平台验收，P1。**
 
 [S-61](plans/S-61-model-viewer-shared-imgui-browser-tests.md) 让 Desktop/Web 使用同一套 ImGui Viewer
 面板，并把浏览器测试导出和 Pipeline C API 探针移出正式运行路径。

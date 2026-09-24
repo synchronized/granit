@@ -5,8 +5,8 @@
 
 ## 状态
 
-**实施中，P1。** 本计划让 Desktop/Web 使用同一套 ImGui Viewer 面板，并把浏览器验收导出与
-Pipeline C API 探针从正式 Model Viewer 运行路径中分离。
+**本地实施与浏览器验收完成，等待远端跨平台验收，P1。** 本计划让 Desktop/Web 使用同一套
+ImGui Viewer 面板，并把浏览器验收导出与 Pipeline C API 探针从正式 Model Viewer 运行路径中分离。
 
 ## 背景与目标
 
@@ -40,11 +40,12 @@ Granit Window/Input 事件并输出拥有型 `frame_canvas_data`。字体像素�
 
 ## 实施顺序
 
-1. **S-61A 契约基线（实施中）**：登记共享 UI 与测试产物边界。
-2. **S-61B 共享 Viewer UI**：提取 Context、事件、字体、面板和帧捕获，迁移 Desktop。
-3. **S-61C Web ImGui**：Web 接入同一 UI，删除 DOM 质量与灯光面板。
-4. **S-61D 浏览器测试目标**：测试导出和 Pipeline 探针只编译到独立测试产物。
-5. **S-61E 验收与文档**：验证 Desktop、正式 Web、测试 Web、Chrome 和文档。
+1. **S-61A 契约基线（完成）**：登记共享 UI 与测试产物边界。
+2. **S-61B 共享 Viewer UI（完成）**：提取 Context、事件、字体、面板和帧捕获，迁移 Desktop。
+3. **S-61C Web ImGui（完成）**：Web 接入同一 UI，删除 DOM 质量与灯光面板。
+4. **S-61D 浏览器测试目标（完成）**：测试导出和 Pipeline 探针只编译到独立测试产物。
+5. **S-61E 验收与文档（本地完成）**：已验证 Desktop、正式 Web、测试 Web、Chrome 和文档；
+   远端 Emscripten/Linux 矩阵留待分支推送后执行。
 
 ## 测试与验收
 

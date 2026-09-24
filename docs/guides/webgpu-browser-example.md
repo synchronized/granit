@@ -5,9 +5,9 @@
 
 本文负责 Emscripten 构建、浏览器服务、安装 Consumer 和通用自动化验证。模型查看器的资产准备、
 桌面运行和性能验收见[跨后端模型查看器指南](model-viewer.md)。浏览器构建同时提供正式的
-`granit_sample_model_viewer_web` 和自动化
-`granit_web_platform_smoke`。两者复用同一个 Model Viewer Core；正式目标默认从 Khronos 加载
-Flight Helmet，Smoke 使用仓库内的小型确定性 Fixture。动态 Uniform、纹理传输和帧生命周期的
+`granit_sample_model_viewer_web`、自动化 `granit_sample_model_viewer_web_test` 和
+`granit_web_platform_smoke`。三者复用同一个 Model Viewer Core；正式目标默认从 Khronos 加载
+Flight Helmet，测试目标使用仓库内的小型确定性 Fixture。动态 Uniform、纹理传输和帧生命周期的
 测试图形只会由 Smoke 目标呈现，正式 Model Viewer 不会在模型出现前显示测试方块。浏览器端不会
 接触 WebGPU 原生句柄。
 
@@ -73,8 +73,9 @@ http://127.0.0.1:8000/granit_sample_model_viewer_web.html?model=https%3A%2F%2Fex
 `ctest --preset emscripten-release` 通过 Emscripten 配置的 Node.js 执行 C/C++ 核心测试，验证版本、
 结果码和包装层，并检查后端边界；不要求创建 GPU 设备。
 
-仓库浏览器测试会启动无头 Chrome，验证 Renderer 生命周期、共享 Fixture、资源传输、Mipmap、
-分阶段进度、加载取消、错误回滚以及键盘和鼠标输入转发：
+仓库浏览器测试会启动无头 Chrome。正式页面验收共享 ImGui 画面并确认没有测试导出；专用测试页面
+验证 Renderer 生命周期、共享 Fixture、资源传输、Mipmap、分阶段进度、加载取消、错误回滚以及
+键盘和鼠标输入转发：
 
 ```powershell
 cd tests/web
@@ -87,6 +88,8 @@ npm test -- ../../build/emscripten-release/web
 
 ```powershell
 npm test -- ../../build/emscripten-release/web granit_sample_model_viewer_web.html `
+  model_viewer_fixture.gltf
+npm test -- ../../build/emscripten-release/web granit_sample_model_viewer_web_test.html `
   model_viewer_fixture.gltf
 ```
 

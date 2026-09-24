@@ -10,12 +10,6 @@
 #include <granit/renderer/shader.h>
 
 #include <cstdint>
-#include <vector>
-
-namespace granit::example::model_viewer {
-class gpu_scene;
-}
-
 namespace granit::example::model_viewer::web {
 
 /** 验收 Web 后端异步 Pipeline 预热和公共 C API 资源生命周期。 */
@@ -26,9 +20,7 @@ public:
   pipeline_validation(const pipeline_validation&) = delete;
   pipeline_validation& operator=(const pipeline_validation&) = delete;
 
-  [[nodiscard]] granit_result begin(granit_renderer renderer, gpu_scene& scene,
-                                    granit_texture_format model_color_format,
-                                    granit_sample_count samples);
+  [[nodiscard]] granit_result begin(granit_renderer renderer);
   [[nodiscard]] granit_result poll();
 
   /** 必须在所属 Renderer 销毁前调用；允许对空闲或已完成对象重复调用。 */
@@ -48,7 +40,6 @@ private:
   granit_async_operation operation_{};
   std::uint32_t graphics_index_{};
   std::uint32_t compute_index_{};
-  std::vector<std::uint32_t> material_indices_;
   phase phase_{phase::idle};
 };
 
