@@ -9,6 +9,8 @@
 
 ## 当前计划
 
+- [S-63：Model Viewer Session 与平台壳收敛](S-63-model-viewer-session-platform-shells.md)——统一
+  Desktop/Web 的启动、加载、UI 帧构造和呈现恢复，只保留真实平台策略。
 - [S-62：Model Viewer 统一 Render Service](S-62-model-viewer-render-service.md)——统一 Desktop/Web
   的渲染调用门面，并保留 threaded/inline 执行策略；本地实施与浏览器验证已经完成。
 - [S-61：Model Viewer 共享 ImGui 与浏览器测试边界](S-61-model-viewer-shared-imgui-browser-tests.md)

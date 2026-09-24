@@ -29,6 +29,13 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 
 ## 当前计划
 
+### S-63：Model Viewer Session 与平台壳收敛
+
+**状态：实施中，P1。**
+
+[S-63](plans/S-63-model-viewer-session-platform-shells.md) 将 Desktop/Web 重复的启动、加载、UI 帧
+构造和呈现恢复收进共享 Session，并继续保留 threaded/inline 与宿主平台差异。
+
 ### S-62：Model Viewer 统一 Render Service
 
 **状态：本地实施与浏览器验收完成，等待远端跨平台验收，P1。**
