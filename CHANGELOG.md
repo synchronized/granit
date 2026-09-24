@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+## 0.30.0 - 2026-09-25
+
 ### 新增
 
 - Window 描述新增可扩展 Target，可在 Emscripten 上通过 Canvas selector 创建多个 Window；几何、
