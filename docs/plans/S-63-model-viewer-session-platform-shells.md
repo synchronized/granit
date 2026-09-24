@@ -19,9 +19,9 @@ S-58～S-62 已统一资产、Core、ImGui、Render Runtime 和 Render Service�
 - 生产代码优先使用 C++ RAII 和强类型引用，把 C ABI 验收回调隔离到测试目标；
 - 统一材质纹理预览和 Present 结果恢复策略；
 - 将 CPU 生命周期、模型与环境资产、质量配置和帧构造组合为共享 `viewer_session`；
-- Desktop/Web 都由 `application_host` 驱动，平台壳只保留 threaded/inline、命令行、浏览器预热和
-  自动化接口；
-- 统一 inline/threaded 帧完成协议，评估删除一对一转发的 Desktop Render Service 门面。
+- 建立唯一的 `viewer_application` 状态机，Desktop/Web 入口只生成配置参数；
+- 统一 inline/threaded 帧与控制任务完成协议，删除 Desktop 专用 Render Service 门面；
+- 将 Pipeline 准备和 CPU/GPU 异步任务提升为跨平台协议，把线程、Asyncify 和后端差异留在实现内。
 
 ## 非目标
 
@@ -49,12 +49,12 @@ C++ RAII。Surface 和主循环的具体实现保持在平台壳，恢复决策�
 3. **S-63C Viewer Session（完成）**：用拥有型 `viewer_session` 组合 Application Core 与模型加载，
    统一 Renderer 阶段、CPU Scene 交接、失败、取消、重置及 GPU 操作入口；Render Runtime 只借用
    Session，平台入口不再并列维护三套生命周期对象。
-4. **S-63D 平台壳迁移（实施中）**：已用 `viewer_frame_builder` 统一面板、输入、Viewer Tick、
-   Canvas 和帧包生成；下一步把 Desktop 加载阶段改为非阻塞状态机并接入 `application_host`，使两端
-   只实现平台策略。
-5. **S-63E 帧完成协议与层次收尾（待开始）**：统一同步/异步 completion，收窄或删除
-   `threaded_render_service`，整理 Runtime/Service 命名。
-6. **S-63F 验收与文档（待开始）**：验证 Windows、Emscripten、Chrome、Linux 和文档。
+4. **S-63D 执行协议（实施中）**：对称化 inline/threaded 的帧与控制任务提交、容量和完成回执，
+   删除 `threaded_render_service`。
+5. **S-63E 统一异步准备（待开始）**：共享 Pipeline Prepare 与 CPU/GPU Application Task。
+6. **S-63F 唯一 Application（待开始）**：实现一个 `viewer_application` 状态机，Desktop/Web
+   入口只负责解析参数并构造描述。
+7. **S-63G 验收与文档（待开始）**：验证 Windows、Emscripten、Chrome、Linux 和文档。
 
 ## 验收
 
