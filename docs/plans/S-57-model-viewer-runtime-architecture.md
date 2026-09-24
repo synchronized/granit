@@ -6,8 +6,8 @@
 ## 状态
 
 **实施中。** S-55 已统一资产与 glTF 加载边界，S-56 已统一 Desktop/Web Window 和输入语义。
-Viewer Core 纯渲染帧与执行层 Frame Packet 已完成分离；下一步整理 Desktop 渲染服务，不改变现有
-目录入口、用户功能或线程模型。
+Viewer Core 纯渲染帧与执行层 Frame Packet 已完成分离；Desktop 渲染命令已收敛到专用服务，
+下一步继续转移剩余 GPU 资源所有权，不改变现有目录入口、用户功能或线程模型。
 
 ## 背景
 
@@ -104,7 +104,9 @@ examples/samples/model_viewer/
 2. **S-57B Desktop 渲染服务**：把 GPU 上传、Pipeline 创建/替换、材质更新、Swapchain 帧执行、
    指标查询和有序销毁收进明确的渲染服务；服务内部使用 threaded executor，入口不再维护成组裸
    Context 结构。不可丢弃命令的“提交、刷新、定位自身回执”已封装为 executor 的同步操作，
-   且不会消费其他命令的完成回执；下一步提取资源所有权和命令上下文。
+   且不会消费其他命令的完成回执。`desktop/render_service.*` 已统一 GPU 上传、Pipeline
+   替换、材质更新、Swapchain 重建、帧队列和有序销毁；下一步把 Renderer、Swapchain 及 UI GPU
+   资源的所有权从入口转入服务，并单独保留 Surface 的主线程交接。
 3. **S-57C Desktop 应用壳**：把加载阶段、窗口事件、UI 帧、呈现恢复和性能采样整理为可测试的
    Desktop application；`main.cpp` 只装配 options、application 并返回运行结果。保留直接 Window
    循环，不扩展通用 Application Host。

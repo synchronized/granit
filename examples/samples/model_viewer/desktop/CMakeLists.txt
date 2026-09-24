@@ -10,7 +10,12 @@ add_library(
   presentation_policy.h
 )
 
-add_executable(granit_sample_model_viewer main.cpp)
+add_executable(
+  granit_sample_model_viewer
+  main.cpp
+  render_service.cpp
+  render_service.h
+)
 target_include_directories(
   granit_sample_model_viewer
   PRIVATE "${PROJECT_SOURCE_DIR}/examples" "${PROJECT_SOURCE_DIR}/examples/common"
