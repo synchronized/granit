@@ -12,9 +12,20 @@
 
 - Window 描述新增可扩展 Target，可在 Emscripten 上通过 Canvas selector 创建多个 Window；几何、
   输入、原生查询和 Surface 创建共享同一目标身份，重复 selector 会返回资源占用。
+- Window component 新增可选 SDL3 后端；桌面与 Emscripten 应用可继续使用同一套 Window、Input、
+  Surface 和托管 Loop 接口，SDL3 类型不会进入公共头或基础依赖面。
+- 新增仓库私有的 Example Application 与统一 Asset System，示例业务使用逻辑 Mount 和请求模型，
+  文件系统、打包资产与 Web Fetch 的来源差异由内部实现处理。
+- 教程收敛为 01 Cube 与 02 PBR Assets 两个特性入口，分别使用原创 CC0 木箱纹理和 Khronos CC0
+  Suzanne 资产；完整异步 Model Viewer 回到 Samples。
 
 ### 变更
 
+- Model Viewer 的 Desktop/Web 入口现在共享唯一 `viewer_application` 状态机、Viewer Session、
+  Render Service、ImGui 前端和帧构造；平台入口只选择 Window/Renderer 后端、资产位置及
+  threaded/inline 执行策略。
+- 文档新增 Frame、Frame Context、Command Recorder、Swapchain 与 Render Pipeline 的统一分层
+  说明，并将教程学习路线收敛到单一索引。
 - 正式 Release 只提供 Windows 与 Linux x64 的共享库 SDK；静态库继续支持源码构建，并由平台 CI
   和安装 Consumer 验证。
 
