@@ -15,6 +15,7 @@
 #include <deque>
 #include <memory>
 #include <mutex>
+#include <string>
 #include <thread>
 #include <unordered_map>
 
@@ -73,6 +74,7 @@ struct window_record {
 #endif
 #if defined(__EMSCRIPTEN__)
   std::uint32_t flags{};
+  std::string canvas_selector;
   bool focused{};
 #endif
 };

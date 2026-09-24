@@ -6,9 +6,38 @@
 
 #include "window/platform/backend.h"
 
+#include <cstring>
 #include <utility>
 
 using namespace granit::window::detail;
+
+namespace {
+
+constexpr std::uint32_t maximum_target_value_length = 4096;
+
+const granit_window_target_desc* get_window_target(const granit_window_desc& desc) noexcept {
+  return desc.struct_size >= GRANIT_WINDOW_DESC_VERSION_2_SIZE ? desc.target : nullptr;
+}
+
+granit_result validate_window_target(const granit_window_desc& desc) noexcept {
+  const auto* target = get_window_target(desc);
+  if (target == nullptr)
+    return GRANIT_SUCCESS;
+  if (target->struct_size < GRANIT_WINDOW_TARGET_DESC_VERSION_1_SIZE || target->flags != 0 ||
+      target->reserved != 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (target->type == GRANIT_WINDOW_TARGET_AUTOMATIC)
+    return target->value == nullptr && target->value_length == 0 ? GRANIT_SUCCESS
+                                                                 : GRANIT_ERROR_INVALID_ARGUMENT;
+  if (target->type != GRANIT_WINDOW_TARGET_CANVAS_SELECTOR || target->value == nullptr ||
+      target->value_length == 0 || target->value_length > maximum_target_value_length ||
+      std::memchr(target->value, '\0', target->value_length) != nullptr) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  return GRANIT_SUCCESS;
+}
+
+} // namespace
 
 extern "C" granit_result granit_window_create(granit_window_system system_handle,
                                               const granit_window_desc* desc,
@@ -21,11 +50,19 @@ extern "C" granit_result granit_window_create(granit_window_system system_handle
       (desc->flags & ~(GRANIT_WINDOW_VISIBLE_BIT | GRANIT_WINDOW_RESIZABLE_BIT |
                        GRANIT_WINDOW_HIGH_DPI_BIT)) != 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto target_result = validate_window_target(*desc);
+  if (target_result != GRANIT_SUCCESS)
+    return target_result;
   auto system = acquire_system(system_handle);
   if (!system)
     return GRANIT_ERROR_INVALID_HANDLE;
   if (!on_owner_thread(*system))
     return GRANIT_ERROR_INVALID_ARGUMENT;
+#if !defined(__EMSCRIPTEN__)
+  const auto* target = get_window_target(*desc);
+  if (target != nullptr && target->type != GRANIT_WINDOW_TARGET_AUTOMATIC)
+    return GRANIT_ERROR_UNSUPPORTED;
+#endif
 #if defined(_WIN32)
   return create_win32_window(system, desc, output);
 #elif defined(GRANIT_WINDOW_HAS_XCB) || defined(GRANIT_WINDOW_HAS_WAYLAND)
@@ -180,7 +217,7 @@ granit_window_get_native_emscripten(granit_window_system system_handle, granit_w
   if (found == system->windows.end())
     return GRANIT_ERROR_INVALID_HANDLE;
 #if defined(__EMSCRIPTEN__)
-  return get_native_emscripten(*output);
+  return get_native_emscripten(found->second, *output);
 #else
   return GRANIT_ERROR_UNSUPPORTED;
 #endif

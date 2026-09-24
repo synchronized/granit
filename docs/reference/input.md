@@ -112,4 +112,5 @@ Emscripten Window 在浏览器回调中将 DOM Keyboard、Mouse、Wheel 和 Focu
 - 不提供 IME 预编辑、候选窗或组合文本协议，只提供已经提交的文本。
 - 不提供 Action Mapping、快捷键系统或外部事件注入。
 - XCB 布局文本、Wayland 客户端按键重复和 Compose/IME 仍需单独实现、验证。
-- Emscripten 当前绑定固定的 `#canvas`，只提供 `keypress` 已提交文本，不覆盖浏览器 IME 组合阶段。
+- Emscripten 的键盘、指针与焦点回调按各 Window 的 Canvas selector 绑定；Canvas 必须可聚焦。
+  当前只提供 `keypress` 已提交文本，不覆盖浏览器 IME 组合阶段。

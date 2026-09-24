@@ -132,6 +132,20 @@ async function main() {
     if (status !== "ready") {
       throw new Error(`WebGPU 平台启动失败，页面状态为 ${status}`);
     }
+    if (entryName === "granit_web_platform_smoke.html") {
+      await page.evaluate(() => {
+        const secondary = document.createElement("canvas");
+        secondary.id = "secondary-canvas";
+        secondary.tabIndex = 0;
+        secondary.style.position = "fixed";
+        secondary.style.left = "-10000px";
+        secondary.style.border = "none";
+        document.body.appendChild(secondary);
+        const result = Module._granit_web_validate_multi_window();
+        secondary.remove();
+        if (result !== 0) throw new Error(`浏览器多 Window Target 验证失败：${result}`);
+      });
+    }
     const rendererState = await page.evaluate(() => Module._granit_web_renderer_state());
     const failureResult = await page.evaluate(() => Module._granit_web_renderer_failure_result());
     const assetStatus = await page.evaluate(() => Module._granit_web_asset_status());

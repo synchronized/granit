@@ -71,7 +71,8 @@ granit_result create_emscripten_window(const std::shared_ptr<window_system_recor
                                        const granit_window_desc* desc, granit_window* output);
 granit_result destroy_emscripten_window(const std::shared_ptr<window_system_record>& system,
                                         granit_window handle);
-granit_result get_native_emscripten(granit_window_native_emscripten& output);
+granit_result get_native_emscripten(const std::shared_ptr<window_record>& window,
+                                    granit_window_native_emscripten& output);
 #endif
 
 } // namespace granit::window::detail

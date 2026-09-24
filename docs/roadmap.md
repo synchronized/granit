@@ -29,6 +29,13 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 
 ## 当前计划
 
+### S-56：Window Target 与 SDL3 后端
+
+**状态：实施中，P1。**
+
+[S-56](plans/S-56-window-target-and-sdl3-backend.md) 分离 Window Backend 与 Window Target，先让
+原生 Emscripten 支持多 Canvas，再以可选 SDL3 后端统一桌面与浏览器的 Window API。
+
 ### S-54：0.30.0 特性教程与 Example Application
 
 **状态：实施完成，等待远端验收，P1。**

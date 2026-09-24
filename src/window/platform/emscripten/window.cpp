@@ -14,14 +14,36 @@
 #include <memory>
 #include <mutex>
 #include <new>
+#include <string>
+#include <string_view>
 #include <thread>
 #include <vector>
 
 namespace granit::window::detail {
 namespace {
 
-constexpr char canvas_selector[] = "#canvas";
-std::weak_ptr<window_record> active_window;
+constexpr std::string_view default_canvas_selector = "#canvas";
+
+std::string resolve_canvas_selector(const granit_window_desc& desc) {
+  if (desc.struct_size < GRANIT_WINDOW_DESC_VERSION_2_SIZE || desc.target == nullptr ||
+      desc.target->type == GRANIT_WINDOW_TARGET_AUTOMATIC) {
+    return std::string{default_canvas_selector};
+  }
+  return std::string{desc.target->value, desc.target->value_length};
+}
+
+bool canvas_selector_in_use(std::string_view selector) {
+  std::lock_guard lock{registry_mutex};
+  for (const auto& [unused_system_handle, system] : systems) {
+    static_cast<void>(unused_system_handle);
+    for (const auto& [unused_window_handle, window] : system->windows) {
+      static_cast<void>(unused_window_handle);
+      if (window != nullptr && window->canvas_selector == selector)
+        return true;
+    }
+  }
+  return false;
+}
 
 std::uint32_t dom_modifiers(bool control, bool shift, bool alt, bool meta) noexcept {
   std::uint32_t result = 0;
@@ -52,6 +74,7 @@ void enqueue_focus_event(const std::shared_ptr<window_system_record>& system,
 }
 
 granit_result refresh_geometry(window_record& window, bool emit_events) {
+  const auto* canvas_selector = window.canvas_selector.c_str();
   double css_width = 0.0;
   double css_height = 0.0;
   if (emscripten_get_element_css_size(canvas_selector, &css_width, &css_height) !=
@@ -218,17 +241,13 @@ EM_BOOL focus_callback(int event_type, const EmscriptenFocusEvent*, void* user_d
   return EM_FALSE;
 }
 
-void unbind_callbacks() noexcept {
-  static_cast<void>(
-      emscripten_set_keydown_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, false, nullptr));
-  static_cast<void>(
-      emscripten_set_keyup_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, false, nullptr));
-  static_cast<void>(
-      emscripten_set_keypress_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, false, nullptr));
-  static_cast<void>(
-      emscripten_set_focus_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, false, nullptr));
-  static_cast<void>(
-      emscripten_set_blur_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, false, nullptr));
+void unbind_callbacks(const window_record& window) noexcept {
+  const auto* canvas_selector = window.canvas_selector.c_str();
+  static_cast<void>(emscripten_set_keydown_callback(canvas_selector, nullptr, false, nullptr));
+  static_cast<void>(emscripten_set_keyup_callback(canvas_selector, nullptr, false, nullptr));
+  static_cast<void>(emscripten_set_keypress_callback(canvas_selector, nullptr, false, nullptr));
+  static_cast<void>(emscripten_set_focus_callback(canvas_selector, nullptr, false, nullptr));
+  static_cast<void>(emscripten_set_blur_callback(canvas_selector, nullptr, false, nullptr));
   static_cast<void>(emscripten_set_mousedown_callback(canvas_selector, nullptr, false, nullptr));
   static_cast<void>(emscripten_set_mouseup_callback(canvas_selector, nullptr, false, nullptr));
   static_cast<void>(emscripten_set_mousemove_callback(canvas_selector, nullptr, false, nullptr));
@@ -238,24 +257,20 @@ void unbind_callbacks() noexcept {
 }
 
 granit_result bind_callbacks(window_record& window) {
+  const auto* canvas_selector = window.canvas_selector.c_str();
   const auto failed = [&](EMSCRIPTEN_RESULT result) { return result != EMSCRIPTEN_RESULT_SUCCESS; };
-  if (failed(emscripten_set_keydown_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, &window, false,
-                                             key_callback)) ||
-      failed(emscripten_set_keyup_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, &window, false,
-                                           key_callback)) ||
-      failed(emscripten_set_keypress_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, &window, false,
-                                              text_callback)) ||
-      failed(emscripten_set_focus_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, &window, false,
-                                           focus_callback)) ||
-      failed(emscripten_set_blur_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, &window, false,
-                                          focus_callback)) ||
+  if (failed(emscripten_set_keydown_callback(canvas_selector, &window, false, key_callback)) ||
+      failed(emscripten_set_keyup_callback(canvas_selector, &window, false, key_callback)) ||
+      failed(emscripten_set_keypress_callback(canvas_selector, &window, false, text_callback)) ||
+      failed(emscripten_set_focus_callback(canvas_selector, &window, false, focus_callback)) ||
+      failed(emscripten_set_blur_callback(canvas_selector, &window, false, focus_callback)) ||
       failed(emscripten_set_mousedown_callback(canvas_selector, &window, false, mouse_callback)) ||
       failed(emscripten_set_mouseup_callback(canvas_selector, &window, false, mouse_callback)) ||
       failed(emscripten_set_mousemove_callback(canvas_selector, &window, false, mouse_callback)) ||
       failed(emscripten_set_mouseenter_callback(canvas_selector, &window, false, mouse_callback)) ||
       failed(emscripten_set_mouseleave_callback(canvas_selector, &window, false, mouse_callback)) ||
       failed(emscripten_set_wheel_callback(canvas_selector, &window, false, wheel_callback))) {
-    unbind_callbacks();
+    unbind_callbacks(window);
     return GRANIT_ERROR_INITIALIZATION_FAILED;
   }
   return GRANIT_SUCCESS;
@@ -285,8 +300,11 @@ granit_result create_emscripten_system(granit_window_system* output) {
 granit_result destroy_emscripten_system(granit_window_system handle,
                                         const std::shared_ptr<window_system_record>& system) {
   if (!system->windows.empty()) {
-    unbind_callbacks();
-    active_window.reset();
+    for (const auto& [unused, window] : system->windows) {
+      static_cast<void>(unused);
+      if (window != nullptr)
+        unbind_callbacks(*window);
+    }
   }
   system->windows.clear();
   std::lock_guard lock{registry_mutex};
@@ -308,11 +326,19 @@ granit_result process_emscripten_events(const std::shared_ptr<window_system_reco
 
 granit_result create_emscripten_window(const std::shared_ptr<window_system_record>& system,
                                        const granit_window_desc* desc, granit_window* output) {
-  if (!system->windows.empty() || !active_window.expired())
-    return GRANIT_ERROR_RESOURCE_IN_USE;
   if (!valid_dimension(desc->width) || !valid_dimension(desc->height))
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (emscripten_set_element_css_size(canvas_selector, static_cast<double>(desc->width),
+  std::string canvas_selector;
+  try {
+    canvas_selector = resolve_canvas_selector(*desc);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+  if (canvas_selector_in_use(canvas_selector))
+    return GRANIT_ERROR_RESOURCE_IN_USE;
+  if (emscripten_set_element_css_size(canvas_selector.c_str(), static_cast<double>(desc->width),
                                       static_cast<double>(desc->height)) !=
       EMSCRIPTEN_RESULT_SUCCESS) {
     return GRANIT_ERROR_BACKEND_UNAVAILABLE;
@@ -324,16 +350,18 @@ granit_result create_emscripten_window(const std::shared_ptr<window_system_recor
   const auto framebuffer_height = std::round(static_cast<double>(desc->height) * scale);
   if (!valid_dimension(framebuffer_width) || !valid_dimension(framebuffer_height))
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (emscripten_set_canvas_element_size(canvas_selector, static_cast<int>(framebuffer_width),
-                                         static_cast<int>(framebuffer_height)) !=
-      EMSCRIPTEN_RESULT_SUCCESS) {
+  if (emscripten_set_canvas_element_size(
+          canvas_selector.c_str(), static_cast<int>(framebuffer_width),
+          static_cast<int>(framebuffer_height)) != EMSCRIPTEN_RESULT_SUCCESS) {
     return GRANIT_ERROR_BACKEND_UNAVAILABLE;
   }
+  std::shared_ptr<window_record> window;
   try {
-    auto window = std::make_shared<window_record>();
+    window = std::make_shared<window_record>();
     window->handle = allocate_handle();
     window->system = system;
     window->flags = desc->flags;
+    window->canvas_selector = std::move(canvas_selector);
     const auto geometry_result = refresh_geometry(*window, false);
     if (geometry_result != GRANIT_SUCCESS)
       return geometry_result;
@@ -341,14 +369,15 @@ granit_result create_emscripten_window(const std::shared_ptr<window_system_recor
     if (callback_result != GRANIT_SUCCESS)
       return callback_result;
     system->windows.emplace(window->handle, window);
-    active_window = window;
     *output = window->handle;
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
-    unbind_callbacks();
+    if (window != nullptr && !window->canvas_selector.empty())
+      unbind_callbacks(*window);
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {
-    unbind_callbacks();
+    if (window != nullptr && !window->canvas_selector.empty())
+      unbind_callbacks(*window);
     return GRANIT_ERROR_INTERNAL;
   }
 }
@@ -358,15 +387,15 @@ granit_result destroy_emscripten_window(const std::shared_ptr<window_system_reco
   const auto found = system->windows.find(handle);
   if (found == system->windows.end())
     return GRANIT_ERROR_INVALID_HANDLE;
-  unbind_callbacks();
-  active_window.reset();
+  unbind_callbacks(*found->second);
   system->windows.erase(found);
   return GRANIT_SUCCESS;
 }
 
-granit_result get_native_emscripten(granit_window_native_emscripten& output) {
-  output.canvas_selector = canvas_selector;
-  output.canvas_selector_length = static_cast<std::uint32_t>(sizeof(canvas_selector) - 1);
+granit_result get_native_emscripten(const std::shared_ptr<window_record>& window,
+                                    granit_window_native_emscripten& output) {
+  output.canvas_selector = window->canvas_selector.data();
+  output.canvas_selector_length = static_cast<std::uint32_t>(window->canvas_selector.size());
   return GRANIT_SUCCESS;
 }
 

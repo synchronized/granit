@@ -26,6 +26,30 @@ typedef enum granit_window_backend {
 #define GRANIT_WINDOW_RESIZABLE_BIT (UINT32_C(1) << 1)
 #define GRANIT_WINDOW_HIGH_DPI_BIT (UINT32_C(1) << 2)
 
+typedef uint32_t granit_window_target_type;
+#define GRANIT_WINDOW_TARGET_AUTOMATIC UINT32_C(0)
+#define GRANIT_WINDOW_TARGET_CANVAS_SELECTOR UINT32_C(1)
+
+/** Window 创建时绑定的外部目标；字符串只在创建调用期间借用。 */
+typedef struct granit_window_target_desc {
+  uint32_t struct_size;
+  granit_window_target_type type;
+  const char* value;
+  uint32_t value_length;
+  uint32_t flags;
+  uint32_t reserved;
+} granit_window_target_desc;
+
+#define GRANIT_WINDOW_TARGET_DESC_VERSION_1_SIZE                                                   \
+  ((uint32_t)(offsetof(granit_window_target_desc, reserved) + sizeof(uint32_t)))
+#define GRANIT_WINDOW_TARGET_DESC_INIT                                                             \
+  {(uint32_t)sizeof(granit_window_target_desc),                                                    \
+   GRANIT_WINDOW_TARGET_AUTOMATIC,                                                                 \
+   0,                                                                                              \
+   UINT32_C(0),                                                                                    \
+   UINT32_C(0),                                                                                    \
+   UINT32_C(0)}
+
 typedef struct granit_window_system_desc {
   uint32_t struct_size;
   uint32_t backend;
@@ -47,10 +71,13 @@ typedef struct granit_window_desc {
   uint32_t height;
   uint32_t flags;
   uint32_t reserved;
+  const granit_window_target_desc* target;
 } granit_window_desc;
 
 #define GRANIT_WINDOW_DESC_VERSION_1_SIZE                                                          \
   ((uint32_t)(offsetof(granit_window_desc, reserved) + sizeof(uint32_t)))
+#define GRANIT_WINDOW_DESC_VERSION_2_SIZE                                                          \
+  ((uint32_t)(offsetof(granit_window_desc, target) + sizeof(const granit_window_target_desc*)))
 #define GRANIT_WINDOW_DESC_INIT                                                                    \
   {(uint32_t)sizeof(granit_window_desc),                                                           \
    0,                                                                                              \
@@ -58,7 +85,8 @@ typedef struct granit_window_desc {
    UINT32_C(0),                                                                                    \
    UINT32_C(0),                                                                                    \
    GRANIT_WINDOW_VISIBLE_BIT | GRANIT_WINDOW_RESIZABLE_BIT,                                        \
-   UINT32_C(0)}
+   UINT32_C(0),                                                                                    \
+   0}
 
 typedef uint32_t granit_window_event_type;
 #define GRANIT_WINDOW_EVENT_CLOSE_REQUESTED UINT32_C(1)

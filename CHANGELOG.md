@@ -8,6 +8,11 @@
 
 ## Unreleased
 
+### 新增
+
+- Window 描述新增可扩展 Target，可在 Emscripten 上通过 Canvas selector 创建多个 Window；几何、
+  输入、原生查询和 Surface 创建共享同一目标身份，重复 selector 会返回资源占用。
+
 ### 变更
 
 - 正式 Release 只提供 Windows 与 Linux x64 的共享库 SDK；静态库继续支持源码构建，并由平台 CI

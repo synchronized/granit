@@ -12,3 +12,4 @@ Reference 和实现为准。
 - [ADR-004：WebGPU 实现与加载策略](ADR-004-webgpu-provider-loading.md)（已取代）
 - [ADR-005：WebGPU 仅支持 Emscripten 浏览器](ADR-005-browser-only-webgpu.md)（已接受）
 - [ADR-006：以 Shader Library 作为运行时 Shader 资产](ADR-006-shader-library-runtime-asset.md)（已接受）
+- [ADR-007：分离 Window Backend 与 Window Target](ADR-007-window-backend-and-target.md)（已接受）

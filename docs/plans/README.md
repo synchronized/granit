@@ -9,6 +9,8 @@
 
 ## 当前计划
 
+- [S-56：Window Target 与 SDL3 后端](S-56-window-target-and-sdl3-backend.md)——分离 Window
+  Backend 与绑定目标，支持原生 Emscripten 多 Canvas，并通过可选 SDL3 后端提供统一 Window API。
 - [S-55：Example Common 架构整理](S-55-example-common-architecture.md)——保持现有短目录入口，
   统一 SDL target，整理资产与 Web 资源边界，并专项分析 Model Viewer。
 - [S-54：0.30.0 特性教程与 Example Application](S-54-0.30.0-feature-tutorial-framework.md)——抽取
