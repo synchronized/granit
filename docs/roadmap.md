@@ -31,7 +31,7 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 
 ### S-57：Model Viewer 运行时架构
 
-**状态：实施中，P1。**
+**状态：实施完成，等待远端 Linux 验收，P1。**
 
 [S-57](plans/S-57-model-viewer-runtime-architecture.md) 在保持 Desktop 渲染线程、Web inline/Asyncify
 和现有目录入口的前提下，拆分 Viewer Core 输出、执行包、桌面渲染服务与浏览器验收接口，使两个

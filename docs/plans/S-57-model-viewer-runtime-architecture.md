@@ -5,10 +5,11 @@
 
 ## 状态
 
-**实施中。** S-55 已统一资产与 glTF 加载边界，S-56 已统一 Desktop/Web Window 和输入语义。
+**实施完成，等待远端 Linux 验收。** S-55 已统一资产与 glTF 加载边界，S-56 已统一 Desktop/Web
+Window 和输入语义。
 Viewer Core 纯渲染帧与执行层 Frame Packet 已完成分离；Desktop 渲染命令和 GPU 资源所有权
 已收敛到专用服务，应用生命周期也已移出进程入口。Web Pipeline 验收与浏览器导出也已从产品
-运行时分离。下一步审计 Desktop/Web 重复职责，不改变现有目录入口、用户功能或线程模型。
+运行时分离，重复职责审计未发现需要新增的跨平台状态机。当前等待远端 Linux 验收。
 
 ## 背景
 
@@ -122,8 +123,11 @@ examples/samples/model_viewer/
    和帧数据生成。其余相似流程具有不同所有权：Desktop 使用 CPU 规划任务、渲染线程上传和 Surface
    线程交接，Web 使用 Fetch、Asyncify、inline 上传和 Canvas Swapchain；质量修改也分别通过有序渲染
    命令与浏览器 C 导出执行。因此不再增加跨平台基类或状态机。
-6. **S-57F 验证与文档**：补齐状态转换、线程命令、失败回滚和重复 Shutdown 测试，运行 Desktop、
-   Emscripten、浏览器与安装边界检查，并更新 Model Viewer 指南及实施记录。
+6. **S-57F 验证与文档（本地完成）**：现有自动化已覆盖状态转换、线程命令、失败回滚和重复
+   Shutdown；Windows shared/static、Desktop Vulkan Smoke、Emscripten、Chrome 和文档检查通过。
+   Model Viewer 指南已补充运行时边界，结果见
+   [本地验收记录](../records/2026-09-24-s57-model-viewer-runtime-local-acceptance.md)。剩余远端 Linux
+   XCB/Wayland 与 SDL3 验收。
 
 ## 验收标准
 

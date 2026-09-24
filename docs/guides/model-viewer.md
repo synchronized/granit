@@ -8,6 +8,21 @@ Emscripten WebGPU 上显示 glTF 2.0 模型。桌面目标叠加 ImGui 调试面
 不属于 Granit 安装 SDK。本指南只负责模型资产、桌面运行、性能和固定画面验收；Emscripten
 工具链、浏览器服务和通用浏览器测试见[浏览器 WebGPU 指南](webgpu-browser-example.md)。
 
+## 运行时边界
+
+桌面与浏览器入口共享 `application_core`、glTF CPU Scene、GPU Scene、Viewer 状态和纯渲染帧数据，
+但平台调度保持分离：
+
+- Desktop 主线程处理 Window、Input、ImGui 和加载编排，`render_service` 在专用渲染线程拥有
+  Renderer、Surface、Swapchain、Pipeline 及帧资源；普通帧允许替换，上传、质量修改、重建和销毁
+  通过不可丢弃的有序命令执行。
+- Web 在浏览器主线程使用 inline 帧执行；Fetch 和资源上传在明确边界通过 Asyncify 让出事件循环。
+  `pipeline_validation` 单独负责 WebGPU 异步 Pipeline 预热与公共 C API 生命周期验收，浏览器导出只
+  校验参数并转发运行时状态和控制操作。
+
+这两条路径共享渲染结果和 Viewer 操作语义，不共享线程、Surface 恢复或异步加载状态机。它们属于
+Sample 私有实现，不会进入 Granit 安装 SDK。
+
 ## 构建桌面查看器
 
 桌面目标通过 `granit::window` 的 SDL3 Backend 管理窗口和输入，并使用 ImGui Draw Data
@@ -197,7 +212,8 @@ cmake --build --preset emscripten-release
 cd tests/web
 npm ci
 $env:CHROME_PATH = "C:\Program Files\Google\Chrome\Application\chrome.exe"
-npm test -- ../../build/emscripten-release/web
+npm test -- ../../build/emscripten-release/web granit_sample_model_viewer_web.html `
+  model_viewer_fixture.gltf
 ```
 
 ## 常见问题
