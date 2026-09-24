@@ -96,8 +96,9 @@ examples/common/assets/
 2. **S-58B Asset System 核心（已完成）**：已增加类型安全 Mount、`asset_key` 和统一请求入口；
    打包资产可立即完成，外部根继续异步读取，二者复用同一 `asset_request` 状态、进度、取消与
    generation 保护。Windows 与 Emscripten 资产测试通过。
-3. **S-58C 内部 Source**：接入 Desktop packaged/filesystem 与 Web MEMFS/Fetch；平台 Source 只在
-   构建期选择，不进入业务头文件。
+3. **S-58C 内部 Source（已完成）**：Desktop packaged/filesystem 与 Web MEMFS/Fetch 已收进
+   Asset System 的私有实现；业务头文件不再包含 Store、Loader、文件系统或平台读取实现。现有
+   Store/Loader 暂作内部适配层，待 S-58F 删除。
 4. **S-58D Application 与教程迁移**：Application Host 改为单一 Asset System；Cube、PBR Assets、
    Shader Library、Material、Texture 和 Environment 使用逻辑 Key 请求。
 5. **S-58E glTF 与 Model Viewer**：`document_loader` 接收 Asset System 与 Mount，统一文档和外部资源

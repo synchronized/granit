@@ -4,14 +4,12 @@
 #ifndef GRANIT_EXAMPLES_COMMON_ASSETS_ASSET_SYSTEM_H_
 #define GRANIT_EXAMPLES_COMMON_ASSETS_ASSET_SYSTEM_H_
 
-#include "assets/asset_loader.h"
-#include "assets/asset_store.h"
+#include "assets/asset_request.h"
 
 #include <cstdint>
 #include <memory>
 #include <string>
 #include <string_view>
-#include <vector>
 
 namespace granit::example::assets {
 
@@ -38,8 +36,8 @@ struct asset_key {
 /** 示例私有的统一只读资产入口；平台来源不会进入业务资产 Key。 */
 class asset_system final {
 public:
-  asset_system() = default;
-  ~asset_system() = default;
+  asset_system();
+  ~asset_system();
   asset_system(const asset_system&) = delete;
   asset_system& operator=(const asset_system&) = delete;
 
@@ -58,17 +56,8 @@ public:
   [[nodiscard]] asset_mount bundled() const noexcept { return bundled_; }
 
 private:
-  enum class source_kind { bundled, external };
-  struct mount_record {
-    source_kind source{};
-    std::string root_location;
-  };
-
-  [[nodiscard]] const mount_record* find(asset_mount mount) const noexcept;
-
-  asset_store store_;
-  asset_loader loader_;
-  std::vector<mount_record> mounts_;
+  struct implementation;
+  std::unique_ptr<implementation> implementation_;
   asset_mount bundled_;
 };
 

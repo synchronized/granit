@@ -3,11 +3,14 @@
 
 #include "assets/asset_system.h"
 
+#include "assets/asset_loader.h"
+#include "assets/asset_store.h"
 #include "assets/resource_path.h"
 
 #include <filesystem>
 #include <limits>
 #include <utility>
+#include <vector>
 
 namespace granit::example::assets {
 namespace {
@@ -45,21 +48,41 @@ bool resolve_from_root(std::string_view root, std::string_view logical_path, std
 
 } // namespace
 
+struct asset_system::implementation {
+  enum class source_kind { bundled, external };
+
+  struct mount_record {
+    source_kind source{};
+    std::string root_location;
+  };
+
+  asset_store store;
+  asset_loader loader;
+  std::vector<mount_record> mounts;
+};
+
+asset_system::asset_system() : implementation_(std::make_unique<implementation>()) {}
+
+asset_system::~asset_system() = default;
+
 bool asset_system::initialize(std::string_view executable_path) {
-  if (bundled_.valid() || !store_.initialize(executable_path))
+  if (bundled_.valid() || !implementation_->store.initialize(executable_path))
     return false;
-  mounts_.push_back({.source = source_kind::bundled, .root_location = {}});
+  implementation_->mounts.push_back(
+      {.source = implementation::source_kind::bundled, .root_location = {}});
   bundled_ = asset_mount{1};
   return true;
 }
 
 bool asset_system::mount(std::string root_location, asset_mount& output) {
   if (!bundled_.valid() || root_location.empty() || root_location.find('\0') != std::string::npos ||
-      mounts_.size() >= std::numeric_limits<std::uint32_t>::max()) {
+      implementation_->mounts.size() >= std::numeric_limits<std::uint32_t>::max()) {
     return false;
   }
-  mounts_.push_back({.source = source_kind::external, .root_location = std::move(root_location)});
-  output = asset_mount{static_cast<std::uint32_t>(mounts_.size())};
+  implementation_->mounts.push_back(
+      {.source = implementation::source_kind::external,
+       .root_location = std::move(root_location)});
+  output = asset_mount{static_cast<std::uint32_t>(implementation_->mounts.size())};
   return true;
 }
 
@@ -69,14 +92,16 @@ std::shared_ptr<asset_request> asset_system::request(asset_key key) {
     return failed_request(std::string{key.path}, asset_request_error::invalid_location,
                           "资产逻辑路径无效");
   }
-  const auto* record = find(key.mount);
+  const implementation::mount_record* record = nullptr;
+  if (key.mount.valid() && key.mount.value_ <= implementation_->mounts.size())
+    record = &implementation_->mounts[key.mount.value_ - 1];
   if (record == nullptr) {
     return failed_request(std::move(normalized), asset_request_error::invalid_location,
                           "资产挂载无效");
   }
-  if (record->source == source_kind::bundled) {
+  if (record->source == implementation::source_kind::bundled) {
     std::vector<std::byte> bytes;
-    if (!store_.read(normalized, bytes)) {
+    if (!implementation_->store.read(normalized, bytes)) {
       return failed_request("asset:///" + normalized, asset_request_error::io_error,
                             "无法读取打包资产");
     }
@@ -91,15 +116,9 @@ std::shared_ptr<asset_request> asset_system::request(asset_key key) {
     return failed_request(std::move(normalized), asset_request_error::invalid_location,
                           "无法解析资产位置");
   }
-  return loader_.load(std::move(location));
+  return implementation_->loader.load(std::move(location));
 }
 
-void asset_system::poll() { loader_.poll(); }
-
-const asset_system::mount_record* asset_system::find(asset_mount mount) const noexcept {
-  if (!mount.valid() || mount.value_ > mounts_.size())
-    return nullptr;
-  return &mounts_[mount.value_ - 1];
-}
+void asset_system::poll() { implementation_->loader.poll(); }
 
 } // namespace granit::example::assets
