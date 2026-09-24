@@ -5,8 +5,8 @@
 
 ## 状态
 
-**本地实施与浏览器验收完成，等待远端跨平台验收，P1。** Desktop/Web 已通过同一个
-`render_service` 使用 `render_runtime`，并分别保留 threaded 与 inline 执行策略。
+**已完成，P1。** Desktop/Web 已通过同一个 `render_service` 使用 `render_runtime`，并分别保留
+threaded 与 inline 执行策略。Pull Request #85 的 Linux、Windows、Emscripten 和浏览器验收均已通过。
 
 ## 背景与目标
 

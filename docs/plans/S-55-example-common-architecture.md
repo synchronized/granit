@@ -5,9 +5,9 @@
 
 ## 状态
 
-**实施中。** SDL target、Desktop/Web 统一资产接口、glTF 文档资源编排和通用 Application Host
-已经完成。Web Model Viewer 已复用 Host；Desktop 已改用统一 Window API，但仍保留独立渲染线程，
-后续只在不破坏线程语义的前提下评估是否接入 Host。
+**已完成。** SDL target、统一 Asset System、glTF 文档资源编排、通用 Application Host 和
+Model Viewer 唯一 Application 状态机已经落地。Desktop/Web 只保留真实的平台入口与执行策略差异，
+并已通过 Pull Request #85 的跨平台验收。
 
 ## 背景与目标
 

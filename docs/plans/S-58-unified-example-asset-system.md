@@ -5,9 +5,9 @@
 
 ## 状态
 
-**本地实施完成，P1。** 原 `asset_store` 与 `asset_loader` 在路径解析和完整 Blob 读取上职责交叉。
-S-58 已将资产身份、来源和读取调度拆开，以单一请求模型服务 Application Host、教程、glTF 与
-Model Viewer；等待远端浏览器验收。
+**已完成，P1。** 资产身份、来源和读取调度已经拆开，单一请求模型服务 Application Host、教程、
+glTF 与 Model Viewer。Desktop 文件系统、Emscripten MEMFS 与 Fetch 差异均封装在内部 Source，
+并通过 Pull Request #85 的桌面、安装 Consumer 与浏览器验收。
 
 ## 目标
 
