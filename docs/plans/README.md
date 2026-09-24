@@ -9,6 +9,8 @@
 
 ## 当前计划
 
+- [S-59：Model Viewer 渲染任务运行时](S-59-model-viewer-render-task-runtime.md)——以强类型任务统一
+  Desktop/Web 的 GPU 执行语义，并提取跨平台 Viewer 生命周期。
 - [S-58：统一 Example Asset System](S-58-unified-example-asset-system.md)——以逻辑 Mount、统一请求和
   内部平台 Source 取代 Store/Loader 并列入口，并统一 Tutorial、glTF 与 Model Viewer 加载编排。
 - [S-57：Model Viewer 运行时架构](S-57-model-viewer-runtime-architecture.md)——保持现有目录和
