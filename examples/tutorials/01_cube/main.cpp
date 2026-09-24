@@ -164,10 +164,13 @@ private:
   }
 
   granit::result initialize_texture_resources() noexcept {
-    std::vector<std::byte> encoded_texture;
+    const auto texture_request = assets().request(
+        {assets().bundled(), "tutorials/01_cube/wooden_crate.png"});
     granit::example::gltf::image decoded_texture;
-    if (!assets().read("tutorials/01_cube/wooden_crate.png", encoded_texture) ||
-        granit::example::gltf::decode_image(encoded_texture, decoded_texture) !=
+    if (!texture_request ||
+        texture_request->status() !=
+            granit::example::assets::asset_request_status::ready ||
+        granit::example::gltf::decode_image(texture_request->bytes(), decoded_texture) !=
             granit::example::gltf::image_decode_error::none ||
         decoded_texture.mips.size() != 1) {
       std::cerr << "Failed to decode crate texture\n";

@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "application/application.h"
-#include "assets/asset_store_resolver.h"
+#include "assets/asset_system_resolver.h"
 #include "gltf/importer.h"
 #include "imgui/imgui_font_atlas.h"
 #include "imgui/imgui_input.h"
@@ -133,14 +133,18 @@ private:
   }
 
   granit::result initialize_model() noexcept {
-    std::vector<std::byte> document;
-    if (!assets().read("tutorials/02_pbr_assets/Suzanne.gltf", document)) {
+    const auto model_request =
+        assets().request({assets().bundled(), "tutorials/02_pbr_assets/Suzanne.gltf"});
+    if (!model_request ||
+        model_request->status() != granit::example::assets::asset_request_status::ready) {
       std::cerr << "Failed to read Suzanne model\n";
       return granit::result::invalid_argument;
     }
 
-    granit::example::assets::asset_store_resolver resolver{assets(), "tutorials/02_pbr_assets"};
-    const auto loaded = granit::example::gltf::import_scene(document, &resolver, model_scene_);
+    granit::example::assets::asset_system_resolver resolver{
+        assets(), assets().bundled(), "tutorials/02_pbr_assets"};
+    const auto loaded =
+        granit::example::gltf::import_scene(model_request->bytes(), &resolver, model_scene_);
     if (!loaded) {
       std::cerr << "Failed to load Suzanne model: " << loaded.diagnostic << '\n';
       return granit::result::invalid_argument;

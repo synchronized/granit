@@ -67,7 +67,7 @@ result application_host::poll_events() noexcept {
 
 result application_host::update_services() noexcept {
   try {
-    asset_loader_.poll();
+    assets_.poll();
     return result::success;
   } catch (const std::bad_alloc&) {
     return result::out_of_memory;

@@ -12,10 +12,10 @@ add_library(
   asset_request.h
   asset_store.cpp
   asset_store.h
-  asset_store_resolver.cpp
-  asset_store_resolver.h
   asset_system.cpp
   asset_system.h
+  asset_system_resolver.cpp
+  asset_system_resolver.h
   memory_resource_resolver.cpp
   memory_resource_resolver.h
   resource_path.cpp

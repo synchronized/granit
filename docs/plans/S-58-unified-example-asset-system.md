@@ -99,8 +99,9 @@ examples/common/assets/
 3. **S-58C 内部 Source（已完成）**：Desktop packaged/filesystem 与 Web MEMFS/Fetch 已收进
    Asset System 的私有实现；业务头文件不再包含 Store、Loader、文件系统或平台读取实现。现有
    Store/Loader 暂作内部适配层，待 S-58F 删除。
-4. **S-58D Application 与教程迁移**：Application Host 改为单一 Asset System；Cube、PBR Assets、
-   Shader Library、Material、Texture 和 Environment 使用逻辑 Key 请求。
+4. **S-58D Application 与教程迁移（已完成）**：Application Host 已改为单一 Asset System；Cube
+   纹理以及 PBR Assets 的 glTF、Buffer 和纹理均通过 Mount 与逻辑 Key 读取。同步 Importer 使用
+   基于 Asset System 的驻留资源 Resolver，旧 Store Resolver 已删除。
 5. **S-58E glTF 与 Model Viewer**：`document_loader` 接收 Asset System 与 Mount，统一文档和外部资源
    请求；增加共享 `model_loading_session`，统一“文档 → Import → GPU Plan”的状态、进度和取消，
    Desktop/Web 仅保留任务调度、UI 与 GPU 所属线程差异。

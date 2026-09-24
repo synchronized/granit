@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "assets/asset_system.h"
+#include "assets/asset_system_resolver.h"
 
 #include <catch2/catch_all.hpp>
 
@@ -10,6 +11,7 @@
 #include <filesystem>
 #include <fstream>
 #include <thread>
+#include <vector>
 
 namespace assets = granit::example::assets;
 
@@ -56,6 +58,14 @@ TEST_CASE("Asset System 以统一请求读取打包和外部资产", "[example][
   REQUIRE(bundled);
   CHECK(bundled->status() == assets::asset_request_status::ready);
   CHECK(bundled->bytes().size() == 3);
+
+  assets::asset_system_resolver resolver{system, system.bundled(), "tutorials"};
+  std::vector<std::byte> resolved;
+  REQUIRE(resolver.resolve("bundled.bin", resolved));
+  CHECK(resolved == bundled->bytes());
+  const auto committed = resolved;
+  CHECK_FALSE(resolver.resolve("../bundled.bin", resolved));
+  CHECK(resolved == committed);
 
   assets::asset_mount content;
   REQUIRE(system.mount((fixture.root / "content").string(), content));
