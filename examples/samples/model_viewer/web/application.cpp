@@ -56,10 +56,11 @@ struct web_platform_state {
   unsigned resize_count{};
   unsigned quality_generation{};
   unsigned lighting_generation{};
-  granit_sample_count sample_count{GRANIT_SAMPLE_COUNT_1};
-  unsigned enable_fxaa{1};
-  unsigned enable_specular_aa{1};
-  unsigned sampler_anisotropy{1};
+  granit::example::model_viewer::render_quality_config quality{.sample_count =
+                                                                   GRANIT_SAMPLE_COUNT_1,
+                                                               .enable_fxaa = true,
+                                                               .enable_specular_aa = true,
+                                                               .sampler_anisotropy = 1.0F};
   std::uint64_t shutdown_live_resource_count{};
   std::uint64_t shutdown_pending_retirement_count{};
   granit_result shutdown_result{GRANIT_SUCCESS};
@@ -281,11 +282,6 @@ granit_result render_model_viewer_frame(float delta_seconds) {
       .gpu_frame_ms = state.latest_performance.gpu_frame_ms,
       .gpu_timing_available = state.latest_performance.gpu_timing_available,
       .history = state.session.performance().summarize()};
-  const granit::example::model_viewer::render_quality_config quality{
-      .sample_count = state.sample_count,
-      .enable_fxaa = state.enable_fxaa != 0,
-      .enable_specular_aa = state.enable_specular_aa != 0,
-      .sampler_anisotropy = static_cast<float>(state.sampler_anisotropy)};
   granit::example::model_viewer::viewer_frame_build_result frame;
   operation =
       granit::example::model_viewer::build_viewer_frame(state.session, state.ui, state.input,
@@ -293,7 +289,7 @@ granit_result render_model_viewer_frame(float delta_seconds) {
                                                          .delta_seconds = delta_seconds,
                                                          .renderer = panel_renderer,
                                                          .performance = panel_performance,
-                                                         .quality = quality,
+                                                         .quality = state.quality,
                                                          .previews = state.previews.items(),
                                                          .sample = state.latest_performance},
                                                         frame);
@@ -303,13 +299,15 @@ granit_result render_model_viewer_frame(float delta_seconds) {
     ++state.applied_input_count;
   state.input.begin_frame();
   if (frame.changes.quality) {
+    const auto anisotropy_changed =
+        frame.changes.quality->sampler_anisotropy != state.quality.sampler_anisotropy;
     result = execute_render_quality_change(
         frame.changes.quality->sample_count, frame.changes.quality->enable_fxaa ? 1U : 0U,
         frame.changes.quality->enable_specular_aa ? 1U : 0U,
         static_cast<unsigned>(frame.changes.quality->sampler_anisotropy));
     if (result != GRANIT_SUCCESS)
       return result;
-    if (frame.changes.quality->sampler_anisotropy != quality.sampler_anisotropy) {
+    if (anisotropy_changed) {
       operation = rebuild_previews();
       if (operation.failed())
         return granit::to_native(operation);
@@ -368,16 +366,16 @@ granit_result execute_render_quality_change(granit_sample_count sample_count, un
       .enable_specular_aa = enable_specular_aa != 0,
   };
   granit::example::model_viewer::render_quality_change_result output;
-  const auto result = granit::to_native(
-      state.rendering.change_quality(desc, static_cast<float>(sampler_anisotropy),
-                                     sampler_anisotropy != state.sampler_anisotropy, output));
+  const auto result = granit::to_native(state.rendering.change_quality(
+      desc, static_cast<float>(sampler_anisotropy),
+      static_cast<float>(sampler_anisotropy) != state.quality.sampler_anisotropy, output));
   if (result != GRANIT_SUCCESS) {
     return result;
   }
-  state.sample_count = sample_count;
-  state.enable_fxaa = enable_fxaa;
-  state.enable_specular_aa = enable_specular_aa;
-  state.sampler_anisotropy = sampler_anisotropy;
+  state.quality = {.sample_count = sample_count,
+                   .enable_fxaa = enable_fxaa != 0,
+                   .enable_specular_aa = enable_specular_aa != 0,
+                   .sampler_anisotropy = static_cast<float>(sampler_anisotropy)};
   ++state.quality_generation;
   return GRANIT_SUCCESS;
 }
@@ -553,7 +551,7 @@ void update_web_application() noexcept {
       state.upload_cancel_requested = false;
       const auto begin_result = state.pipeline_warmup.begin(
           state.rendering.renderer(), state.session.scene_gpu(), swapchain_info.format,
-          static_cast<granit::sample_count>(state.sample_count));
+          static_cast<granit::sample_count>(state.quality.sample_count));
       if (begin_result.failed()) {
         state.upload_active = false;
         fail("renderer-pipeline", granit::to_native(begin_result));
