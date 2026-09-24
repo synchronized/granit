@@ -7,7 +7,8 @@
 
 **实施中。** S-55 已统一资产与 glTF 加载边界，S-56 已统一 Desktop/Web Window 和输入语义。
 Viewer Core 纯渲染帧与执行层 Frame Packet 已完成分离；Desktop 渲染命令和 GPU 资源所有权
-已收敛到专用服务。下一步整理 Desktop 应用壳，不改变现有目录入口、用户功能或线程模型。
+已收敛到专用服务，应用生命周期也已移出进程入口。下一步拆分 Web 运行时职责，不改变
+现有目录入口、用户功能或线程模型。
 
 ## 背景
 
@@ -109,9 +110,9 @@ examples/samples/model_viewer/
    替换、材质更新、Swapchain 重建、帧队列和有序销毁。三槽帧 Canvas 以及加载期 Frame
    Context/Canvas 以及字体 Texture/View/Sampler 也已改由服务创建和销毁。Renderer、
    Surface 与 Swapchain 由服务持有，Surface 重建通过显式主线程交接方法完成。
-3. **S-57C Desktop 应用壳**：把加载阶段、窗口事件、UI 帧、呈现恢复和性能采样整理为可测试的
-   Desktop application；`main.cpp` 只装配 options、application 并返回运行结果。保留直接 Window
-   循环，不扩展通用 Application Host。
+3. **S-57C Desktop 应用壳（已完成）**：加载阶段、窗口事件、UI 帧、呈现恢复和性能采样
+   已收进 `desktop/application.*`；`main.cpp` 只解析 options、运行 application 并返回结果。保留直接
+   Window 循环，不扩展通用 Application Host。
 4. **S-57D Web 职责拆分**：将 Pipeline 预热和公共 C API 生命周期验收移出运行时文件，将
    JavaScript 导出集中为只校验参数并转发状态/控制的边界；Host 和 inline 帧执行行为不变。
 5. **S-57E 重复审计**：完成拆分后再比较 Desktop/Web 的加载阶段、质量设置和呈现恢复。只有存在

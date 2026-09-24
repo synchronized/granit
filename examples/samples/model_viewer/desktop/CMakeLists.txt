@@ -12,6 +12,8 @@ add_library(
 
 add_executable(
   granit_sample_model_viewer
+  application.cpp
+  application.h
   main.cpp
   render_service.cpp
   render_service.h
