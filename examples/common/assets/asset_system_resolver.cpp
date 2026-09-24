@@ -14,8 +14,9 @@ asset_system_resolver::asset_system_resolver(asset_system& assets, asset_mount m
     base_path_.push_back('/');
 }
 
-bool asset_system_resolver::resolve(std::string_view path, std::vector<std::byte>& output) const {
-  const auto request = assets_.request({mount_, base_path_ + std::string{path}});
+bool asset_system_resolver::resolve(std::string_view resource_uri,
+                                    std::vector<std::byte>& output) const {
+  const auto request = assets_.request({mount_, base_path_ + std::string{resource_uri}});
   if (!request || request->status() != asset_request_status::ready)
     return false;
   output = request->bytes();

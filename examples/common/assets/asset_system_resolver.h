@@ -16,7 +16,8 @@ class asset_system_resolver final : public resource_resolver {
 public:
   asset_system_resolver(asset_system& assets, asset_mount mount, std::string base_path);
 
-  [[nodiscard]] bool resolve(std::string_view path, std::vector<std::byte>& output) const override;
+  [[nodiscard]] bool resolve(std::string_view resource_uri,
+                             std::vector<std::byte>& output) const override;
 
 private:
   asset_system& assets_;

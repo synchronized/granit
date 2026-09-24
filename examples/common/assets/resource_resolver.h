@@ -10,7 +10,7 @@
 
 namespace granit::example::assets {
 
-/** 按受控相对路径返回资源的自有字节。 */
+/** 按文档中的受控相对资源 URI 返回自有字节。 */
 class resource_resolver {
 public:
   resource_resolver() = default;
@@ -18,7 +18,7 @@ public:
   resource_resolver(const resource_resolver&) = delete;
   resource_resolver& operator=(const resource_resolver&) = delete;
 
-  [[nodiscard]] virtual bool resolve(std::string_view path,
+  [[nodiscard]] virtual bool resolve(std::string_view resource_uri,
                                      std::vector<std::byte>& bytes) const = 0;
 };
 

@@ -25,11 +25,11 @@ std::span<const std::byte> bytes(std::string_view text) {
 
 class memory_resolver final : public granit::example::assets::resource_resolver {
 public:
-  explicit memory_resolver(std::vector<std::byte> data, std::string path = "scene.bin")
-      : data_(std::move(data)), path_(std::move(path)) {}
+  explicit memory_resolver(std::vector<std::byte> data, std::string resource_uri = "scene.bin")
+      : data_(std::move(data)), resource_uri_(std::move(resource_uri)) {}
 
-  bool resolve(std::string_view path, std::vector<std::byte>& output) const override {
-    if (path != path_)
+  bool resolve(std::string_view resource_uri, std::vector<std::byte>& output) const override {
+    if (resource_uri != resource_uri_)
       return false;
     output = data_;
     return true;
@@ -37,7 +37,7 @@ public:
 
 private:
   std::vector<std::byte> data_;
-  std::string path_;
+  std::string resource_uri_;
 };
 
 bool cancel_import(const granit::example::gltf::import_progress& progress, void* user_data) {

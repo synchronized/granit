@@ -215,8 +215,9 @@ class file_resolver final : public granit::example::assets::resource_resolver {
 public:
   explicit file_resolver(std::filesystem::path base) : base_(std::move(base)) {}
 
-  [[nodiscard]] bool resolve(std::string_view path, std::vector<std::byte>& bytes) const override {
-    return read_file(base_ / std::filesystem::path(path), bytes);
+  [[nodiscard]] bool resolve(std::string_view resource_uri,
+                             std::vector<std::byte>& bytes) const override {
+    return read_file(base_ / std::filesystem::path(resource_uri), bytes);
   }
 
 private:
