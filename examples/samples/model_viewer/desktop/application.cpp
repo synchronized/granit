@@ -2,12 +2,12 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "model_viewer/desktop/application.h"
-#include "model_viewer/desktop/presentation_policy.h"
 #include "model_viewer/desktop/threaded_render_service.h"
 
 #include "assets/asset_system.h"
 #include "model_viewer/application_core.h"
 #include "model_viewer/model_viewer_runtime.h"
+#include "model_viewer/presentation_recovery.h"
 #include "model_viewer/render_task_executor.h"
 #include "model_viewer/viewer_input_accumulator.h"
 #include "model_viewer/viewer_panels.h"
@@ -587,18 +587,18 @@ int granit::example::model_viewer::desktop::application::run() {
         producer_frame_times.erase(timing);
       if (completed.dropped)
         continue;
-      recreate = recreate || completed.execution.needs_recreate;
-      const auto action = desktop::classify_presentation_result(completed.status);
-      if (action == desktop::presentation_action::recreate_swapchain)
+      const auto outcome =
+          classify_presentation_result(completed.status, completed.execution.needs_recreate);
+      if (outcome.action == presentation_action::recreate_swapchain)
         recreate = true;
-      else if (action == desktop::presentation_action::recreate_surface)
+      else if (outcome.action == presentation_action::recreate_surface)
         recreate_surface = true;
-      else if (action == desktop::presentation_action::stop) {
+      else if (outcome.action == presentation_action::stop) {
         result = completed.status;
         running = false;
         break;
       }
-      if (action != desktop::presentation_action::proceed)
+      if (!outcome.frame_rendered)
         continue;
       latest_sample = {.frames_per_second =
                            producer_frame_ms > 0.0F ? 1000.0F / producer_frame_ms : 0.0F,

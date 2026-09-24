@@ -23,6 +23,7 @@ add_library(
   orbit_camera.h
   performance_history.cpp
   performance_history.h
+  presentation_recovery.h
   viewer_state.cpp
   viewer_state.h
   viewer_input.h
@@ -72,6 +73,7 @@ if(GRANIT_HAS_NATIVE_WINDOW AND GRANIT_TESTING_ENABLED)
     model_viewer_runtime_test.cpp
     orbit_camera_test.cpp
     performance_history_test.cpp
+    presentation_recovery_test.cpp
     viewer_state_test.cpp
     viewer_input_accumulator_test.cpp
   )

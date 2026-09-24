@@ -15,6 +15,7 @@
 #include "application/application_host.h"
 #include "model_viewer/application_core.h"
 #include "model_viewer/model_viewer_runtime.h"
+#include "model_viewer/presentation_recovery.h"
 #include "model_viewer/render_service.h"
 #include "model_viewer/render_task_executor.h"
 #include "model_viewer/viewer_input_accumulator.h"
@@ -62,6 +63,8 @@ struct web_platform_state {
   std::uint64_t shutdown_pending_retirement_count{};
   granit_result shutdown_result{GRANIT_SUCCESS};
   bool shutdown_complete{};
+  bool recreate_swapchain{};
+  bool recreate_surface{};
   granit::example::model_viewer::viewer_input_accumulator input;
   granit::example::model_viewer::model_loading_session model_loading;
   std::string asset_url;
@@ -205,20 +208,28 @@ granit_result create_presentation_resources() {
   return GRANIT_SUCCESS;
 }
 
-granit_result resize_swapchain_if_needed() {
+granit_result recover_presentation_if_needed() {
   granit::window_state window_state;
   auto result = web_host.window().get_state(window_state);
   if (result.failed())
     return granit::to_native(result);
+  if (window_state.framebuffer_width == 0 || window_state.framebuffer_height == 0)
+    return GRANIT_ERROR_NOT_READY;
   const auto& info = state.rendering.swapchain_info();
-  if (info.width == window_state.framebuffer_width &&
-      info.height == window_state.framebuffer_height)
+  const auto size_changed = info.width != window_state.framebuffer_width ||
+                            info.height != window_state.framebuffer_height;
+  if (!state.recreate_surface && !state.recreate_swapchain && !size_changed)
     return GRANIT_SUCCESS;
-  result = state.rendering.recreate_swapchain({.width = window_state.framebuffer_width,
-                                               .height = window_state.framebuffer_height,
-                                               .minimum_image_count = 2});
-  if (result.ok())
+  const granit::swapchain_desc desc{.width = window_state.framebuffer_width,
+                                    .height = window_state.framebuffer_height,
+                                    .minimum_image_count = 2};
+  result = state.recreate_surface ? state.rendering.recreate_surface(web_host.window(), desc)
+                                  : state.rendering.recreate_swapchain(desc);
+  if (result.ok()) {
+    state.recreate_surface = false;
+    state.recreate_swapchain = false;
     ++state.resize_count;
+  }
   return granit::to_native(result);
 }
 
@@ -242,7 +253,9 @@ granit::result rebuild_previews() {
 }
 
 granit_result render_model_viewer_frame(float delta_seconds) {
-  auto result = resize_swapchain_if_needed();
+  auto result = recover_presentation_if_needed();
+  if (result == GRANIT_ERROR_NOT_READY)
+    return GRANIT_SUCCESS;
   if (result != GRANIT_SUCCESS)
     return result;
   granit::window_state window_state;
@@ -312,22 +325,31 @@ granit_result render_model_viewer_frame(float delta_seconds) {
     result = granit::to_native(
         state.rendering.update_material(state.core.state().selected_material(), *changes.material));
   }
-  if (result == GRANIT_SUCCESS) {
-    granit::example::model_viewer::frame_execution_result execution;
-    result = granit::to_native(state.rendering.submit(std::move(output), execution));
-    if (result == GRANIT_SUCCESS) {
-      state.latest_performance = {.frames_per_second =
-                                      delta_seconds > 0.0F ? 1.0F / delta_seconds : 0.0F,
-                                  .cpu_frame_ms = delta_seconds * 1000.0F,
-                                  .frame_slot_wait_ms = execution.acquire_wait_ms,
-                                  .present_wait_ms = execution.present_wait_ms,
-                                  .gpu_frame_ms = execution.gpu_frame_ms,
-                                  .gpu_timing_available = execution.gpu_timing_available};
-    }
+  if (result != GRANIT_SUCCESS)
+    return result;
+  granit::example::model_viewer::frame_execution_result execution;
+  const auto submit_result = state.rendering.submit(std::move(output), execution);
+  const auto outcome = granit::example::model_viewer::classify_presentation_result(
+      submit_result, execution.needs_recreate);
+  if (outcome.action == granit::example::model_viewer::presentation_action::recreate_surface) {
+    state.recreate_surface = true;
+  } else if (outcome.action ==
+             granit::example::model_viewer::presentation_action::recreate_swapchain) {
+    state.recreate_swapchain = true;
+  } else if (outcome.action == granit::example::model_viewer::presentation_action::stop) {
+    return granit::to_native(submit_result);
   }
-  if (result == GRANIT_SUCCESS)
+  if (outcome.frame_rendered) {
+    state.latest_performance = {.frames_per_second =
+                                    delta_seconds > 0.0F ? 1.0F / delta_seconds : 0.0F,
+                                .cpu_frame_ms = delta_seconds * 1000.0F,
+                                .frame_slot_wait_ms = execution.acquire_wait_ms,
+                                .present_wait_ms = execution.present_wait_ms,
+                                .gpu_frame_ms = execution.gpu_frame_ms,
+                                .gpu_timing_available = execution.gpu_timing_available};
     ++state.rendered_frame_count;
-  return result;
+  }
+  return GRANIT_SUCCESS;
 }
 
 granit_result execute_render_quality_change(granit_sample_count sample_count, unsigned enable_fxaa,

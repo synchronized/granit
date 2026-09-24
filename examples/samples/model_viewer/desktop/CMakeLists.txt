@@ -7,7 +7,6 @@ add_library(
   granit_sample_model_viewer_desktop_shell STATIC
   desktop_options.cpp
   desktop_options.h
-  presentation_policy.h
 )
 
 add_executable(
@@ -60,7 +59,6 @@ if(GRANIT_TESTING_ENABLED)
   add_executable(
     granit_sample_model_viewer_desktop_shell_test
     desktop_options_test.cpp
-    presentation_policy_test.cpp
   )
   target_link_libraries(
     granit_sample_model_viewer_desktop_shell_test
