@@ -27,16 +27,17 @@ struct asset_batch_progress {
 };
 
 struct asset_batch_entry {
-  std::string path;
-  asset_mount mount;
-  std::string asset_path;
+  std::string resource_uri;
+  asset_mount source_mount;
+  std::string source_path;
   std::shared_ptr<asset_request> request;
 };
 
 /** 并行读取一组资源，并在全部完成后原子构造内存 resolver。 */
 class asset_batch {
 public:
-  [[nodiscard]] bool add(std::string_view path, asset_mount mount, std::string asset_path);
+  /** 添加 Resolver 查询 URI 与已经由上层解析完成的资产 Key。 */
+  [[nodiscard]] bool add(std::string_view resource_uri, asset_key source);
   [[nodiscard]] bool start(asset_system& assets);
   [[nodiscard]] asset_batch_status status() const noexcept;
   [[nodiscard]] asset_batch_progress progress() const noexcept;

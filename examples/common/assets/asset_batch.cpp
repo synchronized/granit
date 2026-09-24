@@ -10,21 +10,21 @@
 
 namespace granit::example::assets {
 
-bool asset_batch::add(std::string_view path, asset_mount mount, std::string asset_path) {
-  std::string normalized_path;
-  if (started_ || !mount.valid() || asset_path.empty() ||
-      asset_path.find('\0') != std::string::npos ||
-      !normalize_resource_path(path, normalized_path)) {
+bool asset_batch::add(std::string_view resource_uri, asset_key source) {
+  std::string normalized_uri;
+  if (started_ || !source.mount.valid() || source.path.empty() ||
+      source.path.find('\0') != std::string_view::npos ||
+      !normalize_resource_path(resource_uri, normalized_uri)) {
     return false;
   }
   if (std::ranges::any_of(entries_, [&](const asset_batch_entry& entry) {
-        return entry.path == normalized_path;
+        return entry.resource_uri == normalized_uri;
       })) {
     return false;
   }
-  entries_.push_back({.path = std::move(normalized_path),
-                      .mount = mount,
-                      .asset_path = std::move(asset_path),
+  entries_.push_back({.resource_uri = std::move(normalized_uri),
+                      .source_mount = source.mount,
+                      .source_path = std::string{source.path},
                       .request = {}});
   return true;
 }
@@ -34,7 +34,7 @@ bool asset_batch::start(asset_system& assets) {
     return false;
   started_ = true;
   for (auto& entry : entries_)
-    entry.request = assets.request({entry.mount, entry.asset_path});
+    entry.request = assets.request({entry.source_mount, entry.source_path});
   return true;
 }
 
@@ -85,7 +85,7 @@ bool asset_batch::commit(memory_resource_resolver& resolver) const {
     return false;
   memory_resource_resolver replacement;
   for (const auto& entry : entries_) {
-    if (!replacement.insert(entry.path, entry.request->bytes()))
+    if (!replacement.insert(entry.resource_uri, entry.request->bytes()))
       return false;
   }
   resolver.swap(replacement);

@@ -17,11 +17,11 @@ TEST_CASE("资产批次拒绝重复和越界资源路径", "[example][assets]") 
   assets::asset_system system;
   REQUIRE(system.initialize("example"));
   assets::asset_batch batch;
-  CHECK(batch.add("./mesh.bin", system.bundled(), "assets/mesh.bin"));
-  CHECK_FALSE(batch.add("mesh.bin", system.bundled(), "assets/duplicate.bin"));
-  CHECK_FALSE(batch.add("../escape.bin", system.bundled(), "assets/escape.bin"));
-  CHECK_FALSE(batch.add("other.bin", system.bundled(), {}));
-  CHECK_FALSE(batch.add("other.bin", {}, "assets/other.bin"));
+  CHECK(batch.add("./mesh.bin", {system.bundled(), "assets/mesh.bin"}));
+  CHECK_FALSE(batch.add("mesh.bin", {system.bundled(), "assets/duplicate.bin"}));
+  CHECK_FALSE(batch.add("../escape.bin", {system.bundled(), "assets/escape.bin"}));
+  CHECK_FALSE(batch.add("other.bin", {system.bundled(), {}}));
+  CHECK_FALSE(batch.add("other.bin", {{}, "assets/other.bin"}));
   CHECK(batch.status() == assets::asset_batch_status::idle);
 }
 
@@ -50,7 +50,8 @@ TEST_CASE("Desktop 资产批次加载并提交资源", "[example][assets]") {
   assets::asset_mount content;
   REQUIRE(system.mount(path.parent_path().string(), content));
   assets::asset_batch batch;
-  REQUIRE(batch.add("mesh.bin", content, path.filename().string()));
+  const auto source_path = path.filename().string();
+  REQUIRE(batch.add("mesh.bin", {content, source_path}));
   REQUIRE(batch.start(system));
   const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds{5};
   while (batch.status() == assets::asset_batch_status::pending &&
