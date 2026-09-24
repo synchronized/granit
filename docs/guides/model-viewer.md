@@ -10,18 +10,20 @@ Emscripten WebGPU 上显示 glTF 2.0 模型。桌面目标叠加 ImGui 调试面
 
 ## 运行时边界
 
-桌面与浏览器入口共享 `application_core`、glTF CPU Scene、GPU Scene、Viewer 状态和纯渲染帧数据，
-但平台调度保持分离：
+桌面与浏览器入口共享 `model_viewer_runtime`、`application_core`、glTF CPU Scene、GPU Scene、Viewer
+状态和纯渲染帧数据。Runtime 统一 Renderer 阶段、资产加载状态、CPU 导入、Scene/GPU 计划交接、
+失败同步、取消和重置；`render_task_executor` 统一帧与不可丢弃控制任务的执行语义：
 
 - Desktop 主线程处理 Window、Input、ImGui 和加载编排，`render_service` 在专用渲染线程拥有
   Renderer、Surface、Swapchain、Pipeline 及帧资源；普通帧允许替换，上传、质量修改、重建和销毁
-  通过不可丢弃的有序命令执行。
-- Web 在浏览器主线程使用 inline 帧执行；Fetch 和资源上传在明确边界通过 Asyncify 让出事件循环。
+  通过不可丢弃的拥有型任务有序执行。
+- Web 持久使用浏览器主线程 inline 执行器，通过相同任务协议执行上传、帧、质量修改与释放；Fetch
+  和资源上传在明确边界通过 Asyncify 让出事件循环。
   `pipeline_validation` 单独负责 WebGPU 异步 Pipeline 预热与公共 C API 生命周期验收，浏览器导出只
   校验参数并转发运行时状态和控制操作。
 
-这两条路径共享渲染结果和 Viewer 操作语义，不共享线程、Surface 恢复或异步加载状态机。它们属于
-Sample 私有实现，不会进入 Granit 安装 SDK。
+两条路径共享生命周期和任务语义，但不共享线程策略、Surface 恢复、文件/Fetch 来源或窗口循环。
+这些类型属于 Sample 私有实现，不会进入 Granit 安装 SDK。
 
 ## 构建桌面查看器
 

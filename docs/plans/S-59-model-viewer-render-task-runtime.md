@@ -5,8 +5,9 @@
 
 ## 状态
 
-**实施中，P1。** 本计划延续 S-57 的运行时拆分和 S-58 的统一资产入口，把只接收帧与无类型命令的
-`frame_executor` 提升为强类型渲染任务执行器，并在其上建立 Desktop/Web 共用的 Viewer 生命周期。
+**本地实施完成，等待远端 Linux 与浏览器验收，P1。** 本计划延续 S-57 的运行时拆分和 S-58 的
+统一资产入口，把只接收帧与无类型命令的 `frame_executor` 提升为强类型渲染任务执行器，并在其上
+建立 Desktop/Web 共用的 Viewer 生命周期。
 该能力仅服务仓库示例，不进入公共 SDK，也不改变 Granit API/ABI。
 
 ## 背景与目标
@@ -68,8 +69,10 @@ Fetch、文件系统或 ImGui Context。
 5. **S-59E 共享 Viewer Runtime（已完成）**：新增 `model_viewer_runtime` 连接
    `model_loading_session` 与 `application_core`，统一 Renderer 阶段、资产轮询、CPU 导入、Scene/计划
    交接、失败同步、取消和重置；Desktop/Web 只保留各自的 I/O、窗口循环和 GPU 执行策略。
-6. **S-59F 验收与文档**：验证 inline/threaded 语义一致性、跨平台 Sample、浏览器行为和文档边界，
-   将长期结构更新到 Model Viewer Guide。
+6. **S-59F 验收与文档（本地完成）**：Model Viewer Guide 已记录共享 Runtime、任务语义与平台
+   边界；Windows Desktop、共享单测、Emscripten Web 构建和文档检查已经通过，等待远端 Linux 与
+   浏览器行为验收。详细结果见
+   [S-59 本地验收记录](../records/2026-09-24-s59-model-viewer-render-runtime-local-acceptance.md)。
 
 ## 测试与验收
 

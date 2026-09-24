@@ -21,6 +21,7 @@
 
 ## 稳定化与跨平台
 
+- [2026-09-24 S-59 Model Viewer 渲染任务运行时本地验收](2026-09-24-s59-model-viewer-render-runtime-local-acceptance.md)
 - [2026-09-24 S-57 Model Viewer 运行时架构本地验收](2026-09-24-s57-model-viewer-runtime-local-acceptance.md)
 - [2026-09-24 S-56 Window Target 与 SDL3 后端本地验收](2026-09-24-s56-window-sdl3-local-acceptance.md)
 - [2026-09-23 S-54 特性教程与 Example Application 本地验收](2026-09-23-s54-feature-tutorial-acceptance.md)
