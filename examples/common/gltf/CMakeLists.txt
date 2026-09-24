@@ -84,10 +84,14 @@ set_target_properties(granit_example_gltf_dependencies PROPERTIES FOLDER "Exampl
 
 add_library(
   granit_example_gltf_support STATIC
+  cgltf_implementation.cpp
   document_loader.cpp
   document_loader.h
+  document_manifest.cpp
+  document_manifest.h
   image_decoder.cpp
-  loader.cpp
+  importer.cpp
+  importer.h
 )
 if(MSVC OR WIN32)
   target_compile_definitions(granit_example_gltf_support PRIVATE _CRT_SECURE_NO_WARNINGS)
@@ -103,7 +107,7 @@ set_target_properties(granit_example_gltf_support PROPERTIES FOLDER "Examples")
 granit_target_compile_warnings(granit_example_gltf_support)
 
 if(GRANIT_HAS_NATIVE_WINDOW AND GRANIT_TESTING_ENABLED)
-  add_executable(granit_example_gltf_support_test loader_test.cpp)
+  add_executable(granit_example_gltf_support_test gltf_test.cpp)
   target_link_libraries(
     granit_example_gltf_support_test
     PRIVATE granit_example_gltf_support Catch2::Catch2WithMain

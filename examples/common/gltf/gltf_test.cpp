@@ -5,8 +5,9 @@
 
 #include "assets/resource_resolver.h"
 #include "gltf/document_loader.h"
+#include "gltf/document_manifest.h"
 #include "gltf/fixtures/minimal_scene_glb.h"
-#include "gltf/loader.h"
+#include "gltf/importer.h"
 
 #include <array>
 #include <chrono>
@@ -39,10 +40,10 @@ private:
   std::string path_;
 };
 
-bool cancel_load(const granit::example::gltf::load_progress& progress, void* user_data) {
+bool cancel_import(const granit::example::gltf::import_progress& progress, void* user_data) {
   auto& calls = *static_cast<std::uint32_t*>(user_data);
   ++calls;
-  return progress.stage != granit::example::gltf::load_stage::document;
+  return progress.stage != granit::example::gltf::import_stage::document;
 }
 
 TEST_CASE("发现 glTF 外部资源并去重") {
@@ -64,14 +65,14 @@ TEST_CASE("发现 glTF 外部资源并去重") {
   CHECK(resources[1] == "textures/base.png");
 }
 
-TEST_CASE("glTF Loader 在阶段边界支持取消且保留输出") {
+TEST_CASE("glTF Importer 在阶段边界支持取消且保留输出") {
   constexpr std::string_view document = R"({"asset":{"version":"2.0"}})";
   granit::example::gltf::scene scene;
   scene.nodes.emplace_back();
   std::uint32_t calls{};
   const auto result =
-      granit::example::gltf::load(bytes(document), nullptr, scene, cancel_load, &calls);
-  CHECK(result.error == granit::example::gltf::load_error::cancelled);
+      granit::example::gltf::import_scene(bytes(document), nullptr, scene, cancel_import, &calls);
+  CHECK(result.error == granit::example::gltf::import_error::cancelled);
   CHECK(calls == 1);
   CHECK(scene.nodes.size() == 1);
 }
@@ -83,7 +84,7 @@ TEST_CASE("发现外部资源失败时保留原输出") {
   const auto result =
       granit::example::gltf::discover_external_resources(bytes(document), resources);
   CHECK_FALSE(result);
-  CHECK(result.error == granit::example::gltf::load_error::invalid_resource_uri);
+  CHECK(result.error == granit::example::gltf::document_manifest_error::invalid_resource_uri);
   REQUIRE(resources.size() == 1);
   CHECK(resources.front() == "keep.bin");
 }
@@ -185,7 +186,7 @@ TEST_CASE("glTF CPU Scene 使用自有存储", "[example][gltf][scene]") {
   CHECK(scene.roots.front() == 0);
 }
 
-TEST_CASE("glTF Loader 转换 Node 层级和 TRS", "[example][gltf][loader]") {
+TEST_CASE("glTF Importer 转换 Node 层级和 TRS", "[example][gltf][importer]") {
   constexpr std::string_view document = R"({
     "asset":{"version":"2.0"},
     "scene":0,
@@ -194,7 +195,7 @@ TEST_CASE("glTF Loader 转换 Node 层级和 TRS", "[example][gltf][loader]") {
              {"name":"child","matrix":[1,0,0,0,0,1,0,0,0,0,1,0,4,5,6,1]}]
   })";
   granit::example::gltf::scene scene;
-  const auto result = granit::example::gltf::load(bytes(document), nullptr, scene);
+  const auto result = granit::example::gltf::import_scene(bytes(document), nullptr, scene);
   REQUIRE(result);
   REQUIRE(scene.nodes.size() == 2);
   CHECK(scene.roots == std::vector<std::uint32_t>{0});
@@ -209,27 +210,27 @@ TEST_CASE("glTF Loader 转换 Node 层级和 TRS", "[example][gltf][loader]") {
   CHECK(scene.nodes[1].world_transform[14] == 9.0F);
 }
 
-TEST_CASE("glTF Loader 读取仓库固定 GLB Fixture", "[example][gltf][loader][fixture]") {
+TEST_CASE("glTF Importer 读取仓库固定 GLB Fixture", "[example][gltf][importer][fixture]") {
   const auto& fixture = granit::example::gltf::fixtures::minimal_scene_glb;
   const std::span document{reinterpret_cast<const std::byte*>(fixture), sizeof(fixture)};
   granit::example::gltf::scene scene;
-  const auto result = granit::example::gltf::load(document, nullptr, scene);
+  const auto result = granit::example::gltf::import_scene(document, nullptr, scene);
   REQUIRE(result);
   REQUIRE(scene.nodes.size() == 1);
   CHECK(scene.nodes[0].name == "fixture");
 }
 
-TEST_CASE("glTF Loader 失败时保持输出不变", "[example][gltf][loader]") {
+TEST_CASE("glTF Importer 失败时保持输出不变", "[example][gltf][importer]") {
   granit::example::gltf::scene scene;
   scene.nodes.emplace_back().name = "保留";
-  const auto result = granit::example::gltf::load({}, nullptr, scene);
+  const auto result = granit::example::gltf::import_scene({}, nullptr, scene);
   CHECK_FALSE(result);
-  CHECK(result.error == granit::example::gltf::load_error::truncated_data);
+  CHECK(result.error == granit::example::gltf::import_error::truncated_data);
   REQUIRE(scene.nodes.size() == 1);
   CHECK(scene.nodes.front().name == "保留");
 }
 
-TEST_CASE("glTF Loader 读取 Primitive、索引和 AABB", "[example][gltf][loader]") {
+TEST_CASE("glTF Importer 读取 Primitive、索引和 AABB", "[example][gltf][importer]") {
   constexpr std::string_view document = R"({
     "asset":{"version":"2.0"},
     "buffers":[{"uri":"scene.bin","byteLength":78}],
@@ -254,7 +255,7 @@ TEST_CASE("glTF Loader 读取 Primitive、索引和 AABB", "[example][gltf][load
 
   const memory_resolver resolver(std::move(buffer));
   granit::example::gltf::scene scene;
-  const auto result = granit::example::gltf::load(bytes(document), &resolver, scene);
+  const auto result = granit::example::gltf::import_scene(bytes(document), &resolver, scene);
   REQUIRE(result);
   REQUIRE(scene.meshes.size() == 1);
   const auto& primitive = scene.meshes.front().primitives.front();
@@ -265,7 +266,7 @@ TEST_CASE("glTF Loader 读取 Primitive、索引和 AABB", "[example][gltf][load
   CHECK(primitive.local_bounds.maximum == granit::math::float3{3, 4, 1});
 }
 
-TEST_CASE("glTF Loader 读取 GLB 内嵌 BIN", "[example][gltf][loader][glb]") {
+TEST_CASE("glTF Importer 读取 GLB 内嵌 BIN", "[example][gltf][importer][glb]") {
   std::vector<std::byte> binary;
   for (const float value : {0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 1.0F, 1.0F, 0.0F, 0.0F, 0.0F, 0.0F, 1.0F,
                             0.0F, 1.0F, 0.0F, 0.0F, 0.0F, 1.0F})
@@ -275,14 +276,14 @@ TEST_CASE("glTF Loader 读取 GLB 内嵌 BIN", "[example][gltf][loader][glb]") {
       std::move(binary));
 
   granit::example::gltf::scene scene;
-  const auto result = granit::example::gltf::load(glb, nullptr, scene);
+  const auto result = granit::example::gltf::import_scene(glb, nullptr, scene);
   INFO(result.diagnostic);
   REQUIRE(result);
   REQUIRE(scene.meshes.size() == 1);
   CHECK(scene.meshes[0].primitives[0].indices == std::vector<std::uint32_t>{0, 1, 2});
 }
 
-TEST_CASE("glTF Loader 读取 Base64 Data URI Buffer", "[example][gltf][loader][data-uri]") {
+TEST_CASE("glTF Importer 读取 Base64 Data URI Buffer", "[example][gltf][importer][data-uri]") {
   constexpr std::string_view document = R"({
     "asset":{"version":"2.0"},
     "buffers":[{"uri":"data:application/octet-stream;base64,AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAA","byteLength":36}],
@@ -292,14 +293,14 @@ TEST_CASE("glTF Loader 读取 Base64 Data URI Buffer", "[example][gltf][loader][
     "nodes":[{"mesh":0}],"scenes":[{"nodes":[0]}],"scene":0
   })";
   granit::example::gltf::scene scene;
-  const auto result = granit::example::gltf::load(bytes(document), nullptr, scene);
+  const auto result = granit::example::gltf::import_scene(bytes(document), nullptr, scene);
   INFO(result.diagnostic);
   REQUIRE(result);
   REQUIRE(scene.meshes.size() == 1);
   CHECK(scene.meshes[0].primitives[0].positions.size() == 3);
 }
 
-TEST_CASE("glTF Loader 解码 PBR Material 图片与 Sampler", "[example][gltf][loader]") {
+TEST_CASE("glTF Importer 解码 PBR Material 图片与 Sampler", "[example][gltf][importer]") {
   constexpr std::string_view document = R"({
     "asset":{"version":"2.0"},
     "images":[{"name":"pixel","uri":"pixel.png"}],
@@ -321,7 +322,7 @@ TEST_CASE("glTF Loader 解码 PBR Material 图片与 Sampler", "[example][gltf][
   const memory_resolver resolver(std::move(encoded), "pixel.png");
 
   granit::example::gltf::scene scene;
-  const auto result = granit::example::gltf::load(bytes(document), &resolver, scene);
+  const auto result = granit::example::gltf::import_scene(bytes(document), &resolver, scene);
   REQUIRE(result);
   REQUIRE(scene.images.size() == 1);
   REQUIRE(scene.images[0].mips.size() == 1);
@@ -339,25 +340,25 @@ TEST_CASE("glTF Loader 解码 PBR Material 图片与 Sampler", "[example][gltf][
   CHECK(scene.samplers[0].wrap_v == 33071);
 }
 
-TEST_CASE("glTF Loader 区分资源和数据错误", "[example][gltf][loader][error]") {
+TEST_CASE("glTF Importer 区分资源和数据错误", "[example][gltf][importer][error]") {
   SECTION("拒绝不安全 URI") {
     constexpr std::string_view document =
         R"({"asset":{"version":"2.0"},"buffers":[{"uri":"../scene.bin","byteLength":1}]})";
     const memory_resolver resolver({std::byte{1}});
     granit::example::gltf::scene scene;
-    const auto result = granit::example::gltf::load(bytes(document), &resolver, scene);
-    CHECK(result.error == granit::example::gltf::load_error::invalid_resource_uri);
+    const auto result = granit::example::gltf::import_scene(bytes(document), &resolver, scene);
+    CHECK(result.error == granit::example::gltf::import_error::invalid_resource_uri);
   }
 
   SECTION("区分资源缺失和截断") {
     constexpr std::string_view document =
         R"({"asset":{"version":"2.0"},"buffers":[{"uri":"scene.bin","byteLength":4}]})";
     granit::example::gltf::scene scene;
-    CHECK(granit::example::gltf::load(bytes(document), nullptr, scene).error ==
-          granit::example::gltf::load_error::missing_resource);
+    CHECK(granit::example::gltf::import_scene(bytes(document), nullptr, scene).error ==
+          granit::example::gltf::import_error::missing_resource);
     const memory_resolver resolver({std::byte{1}});
-    CHECK(granit::example::gltf::load(bytes(document), &resolver, scene).error ==
-          granit::example::gltf::load_error::truncated_data);
+    CHECK(granit::example::gltf::import_scene(bytes(document), &resolver, scene).error ==
+          granit::example::gltf::import_error::truncated_data);
   }
 
   SECTION("区分 Accessor 越界") {
@@ -368,8 +369,8 @@ TEST_CASE("glTF Loader 区分资源和数据错误", "[example][gltf][loader][er
     })";
     const memory_resolver resolver(std::vector<std::byte>(12));
     granit::example::gltf::scene scene;
-    CHECK(granit::example::gltf::load(bytes(document), &resolver, scene).error ==
-          granit::example::gltf::load_error::accessor_out_of_bounds);
+    CHECK(granit::example::gltf::import_scene(bytes(document), &resolver, scene).error ==
+          granit::example::gltf::import_error::accessor_out_of_bounds);
   }
 
   SECTION("区分图片解码失败") {
@@ -377,8 +378,8 @@ TEST_CASE("glTF Loader 区分资源和数据错误", "[example][gltf][loader][er
         R"({"asset":{"version":"2.0"},"images":[{"uri":"bad.png"}]})";
     const memory_resolver resolver({std::byte{1}, std::byte{2}}, "bad.png");
     granit::example::gltf::scene scene;
-    CHECK(granit::example::gltf::load(bytes(document), &resolver, scene).error ==
-          granit::example::gltf::load_error::image_decode_failed);
+    CHECK(granit::example::gltf::import_scene(bytes(document), &resolver, scene).error ==
+          granit::example::gltf::import_error::image_decode_failed);
   }
 
   SECTION("拒绝未支持的材质扩展") {
@@ -387,8 +388,8 @@ TEST_CASE("glTF Loader 区分资源和数据错误", "[example][gltf][loader][er
       "materials":[{"extensions":{"KHR_materials_clearcoat":{"clearcoatFactor":1.0}}}]
     })";
     granit::example::gltf::scene scene;
-    CHECK(granit::example::gltf::load(bytes(document), nullptr, scene).error ==
-          granit::example::gltf::load_error::unsupported_feature);
+    CHECK(granit::example::gltf::import_scene(bytes(document), nullptr, scene).error ==
+          granit::example::gltf::import_error::unsupported_feature);
   }
 
   SECTION("可选 Transmission 使用核心 PBR 回退") {
@@ -398,7 +399,7 @@ TEST_CASE("glTF Loader 区分资源和数据错误", "[example][gltf][loader][er
                     "pbrMetallicRoughness":{"metallicFactor":0.2}}]
     })";
     granit::example::gltf::scene scene;
-    const auto result = granit::example::gltf::load(bytes(document), nullptr, scene);
+    const auto result = granit::example::gltf::import_scene(bytes(document), nullptr, scene);
     REQUIRE(result);
     REQUIRE(scene.materials.size() == 1);
     CHECK(scene.materials.front().metallic == Catch::Approx(0.2F));
@@ -412,7 +413,7 @@ TEST_CASE("glTF Loader 区分资源和数据错误", "[example][gltf][loader][er
       "materials":[{"extensions":{"KHR_materials_transmission":{"transmissionFactor":1.0}}}]
     })";
     granit::example::gltf::scene scene;
-    CHECK(granit::example::gltf::load(bytes(document), nullptr, scene).error ==
-          granit::example::gltf::load_error::unsupported_feature);
+    CHECK(granit::example::gltf::import_scene(bytes(document), nullptr, scene).error ==
+          granit::example::gltf::import_error::unsupported_feature);
   }
 }

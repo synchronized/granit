@@ -140,8 +140,8 @@ bool report_upload_progress(
   return !state.upload_cancel_requested;
 }
 
-const char* load_stage_name(granit::example::gltf::load_stage stage) noexcept {
-  using enum granit::example::gltf::load_stage;
+const char* load_stage_name(granit::example::gltf::import_stage stage) noexcept {
+  using enum granit::example::gltf::import_stage;
   switch (stage) {
   case document:
     return "document";
@@ -159,7 +159,7 @@ const char* load_stage_name(granit::example::gltf::load_stage stage) noexcept {
   return "unknown";
 }
 
-bool report_load_progress(const granit::example::gltf::load_progress& progress, void*) {
+bool report_load_progress(const granit::example::gltf::import_progress& progress, void*) {
   std::printf("GRANIT_PROGRESS:%s:%u:%u\n", load_stage_name(progress.stage), progress.completed,
               progress.total);
   emscripten_sleep(0);

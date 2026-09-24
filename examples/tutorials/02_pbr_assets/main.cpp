@@ -3,7 +3,7 @@
 
 #include "application/application.h"
 #include "assets/asset_store_resolver.h"
-#include "gltf/loader.h"
+#include "gltf/importer.h"
 #include "imgui/imgui_font_atlas.h"
 #include "imgui/imgui_input.h"
 #include "imgui/imgui_texture_registry.h"
@@ -140,7 +140,7 @@ private:
     }
 
     granit::example::assets::asset_store_resolver resolver{assets(), "tutorials/02_pbr_assets"};
-    const auto loaded = granit::example::gltf::load(document, &resolver, model_scene_);
+    const auto loaded = granit::example::gltf::import_scene(document, &resolver, model_scene_);
     if (!loaded) {
       std::cerr << "Failed to load Suzanne model: " << loaded.diagnostic << '\n';
       return granit::result::invalid_argument;

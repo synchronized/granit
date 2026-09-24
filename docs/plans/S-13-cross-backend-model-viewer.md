@@ -29,7 +29,7 @@ glTF 首阶段只是示例输入格式，加载代码位于 `examples/common/glt
 - 不在本任务发布通用 glTF Integration SDK。
 - 不支持 glTF 的动画、蒙皮、Morph、压缩扩展或全部材质扩展。
 - 不建立 Gneiss 的资产格式、RID、缓存或编辑器工程模型。
-- 不把示例加载器放进 `granit` 核心目标或安装导出。
+- 不把示例导入器放进 `granit` 核心目标或安装导出。
 - 不使用许可证限制不明确或不适合再分发的模型作为仓库默认资产。
 
 ## 已确认决策
@@ -37,7 +37,7 @@ glTF 首阶段只是示例输入格式，加载代码位于 `examples/common/glt
 - 示例加载代码放在 `examples/common/gltf`，构建为不安装、不导出的内部目标
   `granit_example_gltf_support`。
 - `cgltf` 和图片解码器只作为该目标的私有实现依赖，类型不得出现在 Granit 公共头文件中。
-- 加载器输出后端无关的 CPU Scene、Mesh、Primitive、Material 和 Image 数据；GPU 上传由查看器完成。
+- 导入器输出后端无关的 CPU Scene、Mesh、Primitive、Material 和 Image 数据；GPU 上传由查看器完成。
 - 默认评估 `FlightHelmet` 等 CC0 资产；若采用其他模型，必须保存来源、版本、许可证和署名。
 - 桌面窗口与输入优先复用 SDL3 Integration；ImGui 继续通过现有 Draw Data 转换入口渲染。
 - 浏览器目标复用相同查看器核心，平台层只负责主循环、Canvas、输入与资源获取。
@@ -72,8 +72,9 @@ S-13A 的交付物包含依赖锁定记录、第三方通知、资产 manifest�
 
 ### S-13B CPU Scene 与加载契约
 
-实现位于 `examples/common/gltf`，建议拆分为 `scene.h`、`loader.h/.cpp`、
-`image_decoder.h/.cpp` 和目录内 `CMakeLists.txt`。`scene.h` 是示例私有的 CPU 数据契约，
+实现位于 `examples/common/gltf`，由 `document_manifest` 扫描外部 URI，`document_loader` 编排资源
+读取，`importer` 将完整文档转换为 `scene`，`image_decoder` 负责图片解码。`scene.h` 是示例私有的
+CPU 数据契约，
 不安装且不包含 `cgltf_*`、GPU 句柄或后端类型。
 
 CPU Scene 包含以下所有权对象：
@@ -90,8 +91,8 @@ CPU Scene 包含以下所有权对象：
 
 加载入口接受主文档字节 Span 和只读资源解析回调并填充输出 Scene，不直接访问文件系统；因此桌面
 文件、浏览器 Fetch 和内嵌 Fixture 可复用同一解析路径。首轮接受 GLB 内嵌 Buffer/Image，以及
-`.gltf` 中不含 Scheme、查询、Fragment、绝对路径或父目录跳转的相对 URI。Data URI 和网络获取
-不进入解析器；资源层必须在调用 Loader 前完成获取，并由回调按规范化 URI 返回只读字节。
+`.gltf` 中不含 Scheme、查询、Fragment、绝对路径或父目录跳转的相对 URI。Importer 可直接解码
+Base64 Data URI Buffer；网络获取由资源层在导入前完成，并由 Resolver 按规范化 URI 返回字节。
 
 - 坐标保持 glTF 右手、Y 向上语义；矩阵转为 Granit 列主序数值，不翻转顶点、
   索引绕序或纹理 V 坐标。剪裁空间差异由 Renderer/HAL 收敛，模型查看器的矩阵、WGSL 与由其
@@ -103,7 +104,7 @@ CPU Scene 包含以下所有权对象：
 - 未列入首版范围的可选材质扩展忽略其扩展字段，并保留核心 Metallic/Roughness 回退；同一扩展
   若出现在 `extensionsRequired` 中则明确拒绝，避免静默生成错误画面。
 - 解析成功后 Scene 不借用输入 Span 或第三方内存；失败保持输出不变。
-- 错误由示例私有 `load_error` 与可选诊断文本返回，区分非法 GLB、截断数据、
+- 错误由示例私有 `import_error` 与可选诊断文本返回，区分非法 GLB、截断数据、
   越界 Accessor、不支持 Feature、图片解码失败、数值溢出与内存不足。
 
 单元测试覆盖 Node 层级、TRS/矩阵、交错 Accessor、索引归一化、材质纹理语义、
@@ -268,7 +269,7 @@ Present 等待和 GPU 时间的 p50、p95 与最大值；不可用 GPU 样本不
 
 ### S-13F 三端启动与资源流程
 
-共享应用核心构建为不安装的 `granit_model_viewer_core` 静态目标，拥有 Loader、
+共享应用核心构建为不安装的 `granit_model_viewer_core` 静态目标，拥有 Importer、
 CPU/GPU Scene、Orbit Camera、Viewer State、ImGui 面板与单帧 `tick`。它不提供 `main`、
 不创建原生窗口，也不包含桌面或浏览器条件编译。
 
@@ -281,10 +282,10 @@ Snapshot、预填充 Render Pipeline 描述并收集性能样本；平台输出�
 Emscripten 类型的输入适配与异步资产请求状态；请求 generation 会拒绝取消或重载后的迟到回调。
 Emscripten Fetch 传输已使用共享请求状态保护回调生命周期，并将 HTTP/空响应诊断写回请求状态。
 浏览器资源 Bundle 会规范化并拥有预取的 `.bin` 与纹理字节，再通过现有同步 Resolver 契约交给
-Loader。Loader 支持在不加载资源的情况下先发现并去重 glTF 外部 URI，拒绝不安全路径且在失败时
-保留调用方原列表，为浏览器“两阶段 Fetch”提供单一资源清单来源。Emscripten 构建复用相同的
-Loader 与锁定 `cgltf`/`stb_image` 依赖；浏览器 Fixture 已验证主文档 Fetch、URI 发现、外部资源
-批量 Fetch、Bundle 提交与同步 Loader 的完整链路。Web 壳现已链接完整 Core，并在 Renderer 就绪后
+Importer。`document_manifest` 在不加载资源的情况下发现并去重 glTF 外部 URI，拒绝不安全路径且
+在失败时保留调用方原列表，为浏览器“两阶段 Fetch”提供单一资源清单来源。Emscripten 构建复用相同的
+Importer 与锁定 `cgltf`/`stb_image` 依赖；浏览器 Fixture 已验证主文档 Fetch、URI 发现、外部资源
+批量 Fetch、Bundle 提交与同步 Importer 的完整链路。Web 壳现已链接完整 Core，并在 Renderer 就绪后
 通过相同状态机完成资产解析与 GPU Scene 上传；真正的模型查看器帧循环与 ImGui 接入仍待完成。
 
 浏览器接入完整 `application_core` 前先统一共享模块构建，禁止仅编译 Core 的 CPU 方法并依赖链接器
@@ -317,7 +318,7 @@ Smoke 会持续覆盖该路径。下一步接入浏览器帧循环，不能以 W
 
 帧循环预检进一步清理了同类跨后端假设：Scene Snapshot、Canvas、Debug Draw、Text Atlas 与 Text
 Draw List 不再依赖 Pipeline Cache 能力；Wasm32 的 Scene Snapshot V1 尾字段尺寸也已修正。glTF
-Loader 现支持标准 Base64 Data URI Buffer，浏览器 Fixture 已升级为带节点、材质和真实三角形的场景，
+Importer 现支持标准 Base64 Data URI Buffer，浏览器 Fixture 已升级为带节点、材质和真实三角形的场景，
 同时保留外部 `.bin` 请求验证两阶段 Fetch。WebGPU Pipeline 已补齐 `RGBA16_FLOAT` Render Target 与
 Depth Bias 传递；共享 Core 的 `tick` 和 Scene Snapshot 已能进入真实首帧，剩余阻塞位于后续 PBR
 Render 命令能力。现已补齐比较采样器、零颜色附件的 Depth-only Pipeline/Render Pass，以及
@@ -353,11 +354,11 @@ Device Lost 明确终止并保留错误结果。真实 Dawn 验收仍待匹配 S
   Canvas Surface、`requestAnimationFrame` 主循环及 Keyboard/Pointer/Wheel 事件留在 `web/`
   薄壳中。壳层将事件同时送入 ImGui IO 和规范化 `viewer_input`。
 
-资源来源抽象为只读字节请求，完成后才调用 S-13B Loader：桌面壳异步读取
+资源来源抽象为只读字节请求，完成后才调用 S-13B Importer：桌面壳异步读取
 `--asset=<path>`；浏览器壳通过 Fetch 读取 URL。小型 Smoke Fixture 可预加载，
 完整 FlightHelmet 作为独立缓存资源提供，不嵌入 Wasm/JS 或桌面可执行文件。浏览器资源批次
 统一跟踪主文档引用的 `.bin` 与纹理请求；只有全部成功后才原子提交到只读 Resource Bundle，
-任一请求失败或仍在进行时均不会把不完整资源交给同步 Loader。
+任一请求失败或仍在进行时均不会把不完整资源交给同步 Importer。
 
 启动是显式状态机：`platform_ready`、`renderer_pending`、`asset_loading`、
 `gpu_upload`、`ready`、`failed`。WebGPU 设备异步创建期间不进入 Scene 上传；失败页面/窗口
@@ -380,7 +381,7 @@ Emscripten 预设构建。两者都不进入 Granit 安装导出，且不复制�
 
 验收分为四层，不用一个可视化窗口 Smoke 代替可定位的单元和像素回归：
 
-1. **CPU 契约**：Loader、Scene、Camera、UI State、资源打包与统计在无 GPU 环境运行。
+1. **CPU 契约**：Importer、Scene、Camera、UI State、资源打包与统计在无 GPU 环境运行。
 2. **离屏 GPU Fixture**：仓库内小型 GLB 在 Vulkan 与桌面 Dawn 上通过同一公共路径
    上传和绘制，不创建窗口；浏览器在 Chromium WebGPU 中运行同一 Fixture。
 3. **交互 Smoke**：运行 60 帧，注入环绕、缩放、选择、ImGui 修改和一次 Resize，
@@ -425,7 +426,7 @@ S-14，不在 S-13 实施中预先安装或导出 glTF 加载层。
 ## 实施顺序
 
 1. **S-13A 资产与依赖评估**：锁定模型、`cgltf`、图片解码器版本、许可证及获取/打包方式。
-2. **S-13B 示例加载器**：解析 GLB、节点变换、Primitive、索引、顶点属性、PBR 材质和图片。
+2. **S-13B 示例导入器**：解析 GLB、节点变换、Primitive、索引、顶点属性、PBR 材质和图片。
 3. **S-13C GPU 场景**：创建 Mesh、纹理、Sampler、材质、动态 Uniform Arena 和逐帧绘制数据。
 4. **S-13D 查看器交互**：实现轨道相机、自动聚焦、调整窗口和鼠标/键盘操作。
 5. **S-13E ImGui 面板**：显示层级、材质、灯光、曝光、后端、FPS 与 CPU/GPU 帧时间。
@@ -434,7 +435,7 @@ S-14，不在 S-13 实施中预先安装或导出 glTF 加载层。
 
 ## 测试与验收
 
-- 加载器覆盖有效 GLB、截断数据、非法索引、缺失属性、不支持扩展和图片解码失败。
+- 导入器覆盖有效 GLB、截断数据、非法索引、缺失属性、不支持扩展和图片解码失败。
 - CPU Scene 不包含后端类型，同一加载结果可分别上传到 Vulkan 与 WebGPU Renderer。
 - 三个目标均可显示模型、操作相机并渲染 ImGui；后端差异只通过能力查询处理。
 - 固定相机下的轮廓、深度和关键材质区域满足量化容差；截图差异不得通过扩大阈值掩盖。
@@ -446,5 +447,5 @@ S-14，不在 S-13 实施中预先安装或导出 glTF 加载层。
 - 浏览器 ImGui Platform Backend、字体和模型资源加载需要与 Emscripten 主循环共同验证。
 - PBR 最终画面还受色彩空间、切线、Mip、环境光和 Tone Mapping 差异影响，验收应分层比较。
 - 完整模型适合按锁定版本下载或使用可选资产包，具体缓存策略在 S-13A 决定。
-- 当至少两个非示例 Consumer 需要复用加载器，且 CPU 数据模型经过查看器验证后，再启动 S-14，
+- 当至少两个非示例 Consumer 需要复用导入器，且 CPU 数据模型经过查看器验证后，再启动 S-14，
   将其提升为正式 `granit::integration_gltf`；否则继续保持示例私有实现。

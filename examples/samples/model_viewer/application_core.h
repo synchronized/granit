@@ -4,7 +4,7 @@
 #ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_APPLICATION_CORE_H_
 #define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_APPLICATION_CORE_H_
 
-#include "gltf/loader.h"
+#include "gltf/importer.h"
 #include "imgui/frame_canvas_data.h"
 #include "model_viewer/gpu_scene.h"
 #include "model_viewer/performance_history.h"
@@ -61,7 +61,7 @@ public:
   [[nodiscard]] granit::result renderer_ready() noexcept;
   [[nodiscard]] granit::result load_asset(std::span<const std::byte> bytes,
                                           const assets::resource_resolver* resolver,
-                                          gltf::load_progress_callback progress = nullptr,
+                                          gltf::import_progress_callback progress = nullptr,
                                           void* progress_user_data = nullptr);
   [[nodiscard]] granit::result accept_scene(gltf::scene scene);
   /** 接收已经在资产线程完成打包的 CPU Scene 与 GPU 创建计划。 */

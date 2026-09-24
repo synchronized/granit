@@ -28,7 +28,7 @@
 ## 非目标
 
 - 不修改 Granit 公共 C/C++ API、ABI 或 Vulkan 封装边界。
-- 不把 glTF Loader、应用壳、Model Viewer 执行器或 Web 资源系统提升为公共 SDK。
+- 不把 glTF Importer、应用壳、Model Viewer 执行器或 Web 资源系统提升为公共 SDK。
 - 不把 glTF 解析或 GPU 上传并入资产字节读取状态机。
 - 不新增第三方依赖。
 - 不改变 sample 和 tutorial 的用户可见功能；必要的内部 target 名称可以同步调整。
@@ -86,9 +86,9 @@ validation ──────────────────┘
    Packet 已经保持后端无关；重复主要位于主文档/外部资源编排、窗口呈现和输入适配。Desktop 使用
    带背压的独立渲染线程，Web 使用 inline executor 并承担 C ABI 浏览器验收，不能直接套用当前
    单线程 `application` 而丢失执行语义。
-6. **S-55F glTF 文档资源收敛（已完成）**：新增 `gltf::document_loader`，统一主文档读取、外部 URI
-   发现、批量加载、Resolver 提交、取消、进度和结构化失败；Desktop/Web Model Viewer 不再各自
-   维护这套状态机。
+6. **S-55F glTF 文档资源收敛（已完成）**：`document_manifest` 只扫描外部 URI，
+   `document_loader` 统一主文档读取、批量加载、Resolver 提交、取消、进度和结构化失败，
+   `importer` 专门将完整文档导入 CPU Scene；Desktop/Web Model Viewer 不再各自维护资源状态机。
 7. **S-55G Application 能力整理（部分完成）**：已抽出不拥有 Renderer 的 `application_host`，
    统一 Window、事件循环和异步资产服务；现有 `application` 在其上提供可配置的 inline
    Renderer/Swapchain 与不依赖 Acquire 的 update hook。Web Model Viewer 已接入 Host，同时保留

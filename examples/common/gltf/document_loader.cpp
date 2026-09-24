@@ -4,7 +4,7 @@
 #include "gltf/document_loader.h"
 
 #include "assets/asset_request.h"
-#include "gltf/loader.h"
+#include "gltf/document_manifest.h"
 
 #include <new>
 #include <utility>
@@ -31,6 +31,20 @@ document_load_error batch_error(const assets::asset_batch& batch) noexcept {
     }
   }
   return document_load_error::resource_read;
+}
+
+document_load_error manifest_error(document_manifest_error error) noexcept {
+  switch (error) {
+  case document_manifest_error::invalid_resource_uri:
+    return document_load_error::invalid_location;
+  case document_manifest_error::out_of_memory:
+    return document_load_error::out_of_memory;
+  case document_manifest_error::none:
+  case document_manifest_error::invalid_document:
+  case document_manifest_error::truncated_data:
+    return document_load_error::invalid_document;
+  }
+  return document_load_error::invalid_document;
 }
 
 } // namespace
@@ -75,7 +89,7 @@ void document_loader::poll() {
       std::vector<std::string> resources;
       const auto discovery = discover_external_resources(document_request_->bytes(), resources);
       if (!discovery) {
-        fail(document_load_error::invalid_document, discovery.diagnostic);
+        fail(manifest_error(discovery.error), discovery.diagnostic);
         return;
       }
       for (const auto& resource : resources) {

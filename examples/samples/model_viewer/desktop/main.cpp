@@ -798,8 +798,8 @@ int main(int argc, char** argv) {
     cpu_loading = std::async(std::launch::async, [&] {
       cpu_asset_result output;
       loading_stage.store(3, std::memory_order_release);
-      const auto loaded = granit::example::gltf::load(document_loader.document(),
-                                                      &document_loader.resolver(), output.scene);
+      const auto loaded = granit::example::gltf::import_scene(
+          document_loader.document(), &document_loader.resolver(), output.scene);
       if (!loaded) {
         output.status = granit::result::invalid_argument;
         output.diagnostic = loaded.diagnostic;

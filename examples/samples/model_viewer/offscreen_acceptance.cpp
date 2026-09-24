@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "application_core.h"
-#include "gltf/loader.h"
+#include "gltf/importer.h"
 #include "validation/screenshot_comparison.h"
 
 #include <granit/granit.hpp>
