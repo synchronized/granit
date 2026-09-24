@@ -4,22 +4,22 @@
 # 运行跨后端模型查看器
 
 本指南说明如何使用同一套 CPU Scene、GPU Scene 和 Render Pipeline，在桌面 Vulkan 与浏览器
-Emscripten WebGPU 上显示 glTF 2.0 模型。桌面目标叠加 ImGui 调试面板；该示例及其 glTF 加载器
+Emscripten WebGPU 上显示 glTF 2.0 模型。两个目标叠加同一套 ImGui 调试面板；该示例及其 glTF 加载器
 不属于 Granit 安装 SDK。本指南只负责模型资产、桌面运行、性能和固定画面验收；Emscripten
 工具链、浏览器服务和通用浏览器测试见[浏览器 WebGPU 指南](webgpu-browser-example.md)。
 
 ## 运行时边界
 
-桌面与浏览器入口共享 `model_viewer_runtime`、`application_core`、`render_runtime`、glTF CPU Scene、
-GPU Scene、Viewer 状态和纯渲染帧数据。Viewer Runtime 统一 Renderer 阶段、资产加载状态、CPU
+桌面与浏览器入口共享 `model_viewer_runtime`、`application_core`、`render_runtime`、`viewer_ui`、
+glTF CPU Scene、GPU Scene、Viewer 状态和纯渲染帧数据。Viewer Runtime 统一 Renderer 阶段、资产加载状态、CPU
 导入、Scene/GPU 计划交接、失败同步、取消和重置；Render Runtime 统一 Renderer、Surface、
 Swapchain、Pipeline、Scene 上传、质量切换、帧执行和释放；`render_task_executor` 统一帧与不可丢弃
 控制任务的执行语义：
 
-- Desktop 主线程处理 Window、Input、ImGui 和加载编排，`render_thread` 通过专用线程调用共享
+- Desktop 主线程处理 Window、Input、共享 ImGui 前端和加载编排，`render_thread` 通过专用线程调用共享
   Render Runtime；普通帧允许替换，上传、质量修改、重建和销毁通过不可丢弃的拥有型任务有序执行。
-- Web 持久使用浏览器主线程 inline 执行器调用同一个 Render Runtime；Fetch 和资源上传在明确边界
-  通过 Asyncify 让出事件循环。
+- Web 持久使用浏览器主线程 inline 执行器调用同一个 Render Runtime，并将 Window/Input 事件交给
+  同一个 `viewer_ui`；Fetch 和资源上传在明确边界通过 Asyncify 让出事件循环。
   `pipeline_validation` 单独负责 WebGPU 异步 Pipeline 预热与公共 C API 生命周期验收，浏览器导出只
   校验参数并转发运行时状态和控制操作。
 
@@ -197,9 +197,9 @@ CPU/GPU Scene、PBR 和 Environment Map。详细构建及 URL 用法见
 [浏览器 WebGPU 示例](webgpu-browser-example.md)。该指南负责浏览器构建和通用验证；本页只保留
 模型查看器特有的页面行为说明。
 
-页面右上角的 DOM 工具面板可调整 MSAA、FXAA、Specular AA、各向异性，以及曝光、环境光和
-主方向光强度。光照控件直接修改共享 Viewer Core 的状态，因此与桌面 Lighting 面板采用相同的
-参数范围、校验和渲染结果；它不是独立的 CSS 预览效果。
+页面使用与桌面相同的 ImGui Scene、Inspector、Lighting、Renderer 和 Performance 面板；字体、
+材质预览纹理、输入捕获和 Draw Data 转换也走同一套实现。HTML 只保留 Canvas 以及 Renderer 和
+资产尚未就绪时的启动、进度、取消和错误状态，不再维护另一套 DOM 质量与光照控件。
 
 `granit_web_platform_smoke.html` 保留为自动化 Fixture。它验证模型 Fetch、PBR 绘制、60 帧循环、
 输入、Resize、分阶段加载、取消回滚、错误资产诊断和退出时资源归零，并覆盖 WebGPU 资源传输与
@@ -207,7 +207,7 @@ Mipmap。浏览器加载在 CPU 与 GPU 资源边界通过 Asyncify 让出事件
 Fixture 的 glTF
 是用于确定性测试的三角模型，因此 Smoke 页面显示三角形不表示正式查看器回退。自动化测试还会
 依次切换 1×/全关闭与 4×/FXAA/Specular AA 配置，按设备上限验证各向异性重建，并验证 Web
-光照控件写入共享 Viewer Core：
+光照状态写入共享 Viewer Core：
 
 ```powershell
 cmake --preset emscripten-release

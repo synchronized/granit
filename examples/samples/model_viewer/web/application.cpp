@@ -7,6 +7,7 @@
 #include <new>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include <emscripten/emscripten.h>
 #include <emscripten/html5.h>
@@ -17,6 +18,8 @@
 #include "model_viewer/render_runtime.h"
 #include "model_viewer/render_task_executor.h"
 #include "model_viewer/viewer_input_accumulator.h"
+#include "model_viewer/viewer_panels.h"
+#include "model_viewer/viewer_ui.h"
 
 #include "application.h"
 #include "pipeline_validation.h"
@@ -32,6 +35,7 @@ struct web_platform_state {
   granit::example::model_viewer::render_runtime rendering;
   granit::example::model_viewer::inline_render_task_executor executor;
   granit::example::model_viewer::web::pipeline_validation pipeline_validation;
+  granit::example::model_viewer::viewer_ui ui;
   startup_status status{startup_status::starting};
   unsigned input_event_count{};
   unsigned applied_input_count{};
@@ -61,6 +65,8 @@ struct web_platform_state {
   double renderer_initialization_started_ms{};
   double pipeline_warmup_started_ms{};
   granit::example::model_viewer::gpu_scene_upload_progress upload_progress{};
+  granit::example::model_viewer::performance_sample latest_performance{};
+  std::vector<granit::example::model_viewer::texture_preview> previews;
 };
 
 web_platform_state state;
@@ -166,7 +172,7 @@ granit_result create_presentation_resources() {
                                                    {.width = window_state.framebuffer_width,
                                                     .height = window_state.framebuffer_height,
                                                     .minimum_image_count = 2},
-                                                   false);
+                                                   true);
   const auto& info = state.rendering.swapchain_info();
   if (result.failed() || info.width == 0 || info.height == 0 || info.image_count == 0) {
     return result.ok() ? GRANIT_ERROR_INITIALIZATION_FAILED : granit::to_native(result);
@@ -208,24 +214,138 @@ granit::result execute_web_frame(granit::example::model_viewer::frame_packet&& p
   return state.rendering.render(std::move(packet), output);
 }
 
-granit_result render_model_viewer_frame() {
+granit_result execute_render_quality_change(granit_sample_count sample_count, unsigned enable_fxaa,
+                                            unsigned enable_specular_aa,
+                                            unsigned sampler_anisotropy);
+
+const char* present_mode_label(granit::present_mode mode) noexcept {
+  switch (mode) {
+  case granit::present_mode::mailbox:
+    return "Mailbox";
+  case granit::present_mode::immediate:
+    return "Immediate";
+  default:
+    return "FIFO";
+  }
+}
+
+granit::result rebuild_previews() {
+  for (const auto& preview : state.previews)
+    static_cast<void>(state.ui.unregister_texture(preview.texture));
+  state.previews.clear();
+  const auto register_preview = [](const granit::example::gltf::texture_reference& reference,
+                                   bool srgb) {
+    using namespace granit::example::model_viewer;
+    if (reference.image == granit::example::gltf::invalid_index)
+      return granit::result::success;
+    ImTextureID existing = ImTextureID_Invalid;
+    if (find_texture_preview(reference, srgb, state.previews, existing))
+      return granit::result::success;
+    granit::texture_view_ref view;
+    granit::sampler_ref sampler;
+    auto result = state.core.scene_gpu().texture_binding(reference, srgb, view, sampler);
+    ImTextureID texture = ImTextureID_Invalid;
+    if (result.ok())
+      result = state.ui.register_texture(view, sampler, texture);
+    if (result.ok())
+      state.previews.push_back({reference.image, reference.sampler, srgb, texture});
+    return result;
+  };
+  for (const auto& material : state.core.cpu_scene().materials) {
+    granit::result result;
+    if ((result = register_preview(material.base_color_texture, true)).failed() ||
+        (result = register_preview(material.emissive_texture, true)).failed() ||
+        (result = register_preview(material.metallic_roughness_texture, false)).failed() ||
+        (result = register_preview(material.normal_texture, false)).failed() ||
+        (result = register_preview(material.occlusion_texture, false)).failed())
+      return result;
+  }
+  return granit::result::success;
+}
+
+granit_result render_model_viewer_frame(float delta_seconds) {
   auto result = resize_swapchain_if_needed();
   if (result != GRANIT_SUCCESS)
     return result;
+  granit::window_state window_state;
+  auto operation = web_host.window().get_state(window_state);
+  if (operation.failed())
+    return granit::to_native(operation);
+  const auto& renderer_info = state.rendering.renderer_info();
+  const auto& renderer_limits = state.rendering.renderer_limits();
+  const auto& swapchain_info = state.rendering.swapchain_info();
+  state.ui.begin_frame(window_state, delta_seconds);
+  const granit::example::model_viewer::renderer_panel_info panel_renderer{
+      .backend = "WebGPU",
+      .adapter = renderer_info.adapter_name,
+      .swapchain_format = "Swapchain",
+      .present_mode = present_mode_label(swapchain_info.presentation),
+      .width = swapchain_info.width,
+      .height = swapchain_info.height,
+      .frame_slots = GRANIT_DEFAULT_FRAMES_IN_FLIGHT,
+      .supported_sample_counts = renderer_limits.framebuffer_sample_counts,
+      .max_sampler_anisotropy = renderer_limits.max_sampler_anisotropy};
+  const granit::example::model_viewer::performance_panel_info panel_performance{
+      .frames_per_second = state.latest_performance.frames_per_second,
+      .cpu_frame_ms = state.latest_performance.cpu_frame_ms,
+      .frame_slot_wait_ms = state.latest_performance.frame_slot_wait_ms,
+      .present_wait_ms = state.latest_performance.present_wait_ms,
+      .gpu_frame_ms = state.latest_performance.gpu_frame_ms,
+      .gpu_timing_available = state.latest_performance.gpu_timing_available,
+      .history = state.core.performance().summarize()};
+  const granit::example::model_viewer::render_quality_config quality{
+      .sample_count = state.sample_count,
+      .enable_fxaa = state.enable_fxaa != 0,
+      .enable_specular_aa = state.enable_specular_aa != 0,
+      .sampler_anisotropy = static_cast<float>(state.sampler_anisotropy)};
+  const auto changes = granit::example::model_viewer::draw_viewer_panels(
+      state.core.cpu_scene(), state.core.state(), panel_renderer, panel_performance, quality,
+      state.previews);
+  if (changes.quality) {
+    result = execute_render_quality_change(
+        changes.quality->sample_count, changes.quality->enable_fxaa ? 1U : 0U,
+        changes.quality->enable_specular_aa ? 1U : 0U,
+        static_cast<unsigned>(changes.quality->sampler_anisotropy));
+    if (result != GRANIT_SUCCESS)
+      return result;
+    if (changes.quality->sampler_anisotropy != quality.sampler_anisotropy) {
+      operation = rebuild_previews();
+      if (operation.failed())
+        return granit::to_native(operation);
+    }
+  }
   granit::example::model_viewer::frame_packet output;
   granit::example::model_viewer::application_tick_input input;
-  input.input = state.input.finish(false, false);
+  input.input = state.input.finish(state.ui.wants_mouse(), state.ui.wants_keyboard());
   if (input.input.pointer_delta_x != 0.0F || input.input.pointer_delta_y != 0.0F ||
       input.input.wheel_delta != 0.0F || input.input.focus_requested || input.input.home_requested)
     ++state.applied_input_count;
   state.input.begin_frame();
-  input.width = state.rendering.swapchain_info().width;
-  input.height = state.rendering.swapchain_info().height;
+  input.change = changes.state;
+  input.width = swapchain_info.width;
+  input.height = swapchain_info.height;
+  input.performance = state.latest_performance;
   if (result == GRANIT_SUCCESS)
     result = granit::to_native(state.core.tick(input, output.viewer));
+  if (result == GRANIT_SUCCESS)
+    result = granit::to_native(state.ui.capture(output.canvas));
+  if (result == GRANIT_SUCCESS && changes.material &&
+      state.core.state().selected_material() != granit::example::gltf::invalid_index) {
+    result = granit::to_native(
+        state.rendering.update_material(state.core.state().selected_material(), *changes.material));
+  }
   if (result == GRANIT_SUCCESS) {
     granit::example::model_viewer::frame_execution_result execution;
     result = granit::to_native(state.executor.submit(std::move(output), execution));
+    if (result == GRANIT_SUCCESS) {
+      state.latest_performance = {.frames_per_second =
+                                      delta_seconds > 0.0F ? 1.0F / delta_seconds : 0.0F,
+                                  .cpu_frame_ms = delta_seconds * 1000.0F,
+                                  .frame_slot_wait_ms = execution.acquire_wait_ms,
+                                  .present_wait_ms = execution.present_wait_ms,
+                                  .gpu_frame_ms = execution.gpu_frame_ms,
+                                  .gpu_timing_available = execution.gpu_timing_available};
+    }
   }
   if (result == GRANIT_SUCCESS)
     ++state.rendered_frame_count;
@@ -308,7 +428,7 @@ void update_web_application() noexcept {
     return;
   }
   if (state.status == startup_status::ready) {
-    const auto result = render_model_viewer_frame();
+    const auto result = render_model_viewer_frame(1.0F / 60.0F);
     if (result != GRANIT_SUCCESS)
       fail("model-viewer-frame", result);
     return;
@@ -466,7 +586,22 @@ void update_web_application() noexcept {
       fail("pipeline-create", granit::to_native(pipeline_create_result));
       return;
     }
-    const auto render_result = render_model_viewer_frame();
+    std::vector<std::byte> font_pixels;
+    std::uint32_t font_width{};
+    std::uint32_t font_height{};
+    auto ui_result = state.ui.capture_font_atlas(font_pixels, font_width, font_height);
+    if (ui_result.ok())
+      ui_result = state.rendering.initialize_font_atlas(font_pixels, font_width, font_height);
+    if (ui_result.ok())
+      ui_result =
+          state.ui.register_font(state.rendering.font_view(), state.rendering.font_sampler());
+    if (ui_result.ok())
+      ui_result = rebuild_previews();
+    if (ui_result.failed()) {
+      fail("viewer-ui", granit::to_native(ui_result));
+      return;
+    }
+    const auto render_result = render_model_viewer_frame(1.0F / 60.0F);
     if (render_result != GRANIT_SUCCESS) {
       fail("model-viewer-render", render_result);
       return;
@@ -479,10 +614,13 @@ void update_web_application() noexcept {
     return;
   }
   state.status = startup_status::ready;
+  static_cast<void>(state.rendering.finish_loading());
   std::puts("GRANIT_STATUS:ready");
 }
 
 granit_result destroy_web_render_resources() noexcept {
+  state.ui.clear_textures();
+  state.previews.clear();
   state.runtime.reset();
   state.pipeline_validation.reset();
   granit::renderer_resource_stats stats;
@@ -504,6 +642,11 @@ granit_result shutdown_web_resources() noexcept {
 }
 
 granit::result web_application_host::on_host_initialize() noexcept {
+  auto ui_result = state.ui.initialize();
+  if (ui_result.failed()) {
+    fail("viewer-ui-initialize", granit::to_native(ui_result));
+    return ui_result;
+  }
   const auto result = state.rendering.initialize_renderer(
       {.presentation = granit::presentation_mode::enabled, .diagnostics = diagnose}, state.core);
   if (result.failed()) {
@@ -539,9 +682,15 @@ granit::result web_application_host::on_host_initialize() noexcept {
   return granit::result::success;
 }
 
-granit::result web_application_host::on_host_update(float,
+granit::result web_application_host::on_host_update(float delta_seconds,
                                                     granit::window_loop_action& action) noexcept {
-  update_web_application();
+  if (state.status == startup_status::ready) {
+    const auto result = render_model_viewer_frame(delta_seconds);
+    if (result != GRANIT_SUCCESS)
+      fail("model-viewer-frame", result);
+  } else {
+    update_web_application();
+  }
   if (state.status == startup_status::failed)
     action = granit::window_loop_action::idle;
   return granit::result::success;
@@ -551,6 +700,7 @@ granit::result
 web_application_host::on_host_window_event(const granit::window_event& event) noexcept {
   if (event.type == granit::window_event_type::focus_changed)
     ++state.input_event_count;
+  state.ui.process(event);
   state.input.process(event);
   return granit::result::success;
 }
@@ -558,7 +708,8 @@ web_application_host::on_host_window_event(const granit::window_event& event) no
 granit::result
 web_application_host::on_host_input_event(const granit::input_event& event) noexcept {
   ++state.input_event_count;
-  state.input.process(event);
+  state.ui.process(event);
+  state.input.process(event, state.ui.wants_mouse(), state.ui.wants_keyboard());
   return granit::result::success;
 }
 
