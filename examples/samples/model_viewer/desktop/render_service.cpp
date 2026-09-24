@@ -16,6 +16,8 @@ struct render_service_state {
   granit::swapchain* swapchain{};
   granit::swapchain_info* swapchain_info{};
   application_core* core{};
+  granit::frame_context loading_frame_context;
+  granit::canvas_draw_list loading_canvas;
   std::array<granit::canvas_draw_list, 3> frame_canvases;
   granit::render_pipeline pipeline;
   threaded_frame_executor executor;
@@ -223,8 +225,14 @@ struct shutdown_context {
   granit::texture* font_texture{};
   granit::texture_view* font_view{};
   granit::sampler* font_sampler{};
-  granit::canvas_draw_list* loading_canvas{};
 };
+
+granit::result finish_loading(void* user_data) {
+  auto& state = *static_cast<render_service_state*>(user_data);
+  const auto frame_result = state.loading_frame_context.reset();
+  const auto canvas_result = state.loading_canvas.destroy();
+  return frame_result.failed() ? frame_result : canvas_result;
+}
 
 granit::result shutdown_renderer(void* user_data) {
   auto& context = *static_cast<shutdown_context*>(user_data);
@@ -237,7 +245,8 @@ granit::result shutdown_renderer(void* user_data) {
   context.state->core->reset();
   for (auto& canvas : context.state->frame_canvases)
     collect(canvas.destroy());
-  collect(context.loading_canvas->destroy());
+  collect(context.state->loading_canvas.destroy());
+  collect(context.state->loading_frame_context.reset());
   collect(context.font_sampler->reset());
   collect(context.font_view->reset());
   collect(context.font_texture->reset());
@@ -270,6 +279,9 @@ granit::result render_service::initialize(granit::renderer_ref renderer,
     state->core = &core;
     auto result = granit::result::success;
     if (enable_ui) {
+      result = state->loading_frame_context.initialize(renderer);
+      if (result.ok())
+        result = state->loading_canvas.initialize(renderer);
       for (auto& canvas : state->frame_canvases) {
         if (result.ok())
           result = canvas.initialize(renderer);
@@ -318,6 +330,52 @@ bool render_service::try_finish_gpu_upload(granit::result& status) noexcept {
 void render_service::cancel_gpu_upload() noexcept {
   if (state_)
     state_->upload_cancelled.store(true, std::memory_order_release);
+}
+
+granit::result render_service::render_loading_frame(const imgui::frame_canvas_data& data) noexcept {
+  if (!state_ || !state_->loading_frame_context.valid())
+    return granit::result::not_ready;
+  auto result = state_->loading_canvas.clear();
+  if (result.ok())
+    result = data.append_to(state_->loading_canvas);
+  granit::acquired_frame frame;
+  if (result.ok())
+    result = state_->swapchain->acquire(frame);
+  granit::swapchain_backbuffer backbuffer;
+  if (result.ok())
+    result = state_->swapchain->backbuffer(frame, backbuffer);
+  granit::frame_recording recording;
+  if (result.ok())
+    result = state_->loading_frame_context.begin(frame, recording);
+  if (result.ok()) {
+    const auto format = state_->swapchain_info->format;
+    result = state_->loading_canvas.record(
+        recording.recorder(), {.color = backbuffer.view,
+                               .color_format = format,
+                               .width = state_->swapchain_info->width,
+                               .height = state_->swapchain_info->height,
+                               .load_operation = granit::attachment_load_operation::clear,
+                               .encode_srgb = format == granit::texture_format::rgba8_unorm ||
+                                              format == granit::texture_format::bgra8_unorm,
+                               .frame_slot = recording.frame_slot()});
+  }
+  if (result.ok())
+    result = recording.submit();
+  if (result.ok())
+    result = state_->swapchain->present(frame);
+  if (result.failed()) {
+    if (recording.valid())
+      static_cast<void>(recording.abort());
+    if (frame.valid())
+      static_cast<void>(state_->swapchain->cancel(frame));
+  }
+  return result;
+}
+
+granit::result render_service::finish_loading() noexcept {
+  if (!state_)
+    return granit::result::not_ready;
+  return state_->executor.run_command(desktop::finish_loading, state_.get());
 }
 
 granit::result
@@ -386,8 +444,7 @@ granit::result render_service::flush() noexcept {
 granit::result render_service::shutdown(granit::renderer& renderer, granit::surface& surface,
                                         granit::texture& font_texture,
                                         granit::texture_view& font_view,
-                                        granit::sampler& font_sampler,
-                                        granit::canvas_draw_list& loading_canvas) noexcept {
+                                        granit::sampler& font_sampler) noexcept {
   if (!state_)
     return granit::result::not_ready;
   if (state_->upload_active) {
@@ -401,8 +458,7 @@ granit::result render_service::shutdown(granit::renderer& renderer, granit::surf
                            .surface = &surface,
                            .font_texture = &font_texture,
                            .font_view = &font_view,
-                           .font_sampler = &font_sampler,
-                           .loading_canvas = &loading_canvas};
+                           .font_sampler = &font_sampler};
   const auto result = state_->executor.run_command(shutdown_renderer, &context);
   state_->executor.stop();
   return result;

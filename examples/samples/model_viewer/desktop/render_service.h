@@ -50,6 +50,9 @@ public:
   [[nodiscard]] granit::result begin_gpu_upload(const gpu_upload_desc& desc) noexcept;
   [[nodiscard]] bool try_finish_gpu_upload(granit::result& status) noexcept;
   void cancel_gpu_upload() noexcept;
+  /** 调用方保证没有并发帧任务；上传开始后只能从渲染线程调用。 */
+  [[nodiscard]] granit::result render_loading_frame(const imgui::frame_canvas_data& data) noexcept;
+  [[nodiscard]] granit::result finish_loading() noexcept;
 
   [[nodiscard]] granit::result
   initialize_pipeline(const granit::render_pipeline_desc& desc) noexcept;
@@ -70,8 +73,7 @@ public:
   [[nodiscard]] granit::result shutdown(granit::renderer& renderer, granit::surface& surface,
                                         granit::texture& font_texture,
                                         granit::texture_view& font_view,
-                                        granit::sampler& font_sampler,
-                                        granit::canvas_draw_list& loading_canvas) noexcept;
+                                        granit::sampler& font_sampler) noexcept;
   [[nodiscard]] bool running() const noexcept;
 
 private:

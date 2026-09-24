@@ -254,11 +254,6 @@ void print_usage() {
                "[--present-mode=fifo|immediate] [--profile-output <文件.json>]\n";
 }
 
-bool loading_needs_srgb_encoding(granit::texture_format format) noexcept {
-  return format == granit::texture_format::rgba8_unorm ||
-         format == granit::texture_format::bgra8_unorm;
-}
-
 granit::result capture_loading_frame(const granit::window_state& window_state,
                                      const granit::swapchain_info& swapchain_info,
                                      granit::example::imgui::texture_registry& textures,
@@ -282,68 +277,21 @@ granit::result capture_loading_frame(const granit::window_state& window_state,
       ImGui::GetDrawData(), granit::example::imgui::texture_registry::resolver, &textures, output);
 }
 
-granit::result render_loading_frame_data(granit::swapchain& swapchain,
-                                         const granit::swapchain_info& swapchain_info,
-                                         granit::frame_context& frame_context,
-                                         granit::canvas_draw_list& canvas,
-                                         const granit::example::imgui::frame_canvas_data& data) {
-  auto result = canvas.clear();
-  if (result.ok())
-    result = data.append_to(canvas);
-  granit::acquired_frame frame;
-  if (result.ok())
-    result = swapchain.acquire(frame);
-  granit::swapchain_backbuffer backbuffer;
-  if (result.ok())
-    result = swapchain.backbuffer(frame, backbuffer);
-  granit::frame_recording recording;
-  if (result.ok())
-    result = frame_context.begin(frame, recording);
-  if (result.ok()) {
-    const granit::canvas_record_desc record{
-        .color = backbuffer.view,
-        .color_format = swapchain_info.format,
-        .width = swapchain_info.width,
-        .height = swapchain_info.height,
-        .load_operation = granit::attachment_load_operation::clear,
-        .encode_srgb = loading_needs_srgb_encoding(swapchain_info.format),
-        .frame_slot = recording.frame_slot(),
-    };
-    result = canvas.record(recording.recorder(), record);
-  }
-  if (result.ok())
-    result = recording.submit();
-  if (result.ok())
-    result = swapchain.present(frame);
-  if (result.failed()) {
-    if (recording.valid())
-      static_cast<void>(recording.abort());
-    if (frame.valid())
-      static_cast<void>(swapchain.cancel(frame));
-  }
-  return result;
-}
-
-granit::result render_loading_frame(granit::swapchain& swapchain,
+granit::result render_loading_frame(granit::example::model_viewer::desktop::render_service& service,
                                     const granit::window_state& window_state,
                                     const granit::swapchain_info& swapchain_info,
-                                    granit::frame_context& frame_context,
-                                    granit::canvas_draw_list& canvas,
                                     granit::example::imgui::texture_registry& textures,
                                     const char* stage, float progress) {
   granit::example::imgui::frame_canvas_data data;
   auto result =
       capture_loading_frame(window_state, swapchain_info, textures, stage, progress, data);
   if (result.ok())
-    result = render_loading_frame_data(swapchain, swapchain_info, frame_context, canvas, data);
+    result = service.render_loading_frame(data);
   return result;
 }
 
 struct gpu_upload_progress_context {
-  granit::swapchain* swapchain{};
-  const granit::swapchain_info* swapchain_info{};
-  granit::frame_context* frame_context{};
-  granit::canvas_draw_list* canvas{};
+  granit::example::model_viewer::desktop::render_service* service{};
   const std::array<granit::example::imgui::frame_canvas_data, 101>* progress_frames{};
 };
 
@@ -359,9 +307,7 @@ granit::result render_gpu_upload_progress(unsigned percentage, void* user_data) 
   auto& context = *static_cast<gpu_upload_progress_context*>(user_data);
   if (context.progress_frames == nullptr)
     return granit::result::success;
-  return render_loading_frame_data(*context.swapchain, *context.swapchain_info,
-                                   *context.frame_context, *context.canvas,
-                                   (*context.progress_frames)[percentage]);
+  return context.service->render_loading_frame((*context.progress_frames)[percentage]);
 }
 
 } // namespace
@@ -409,7 +355,6 @@ int main(int argc, char** argv) {
   granit::texture font_texture;
   granit::texture_view font_view;
   granit::sampler font_sampler;
-  granit::canvas_draw_list canvas;
   granit::example::imgui::texture_registry textures;
   application_core core;
   result = core.begin_renderer();
@@ -464,9 +409,9 @@ int main(int argc, char** argv) {
     result = granit::result::unsupported;
   }
 
-  granit::frame_context loading_frame_context;
-  if (result.ok() && options.show_ui)
-    result = loading_frame_context.initialize(renderer);
+  if (result.ok())
+    result =
+        render_service.initialize(renderer.ref(), swapchain, swapchain_info, core, options.show_ui);
   if (result.ok() && options.show_ui)
     result = upload_font_atlas(renderer, font_texture, font_view, font_sampler);
   ImTextureID font_texture_id = ImTextureID_Invalid;
@@ -476,7 +421,6 @@ int main(int argc, char** argv) {
   if (result.ok() && options.show_ui) {
     ImGui::GetIO().Fonts->SetTexID(font_texture_id);
     ImGui::GetIO().Fonts->TexRef._TexData->SetStatus(ImTextureStatus_OK);
-    result = canvas.initialize(renderer);
   }
 
   const std::filesystem::path asset_path(options.asset_path);
@@ -534,8 +478,8 @@ int main(int argc, char** argv) {
                                 ? static_cast<float>(progress.received_bytes) /
                                       static_cast<float>(*progress.total_bytes)
                                 : 0.0F;
-      result = render_loading_frame(swapchain, window_state, swapchain_info, loading_frame_context,
-                                    canvas, textures, "Loading asset resources...",
+      result = render_loading_frame(render_service, window_state, swapchain_info, textures,
+                                    "Loading asset resources...",
                                     0.05F + std::min(fraction, 1.0F) * 0.20F);
       if (result == granit::result::out_of_date)
         result = granit::result::success;
@@ -603,8 +547,8 @@ int main(int argc, char** argv) {
     const char* label =
         stage < 4 ? "Parsing glTF and decoding textures..." : "Planning GPU resources...";
     const auto progress = stage < 4 ? 0.30F : 0.38F;
-    result = render_loading_frame(swapchain, window_state, swapchain_info, loading_frame_context,
-                                  canvas, textures, label, progress);
+    result = render_loading_frame(render_service, window_state, swapchain_info, textures, label,
+                                  progress);
     if (result == granit::result::out_of_date)
       result = granit::result::success;
     std::this_thread::sleep_for(std::chrono::milliseconds{16});
@@ -621,8 +565,8 @@ int main(int argc, char** argv) {
       environment_bytes = std::move(loaded.environment_bytes);
   }
   if (result.ok() && options.show_ui)
-    result = render_loading_frame(swapchain, window_state, swapchain_info, loading_frame_context,
-                                  canvas, textures, "Preparing GPU upload...", 0.40F);
+    result = render_loading_frame(render_service, window_state, swapchain_info, textures,
+                                  "Preparing GPU upload...", 0.40F);
   std::array<granit::example::imgui::frame_canvas_data, 101> gpu_progress_frames;
   if (result.ok() && options.show_ui) {
     for (std::size_t percentage = 0; percentage < gpu_progress_frames.size(); ++percentage) {
@@ -633,16 +577,10 @@ int main(int argc, char** argv) {
         break;
     }
   }
-  if (result.ok())
-    result =
-        render_service.initialize(renderer.ref(), swapchain, swapchain_info, core, options.show_ui);
   bool upload_resize_pending = false;
   if (result.ok()) {
     gpu_upload_progress_context upload_context{
-        .swapchain = &swapchain,
-        .swapchain_info = &swapchain_info,
-        .frame_context = &loading_frame_context,
-        .canvas = &canvas,
+        .service = &render_service,
         .progress_frames = options.show_ui ? &gpu_progress_frames : nullptr};
     result = render_service.begin_gpu_upload(
         {.environment_bytes = environment_bytes,
@@ -681,8 +619,8 @@ int main(int argc, char** argv) {
     }
   }
   if (result.ok() && options.show_ui)
-    result = render_loading_frame(swapchain, window_state, swapchain_info, loading_frame_context,
-                                  canvas, textures, "Creating render pipeline...", 0.96F);
+    result = render_loading_frame(render_service, window_state, swapchain_info, textures,
+                                  "Creating render pipeline...", 0.96F);
   granit::render_pipeline_desc pipeline_desc{
       .samples = static_cast<granit::sample_count>(render_quality.sample_count),
       .enable_fxaa = render_quality.enable_fxaa != 0,
@@ -726,19 +664,16 @@ int main(int argc, char** argv) {
   if (result.ok() && options.show_ui)
     result = rebuild_previews();
   if (result.ok() && options.show_ui)
-    result = render_loading_frame(swapchain, window_state, swapchain_info, loading_frame_context,
-                                  canvas, textures, "Loading complete", 1.0F);
-  if (loading_frame_context.valid()) {
-    const auto reset_result = loading_frame_context.reset();
-    if (result.ok())
-      result = reset_result;
-  }
+    result = render_loading_frame(render_service, window_state, swapchain_info, textures,
+                                  "Loading complete", 1.0F);
+  if (result.ok())
+    result = render_service.finish_loading();
 
   if (result.failed()) {
     if (render_service.running()) {
       textures.clear();
-      static_cast<void>(render_service.shutdown(renderer, surface, font_texture, font_view,
-                                                font_sampler, canvas));
+      static_cast<void>(
+          render_service.shutdown(renderer, surface, font_texture, font_view, font_sampler));
     }
     std::cerr << "模型查看器初始化失败：" << granit::result_message(result);
     if (!core.diagnostic().empty())
@@ -950,7 +885,7 @@ int main(int argc, char** argv) {
   if (render_service.running()) {
     textures.clear();
     const auto shutdown_result =
-        render_service.shutdown(renderer, surface, font_texture, font_view, font_sampler, canvas);
+        render_service.shutdown(renderer, surface, font_texture, font_view, font_sampler);
     if (result.ok())
       result = shutdown_result;
   }
