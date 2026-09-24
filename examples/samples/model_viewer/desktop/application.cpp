@@ -3,7 +3,7 @@
 
 #include "model_viewer/desktop/application.h"
 #include "model_viewer/desktop/presentation_policy.h"
-#include "model_viewer/desktop/render_service.h"
+#include "model_viewer/desktop/render_thread.h"
 
 #include "assets/asset_system.h"
 #include "imgui/imgui_frame_capture.h"
@@ -11,8 +11,8 @@
 #include "imgui/imgui_texture_registry.h"
 #include "imgui/imgui_theme.h"
 #include "model_viewer/application_core.h"
-#include "model_viewer/render_task_executor.h"
 #include "model_viewer/model_viewer_runtime.h"
+#include "model_viewer/render_task_executor.h"
 #include "model_viewer/viewer_input_accumulator.h"
 #include "model_viewer/viewer_panels.h"
 
@@ -254,7 +254,7 @@ granit::result capture_loading_frame(const granit::window_state& window_state,
       ImGui::GetDrawData(), granit::example::imgui::texture_registry::resolver, &textures, output);
 }
 
-granit::result render_loading_frame(granit::example::model_viewer::desktop::render_service& service,
+granit::result render_loading_frame(granit::example::model_viewer::desktop::render_thread& service,
                                     const granit::window_state& window_state,
                                     const granit::swapchain_info& swapchain_info,
                                     granit::example::imgui::texture_registry& textures,
@@ -268,7 +268,7 @@ granit::result render_loading_frame(granit::example::model_viewer::desktop::rend
 }
 
 struct gpu_upload_progress_context {
-  granit::example::model_viewer::desktop::render_service* service{};
+  granit::example::model_viewer::desktop::render_thread* service{};
   const std::array<granit::example::imgui::frame_canvas_data, 101>* progress_frames{};
 };
 
@@ -335,25 +335,25 @@ int granit::example::model_viewer::desktop::application::run() {
               << pixel_height << '\n';
     result = granit::result::invalid_argument;
   }
-  desktop::render_service render_service;
+  desktop::render_thread render_thread;
   if (result.ok()) {
-    result = render_service.initialize(window,
-                                       {.application_name = "Granit Model Viewer",
-                                        .enable_validation = options.enable_validation,
-                                        .presentation = granit::presentation_mode::enabled,
-                                        .backend = options.backend},
-                                       {.width = static_cast<std::uint32_t>(pixel_width),
-                                        .height = static_cast<std::uint32_t>(pixel_height),
-                                        .presentation = options.presentation},
-                                       core, options.show_ui);
+    result = render_thread.initialize(window,
+                                      {.application_name = "Granit Model Viewer",
+                                       .enable_validation = options.enable_validation,
+                                       .presentation = granit::presentation_mode::enabled,
+                                       .backend = options.backend},
+                                      {.width = static_cast<std::uint32_t>(pixel_width),
+                                       .height = static_cast<std::uint32_t>(pixel_height),
+                                       .presentation = options.presentation},
+                                      core, options.show_ui);
   }
   granit::renderer_info renderer_info;
   granit::renderer_limits renderer_limits;
   granit::swapchain_info swapchain_info;
   if (result.ok()) {
-    renderer_info = render_service.renderer_info();
-    renderer_limits = render_service.renderer_limits();
-    swapchain_info = render_service.swapchain_info();
+    renderer_info = render_thread.renderer_info();
+    renderer_limits = render_thread.renderer_limits();
+    swapchain_info = render_thread.swapchain_info();
   }
   render_quality_config render_quality{
       .sample_count = renderer_limits.supports_sample_count(granit::sample_count::four)
@@ -374,11 +374,11 @@ int granit::example::model_viewer::desktop::application::run() {
     std::uint32_t font_height{};
     result = capture_font_atlas(font_pixels, font_width, font_height);
     if (result.ok())
-      result = render_service.initialize_font_atlas(font_pixels, font_width, font_height);
+      result = render_thread.initialize_font_atlas(font_pixels, font_width, font_height);
   }
   ImTextureID font_texture_id = ImTextureID_Invalid;
   if (result.ok() && options.show_ui) {
-    result = textures.register_texture(render_service.font_view(), render_service.font_sampler(),
+    result = textures.register_texture(render_thread.font_view(), render_thread.font_sampler(),
                                        font_texture_id);
   }
   if (result.ok() && options.show_ui) {
@@ -389,9 +389,8 @@ int granit::example::model_viewer::desktop::application::run() {
   granit::example::assets::asset_system assets;
   granit::example::assets::asset_mount model_mount;
   std::string model_path;
-  if (result.ok() &&
-      (!assets.initialize(options.asset_path) ||
-       !assets.mount_location(options.asset_path, model_mount, model_path))) {
+  if (result.ok() && (!assets.initialize(options.asset_path) ||
+                      !assets.mount_location(options.asset_path, model_mount, model_path))) {
     result = granit::result::invalid_argument;
   }
   if (result.ok() && !runtime.start_loading(assets, {model_mount, model_path}))
@@ -418,17 +417,16 @@ int granit::example::model_viewer::desktop::application::run() {
       pixel_width = window_state.framebuffer_width;
       pixel_height = window_state.framebuffer_height;
       if (pixel_width > 0 && pixel_height > 0) {
-        result = render_service.recreate_swapchain(
+        result = render_thread.recreate_swapchain(
             {.width = pixel_width, .height = pixel_height, .presentation = options.presentation});
         if (result.ok())
-          swapchain_info = render_service.swapchain_info();
+          swapchain_info = render_thread.swapchain_info();
       }
     }
     if (result.failed() || loading_cancelled)
       break;
 
-    if (runtime.loading_status() ==
-        granit::example::model_viewer::model_loading_status::failed) {
+    if (runtime.loading_status() == granit::example::model_viewer::model_loading_status::failed) {
       result = runtime.loading_result();
       break;
     }
@@ -442,10 +440,9 @@ int granit::example::model_viewer::desktop::application::run() {
     const bool environment_ready =
         !environment_request ||
         environment_request->status() == granit::example::assets::asset_request_status::ready;
-    asset_bytes_ready =
-        runtime.loading_status() ==
-            granit::example::model_viewer::model_loading_status::assets_ready &&
-        environment_ready;
+    asset_bytes_ready = runtime.loading_status() ==
+                            granit::example::model_viewer::model_loading_status::assets_ready &&
+                        environment_ready;
 
     if (result.ok() && options.show_ui && !asset_bytes_ready) {
       const auto progress = runtime.loading_progress().document;
@@ -453,7 +450,7 @@ int granit::example::model_viewer::desktop::application::run() {
                                 ? static_cast<float>(progress.received_bytes) /
                                       static_cast<float>(*progress.total_bytes)
                                 : 0.0F;
-      result = render_loading_frame(render_service, window_state, swapchain_info, textures,
+      result = render_loading_frame(render_thread, window_state, swapchain_info, textures,
                                     "Loading asset resources...",
                                     0.05F + std::min(fraction, 1.0F) * 0.20F);
       if (result == granit::result::out_of_date)
@@ -497,10 +494,10 @@ int granit::example::model_viewer::desktop::application::run() {
       pixel_width = window_state.framebuffer_width;
       pixel_height = window_state.framebuffer_height;
       if (pixel_width > 0 && pixel_height > 0) {
-        result = render_service.recreate_swapchain(
+        result = render_thread.recreate_swapchain(
             {.width = pixel_width, .height = pixel_height, .presentation = options.presentation});
         if (result.ok())
-          swapchain_info = render_service.swapchain_info();
+          swapchain_info = render_thread.swapchain_info();
       }
     }
     if (result.failed() || loading_cancelled || !options.show_ui)
@@ -509,7 +506,7 @@ int granit::example::model_viewer::desktop::application::run() {
     const char* label =
         stage < 4 ? "Parsing glTF and decoding textures..." : "Planning GPU resources...";
     const auto progress = stage < 4 ? 0.30F : 0.38F;
-    result = render_loading_frame(render_service, window_state, swapchain_info, textures, label,
+    result = render_loading_frame(render_thread, window_state, swapchain_info, textures, label,
                                   progress);
     if (result == granit::result::out_of_date)
       result = granit::result::success;
@@ -527,7 +524,7 @@ int granit::example::model_viewer::desktop::application::run() {
       environment_bytes = std::move(loaded.environment_bytes);
   }
   if (result.ok() && options.show_ui)
-    result = render_loading_frame(render_service, window_state, swapchain_info, textures,
+    result = render_loading_frame(render_thread, window_state, swapchain_info, textures,
                                   "Preparing GPU upload...", 0.40F);
   std::array<granit::example::imgui::frame_canvas_data, 101> gpu_progress_frames;
   if (result.ok() && options.show_ui) {
@@ -542,9 +539,9 @@ int granit::example::model_viewer::desktop::application::run() {
   bool upload_resize_pending = false;
   if (result.ok()) {
     gpu_upload_progress_context upload_context{
-        .service = &render_service,
+        .service = &render_thread,
         .progress_frames = options.show_ui ? &gpu_progress_frames : nullptr};
-    result = render_service.begin_gpu_upload(
+    result = render_thread.begin_gpu_upload(
         {.environment_bytes = environment_bytes,
          .sampler_anisotropy = render_quality.sampler_anisotropy,
          .progress = options.show_ui ? render_gpu_upload_progress : nullptr,
@@ -554,43 +551,42 @@ int granit::example::model_viewer::desktop::application::run() {
       desktop_window_events events;
       result = pump_window_events(window_system, window, window_state, events);
       if (events.close_requested)
-        render_service.cancel_gpu_upload();
+        render_thread.cancel_gpu_upload();
       if (events.resized) {
         pixel_width = window_state.framebuffer_width;
         pixel_height = window_state.framebuffer_height;
         upload_resize_pending = true;
       }
-      upload_completed = render_service.try_finish_gpu_upload(result);
+      upload_completed = render_thread.try_finish_gpu_upload(result);
       std::this_thread::sleep_for(std::chrono::milliseconds{16});
     }
     if (!upload_completed) {
       const auto original_result = result;
-      render_service.cancel_gpu_upload();
-      const auto flush_result = render_service.flush();
+      render_thread.cancel_gpu_upload();
+      const auto flush_result = render_thread.flush();
       granit::result upload_result;
-      upload_completed = render_service.try_finish_gpu_upload(upload_result);
+      upload_completed = render_thread.try_finish_gpu_upload(upload_result);
       result = original_result.failed() ? original_result : flush_result;
       if (result.ok() && upload_completed)
         result = upload_result;
     }
     if (result.ok() && upload_resize_pending && pixel_width > 0 && pixel_height > 0) {
-      result =
-          render_service.recreate_swapchain({.width = static_cast<std::uint32_t>(pixel_width),
-                                             .height = static_cast<std::uint32_t>(pixel_height),
-                                             .presentation = options.presentation});
+      result = render_thread.recreate_swapchain({.width = static_cast<std::uint32_t>(pixel_width),
+                                                 .height = static_cast<std::uint32_t>(pixel_height),
+                                                 .presentation = options.presentation});
       if (result.ok())
-        swapchain_info = render_service.swapchain_info();
+        swapchain_info = render_thread.swapchain_info();
     }
   }
   if (result.ok() && options.show_ui)
-    result = render_loading_frame(render_service, window_state, swapchain_info, textures,
+    result = render_loading_frame(render_thread, window_state, swapchain_info, textures,
                                   "Creating render pipeline...", 0.96F);
   granit::render_pipeline_desc pipeline_desc{
       .samples = static_cast<granit::sample_count>(render_quality.sample_count),
       .enable_fxaa = render_quality.enable_fxaa != 0,
       .enable_specular_aa = render_quality.enable_specular_aa != 0};
   if (result.ok())
-    result = render_service.initialize_pipeline(pipeline_desc);
+    result = render_thread.initialize_pipeline(pipeline_desc);
   std::vector<texture_preview> previews;
   const auto register_preview = [&](const granit::example::gltf::texture_reference& reference,
                                     bool srgb) {
@@ -628,15 +624,15 @@ int granit::example::model_viewer::desktop::application::run() {
   if (result.ok() && options.show_ui)
     result = rebuild_previews();
   if (result.ok() && options.show_ui)
-    result = render_loading_frame(render_service, window_state, swapchain_info, textures,
+    result = render_loading_frame(render_thread, window_state, swapchain_info, textures,
                                   "Loading complete", 1.0F);
   if (result.ok() && options.show_ui)
-    result = render_service.finish_loading();
+    result = render_thread.finish_loading();
 
   if (result.failed()) {
-    if (render_service.running()) {
+    if (render_thread.running()) {
       textures.clear();
-      static_cast<void>(render_service.shutdown());
+      static_cast<void>(render_thread.shutdown());
     }
     std::cerr << "模型查看器初始化失败：" << granit::result_message(result);
     if (!core.diagnostic().empty())
@@ -661,7 +657,7 @@ int granit::example::model_viewer::desktop::application::run() {
   while (running) {
     const auto cpu_begin = std::chrono::steady_clock::now();
     frame_completion completed;
-    while (render_service.try_take_completion(completed)) {
+    while (render_thread.try_take_completion(completed)) {
       const auto timing = producer_frame_times.find(completed.sequence);
       const auto producer_frame_ms = timing == producer_frame_times.end() ? 0.0F : timing->second;
       if (timing != producer_frame_times.end())
@@ -714,35 +710,34 @@ int granit::example::model_viewer::desktop::application::run() {
       continue;
     }
     if (recreate_surface) {
-      result = render_service.flush();
+      result = render_thread.flush();
       if (result.failed())
         break;
-      result = render_service.recreate_surface(window,
-                                               {.width = static_cast<std::uint32_t>(pixel_width),
-                                                .height = static_cast<std::uint32_t>(pixel_height),
-                                                .presentation = options.presentation});
+      result = render_thread.recreate_surface(window,
+                                              {.width = static_cast<std::uint32_t>(pixel_width),
+                                               .height = static_cast<std::uint32_t>(pixel_height),
+                                               .presentation = options.presentation});
       if (result.failed()) {
         break;
       }
-      swapchain_info = render_service.swapchain_info();
+      swapchain_info = render_thread.swapchain_info();
       recreate_surface = false;
       recreate = false;
     }
     if (recreate) {
-      result =
-          render_service.recreate_swapchain({.width = static_cast<std::uint32_t>(pixel_width),
-                                             .height = static_cast<std::uint32_t>(pixel_height),
-                                             .presentation = options.presentation});
+      result = render_thread.recreate_swapchain({.width = static_cast<std::uint32_t>(pixel_width),
+                                                 .height = static_cast<std::uint32_t>(pixel_height),
+                                                 .presentation = options.presentation});
       if (result == granit::result::not_ready)
         continue;
       if (result.failed())
         break;
-      swapchain_info = render_service.swapchain_info();
+      swapchain_info = render_thread.swapchain_info();
       recreate = false;
     }
 
-    if (!render_service.can_submit_frame()) {
-      render_service.record_skipped_frame_build();
+    if (!render_thread.can_submit_frame()) {
+      render_thread.record_skipped_frame_build();
       continue;
     }
 
@@ -763,7 +758,7 @@ int granit::example::model_viewer::desktop::application::run() {
           .frame_slots = GRANIT_DEFAULT_FRAMES_IN_FLIGHT,
           .supported_sample_counts = renderer_limits.framebuffer_sample_counts,
           .max_sampler_anisotropy = renderer_limits.max_sampler_anisotropy};
-      const auto queue_stats = render_service.query_queue_stats();
+      const auto queue_stats = render_thread.query_queue_stats();
       const performance_panel_info panel_performance{
           .frames_per_second = latest_sample.frames_per_second,
           .cpu_frame_ms = latest_sample.cpu_frame_ms,
@@ -794,7 +789,7 @@ int granit::example::model_viewer::desktop::application::run() {
           .enable_fxaa = changes.quality->enable_fxaa != 0,
           .enable_specular_aa = changes.quality->enable_specular_aa != 0};
       desktop::quality_change_result quality_result;
-      result = render_service.change_quality(
+      result = render_thread.change_quality(
           replacement_desc, changes.quality->sampler_anisotropy,
           changes.quality->sampler_anisotropy != render_quality.sampler_anisotropy, quality_result);
       if (result.ok() && quality_result.scene_reuploaded) {
@@ -825,14 +820,13 @@ int granit::example::model_viewer::desktop::application::run() {
     if (result.ok()) {
       if (changes.material &&
           core.state().selected_material() != granit::example::gltf::invalid_index) {
-        result =
-            render_service.update_material(core.state().selected_material(), *changes.material);
+        result = render_thread.update_material(core.state().selected_material(), *changes.material);
       }
     }
     if (result.failed())
       break;
     [[maybe_unused]] std::uint64_t submitted_sequence{};
-    result = render_service.submit(std::move(tick_output), submitted_sequence);
+    result = render_thread.submit(std::move(tick_output), submitted_sequence);
     const auto producer_frame_ms =
         std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() - cpu_begin)
             .count();
@@ -844,9 +838,9 @@ int granit::example::model_viewer::desktop::application::run() {
       break;
   }
 
-  if (render_service.running()) {
+  if (render_thread.running()) {
     textures.clear();
-    const auto shutdown_result = render_service.shutdown();
+    const auto shutdown_result = render_thread.shutdown();
     if (result.ok())
       result = shutdown_result;
   }

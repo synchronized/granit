@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "render_service.h"
+#include "render_thread.h"
 
 #include "model_viewer/render_runtime.h"
 
@@ -14,7 +14,7 @@
 
 namespace granit::example::model_viewer::desktop {
 
-struct render_service_state {
+struct render_thread_state {
   render_runtime runtime;
   threaded_render_task_executor executor;
   gpu_upload_desc upload;
@@ -64,7 +64,7 @@ unsigned gpu_upload_percentage(const gpu_scene_upload_progress& progress) noexce
 }
 
 bool update_gpu_upload(const gpu_scene_upload_progress& progress, void* user_data) {
-  auto& state = *static_cast<render_service_state*>(user_data);
+  auto& state = *static_cast<render_thread_state*>(user_data);
   if (state.upload_cancelled.load(std::memory_order_acquire))
     return false;
   if (state.upload.progress == nullptr)
@@ -86,7 +86,7 @@ bool update_gpu_upload(const gpu_scene_upload_progress& progress, void* user_dat
   return true;
 }
 
-granit::result execute_gpu_upload(render_service_state& state) {
+granit::result execute_gpu_upload(render_thread_state& state) {
   try {
     const auto result = state.runtime.upload_scene(
         state.upload.environment_bytes, state.upload.sampler_anisotropy, update_gpu_upload, &state);
@@ -100,21 +100,21 @@ granit::result execute_gpu_upload(render_service_state& state) {
 
 } // namespace
 
-render_service::render_service() = default;
+render_thread::render_thread() = default;
 
-render_service::~render_service() {
+render_thread::~render_thread() {
   if (state_)
     state_->executor.stop();
 }
 
-granit::result render_service::initialize(granit::window& window,
-                                          const granit::renderer_desc& renderer_desc,
-                                          const granit::swapchain_desc& swapchain_desc,
-                                          application_core& core, bool enable_ui) noexcept {
+granit::result render_thread::initialize(granit::window& window,
+                                         const granit::renderer_desc& renderer_desc,
+                                         const granit::swapchain_desc& swapchain_desc,
+                                         application_core& core, bool enable_ui) noexcept {
   if (state_)
     return granit::result::invalid_argument;
   try {
-    auto state = std::make_unique<render_service_state>();
+    auto state = std::make_unique<render_thread_state>();
     auto result = state->runtime.initialize_renderer(renderer_desc, core);
     if (result.ok())
       result = state->runtime.complete_renderer_initialization();
@@ -136,19 +136,19 @@ granit::result render_service::initialize(granit::window& window,
   }
 }
 
-const granit::renderer_info& render_service::renderer_info() const noexcept {
+const granit::renderer_info& render_thread::renderer_info() const noexcept {
   return state_->runtime.renderer_info();
 }
 
-const granit::renderer_limits& render_service::renderer_limits() const noexcept {
+const granit::renderer_limits& render_thread::renderer_limits() const noexcept {
   return state_->runtime.renderer_limits();
 }
 
-const granit::swapchain_info& render_service::swapchain_info() const noexcept {
+const granit::swapchain_info& render_thread::swapchain_info() const noexcept {
   return state_->runtime.swapchain_info();
 }
 
-granit::result render_service::begin_gpu_upload(const gpu_upload_desc& desc) noexcept {
+granit::result render_thread::begin_gpu_upload(const gpu_upload_desc& desc) noexcept {
   if (!state_ || state_->upload_active)
     return granit::result::not_ready;
   try {
@@ -169,7 +169,7 @@ granit::result render_service::begin_gpu_upload(const gpu_upload_desc& desc) noe
   return result;
 }
 
-bool render_service::try_finish_gpu_upload(granit::result& status) noexcept {
+bool render_thread::try_finish_gpu_upload(granit::result& status) noexcept {
   if (!state_ || !state_->upload_active)
     return false;
   render_task_completion completion;
@@ -183,24 +183,24 @@ bool render_service::try_finish_gpu_upload(granit::result& status) noexcept {
   return true;
 }
 
-void render_service::cancel_gpu_upload() noexcept {
+void render_thread::cancel_gpu_upload() noexcept {
   if (state_)
     state_->upload_cancelled.store(true, std::memory_order_release);
 }
 
-granit::result render_service::render_loading_frame(const imgui::frame_canvas_data& data) noexcept {
+granit::result render_thread::render_loading_frame(const imgui::frame_canvas_data& data) noexcept {
   return state_ ? state_->runtime.render_loading_frame(data) : granit::result::not_ready;
 }
 
-granit::result render_service::finish_loading() noexcept {
+granit::result render_thread::finish_loading() noexcept {
   return state_ ? state_->executor.run_task(
                       [context = state_.get()] { return context->runtime.finish_loading(); })
                 : granit::result::not_ready;
 }
 
-granit::result render_service::initialize_font_atlas(std::span<const std::byte> pixels,
-                                                     std::uint32_t width,
-                                                     std::uint32_t height) noexcept {
+granit::result render_thread::initialize_font_atlas(std::span<const std::byte> pixels,
+                                                    std::uint32_t width,
+                                                    std::uint32_t height) noexcept {
   if (!state_ || pixels.empty() || width == 0 || height == 0)
     return granit::result::invalid_argument;
   try {
@@ -216,31 +216,31 @@ granit::result render_service::initialize_font_atlas(std::span<const std::byte> 
   }
 }
 
-granit::texture_view_ref render_service::font_view() const noexcept {
+granit::texture_view_ref render_thread::font_view() const noexcept {
   return state_ ? state_->runtime.font_view() : granit::texture_view_ref{};
 }
 
-granit::sampler_ref render_service::font_sampler() const noexcept {
+granit::sampler_ref render_thread::font_sampler() const noexcept {
   return state_ ? state_->runtime.font_sampler() : granit::sampler_ref{};
 }
 
 granit::result
-render_service::initialize_pipeline(const granit::render_pipeline_desc& desc) noexcept {
+render_thread::initialize_pipeline(const granit::render_pipeline_desc& desc) noexcept {
   if (!state_ || state_->upload_active)
     return granit::result::not_ready;
   return state_->executor.run_task(
       [context = state_.get(), desc] { return context->runtime.initialize_pipeline(desc); });
 }
 
-granit::result render_service::recreate_swapchain(const granit::swapchain_desc& desc) noexcept {
+granit::result render_thread::recreate_swapchain(const granit::swapchain_desc& desc) noexcept {
   if (!state_ || state_->upload_active)
     return granit::result::not_ready;
   return state_->executor.run_task(
       [context = state_.get(), desc] { return context->runtime.recreate_swapchain(desc); });
 }
 
-granit::result render_service::recreate_surface(granit::window& window,
-                                                const granit::swapchain_desc& desc) noexcept {
+granit::result render_thread::recreate_surface(granit::window& window,
+                                               const granit::swapchain_desc& desc) noexcept {
   if (!state_ || state_->upload_active)
     return granit::result::not_ready;
   auto result = state_->executor.flush();
@@ -249,9 +249,9 @@ granit::result render_service::recreate_surface(granit::window& window,
   return result;
 }
 
-granit::result render_service::change_quality(const granit::render_pipeline_desc& desc,
-                                              float sampler_anisotropy, bool reupload_scene,
-                                              quality_change_result& output) noexcept {
+granit::result render_thread::change_quality(const granit::render_pipeline_desc& desc,
+                                             float sampler_anisotropy, bool reupload_scene,
+                                             quality_change_result& output) noexcept {
   if (!state_ || state_->upload_active)
     return granit::result::not_ready;
   render_quality_change_result runtime_output;
@@ -264,8 +264,8 @@ granit::result render_service::change_quality(const granit::render_pipeline_desc
   return result;
 }
 
-granit::result render_service::update_material(std::uint32_t material_index,
-                                               const material_factor_edit& edit) noexcept {
+granit::result render_thread::update_material(std::uint32_t material_index,
+                                              const material_factor_edit& edit) noexcept {
   if (!state_ || state_->upload_active)
     return granit::result::not_ready;
   return state_->executor.run_task([context = state_.get(), material_index, edit] {
@@ -273,33 +273,33 @@ granit::result render_service::update_material(std::uint32_t material_index,
   });
 }
 
-bool render_service::can_submit_frame() const noexcept {
+bool render_thread::can_submit_frame() const noexcept {
   return state_ && !state_->upload_active && state_->executor.can_submit_frame();
 }
 
-void render_service::record_skipped_frame_build() noexcept {
+void render_thread::record_skipped_frame_build() noexcept {
   if (state_)
     state_->executor.record_skipped_frame_build();
 }
 
-granit::result render_service::submit(frame_packet packet, std::uint64_t& sequence) noexcept {
+granit::result render_thread::submit(frame_packet packet, std::uint64_t& sequence) noexcept {
   return state_ && !state_->upload_active ? state_->executor.submit(std::move(packet), sequence)
                                           : granit::result::not_ready;
 }
 
-bool render_service::try_take_completion(frame_completion& completion) noexcept {
+bool render_thread::try_take_completion(frame_completion& completion) noexcept {
   return state_ && state_->executor.try_take_completion(completion);
 }
 
-render_task_queue_stats render_service::query_queue_stats() const noexcept {
+render_task_queue_stats render_thread::query_queue_stats() const noexcept {
   return state_ ? state_->executor.query_queue_stats() : render_task_queue_stats{};
 }
 
-granit::result render_service::flush() noexcept {
+granit::result render_thread::flush() noexcept {
   return state_ ? state_->executor.flush() : granit::result::not_ready;
 }
 
-granit::result render_service::shutdown() noexcept {
+granit::result render_thread::shutdown() noexcept {
   if (!state_)
     return granit::result::not_ready;
   if (state_->upload_active) {
@@ -314,6 +314,6 @@ granit::result render_service::shutdown() noexcept {
   return result;
 }
 
-bool render_service::running() const noexcept { return state_ && state_->executor.running(); }
+bool render_thread::running() const noexcept { return state_ && state_->executor.running(); }
 
 } // namespace granit::example::model_viewer::desktop

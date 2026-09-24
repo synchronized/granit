@@ -15,8 +15,8 @@ add_executable(
   application.cpp
   application.h
   main.cpp
-  render_service.cpp
-  render_service.h
+  render_thread.cpp
+  render_thread.h
 )
 target_include_directories(
   granit_sample_model_viewer

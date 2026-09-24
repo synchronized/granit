@@ -20,7 +20,7 @@
 
 namespace granit::example::model_viewer::desktop {
 
-struct render_service_state;
+struct render_thread_state;
 
 using upload_progress_callback = granit::result (*)(unsigned percentage, void* user_data);
 
@@ -36,12 +36,12 @@ struct quality_change_result {
 };
 
 /** Desktop GPU 命令与帧执行边界；公开方法由主线程调用。 */
-class render_service {
+class render_thread {
 public:
-  render_service();
-  ~render_service();
-  render_service(const render_service&) = delete;
-  render_service& operator=(const render_service&) = delete;
+  render_thread();
+  ~render_thread();
+  render_thread(const render_thread&) = delete;
+  render_thread& operator=(const render_thread&) = delete;
 
   [[nodiscard]] granit::result initialize(granit::window& window,
                                           const granit::renderer_desc& renderer_desc,
@@ -85,7 +85,7 @@ public:
   [[nodiscard]] bool running() const noexcept;
 
 private:
-  std::unique_ptr<render_service_state> state_;
+  std::unique_ptr<render_thread_state> state_;
 };
 
 } // namespace granit::example::model_viewer::desktop
