@@ -94,6 +94,8 @@ endif()
 if(TARGET granit::integration_imgui)
   add_library(
     granit_sample_model_viewer_imgui STATIC
+    viewer_ui.cpp
+    viewer_ui.h
     viewer_panels.cpp
     viewer_panels.h
   )

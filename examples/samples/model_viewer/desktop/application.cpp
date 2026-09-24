@@ -6,15 +6,12 @@
 #include "model_viewer/desktop/render_thread.h"
 
 #include "assets/asset_system.h"
-#include "imgui/imgui_frame_capture.h"
-#include "imgui/imgui_input.h"
-#include "imgui/imgui_texture_registry.h"
-#include "imgui/imgui_theme.h"
 #include "model_viewer/application_core.h"
 #include "model_viewer/model_viewer_runtime.h"
 #include "model_viewer/render_task_executor.h"
 #include "model_viewer/viewer_input_accumulator.h"
 #include "model_viewer/viewer_panels.h"
+#include "model_viewer/viewer_ui.h"
 
 #include <imgui.h>
 
@@ -35,7 +32,6 @@
 #include <future>
 #include <iomanip>
 #include <iostream>
-#include <limits>
 #include <memory>
 #include <span>
 #include <sstream>
@@ -48,10 +44,6 @@
 
 namespace {
 
-struct imgui_context {
-  ~imgui_context() { ImGui::DestroyContext(); }
-};
-
 struct desktop_window_events {
   bool close_requested{};
   bool resized{};
@@ -59,7 +51,7 @@ struct desktop_window_events {
 
 granit::result pump_window_events(
     granit::window_system& system, granit::window& window, granit::window_state& state,
-    desktop_window_events& output,
+    desktop_window_events& output, granit::example::model_viewer::viewer_ui* ui = nullptr,
     granit::example::model_viewer::viewer_input_accumulator* input = nullptr) noexcept {
   output = {};
   auto result = system.process_events();
@@ -72,7 +64,8 @@ granit::result pump_window_events(
       return poll_result;
     if (window_event.window != window.ref())
       continue;
-    granit::example::imgui::process_window_event(window_event);
+    if (ui != nullptr)
+      ui->process(window_event);
     if (input != nullptr)
       input->process(window_event);
     output.close_requested =
@@ -89,10 +82,11 @@ granit::result pump_window_events(
       return poll_result;
     if (input_event.window != window.ref())
       continue;
-    granit::example::imgui::process_input_event(input_event);
+    if (ui != nullptr)
+      ui->process(input_event);
     if (input != nullptr) {
-      input->process(input_event, ImGui::GetIO().WantCaptureMouse,
-                     ImGui::GetIO().WantCaptureKeyboard);
+      input->process(input_event, ui != nullptr && ui->wants_mouse(),
+                     ui != nullptr && ui->wants_keyboard());
     }
   }
   if (result.ok() && output.resized)
@@ -120,31 +114,6 @@ constexpr std::string_view present_mode_label(granit::present_mode mode) noexcep
   default:
     return "FIFO";
   }
-}
-
-granit::result capture_font_atlas(std::vector<std::byte>& output, std::uint32_t& output_width,
-                                  std::uint32_t& output_height) {
-  unsigned char* pixels = nullptr;
-  int width = 0;
-  int height = 0;
-  ImGui::GetIO().Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-  if (pixels == nullptr || width <= 0 || height <= 0)
-    return granit::result::internal;
-  const auto pixel_count = static_cast<std::uint64_t>(width) * static_cast<std::uint64_t>(height);
-  if (pixel_count > std::numeric_limits<std::size_t>::max() / 4)
-    return granit::result::out_of_memory;
-  output.resize(static_cast<std::size_t>(pixel_count) * 4);
-  for (std::size_t offset = 0; offset < output.size(); offset += 4) {
-    const auto alpha = pixels[offset + 3];
-    for (std::size_t channel = 0; channel < 3; ++channel) {
-      output[offset + channel] = static_cast<std::byte>(
-          (static_cast<std::uint32_t>(pixels[offset + channel]) * alpha + 127U) / 255U);
-    }
-    output[offset + 3] = static_cast<std::byte>(alpha);
-  }
-  output_width = static_cast<std::uint32_t>(width);
-  output_height = static_cast<std::uint32_t>(height);
-  return granit::result::success;
 }
 
 struct profile_metric {
@@ -233,10 +202,10 @@ bool write_profile(const std::filesystem::path& path, const granit::renderer_inf
 
 granit::result capture_loading_frame(const granit::window_state& window_state,
                                      const granit::swapchain_info& swapchain_info,
-                                     granit::example::imgui::texture_registry& textures,
+                                     granit::example::model_viewer::viewer_ui& ui,
                                      const char* stage, float progress,
                                      granit::example::imgui::frame_canvas_data& output) {
-  granit::example::imgui::begin_frame(window_state, 1.0F / 60.0F);
+  ui.begin_frame(window_state, 1.0F / 60.0F);
   const ImVec2 panel_size{420.0F, 118.0F};
   ImGui::SetNextWindowPos({(static_cast<float>(swapchain_info.width) - panel_size.x) * 0.5F,
                            (static_cast<float>(swapchain_info.height) - panel_size.y) * 0.5F});
@@ -249,19 +218,16 @@ granit::result capture_loading_frame(const granit::window_state& window_state,
   ImGui::ProgressBar(progress, {-1.0F, 0.0F});
   ImGui::TextDisabled("The window remains responsive while large textures are decoded.");
   ImGui::End();
-  ImGui::Render();
-  return granit::example::imgui::capture_imgui_frame(
-      ImGui::GetDrawData(), granit::example::imgui::texture_registry::resolver, &textures, output);
+  return ui.capture(output);
 }
 
 granit::result render_loading_frame(granit::example::model_viewer::desktop::render_thread& service,
                                     const granit::window_state& window_state,
                                     const granit::swapchain_info& swapchain_info,
-                                    granit::example::imgui::texture_registry& textures,
-                                    const char* stage, float progress) {
+                                    granit::example::model_viewer::viewer_ui& ui, const char* stage,
+                                    float progress) {
   granit::example::imgui::frame_canvas_data data;
-  auto result =
-      capture_loading_frame(window_state, swapchain_info, textures, stage, progress, data);
+  auto result = capture_loading_frame(window_state, swapchain_info, ui, stage, progress, data);
   if (result.ok())
     result = service.render_loading_frame(data);
   return result;
@@ -313,13 +279,9 @@ int granit::example::model_viewer::desktop::application::run() {
     std::cerr << "Window 创建失败：" << granit::result_message(result) << '\n';
     return 1;
   }
-  IMGUI_CHECKVERSION();
-  ImGui::CreateContext();
-  imgui_context imgui;
-  ImGui::GetIO().IniFilename = nullptr;
-  granit::example::apply_imgui_theme();
-
-  granit::example::imgui::texture_registry textures;
+  viewer_ui ui;
+  if (options.show_ui)
+    result = ui.initialize();
   application_core core;
   granit::example::model_viewer::model_loading_session model_loading;
   granit::example::model_viewer::model_viewer_runtime runtime(core, model_loading);
@@ -372,19 +334,12 @@ int granit::example::model_viewer::desktop::application::run() {
     std::vector<std::byte> font_pixels;
     std::uint32_t font_width{};
     std::uint32_t font_height{};
-    result = capture_font_atlas(font_pixels, font_width, font_height);
+    result = ui.capture_font_atlas(font_pixels, font_width, font_height);
     if (result.ok())
       result = render_thread.initialize_font_atlas(font_pixels, font_width, font_height);
   }
-  ImTextureID font_texture_id = ImTextureID_Invalid;
-  if (result.ok() && options.show_ui) {
-    result = textures.register_texture(render_thread.font_view(), render_thread.font_sampler(),
-                                       font_texture_id);
-  }
-  if (result.ok() && options.show_ui) {
-    ImGui::GetIO().Fonts->SetTexID(font_texture_id);
-    ImGui::GetIO().Fonts->TexRef._TexData->SetStatus(ImTextureStatus_OK);
-  }
+  if (result.ok() && options.show_ui)
+    result = ui.register_font(render_thread.font_view(), render_thread.font_sampler());
 
   granit::example::assets::asset_system assets;
   granit::example::assets::asset_mount model_mount;
@@ -411,7 +366,8 @@ int granit::example::model_viewer::desktop::application::run() {
   while (result.ok() && !asset_bytes_ready && !loading_cancelled) {
     runtime.poll_loading();
     desktop_window_events events;
-    result = pump_window_events(window_system, window, window_state, events);
+    result = pump_window_events(window_system, window, window_state, events,
+                                options.show_ui ? &ui : nullptr);
     loading_cancelled = events.close_requested;
     if (result.ok() && events.resized) {
       pixel_width = window_state.framebuffer_width;
@@ -450,7 +406,7 @@ int granit::example::model_viewer::desktop::application::run() {
                                 ? static_cast<float>(progress.received_bytes) /
                                       static_cast<float>(*progress.total_bytes)
                                 : 0.0F;
-      result = render_loading_frame(render_thread, window_state, swapchain_info, textures,
+      result = render_loading_frame(render_thread, window_state, swapchain_info, ui,
                                     "Loading asset resources...",
                                     0.05F + std::min(fraction, 1.0F) * 0.20F);
       if (result == granit::result::out_of_date)
@@ -488,7 +444,8 @@ int granit::example::model_viewer::desktop::application::run() {
   while (result.ok() && cpu_loading.valid() &&
          cpu_loading.wait_for(std::chrono::milliseconds{0}) != std::future_status::ready) {
     desktop_window_events events;
-    result = pump_window_events(window_system, window, window_state, events);
+    result = pump_window_events(window_system, window, window_state, events,
+                                options.show_ui ? &ui : nullptr);
     loading_cancelled = events.close_requested;
     if (result.ok() && events.resized) {
       pixel_width = window_state.framebuffer_width;
@@ -506,8 +463,7 @@ int granit::example::model_viewer::desktop::application::run() {
     const char* label =
         stage < 4 ? "Parsing glTF and decoding textures..." : "Planning GPU resources...";
     const auto progress = stage < 4 ? 0.30F : 0.38F;
-    result = render_loading_frame(render_thread, window_state, swapchain_info, textures, label,
-                                  progress);
+    result = render_loading_frame(render_thread, window_state, swapchain_info, ui, label, progress);
     if (result == granit::result::out_of_date)
       result = granit::result::success;
     std::this_thread::sleep_for(std::chrono::milliseconds{16});
@@ -524,14 +480,14 @@ int granit::example::model_viewer::desktop::application::run() {
       environment_bytes = std::move(loaded.environment_bytes);
   }
   if (result.ok() && options.show_ui)
-    result = render_loading_frame(render_thread, window_state, swapchain_info, textures,
+    result = render_loading_frame(render_thread, window_state, swapchain_info, ui,
                                   "Preparing GPU upload...", 0.40F);
   std::array<granit::example::imgui::frame_canvas_data, 101> gpu_progress_frames;
   if (result.ok() && options.show_ui) {
     for (std::size_t percentage = 0; percentage < gpu_progress_frames.size(); ++percentage) {
-      result = capture_loading_frame(
-          window_state, swapchain_info, textures, "Uploading GPU resources...",
-          static_cast<float>(percentage) / 100.0F, gpu_progress_frames[percentage]);
+      result = capture_loading_frame(window_state, swapchain_info, ui, "Uploading GPU resources...",
+                                     static_cast<float>(percentage) / 100.0F,
+                                     gpu_progress_frames[percentage]);
       if (result.failed())
         break;
     }
@@ -549,7 +505,8 @@ int granit::example::model_viewer::desktop::application::run() {
     bool upload_completed = false;
     while (result.ok() && !upload_completed) {
       desktop_window_events events;
-      result = pump_window_events(window_system, window, window_state, events);
+      result = pump_window_events(window_system, window, window_state, events,
+                                  options.show_ui ? &ui : nullptr);
       if (events.close_requested)
         render_thread.cancel_gpu_upload();
       if (events.resized) {
@@ -579,7 +536,7 @@ int granit::example::model_viewer::desktop::application::run() {
     }
   }
   if (result.ok() && options.show_ui)
-    result = render_loading_frame(render_thread, window_state, swapchain_info, textures,
+    result = render_loading_frame(render_thread, window_state, swapchain_info, ui,
                                   "Creating render pipeline...", 0.96F);
   granit::render_pipeline_desc pipeline_desc{
       .samples = static_cast<granit::sample_count>(render_quality.sample_count),
@@ -600,14 +557,14 @@ int granit::example::model_viewer::desktop::application::run() {
     auto preview_result = core.scene_gpu().texture_binding(reference, srgb, view, sampler);
     ImTextureID texture = ImTextureID_Invalid;
     if (preview_result.ok())
-      preview_result = textures.register_texture(view, sampler, texture);
+      preview_result = ui.register_texture(view, sampler, texture);
     if (preview_result.ok())
       previews.push_back({reference.image, reference.sampler, srgb, texture});
     return preview_result;
   };
   const auto rebuild_previews = [&]() {
     for (const auto& preview : previews)
-      static_cast<void>(textures.unregister_texture(preview.texture));
+      static_cast<void>(ui.unregister_texture(preview.texture));
     previews.clear();
     for (const auto& material : core.cpu_scene().materials) {
       granit::result preview_result;
@@ -624,14 +581,14 @@ int granit::example::model_viewer::desktop::application::run() {
   if (result.ok() && options.show_ui)
     result = rebuild_previews();
   if (result.ok() && options.show_ui)
-    result = render_loading_frame(render_thread, window_state, swapchain_info, textures,
+    result = render_loading_frame(render_thread, window_state, swapchain_info, ui,
                                   "Loading complete", 1.0F);
   if (result.ok() && options.show_ui)
     result = render_thread.finish_loading();
 
   if (result.failed()) {
     if (render_thread.running()) {
-      textures.clear();
+      ui.clear_textures();
       static_cast<void>(render_thread.shutdown());
     }
     std::cerr << "模型查看器初始化失败：" << granit::result_message(result);
@@ -694,7 +651,8 @@ int granit::example::model_viewer::desktop::application::run() {
       break;
     input_adapter.begin_frame();
     desktop_window_events events;
-    result = pump_window_events(window_system, window, window_state, events, &input_adapter);
+    result = pump_window_events(window_system, window, window_state, events,
+                                options.show_ui ? &ui : nullptr, &input_adapter);
     if (result.failed())
       break;
     running = !events.close_requested;
@@ -747,7 +705,7 @@ int granit::example::model_viewer::desktop::application::run() {
       const auto ui_time = std::chrono::steady_clock::now();
       const auto delta_seconds = std::chrono::duration<float>(ui_time - last_ui_time).count();
       last_ui_time = ui_time;
-      granit::example::imgui::begin_frame(window_state, delta_seconds);
+      ui.begin_frame(window_state, delta_seconds);
       const renderer_panel_info panel_renderer{
           .backend = backend_name,
           .adapter = renderer_info.adapter_name,
@@ -775,10 +733,7 @@ int granit::example::model_viewer::desktop::application::run() {
           .history = core.performance().summarize()};
       changes = draw_viewer_panels(core.cpu_scene(), core.state(), panel_renderer,
                                    panel_performance, render_quality, previews);
-      ImGui::Render();
-      result = granit::example::imgui::capture_imgui_frame(
-          ImGui::GetDrawData(), granit::example::imgui::texture_registry::resolver, &textures,
-          ui_frame);
+      result = ui.capture(ui_frame);
     }
     if (result.failed())
       break;
@@ -806,8 +761,8 @@ int granit::example::model_viewer::desktop::application::run() {
 
     frame_packet tick_output;
     application_tick_input tick_input;
-    tick_input.input = input_adapter.finish(options.show_ui && ImGui::GetIO().WantCaptureMouse,
-                                            options.show_ui && ImGui::GetIO().WantCaptureKeyboard);
+    tick_input.input = input_adapter.finish(options.show_ui && ui.wants_mouse(),
+                                            options.show_ui && ui.wants_keyboard());
     tick_input.change = changes.state;
     tick_input.width = swapchain_info.width;
     tick_input.height = swapchain_info.height;
@@ -839,7 +794,7 @@ int granit::example::model_viewer::desktop::application::run() {
   }
 
   if (render_thread.running()) {
-    textures.clear();
+    ui.clear_textures();
     const auto shutdown_result = render_thread.shutdown();
     if (result.ok())
       result = shutdown_result;
