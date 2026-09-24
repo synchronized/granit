@@ -12,6 +12,12 @@
 namespace granit::example::model_viewer::desktop {
 
 struct render_service_state {
+  granit::renderer renderer_owner;
+  granit::renderer_info renderer_info;
+  granit::renderer_limits renderer_limits;
+  granit::surface surface_owner;
+  granit::swapchain swapchain_owner;
+  granit::swapchain_info swapchain_info_owner;
   granit::renderer_ref renderer;
   granit::swapchain* swapchain{};
   granit::swapchain_info* swapchain_info{};
@@ -223,8 +229,6 @@ granit::result update_material(void* user_data) {
 
 struct shutdown_context {
   render_service_state* state{};
-  granit::renderer* renderer{};
-  granit::surface* surface{};
 };
 
 struct font_atlas_context {
@@ -283,8 +287,8 @@ granit::result shutdown_renderer(void* user_data) {
   collect(context.state->font_view.reset());
   collect(context.state->font_texture.reset());
   collect(context.state->swapchain->reset());
-  collect(context.surface->reset());
-  collect(context.renderer->reset());
+  collect(context.state->surface_owner.reset());
+  collect(context.state->renderer_owner.reset());
   return first_failure;
 }
 
@@ -297,26 +301,40 @@ render_service::~render_service() {
     state_->executor.stop();
 }
 
-granit::result render_service::initialize(granit::renderer_ref renderer,
-                                          granit::swapchain& swapchain,
-                                          granit::swapchain_info& swapchain_info,
+granit::result render_service::initialize(granit::window& window,
+                                          const granit::renderer_desc& renderer_desc,
+                                          const granit::swapchain_desc& swapchain_desc,
                                           application_core& core, bool enable_ui) noexcept {
   if (state_)
     return granit::result::invalid_argument;
   try {
     auto state = std::make_unique<render_service_state>();
-    state->renderer = renderer;
-    state->swapchain = &swapchain;
-    state->swapchain_info = &swapchain_info;
+    auto result = state->renderer_owner.initialize(renderer_desc);
+    if (result.ok())
+      result = state->renderer_owner.get_info(state->renderer_info);
+    if (result.ok())
+      result = state->renderer_owner.get_limits(state->renderer_limits);
+    if (result.ok())
+      result = core.renderer_ready();
+    if (result.ok())
+      result = window.create_surface(state->renderer_owner, state->surface_owner);
+    if (result.ok())
+      result = state->swapchain_owner.initialize(state->renderer_owner, state->surface_owner,
+                                                 swapchain_desc);
+    if (result.ok())
+      result = state->swapchain_owner.query_info(state->swapchain_info_owner);
+    state->renderer = state->renderer_owner.ref();
+    state->swapchain = &state->swapchain_owner;
+    state->swapchain_info = &state->swapchain_info_owner;
     state->core = &core;
-    auto result = granit::result::success;
     if (enable_ui) {
-      result = state->loading_frame_context.initialize(renderer);
       if (result.ok())
-        result = state->loading_canvas.initialize(renderer);
+        result = state->loading_frame_context.initialize(state->renderer);
+      if (result.ok())
+        result = state->loading_canvas.initialize(state->renderer);
       for (auto& canvas : state->frame_canvases) {
         if (result.ok())
-          result = canvas.initialize(renderer);
+          result = canvas.initialize(state->renderer);
       }
     }
     if (result.ok())
@@ -328,6 +346,18 @@ granit::result render_service::initialize(granit::renderer_ref renderer,
   } catch (const std::bad_alloc&) {
     return granit::result::out_of_memory;
   }
+}
+
+const granit::renderer_info& render_service::renderer_info() const noexcept {
+  return state_->renderer_info;
+}
+
+const granit::renderer_limits& render_service::renderer_limits() const noexcept {
+  return state_->renderer_limits;
+}
+
+const granit::swapchain_info& render_service::swapchain_info() const noexcept {
+  return state_->swapchain_info_owner;
 }
 
 granit::result render_service::begin_gpu_upload(const gpu_upload_desc& desc) noexcept {
@@ -443,6 +473,26 @@ granit::result render_service::recreate_swapchain(const granit::swapchain_desc& 
   return state_->executor.run_command(desktop::recreate_swapchain, &context);
 }
 
+granit::result render_service::recreate_surface(granit::window& window,
+                                                const granit::swapchain_desc& desc) noexcept {
+  if (!state_ || state_->upload_active)
+    return granit::result::not_ready;
+  auto result = state_->executor.flush();
+  if (result.ok())
+    result = state_->swapchain_owner.reset();
+  if (result.ok())
+    result = state_->surface_owner.reset();
+  if (result.ok())
+    result = window.create_surface(state_->renderer_owner, state_->surface_owner);
+  if (result.ok()) {
+    result =
+        state_->swapchain_owner.initialize(state_->renderer_owner, state_->surface_owner, desc);
+  }
+  if (result.ok())
+    result = state_->swapchain_owner.query_info(state_->swapchain_info_owner);
+  return result;
+}
+
 granit::result render_service::change_quality(const granit::render_pipeline_desc& desc,
                                               float sampler_anisotropy, bool reupload_scene,
                                               quality_change_result& output) noexcept {
@@ -491,8 +541,7 @@ granit::result render_service::flush() noexcept {
   return state_ ? state_->executor.flush() : granit::result::not_ready;
 }
 
-granit::result render_service::shutdown(granit::renderer& renderer,
-                                        granit::surface& surface) noexcept {
+granit::result render_service::shutdown() noexcept {
   if (!state_)
     return granit::result::not_ready;
   if (state_->upload_active) {
@@ -501,7 +550,7 @@ granit::result render_service::shutdown(granit::renderer& renderer,
     granit::result upload_result;
     static_cast<void>(try_finish_gpu_upload(upload_result));
   }
-  shutdown_context context{.state = state_.get(), .renderer = &renderer, .surface = &surface};
+  shutdown_context context{.state = state_.get()};
   const auto result = state_->executor.run_command(shutdown_renderer, &context);
   state_->executor.stop();
   return result;

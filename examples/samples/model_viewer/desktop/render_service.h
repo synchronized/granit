@@ -10,6 +10,7 @@
 #include <granit/granit.hpp>
 #include <granit/pipeline/canvas_draw_list.hpp>
 #include <granit/pipeline/render_pipeline.hpp>
+#include <granit/window.hpp>
 
 #include <array>
 #include <cstddef>
@@ -42,10 +43,13 @@ public:
   render_service(const render_service&) = delete;
   render_service& operator=(const render_service&) = delete;
 
-  [[nodiscard]] granit::result initialize(granit::renderer_ref renderer,
-                                          granit::swapchain& swapchain,
-                                          granit::swapchain_info& swapchain_info,
+  [[nodiscard]] granit::result initialize(granit::window& window,
+                                          const granit::renderer_desc& renderer_desc,
+                                          const granit::swapchain_desc& swapchain_desc,
                                           application_core& core, bool enable_ui) noexcept;
+  [[nodiscard]] const granit::renderer_info& renderer_info() const noexcept;
+  [[nodiscard]] const granit::renderer_limits& renderer_limits() const noexcept;
+  [[nodiscard]] const granit::swapchain_info& swapchain_info() const noexcept;
   /** 开始不可丢弃上传；desc 中的视图和用户数据必须保持到完成回执。 */
   [[nodiscard]] granit::result begin_gpu_upload(const gpu_upload_desc& desc) noexcept;
   [[nodiscard]] bool try_finish_gpu_upload(granit::result& status) noexcept;
@@ -62,6 +66,8 @@ public:
   [[nodiscard]] granit::result
   initialize_pipeline(const granit::render_pipeline_desc& desc) noexcept;
   [[nodiscard]] granit::result recreate_swapchain(const granit::swapchain_desc& desc) noexcept;
+  [[nodiscard]] granit::result recreate_surface(granit::window& window,
+                                                const granit::swapchain_desc& desc) noexcept;
   [[nodiscard]] granit::result change_quality(const granit::render_pipeline_desc& desc,
                                               float sampler_anisotropy, bool reupload_scene,
                                               quality_change_result& output) noexcept;
@@ -75,8 +81,7 @@ public:
   [[nodiscard]] render_task_queue_stats query_queue_stats() const noexcept;
   [[nodiscard]] granit::result flush() noexcept;
 
-  [[nodiscard]] granit::result shutdown(granit::renderer& renderer,
-                                        granit::surface& surface) noexcept;
+  [[nodiscard]] granit::result shutdown() noexcept;
   [[nodiscard]] bool running() const noexcept;
 
 private:

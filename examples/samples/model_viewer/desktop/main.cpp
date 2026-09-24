@@ -333,36 +333,9 @@ int main(int argc, char** argv) {
   ImGui::GetIO().IniFilename = nullptr;
   granit::example::apply_imgui_theme();
 
-  granit::renderer renderer;
-  granit::surface surface;
-  granit::swapchain swapchain;
   granit::example::imgui::texture_registry textures;
   application_core core;
   result = core.begin_renderer();
-  if (result.ok()) {
-    result = renderer.initialize({.application_name = "Granit Model Viewer",
-                                  .enable_validation = options.enable_validation,
-                                  .presentation = granit::presentation_mode::enabled,
-                                  .backend = options.backend});
-  }
-  granit::renderer_info renderer_info;
-  if (result.ok())
-    result = renderer.get_info(renderer_info);
-  granit::renderer_limits renderer_limits;
-  if (result.ok())
-    result = renderer.get_limits(renderer_limits);
-  render_quality_config render_quality{
-      .sample_count = renderer_limits.supports_sample_count(granit::sample_count::four)
-                          ? GRANIT_SAMPLE_COUNT_4
-                          : GRANIT_SAMPLE_COUNT_1,
-      .enable_fxaa = true,
-      .enable_specular_aa = true,
-      .sampler_anisotropy = renderer_limits.max_sampler_anisotropy >= 8.0F ? 8.0F : 1.0F};
-  if (result.ok())
-    result = core.renderer_ready();
-
-  if (result.ok())
-    result = window.create_surface(renderer, surface);
   granit::window_state window_state;
   if (result.ok())
     result = window.get_state(window_state);
@@ -374,25 +347,39 @@ int main(int argc, char** argv) {
               << pixel_height << '\n';
     result = granit::result::invalid_argument;
   }
-  if (result.ok()) {
-    result = swapchain.initialize(renderer, surface,
-                                  {.width = static_cast<std::uint32_t>(pixel_width),
-                                   .height = static_cast<std::uint32_t>(pixel_height),
-                                   .presentation = options.presentation});
-  }
-  granit::swapchain_info swapchain_info;
-  if (result.ok())
-    result = swapchain.query_info(swapchain_info);
   desktop::render_service render_service;
+  if (result.ok()) {
+    result = render_service.initialize(window,
+                                       {.application_name = "Granit Model Viewer",
+                                        .enable_validation = options.enable_validation,
+                                        .presentation = granit::presentation_mode::enabled,
+                                        .backend = options.backend},
+                                       {.width = static_cast<std::uint32_t>(pixel_width),
+                                        .height = static_cast<std::uint32_t>(pixel_height),
+                                        .presentation = options.presentation},
+                                       core, options.show_ui);
+  }
+  granit::renderer_info renderer_info;
+  granit::renderer_limits renderer_limits;
+  granit::swapchain_info swapchain_info;
+  if (result.ok()) {
+    renderer_info = render_service.renderer_info();
+    renderer_limits = render_service.renderer_limits();
+    swapchain_info = render_service.swapchain_info();
+  }
+  render_quality_config render_quality{
+      .sample_count = renderer_limits.supports_sample_count(granit::sample_count::four)
+                          ? GRANIT_SAMPLE_COUNT_4
+                          : GRANIT_SAMPLE_COUNT_1,
+      .enable_fxaa = true,
+      .enable_specular_aa = true,
+      .sampler_anisotropy = renderer_limits.max_sampler_anisotropy >= 8.0F ? 8.0F : 1.0F};
   if (result.ok() && !options.profile_output_path.empty() &&
       swapchain_info.presentation != options.presentation) {
     std::cerr << "性能采样要求的呈现模式不可用，后端回退到了其他模式\n";
     result = granit::result::unsupported;
   }
 
-  if (result.ok())
-    result =
-        render_service.initialize(renderer.ref(), swapchain, swapchain_info, core, options.show_ui);
   if (result.ok() && options.show_ui) {
     std::vector<std::byte> font_pixels;
     std::uint32_t font_width{};
@@ -432,10 +419,10 @@ int main(int argc, char** argv) {
       pixel_width = window_state.framebuffer_width;
       pixel_height = window_state.framebuffer_height;
       if (pixel_width > 0 && pixel_height > 0) {
-        result = swapchain.recreate(
+        result = render_service.recreate_swapchain(
             {.width = pixel_width, .height = pixel_height, .presentation = options.presentation});
         if (result.ok())
-          result = swapchain.query_info(swapchain_info);
+          swapchain_info = render_service.swapchain_info();
       }
     }
     if (result.failed() || loading_cancelled)
@@ -523,10 +510,10 @@ int main(int argc, char** argv) {
       pixel_width = window_state.framebuffer_width;
       pixel_height = window_state.framebuffer_height;
       if (pixel_width > 0 && pixel_height > 0) {
-        result = swapchain.recreate(
+        result = render_service.recreate_swapchain(
             {.width = pixel_width, .height = pixel_height, .presentation = options.presentation});
         if (result.ok())
-          result = swapchain.query_info(swapchain_info);
+          swapchain_info = render_service.swapchain_info();
       }
     }
     if (result.failed() || loading_cancelled || !options.show_ui)
@@ -604,6 +591,8 @@ int main(int argc, char** argv) {
           render_service.recreate_swapchain({.width = static_cast<std::uint32_t>(pixel_width),
                                              .height = static_cast<std::uint32_t>(pixel_height),
                                              .presentation = options.presentation});
+      if (result.ok())
+        swapchain_info = render_service.swapchain_info();
     }
   }
   if (result.ok() && options.show_ui)
@@ -654,13 +643,13 @@ int main(int argc, char** argv) {
   if (result.ok() && options.show_ui)
     result = render_loading_frame(render_service, window_state, swapchain_info, textures,
                                   "Loading complete", 1.0F);
-  if (result.ok())
+  if (result.ok() && options.show_ui)
     result = render_service.finish_loading();
 
   if (result.failed()) {
     if (render_service.running()) {
       textures.clear();
-      static_cast<void>(render_service.shutdown(renderer, surface));
+      static_cast<void>(render_service.shutdown());
     }
     std::cerr << "模型查看器初始化失败：" << granit::result_message(result);
     if (!core.diagnostic().empty())
@@ -741,16 +730,14 @@ int main(int argc, char** argv) {
       result = render_service.flush();
       if (result.failed())
         break;
-      if ((result = swapchain.reset()).failed() || (result = surface.reset()).failed() ||
-          (result = window.create_surface(renderer, surface)).failed() ||
-          (result = swapchain.initialize(renderer, surface,
-                                         {.width = static_cast<std::uint32_t>(pixel_width),
-                                          .height = static_cast<std::uint32_t>(pixel_height),
-                                          .presentation = options.presentation}))
-              .failed() ||
-          (result = swapchain.query_info(swapchain_info)).failed()) {
+      result = render_service.recreate_surface(window,
+                                               {.width = static_cast<std::uint32_t>(pixel_width),
+                                                .height = static_cast<std::uint32_t>(pixel_height),
+                                                .presentation = options.presentation});
+      if (result.failed()) {
         break;
       }
+      swapchain_info = render_service.swapchain_info();
       recreate_surface = false;
       recreate = false;
     }
@@ -763,6 +750,7 @@ int main(int argc, char** argv) {
         continue;
       if (result.failed())
         break;
+      swapchain_info = render_service.swapchain_info();
       recreate = false;
     }
 
@@ -871,7 +859,7 @@ int main(int argc, char** argv) {
 
   if (render_service.running()) {
     textures.clear();
-    const auto shutdown_result = render_service.shutdown(renderer, surface);
+    const auto shutdown_result = render_service.shutdown();
     if (result.ok())
       result = shutdown_result;
   }
