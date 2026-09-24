@@ -5,10 +5,9 @@
 
 ## 状态
 
-**本地实施与浏览器验收完成，等待远端跨平台验收，P1。** 本计划延续 S-59 的统一任务语义，把
-Desktop 原 `render_service` 与 Web 平台入口中
-重复的 Renderer、Surface、Swapchain、Pipeline 和帧执行逻辑收敛到单一同步 `render_runtime`。
-该实现只服务仓库 Sample，不进入 Granit 公共 SDK，也不改变 API/ABI。
+**已完成，P1。** Desktop/Web 已共用单一同步 `render_runtime` 管理 Renderer、Surface、
+Swapchain、Pipeline 和帧执行，由 threaded/inline executor 决定执行位置。Pull Request #85 的
+跨平台矩阵与浏览器运行验收均已通过。
 
 ## 背景与目标
 

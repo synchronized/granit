@@ -5,10 +5,9 @@
 
 ## 状态
 
-**实施完成，等待远端 Linux 验收。** 通用 Target、原生与 SDL3 Emscripten 多 Canvas、后端操作表、
-桌面 SDL3 Window 后端、Model Viewer 消费者迁移和当前行为文档已经完成。Windows shared/static、
-SDL3 开关、安装 Consumer、Emscripten 编译与 Chrome 运行已在本地验证；当前机器没有 WSL 或容器
-环境，Linux XCB/Wayland 与 SDL3 路径留给 Pull Request Actions 验收。
+**已完成。** 通用 Target、原生与 SDL3 Emscripten 多 Canvas、后端操作表、桌面 SDL3 Window
+后端、Model Viewer 消费者迁移和当前行为文档已经完成。Pull Request #85 已通过 Windows
+shared/static、Linux XCB/Wayland 与 SDL3、Emscripten、浏览器和安装 Consumer 验收。
 
 ## 背景与目标
 

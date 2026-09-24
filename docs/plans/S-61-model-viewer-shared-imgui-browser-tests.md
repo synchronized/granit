@@ -5,8 +5,8 @@
 
 ## 状态
 
-**本地实施与浏览器验收完成，等待远端跨平台验收，P1。** 本计划让 Desktop/Web 使用同一套
-ImGui Viewer 面板，并把浏览器验收导出与 Pipeline C API 探针从正式 Model Viewer 运行路径中分离。
+**已完成，P1。** Desktop/Web 已使用同一套 ImGui Viewer 面板，浏览器测试导出与 Pipeline
+C API 探针只进入测试产物。正式与测试浏览器目标以及桌面集成已在 Pull Request #85 中通过。
 
 ## 背景与目标
 

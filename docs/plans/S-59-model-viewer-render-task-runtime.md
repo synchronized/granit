@@ -5,10 +5,9 @@
 
 ## 状态
 
-**本地实施与浏览器验收完成，等待远端跨平台验收，P1。** 本计划延续 S-57 的运行时拆分和 S-58 的
-统一资产入口，把只接收帧与无类型命令的 `frame_executor` 提升为强类型渲染任务执行器，并在其上
-建立 Desktop/Web 共用的 Viewer 生命周期。
-该能力仅服务仓库示例，不进入公共 SDK，也不改变 Granit API/ABI。
+**已完成，P1。** 强类型渲染任务执行器和共享 Viewer 生命周期已经落地，Desktop/Web 分别保留
+threaded 与 inline 执行策略。该示例私有能力已通过 Pull Request #85 的 Linux、Windows、
+Emscripten 与浏览器验收，不改变 Granit 公共 API/ABI。
 
 ## 背景与目标
 

@@ -5,11 +5,9 @@
 
 ## 状态
 
-**实施完成，等待远端 Linux 验收。** S-55 已统一资产与 glTF 加载边界，S-56 已统一 Desktop/Web
-Window 和输入语义。
-Viewer Core 纯渲染帧与执行层 Frame Packet 已完成分离；Desktop 渲染命令和 GPU 资源所有权
-已收敛到专用服务，应用生命周期也已移出进程入口。Web Pipeline 验收与浏览器导出也已从产品
-运行时分离，重复职责审计未发现需要新增的跨平台状态机。当前等待远端 Linux 验收。
+**已完成，P1。** Viewer Core 纯渲染帧与执行层 Frame Packet 已完成分离；Desktop 渲染命令和
+GPU 资源所有权收敛到专用服务，应用生命周期移出进程入口，Web Pipeline 验收与浏览器导出也已
+从正式运行时分离。Pull Request #85 已通过 Linux、Windows 与 Emscripten 远端验收。
 
 ## 背景
 
