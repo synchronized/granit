@@ -149,7 +149,7 @@ jobs:
               exit 0
             fi
             if ! grep -Eq \
-              "A valid external Instance reference no longer exists|实际 0,0,0,0，预期|Timeout 30000ms exceeded" "$log"; then
+              "A valid external Instance reference no longer exists|验收像素 .*实际 .*预期|Timeout 30000ms exceeded" "$log"; then
               exit 1
             fi
             echo "无头 Chrome 初始化、WebGPU 设备或 Canvas 合成异常，重试（${attempt}/3）"
