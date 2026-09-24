@@ -5,8 +5,6 @@ add_library(
   granit_example_assets STATIC
   asset_batch.cpp
   asset_batch.h
-  asset_location.cpp
-  asset_location.h
   asset_request.cpp
   asset_request.h
   asset_source.h
@@ -35,7 +33,6 @@ if(GRANIT_TESTING_ENABLED)
   add_executable(
     granit_example_assets_test
     asset_batch_test.cpp
-    asset_location_test.cpp
     asset_request_test.cpp
     asset_system_test.cpp
     memory_resource_resolver_test.cpp

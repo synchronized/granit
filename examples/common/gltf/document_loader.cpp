@@ -3,8 +3,8 @@
 
 #include "gltf/document_loader.h"
 
-#include "assets/asset_location.h"
 #include "assets/asset_request.h"
+#include "assets/resource_path.h"
 #include "gltf/document_manifest.h"
 
 #include <new>
@@ -98,7 +98,7 @@ void document_loader::poll() {
       }
       for (const auto& resource : resources) {
         std::string resource_path;
-        if (!assets::resolve_asset_location(location_, resource, resource_path) ||
+        if (!assets::resolve_resource_path(location_, resource, resource_path) ||
             !resource_batch_.add(resource, {mount_, resource_path})) {
           fail(document_load_error::invalid_location, "glTF 外部资源位置无效");
           return;
