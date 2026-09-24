@@ -1,36 +1,20 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <array>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
-#include <cstring>
-#include <limits>
-#include <memory>
 #include <new>
-#include <span>
 #include <string>
 #include <utility>
-#include <vector>
 
 #include <emscripten/emscripten.h>
 #include <emscripten/html5.h>
 
-#include <granit/pipeline/render_pipeline.h>
-#include <granit/renderer/buffer.hpp>
-#include <granit/renderer/command_recorder.hpp>
-#include <granit/renderer/renderer.h>
-#include <granit/renderer/sampler.hpp>
-#include <granit/renderer/swapchain.h>
-#include <granit/renderer/texture.hpp>
-#include <granit/renderer/texture_asset.h>
-#include <granit/renderer/timestamp_query.h>
-#include <granit/window.h>
-
 #include "application/application_host.h"
 #include "model_viewer/application_core.h"
 #include "model_viewer/model_viewer_runtime.h"
+#include "model_viewer/render_runtime.h"
 #include "model_viewer/render_task_executor.h"
 #include "model_viewer/viewer_input_accumulator.h"
 
@@ -45,11 +29,7 @@ granit::example::model_viewer::web::application_options options;
 enum class startup_status : int { failed = -1, starting, provider_pending, ready, stopped };
 
 struct web_platform_state {
-  granit_renderer renderer{};
-  granit_surface surface{};
-  granit_swapchain swapchain{};
-  granit_swapchain_info swapchain_info = GRANIT_SWAPCHAIN_INFO_INIT;
-  granit_render_pipeline pipeline{};
+  granit::example::model_viewer::render_runtime rendering;
   granit::example::model_viewer::inline_render_task_executor executor;
   granit::example::model_viewer::web::pipeline_validation pipeline_validation;
   startup_status status{startup_status::starting};
@@ -87,10 +67,7 @@ web_platform_state state;
 
 class web_application_host final : public granit::example::application_host {
 public:
-  [[nodiscard]] granit_window_system window_system_handle() noexcept {
-    return app_window_system().native_handle();
-  }
-  [[nodiscard]] granit_window window_handle() noexcept { return app_window().native_handle(); }
+  [[nodiscard]] granit::window& window() noexcept { return app_window(); }
   void request_shutdown() noexcept { request_stop(); }
 
 private:
@@ -181,151 +158,60 @@ void diagnose(granit_diagnostic_severity severity, granit_diagnostic_category, c
 }
 
 granit_result create_presentation_resources() {
-  granit_window_state window_state = GRANIT_WINDOW_STATE_INIT;
-  auto result = granit_window_get_state(web_host.window_system_handle(), web_host.window_handle(),
-                                        &window_state);
-  if (result != GRANIT_SUCCESS)
-    return result;
-  result = granit_window_create_surface(web_host.window_system_handle(), web_host.window_handle(),
-                                        state.renderer, &state.surface);
-  if (result != GRANIT_SUCCESS) {
-    return result;
+  granit::window_state window_state;
+  auto result = web_host.window().get_state(window_state);
+  if (result.failed())
+    return granit::to_native(result);
+  result = state.rendering.initialize_presentation(web_host.window(),
+                                                   {.width = window_state.framebuffer_width,
+                                                    .height = window_state.framebuffer_height,
+                                                    .minimum_image_count = 2},
+                                                   false);
+  const auto& info = state.rendering.swapchain_info();
+  if (result.failed() || info.width == 0 || info.height == 0 || info.image_count == 0) {
+    return result.ok() ? GRANIT_ERROR_INITIALIZATION_FAILED : granit::to_native(result);
   }
-  granit_swapchain_desc swapchain_desc = GRANIT_SWAPCHAIN_DESC_INIT;
-  swapchain_desc.width = window_state.framebuffer_width;
-  swapchain_desc.height = window_state.framebuffer_height;
-  swapchain_desc.minimum_image_count = 2;
-  result =
-      granit_swapchain_create(state.renderer, state.surface, &swapchain_desc, &state.swapchain);
-  if (result != GRANIT_SUCCESS) {
-    return result;
+  if (options.presentation_ready != nullptr) {
+    const granit_swapchain_info native_info{
+        .struct_size = sizeof(granit_swapchain_info),
+        .width = info.width,
+        .height = info.height,
+        .image_count = info.image_count,
+        .present_mode = static_cast<granit_present_mode>(info.presentation),
+        .format = static_cast<granit_texture_format>(info.format),
+    };
+    return options.presentation_ready(state.rendering.native_renderer(),
+                                      state.rendering.native_swapchain(), native_info);
   }
-  result = granit_swapchain_get_info(state.renderer, state.swapchain, &state.swapchain_info);
-  if (result != GRANIT_SUCCESS || state.swapchain_info.width == 0 ||
-      state.swapchain_info.height == 0 || state.swapchain_info.image_count == 0) {
-    return result == GRANIT_SUCCESS ? GRANIT_ERROR_INITIALIZATION_FAILED : result;
-  }
-  if (options.presentation_ready != nullptr)
-    return options.presentation_ready(state.renderer, state.swapchain, state.swapchain_info);
   return GRANIT_SUCCESS;
 }
 
 granit_result resize_swapchain_if_needed() {
-  granit_window_state window_state = GRANIT_WINDOW_STATE_INIT;
-  auto result = granit_window_get_state(web_host.window_system_handle(), web_host.window_handle(),
-                                        &window_state);
-  if (result != GRANIT_SUCCESS)
-    return result;
-  result = granit_swapchain_get_info(state.renderer, state.swapchain, &state.swapchain_info);
-  if (result != GRANIT_SUCCESS ||
-      (state.swapchain_info.width == window_state.framebuffer_width &&
-       state.swapchain_info.height == window_state.framebuffer_height)) {
-    return result;
-  }
-  result = granit_swapchain_destroy(state.renderer, state.swapchain);
-  if (result != GRANIT_SUCCESS)
-    return result;
-  state.swapchain = GRANIT_NULL_HANDLE;
-  granit_swapchain_desc desc = GRANIT_SWAPCHAIN_DESC_INIT;
-  desc.width = window_state.framebuffer_width;
-  desc.height = window_state.framebuffer_height;
-  desc.minimum_image_count = 2;
-  result = granit_swapchain_create(state.renderer, state.surface, &desc, &state.swapchain);
-  if (result == GRANIT_SUCCESS)
-    result = granit_swapchain_get_info(state.renderer, state.swapchain, &state.swapchain_info);
-  if (result == GRANIT_SUCCESS)
+  granit::window_state window_state;
+  auto result = web_host.window().get_state(window_state);
+  if (result.failed())
+    return granit::to_native(result);
+  const auto& info = state.rendering.swapchain_info();
+  if (info.width == window_state.framebuffer_width &&
+      info.height == window_state.framebuffer_height)
+    return GRANIT_SUCCESS;
+  result = state.rendering.recreate_swapchain({.width = window_state.framebuffer_width,
+                                               .height = window_state.framebuffer_height,
+                                               .minimum_image_count = 2});
+  if (result.ok())
     ++state.resize_count;
-  return result;
+  return granit::to_native(result);
 }
 
 granit::result execute_web_frame(granit::example::model_viewer::frame_packet&& packet,
                                  granit::example::model_viewer::frame_execution_result& output) {
-  granit_frame frame{};
-  std::uint32_t image_index{};
-  std::uint32_t needs_recreate{};
-  auto result = granit_swapchain_acquire(state.renderer, state.swapchain, &frame, &image_index,
-                                         &needs_recreate);
-  output.needs_recreate = needs_recreate != 0;
-  granit_texture backbuffer{};
-  granit_texture_view backbuffer_view{};
-  if (result == GRANIT_SUCCESS) {
-    result = granit_swapchain_get_backbuffer(state.renderer, state.swapchain, image_index,
-                                             &backbuffer, &backbuffer_view);
-  }
-  if (result == GRANIT_SUCCESS &&
-      packet.viewer.draw_bindings.size() > std::numeric_limits<std::uint32_t>::max()) {
-    result = GRANIT_ERROR_INVALID_ARGUMENT;
-  }
-  if (result == GRANIT_SUCCESS) {
-    try {
-      std::vector<granit_render_pipeline_draw_binding> bindings;
-      bindings.reserve(packet.viewer.draw_bindings.size());
-      for (const auto& binding : packet.viewer.draw_bindings) {
-        bindings.push_back({.payload = binding.payload,
-                            .mesh = binding.mesh.native_handle(),
-                            .material = binding.material.native_handle(),
-                            .reserved = 0});
-      }
-      const granit_render_pipeline_environment environment{
-          .struct_size = GRANIT_RENDER_PIPELINE_ENVIRONMENT_VERSION_1_SIZE,
-          .reserved = 0,
-          .irradiance = packet.viewer.environment.irradiance.native_handle(),
-          .prefiltered_environment =
-              packet.viewer.environment.prefiltered_environment.native_handle(),
-          .brdf_lut = packet.viewer.environment.brdf_lut.native_handle(),
-          .rotation_radians = packet.viewer.environment.rotation_radians,
-          .intensity = packet.viewer.environment.intensity,
-          .prefiltered_max_mip = packet.viewer.environment.prefiltered_max_mip,
-          .reserved_tail = 0,
-      };
-      const granit_render_pipeline_render_desc render{
-          .struct_size = GRANIT_RENDER_PIPELINE_RENDER_DESC_VERSION_1_SIZE,
-          .reserved = 0,
-          .scene = packet.viewer.snapshot.native_handle(),
-          .output = backbuffer_view,
-          .output_format = state.swapchain_info.format,
-          .width = packet.viewer.width,
-          .height = packet.viewer.height,
-          .first_view = 0,
-          .view_count = 1,
-          .exposure_ev = packet.viewer.exposure_ev,
-          .draw_binding_count = static_cast<std::uint32_t>(bindings.size()),
-          .draw_bindings = bindings.data(),
-          .output_count = 0,
-          .outputs = nullptr,
-          .frame = frame,
-          .reserved_tail = 0,
-          .canvas = GRANIT_NULL_HANDLE,
-          .debug_draw = GRANIT_NULL_HANDLE,
-          .clear_color = {packet.viewer.clear_color.red, packet.viewer.clear_color.green,
-                          packet.viewer.clear_color.blue, packet.viewer.clear_color.alpha},
-          .environment = &environment,
-      };
-      result = granit_render_pipeline_render(state.renderer, state.pipeline, &render);
-    } catch (const std::bad_alloc&) {
-      result = GRANIT_ERROR_OUT_OF_MEMORY;
-    } catch (...) {
-      result = GRANIT_ERROR_INTERNAL;
-    }
-  }
-  if (result != GRANIT_SUCCESS) {
-    if (frame != GRANIT_NULL_HANDLE) {
-      static_cast<void>(
-          granit_frame_cancel(state.renderer, state.swapchain, frame, &needs_recreate));
-      output.needs_recreate = output.needs_recreate || needs_recreate != 0;
-    }
-    return granit::from_native(result);
-  }
-  result = granit_swapchain_present(state.renderer, state.swapchain, frame, &needs_recreate);
-  output.needs_recreate = output.needs_recreate || needs_recreate != 0;
-  return granit::from_native(result);
+  return state.rendering.render(std::move(packet), output);
 }
 
 granit_result render_model_viewer_frame() {
   auto result = resize_swapchain_if_needed();
   if (result != GRANIT_SUCCESS)
     return result;
-  result = granit_swapchain_get_info(state.renderer, state.swapchain, &state.swapchain_info);
   granit::example::model_viewer::frame_packet output;
   granit::example::model_viewer::application_tick_input input;
   input.input = state.input.finish(false, false);
@@ -333,8 +219,8 @@ granit_result render_model_viewer_frame() {
       input.input.wheel_delta != 0.0F || input.input.focus_requested || input.input.home_requested)
     ++state.applied_input_count;
   state.input.begin_frame();
-  input.width = state.swapchain_info.width;
-  input.height = state.swapchain_info.height;
+  input.width = state.rendering.swapchain_info().width;
+  input.height = state.rendering.swapchain_info().height;
   if (result == GRANIT_SUCCESS)
     result = granit::to_native(state.core.tick(input, output.viewer));
   if (result == GRANIT_SUCCESS) {
@@ -349,43 +235,29 @@ granit_result render_model_viewer_frame() {
 granit_result execute_render_quality_change(granit_sample_count sample_count, unsigned enable_fxaa,
                                             unsigned enable_specular_aa,
                                             unsigned sampler_anisotropy) {
-  if (state.status != startup_status::ready || state.renderer == GRANIT_NULL_HANDLE ||
-      state.pipeline == GRANIT_NULL_HANDLE)
+  if (state.status != startup_status::ready || !state.rendering.valid())
     return GRANIT_ERROR_NOT_READY;
   if ((sample_count != GRANIT_SAMPLE_COUNT_1 && sample_count != GRANIT_SAMPLE_COUNT_4) ||
       enable_fxaa > 1 || enable_specular_aa > 1 || sampler_anisotropy == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
 
-  granit_renderer_limits limits = GRANIT_RENDERER_LIMITS_INIT;
-  auto result = granit_renderer_get_limits(state.renderer, &limits);
-  if (result != GRANIT_SUCCESS)
-    return result;
+  const auto& limits = state.rendering.renderer_limits();
   if ((limits.framebuffer_sample_counts & sample_count) == 0 ||
       static_cast<float>(sampler_anisotropy) > limits.max_sampler_anisotropy)
     return GRANIT_ERROR_UNSUPPORTED;
 
-  granit_render_pipeline_desc desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
-  desc.sample_count = sample_count;
-  desc.enable_fxaa = enable_fxaa;
-  desc.enable_specular_aa = enable_specular_aa;
-  granit_render_pipeline replacement{};
-  result = granit_render_pipeline_create(state.renderer, &desc, &replacement);
-  if (result != GRANIT_SUCCESS)
-    return result;
-  if (sampler_anisotropy != state.sampler_anisotropy) {
-    result = granit::to_native(state.core.reupload_scene(
-        granit::renderer_ref::from_native(state.renderer), static_cast<float>(sampler_anisotropy)));
-    if (result != GRANIT_SUCCESS) {
-      static_cast<void>(granit_render_pipeline_destroy(state.renderer, replacement));
-      return result;
-    }
-  }
-  result = granit_render_pipeline_destroy(state.renderer, state.pipeline);
+  const granit::render_pipeline_desc desc{
+      .samples = static_cast<granit::sample_count>(sample_count),
+      .enable_fxaa = enable_fxaa != 0,
+      .enable_specular_aa = enable_specular_aa != 0,
+  };
+  granit::example::model_viewer::render_quality_change_result output;
+  const auto result = granit::to_native(
+      state.rendering.change_quality(desc, static_cast<float>(sampler_anisotropy),
+                                     sampler_anisotropy != state.sampler_anisotropy, output));
   if (result != GRANIT_SUCCESS) {
-    static_cast<void>(granit_render_pipeline_destroy(state.renderer, replacement));
     return result;
   }
-  state.pipeline = replacement;
   state.sample_count = sample_count;
   state.enable_fxaa = enable_fxaa;
   state.enable_specular_aa = enable_specular_aa;
@@ -449,28 +321,30 @@ void update_web_application() noexcept {
     fail("renderer-timeout", GRANIT_ERROR_NOT_READY);
     return;
   }
-  const auto process_result = granit_renderer_process_events(state.renderer);
-  if (process_result != GRANIT_SUCCESS) {
-    fail("provider-events", process_result);
+  const auto process_result = state.rendering.process_renderer_events();
+  if (process_result.failed()) {
+    fail("provider-events", granit::to_native(process_result));
     return;
   }
 
-  granit_renderer_status renderer_status = GRANIT_RENDERER_STATUS_INIT;
-  const auto status_result = granit_renderer_get_status(state.renderer, &renderer_status);
-  if (status_result != GRANIT_SUCCESS) {
-    fail("renderer-status", status_result);
+  granit::renderer_status renderer_status;
+  const auto status_result = state.rendering.query_renderer_status(renderer_status);
+  if (status_result.failed()) {
+    fail("renderer-status", granit::to_native(status_result));
     return;
   }
-  if (renderer_status.state == GRANIT_RENDERER_STATE_FAILED ||
-      renderer_status.state == GRANIT_RENDERER_STATE_DEVICE_LOST) {
-    fail("provider-terminal", renderer_status.failure_result);
+  if (renderer_status.state == granit::renderer_state::failed ||
+      renderer_status.state == granit::renderer_state::device_lost) {
+    fail("provider-terminal", granit::to_native(renderer_status.failure_result));
     return;
   }
-  if (renderer_status.state != GRANIT_RENDERER_STATE_READY) {
+  if (renderer_status.state != granit::renderer_state::ready) {
     return;
   }
   if (!state.core_renderer_ready) {
-    const auto result = state.runtime.renderer_ready();
+    auto result = state.rendering.complete_renderer_initialization();
+    if (result.ok())
+      result = state.runtime.renderer_ready();
     if (result != granit::result::success) {
       fail("core-renderer-ready", granit::to_native(result));
       return;
@@ -501,10 +375,8 @@ void update_web_application() noexcept {
         fail("asset-load", granit::to_native(result));
         return;
       }
-      result = state.executor.run_task([] {
-        return state.core.upload(granit::renderer_ref::from_native(state.renderer), {}, 8.0F,
-                                 report_upload_progress, nullptr);
-      });
+      result = state.executor.run_task(
+          [] { return state.rendering.upload_scene({}, 8.0F, report_upload_progress, nullptr); });
       state.upload_active = false;
       if (result != granit::result::success) {
         fail("asset-upload", granit::to_native(result));
@@ -525,16 +397,21 @@ void update_web_application() noexcept {
   }
 
   if (!state.pipeline_validation.started()) {
-    granit_renderer_limits limits = GRANIT_RENDERER_LIMITS_INIT;
-    const auto limits_result = granit_renderer_get_limits(state.renderer, &limits);
-    if (limits_result != GRANIT_SUCCESS || limits.uniform_buffer_offset_alignment == 0 ||
+    const auto& limits = state.rendering.renderer_limits();
+    if (limits.uniform_buffer_offset_alignment == 0 ||
         limits.max_uniform_buffer_binding_size == 0) {
-      fail("renderer-limits",
-           limits_result == GRANIT_SUCCESS ? GRANIT_ERROR_INTERNAL : limits_result);
+      fail("renderer-limits", GRANIT_ERROR_INTERNAL);
       return;
     }
     if (options.renderer_ready != nullptr) {
-      const auto validation_result = options.renderer_ready(state.renderer, limits);
+      granit_renderer_limits native_limits = GRANIT_RENDERER_LIMITS_INIT;
+      native_limits.uniform_buffer_offset_alignment = limits.uniform_buffer_offset_alignment;
+      native_limits.max_uniform_buffer_binding_size = limits.max_uniform_buffer_binding_size;
+      native_limits.framebuffer_sample_counts = limits.framebuffer_sample_counts;
+      native_limits.max_sampler_anisotropy = limits.max_sampler_anisotropy;
+      native_limits.supported_features = limits.supported_features;
+      const auto validation_result =
+          options.renderer_ready(state.rendering.native_renderer(), native_limits);
       if (validation_result != GRANIT_SUCCESS) {
         fail("renderer-validation", validation_result);
         return;
@@ -542,24 +419,24 @@ void update_web_application() noexcept {
     }
   }
   try {
-    if (state.surface == GRANIT_NULL_HANDLE) {
+    if (state.rendering.native_swapchain() == GRANIT_NULL_HANDLE) {
       const auto create_result = create_presentation_resources();
       if (create_result != GRANIT_SUCCESS) {
         fail("presentation-create", create_result);
         return;
       }
     }
-    granit_swapchain_info swapchain_info = GRANIT_SWAPCHAIN_INFO_INIT;
-    auto result = granit_swapchain_get_info(state.renderer, state.swapchain, &swapchain_info);
-    if (result != GRANIT_SUCCESS) {
-      fail("presentation-info", result);
+    const auto& swapchain_info = state.rendering.swapchain_info();
+    if (swapchain_info.format == granit::texture_format::undefined) {
+      fail("presentation-info", GRANIT_ERROR_INITIALIZATION_FAILED);
       return;
     }
     if (!state.pipeline_validation.started()) {
       state.upload_active = true;
       state.upload_cancel_requested = false;
       const auto begin_result = state.pipeline_validation.begin(
-          state.renderer, state.core.scene_gpu(), swapchain_info.format, state.sample_count);
+          state.rendering.native_renderer(), state.core.scene_gpu(),
+          static_cast<granit_texture_format>(swapchain_info.format), state.sample_count);
       if (begin_result != GRANIT_SUCCESS) {
         state.upload_active = false;
         fail("renderer-pipeline", begin_result);
@@ -573,7 +450,7 @@ void update_web_application() noexcept {
       // Asyncify 允许浏览器交付 WaitAnyOnly Pipeline Future；某些 Emscripten 主循环不会在
       // 当前回调包含前序 Asyncify 上传后再次调度 tick，因此在同一启动阶段显式让出并轮询。
       emscripten_sleep(0);
-      pipeline_result = granit_renderer_process_events(state.renderer);
+      pipeline_result = granit::to_native(state.rendering.process_renderer_events());
       if (pipeline_result == GRANIT_SUCCESS)
         pipeline_result = state.pipeline_validation.poll();
     }
@@ -584,17 +461,13 @@ void update_web_application() noexcept {
       fail("renderer-pipeline", pipeline_result);
       return;
     }
-    const granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
-    const auto pipeline_create_result =
-        granit_render_pipeline_create(state.renderer, &pipeline_desc, &state.pipeline);
-    if (pipeline_create_result != GRANIT_SUCCESS) {
-      fail("pipeline-create", pipeline_create_result);
+    const auto pipeline_create_result = state.rendering.initialize_pipeline({});
+    if (pipeline_create_result.failed()) {
+      fail("pipeline-create", granit::to_native(pipeline_create_result));
       return;
     }
     const auto render_result = render_model_viewer_frame();
     if (render_result != GRANIT_SUCCESS) {
-      static_cast<void>(granit_render_pipeline_destroy(state.renderer, state.pipeline));
-      state.pipeline = GRANIT_NULL_HANDLE;
       fail("model-viewer-render", render_result);
       return;
     }
@@ -611,42 +484,17 @@ void update_web_application() noexcept {
 
 granit_result destroy_web_render_resources() noexcept {
   state.runtime.reset();
-
-  auto first_error = GRANIT_SUCCESS;
-  const auto capture = [&](granit_result result) {
-    if (first_error == GRANIT_SUCCESS && result != GRANIT_SUCCESS)
-      first_error = result;
-  };
   state.pipeline_validation.reset();
-  if (state.pipeline != GRANIT_NULL_HANDLE) {
-    capture(granit_render_pipeline_destroy(state.renderer, state.pipeline));
-    state.pipeline = GRANIT_NULL_HANDLE;
-  }
-  if (state.swapchain != GRANIT_NULL_HANDLE) {
-    capture(granit_swapchain_destroy(state.renderer, state.swapchain));
-    state.swapchain = GRANIT_NULL_HANDLE;
-  }
-  if (state.surface != GRANIT_NULL_HANDLE) {
-    capture(granit_surface_destroy(state.renderer, state.surface));
-    state.surface = GRANIT_NULL_HANDLE;
-  }
-  if (state.renderer != GRANIT_NULL_HANDLE) {
-    granit_renderer_resource_stats stats = GRANIT_RENDERER_RESOURCE_STATS_INIT;
-    const auto stats_result = granit_renderer_get_resource_stats(state.renderer, &stats);
-    capture(stats_result);
-    if (stats_result == GRANIT_SUCCESS) {
-      state.shutdown_live_resource_count = stats.total_live_count;
-      state.shutdown_pending_retirement_count = stats.pending_retirement_count;
-      if (stats.total_live_count != 0)
-        capture(GRANIT_ERROR_INTERNAL);
-    }
-    capture(granit_renderer_destroy(state.renderer));
-    state.renderer = GRANIT_NULL_HANDLE;
-  }
-  state.shutdown_result = first_error;
+  granit::renderer_resource_stats stats;
+  auto result = state.rendering.shutdown(&stats);
+  state.shutdown_live_resource_count = stats.total_live_count;
+  state.shutdown_pending_retirement_count = stats.pending_retirement_count;
+  if (result.ok() && stats.total_live_count != 0)
+    result = granit::result::internal;
+  state.shutdown_result = granit::to_native(result);
   state.shutdown_complete = true;
   state.status = startup_status::stopped;
-  return first_error;
+  return state.shutdown_result;
 }
 
 granit_result shutdown_web_resources() noexcept {
@@ -656,13 +504,11 @@ granit_result shutdown_web_resources() noexcept {
 }
 
 granit::result web_application_host::on_host_initialize() noexcept {
-  granit_renderer_desc desc = GRANIT_RENDERER_DESC_INIT;
-  desc.presentation_mode = GRANIT_PRESENTATION_ENABLED;
-  desc.diagnostic_callback = diagnose;
-  auto result = granit_renderer_create(&desc, &state.renderer);
-  if (result != GRANIT_SUCCESS) {
-    fail("provider-open", result);
-    return granit::from_native(result);
+  const auto result = state.rendering.initialize_renderer(
+      {.presentation = granit::presentation_mode::enabled, .diagnostics = diagnose}, state.core);
+  if (result.failed()) {
+    fail("provider-open", granit::to_native(result));
+    return result;
   }
   const auto executor_result = state.executor.initialize(execute_web_frame);
   if (executor_result.failed()) {
@@ -775,12 +621,9 @@ float granit::example::model_viewer::web::runtime_control::key_light_intensity()
 }
 
 unsigned granit::example::model_viewer::web::runtime_control::max_sampler_anisotropy() noexcept {
-  if (state.renderer == GRANIT_NULL_HANDLE)
+  if (!state.rendering.valid())
     return 0;
-  granit_renderer_limits limits = GRANIT_RENDERER_LIMITS_INIT;
-  if (granit_renderer_get_limits(state.renderer, &limits) != GRANIT_SUCCESS)
-    return 0;
-  return static_cast<unsigned>(limits.max_sampler_anisotropy);
+  return static_cast<unsigned>(state.rendering.renderer_limits().max_sampler_anisotropy);
 }
 
 unsigned long long
@@ -827,14 +670,15 @@ int granit::example::model_viewer::web::runtime_control::cancel_loading() noexce
 }
 
 unsigned granit::example::model_viewer::web::runtime_control::renderer_state() noexcept {
-  granit_renderer_status status = GRANIT_RENDERER_STATUS_INIT;
-  return granit_renderer_get_status(state.renderer, &status) == GRANIT_SUCCESS ? status.state : 0;
+  granit::renderer_status status;
+  return state.rendering.query_renderer_status(status).ok() ? static_cast<unsigned>(status.state)
+                                                            : 0;
 }
 
 int granit::example::model_viewer::web::runtime_control::renderer_failure_result() noexcept {
-  granit_renderer_status status = GRANIT_RENDERER_STATUS_INIT;
-  return granit_renderer_get_status(state.renderer, &status) == GRANIT_SUCCESS
-             ? status.failure_result
+  granit::renderer_status status;
+  return state.rendering.query_renderer_status(status).ok()
+             ? granit::to_native(status.failure_result)
              : GRANIT_ERROR_INVALID_HANDLE;
 }
 

@@ -303,7 +303,7 @@ render_runtime::query_resource_stats(granit::renderer_resource_stats& stats) con
   return state_ ? state_->renderer_owner.get_resource_stats(stats) : granit::result::not_ready;
 }
 
-granit::result render_runtime::shutdown() noexcept {
+granit::result render_runtime::shutdown(granit::renderer_resource_stats* final_stats) noexcept {
   if (!state_)
     return granit::result::success;
   granit::result first_failure = granit::result::success;
@@ -322,7 +322,10 @@ granit::result render_runtime::shutdown() noexcept {
   collect(state_->font_texture.reset());
   collect(state_->swapchain.reset());
   collect(state_->surface.reset());
+  if (final_stats != nullptr)
+    collect(state_->renderer_owner.get_resource_stats(*final_stats));
   collect(state_->renderer_owner.reset());
+  state_.reset();
   return first_failure;
 }
 

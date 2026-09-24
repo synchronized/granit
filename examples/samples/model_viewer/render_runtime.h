@@ -63,7 +63,9 @@ public:
                                                 const granit::swapchain_desc& desc) noexcept;
   [[nodiscard]] granit::result
   query_resource_stats(granit::renderer_resource_stats& stats) const noexcept;
-  [[nodiscard]] granit::result shutdown() noexcept;
+  /** 销毁 Renderer 前可返回资源统计，用于验证所有子资源已经释放。 */
+  [[nodiscard]] granit::result
+  shutdown(granit::renderer_resource_stats* final_stats = nullptr) noexcept;
 
   [[nodiscard]] const granit::renderer_info& renderer_info() const noexcept;
   [[nodiscard]] const granit::renderer_limits& renderer_limits() const noexcept;
