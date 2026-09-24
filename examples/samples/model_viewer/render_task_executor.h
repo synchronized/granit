@@ -11,6 +11,8 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <type_traits>
+#include <utility>
 
 namespace granit::example::model_viewer {
 
@@ -63,15 +65,30 @@ public:
 
   [[nodiscard]] virtual granit::result submit(frame_packet packet,
                                               frame_execution_result& output) = 0;
+  [[nodiscard]] virtual granit::result run_task(render_control_task task) noexcept = 0;
   [[nodiscard]] virtual granit::result flush() noexcept = 0;
 };
 
 /** 在调用线程立即执行帧的实现，供同步平台和线程迁移前的桌面路径使用。 */
 class inline_render_task_executor final : public render_task_executor {
 public:
+  inline_render_task_executor() = default;
   explicit inline_render_task_executor(render_frame_callback callback) noexcept;
 
+  [[nodiscard]] granit::result initialize(render_frame_callback callback) noexcept;
   [[nodiscard]] granit::result submit(frame_packet packet, frame_execution_result& output) override;
+  [[nodiscard]] granit::result run_task(render_control_task task) noexcept override;
+  template <typename Task>
+    requires(!std::is_same_v<std::remove_cvref_t<Task>, render_control_task>)
+  [[nodiscard]] granit::result run_task(Task&& task) noexcept {
+    try {
+      return run_task(render_control_task{std::forward<Task>(task)});
+    } catch (const std::bad_alloc&) {
+      return granit::result::out_of_memory;
+    } catch (...) {
+      return granit::result::internal;
+    }
+  }
   [[nodiscard]] granit::result flush() noexcept override;
 
 private:
@@ -92,8 +109,30 @@ public:
   /** 提交拥有其捕获数据的控制任务；队列已满时返回 not_ready，不替换已有任务。 */
   [[nodiscard]] granit::result submit_task(render_control_task task,
                                            std::uint64_t& sequence) noexcept;
+  template <typename Task>
+    requires(!std::is_same_v<std::remove_cvref_t<Task>, render_control_task>)
+  [[nodiscard]] granit::result submit_task(Task&& task, std::uint64_t& sequence) noexcept {
+    try {
+      return submit_task(render_control_task{std::forward<Task>(task)}, sequence);
+    } catch (const std::bad_alloc&) {
+      return granit::result::out_of_memory;
+    } catch (...) {
+      return granit::result::internal;
+    }
+  }
   /** 提交不可丢弃控制任务并等待其完成。 */
   [[nodiscard]] granit::result run_task(render_control_task task) noexcept;
+  template <typename Task>
+    requires(!std::is_same_v<std::remove_cvref_t<Task>, render_control_task>)
+  [[nodiscard]] granit::result run_task(Task&& task) noexcept {
+    try {
+      return run_task(render_control_task{std::forward<Task>(task)});
+    } catch (const std::bad_alloc&) {
+      return granit::result::out_of_memory;
+    } catch (...) {
+      return granit::result::internal;
+    }
+  }
   /** 返回当前是否有待处理帧容量；单生产者仍须处理 submit 的最终结果。 */
   [[nodiscard]] bool can_submit_frame() const noexcept;
   /** 记录调用方因容量不足而在构造前跳过的帧。 */

@@ -77,12 +77,30 @@ TEST_CASE("同步帧执行器完整转发帧包和执行结果") {
 }
 
 TEST_CASE("同步帧执行器拒绝空回调") {
-  granit::example::model_viewer::inline_render_task_executor executor({});
+  granit::example::model_viewer::inline_render_task_executor executor;
   granit::example::model_viewer::frame_execution_result output;
   output.needs_recreate = true;
 
   CHECK(executor.submit({}, output) == granit::result::invalid_argument);
   CHECK_FALSE(output.needs_recreate);
+}
+
+TEST_CASE("同步渲染任务执行器持久初始化并执行控制任务") {
+  using namespace granit::example::model_viewer;
+  inline_render_task_executor executor;
+  callback_state state;
+  REQUIRE(executor
+              .initialize([&state](auto&& packet, auto& output) {
+                return execute_frame(std::move(packet), output, &state);
+              })
+              .ok());
+  CHECK(executor.initialize({}) == granit::result::invalid_argument);
+  CHECK(executor.run_task([&state] {
+          state.width = 99;
+          return granit::result::success;
+        }).ok());
+  CHECK(state.width == 99);
+  CHECK(executor.run_task({}) == granit::result::invalid_argument);
 }
 
 TEST_CASE("线程帧执行器限制待处理队列并回报被替换帧") {

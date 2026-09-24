@@ -8,6 +8,7 @@
 #include <chrono>
 #include <new>
 #include <thread>
+#include <vector>
 
 namespace granit::example::model_viewer::desktop {
 
@@ -34,6 +35,7 @@ struct render_service_state {
   bool metrics_enabled{};
 
   gpu_upload_desc upload;
+  std::vector<std::byte> upload_environment;
   std::atomic<bool> upload_cancelled{};
   granit::result upload_progress_result{granit::result::success};
   std::uint64_t upload_sequence{};
@@ -365,7 +367,15 @@ const granit::swapchain_info& render_service::swapchain_info() const noexcept {
 granit::result render_service::begin_gpu_upload(const gpu_upload_desc& desc) noexcept {
   if (!state_ || state_->upload_active)
     return granit::result::not_ready;
+  try {
+    state_->upload_environment.assign(desc.environment_bytes.begin(), desc.environment_bytes.end());
+  } catch (const std::bad_alloc&) {
+    return granit::result::out_of_memory;
+  } catch (...) {
+    return granit::result::internal;
+  }
   state_->upload = desc;
+  state_->upload.environment_bytes = state_->upload_environment;
   state_->upload_cancelled.store(false, std::memory_order_release);
   state_->upload_progress_result = granit::result::success;
   state_->displayed_percentage = 40;
@@ -388,6 +398,7 @@ bool render_service::try_finish_gpu_upload(granit::result& status) noexcept {
   }
   state_->upload_active = false;
   state_->upload = {};
+  state_->upload_environment.clear();
   return true;
 }
 
@@ -448,10 +459,19 @@ granit::result render_service::initialize_font_atlas(std::span<const std::byte> 
                                                      std::uint32_t height) noexcept {
   if (!state_ || pixels.empty() || width == 0 || height == 0)
     return granit::result::invalid_argument;
-  font_atlas_context context{
-      .state = state_.get(), .pixels = pixels, .width = width, .height = height};
-  return state_->executor.run_task(
-      [&context] { return desktop::initialize_font_atlas(&context); });
+  try {
+    std::vector<std::byte> owned_pixels(pixels.begin(), pixels.end());
+    return state_->executor.run_task(
+        [context = state_.get(), pixels = std::move(owned_pixels), width, height] {
+          font_atlas_context atlas{
+              .state = context, .pixels = pixels, .width = width, .height = height};
+          return desktop::initialize_font_atlas(&atlas);
+        });
+  } catch (const std::bad_alloc&) {
+    return granit::result::out_of_memory;
+  } catch (...) {
+    return granit::result::internal;
+  }
 }
 
 granit::texture_view_ref render_service::font_view() const noexcept {
@@ -467,14 +487,16 @@ render_service::initialize_pipeline(const granit::render_pipeline_desc& desc) no
   if (!state_ || state_->upload_active)
     return granit::result::not_ready;
   pipeline_context context{.state = state_.get(), .desc = desc};
-  return state_->executor.run_task([&context] { return replace_pipeline(&context); });
+  return state_->executor.run_task(
+      [context]() mutable { return replace_pipeline(&context); });
 }
 
 granit::result render_service::recreate_swapchain(const granit::swapchain_desc& desc) noexcept {
   if (!state_ || state_->upload_active)
     return granit::result::not_ready;
   swapchain_context context{.state = state_.get(), .desc = desc};
-  return state_->executor.run_task([&context] { return desktop::recreate_swapchain(&context); });
+  return state_->executor.run_task(
+      [context]() mutable { return desktop::recreate_swapchain(&context); });
 }
 
 granit::result render_service::recreate_surface(granit::window& window,
@@ -506,7 +528,8 @@ granit::result render_service::change_quality(const granit::render_pipeline_desc
                            .desc = desc,
                            .sampler_anisotropy = sampler_anisotropy,
                            .reupload_scene = reupload_scene};
-  const auto result = state_->executor.run_task([&context] { return replace_pipeline(&context); });
+  const auto result = state_->executor.run_task(
+      [context]() mutable { return replace_pipeline(&context); });
   output = {.scene_reuploaded = result.ok() && reupload_scene};
   return result;
 }
@@ -516,7 +539,8 @@ granit::result render_service::update_material(std::uint32_t material_index,
   if (!state_ || state_->upload_active)
     return granit::result::not_ready;
   material_context context{.state = state_.get(), .material_index = material_index, .edit = edit};
-  return state_->executor.run_task([&context] { return desktop::update_material(&context); });
+  return state_->executor.run_task(
+      [context]() mutable { return desktop::update_material(&context); });
 }
 
 bool render_service::can_submit_frame() const noexcept {
@@ -555,7 +579,8 @@ granit::result render_service::shutdown() noexcept {
     static_cast<void>(try_finish_gpu_upload(upload_result));
   }
   shutdown_context context{.state = state_.get()};
-  const auto result = state_->executor.run_task([&context] { return shutdown_renderer(&context); });
+  const auto result =
+      state_->executor.run_task([context]() mutable { return shutdown_renderer(&context); });
   state_->executor.stop();
   return result;
 }

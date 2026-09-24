@@ -17,12 +17,31 @@ namespace granit::example::model_viewer {
 inline_render_task_executor::inline_render_task_executor(render_frame_callback callback) noexcept
     : callback_(std::move(callback)) {}
 
+granit::result inline_render_task_executor::initialize(render_frame_callback callback) noexcept {
+  if (!callback || callback_)
+    return granit::result::invalid_argument;
+  callback_ = std::move(callback);
+  return granit::result::success;
+}
+
 granit::result inline_render_task_executor::submit(frame_packet packet,
                                                    frame_execution_result& output) {
   output = {};
   if (callback_ == nullptr)
     return granit::result::invalid_argument;
   return callback_(std::move(packet), output);
+}
+
+granit::result inline_render_task_executor::run_task(render_control_task task) noexcept {
+  if (!task)
+    return granit::result::invalid_argument;
+  try {
+    return task();
+  } catch (const std::bad_alloc&) {
+    return granit::result::out_of_memory;
+  } catch (...) {
+    return granit::result::internal;
+  }
 }
 
 granit::result inline_render_task_executor::flush() noexcept { return granit::result::success; }
