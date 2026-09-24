@@ -56,6 +56,10 @@ model_loading_status model_viewer_runtime::loading_status() const noexcept {
   return loading_->status();
 }
 
+model_loading_error model_viewer_runtime::loading_error() const noexcept {
+  return loading_->error();
+}
+
 granit::result model_viewer_runtime::loading_result() const noexcept { return loading_->result(); }
 
 const std::string& model_viewer_runtime::loading_diagnostic() const noexcept {

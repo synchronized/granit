@@ -19,13 +19,13 @@ public:
   [[nodiscard]] bool start_loading(assets::asset_system& assets, assets::asset_key model);
   void poll_loading();
   /** 完成 CPU 导入并把 Scene 与 GPU 计划交给 Core；调用期间不能并发访问 Core。 */
-  [[nodiscard]] granit::result
-  prepare_scene(gltf::import_progress_callback progress = nullptr,
-                void* progress_user_data = nullptr);
+  [[nodiscard]] granit::result prepare_scene(gltf::import_progress_callback progress = nullptr,
+                                             void* progress_user_data = nullptr);
   void cancel_loading() noexcept;
   void reset() noexcept;
 
   [[nodiscard]] model_loading_status loading_status() const noexcept;
+  [[nodiscard]] model_loading_error loading_error() const noexcept;
   [[nodiscard]] granit::result loading_result() const noexcept;
   [[nodiscard]] const std::string& loading_diagnostic() const noexcept;
   [[nodiscard]] gltf::document_load_progress loading_progress() const noexcept;

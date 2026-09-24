@@ -30,8 +30,8 @@
 
 #include "application/application_host.h"
 #include "model_viewer/application_core.h"
-#include "model_viewer/render_task_executor.h"
 #include "model_viewer/model_viewer_runtime.h"
+#include "model_viewer/render_task_executor.h"
 #include "model_viewer/viewer_input_accumulator.h"
 
 #include "application.h"
@@ -479,7 +479,11 @@ void update_web_application() noexcept {
   }
   if (state.runtime.loading_status() ==
       granit::example::model_viewer::model_loading_status::failed) {
-    fail("asset-fetch", granit::to_native(state.runtime.loading_result()));
+    const auto stage = state.runtime.loading_error() ==
+                               granit::example::model_viewer::model_loading_error::resource_read
+                           ? "asset-resource-fetch"
+                           : "asset-fetch";
+    fail(stage, granit::to_native(state.runtime.loading_result()));
     return;
   }
   if (state.runtime.loading_status() !=
@@ -647,8 +651,8 @@ granit_result destroy_web_render_resources() noexcept {
 
 granit_result shutdown_web_resources() noexcept {
   state.runtime.cancel_loading();
-  return granit::to_native(state.executor.run_task(
-      [] { return granit::from_native(destroy_web_render_resources()); }));
+  return granit::to_native(
+      state.executor.run_task([] { return granit::from_native(destroy_web_render_resources()); }));
 }
 
 granit::result web_application_host::on_host_initialize() noexcept {

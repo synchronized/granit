@@ -57,3 +57,34 @@ TEST_CASE("模型加载会话可在资产读取阶段取消", "[example][model-v
   CHECK(session.status() == viewer::model_loading_status::cancelled);
   CHECK(session.result() == granit::result::cancelled);
 }
+
+TEST_CASE("模型加载会话保留外部资源读取错误", "[example][model-viewer][loading]") {
+  const auto directory =
+      std::filesystem::temp_directory_path() / "granit_model_loading_resource_error_test";
+  std::error_code filesystem_error;
+  std::filesystem::create_directories(directory, filesystem_error);
+  REQUIRE_FALSE(filesystem_error);
+  {
+    std::ofstream document{directory / "scene.gltf", std::ios::binary};
+    document << R"({"asset":{"version":"2.0"},"buffers":[{"uri":"missing.bin","byteLength":4}]})";
+  }
+
+  assets::asset_system asset_system;
+  REQUIRE(asset_system.initialize("example"));
+  assets::asset_mount content;
+  REQUIRE(asset_system.mount(directory.string(), content));
+  viewer::model_loading_session session;
+  REQUIRE(session.start(asset_system, {content, "scene.gltf"}));
+  const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds{5};
+  while (session.status() == viewer::model_loading_status::loading_assets &&
+         std::chrono::steady_clock::now() < deadline) {
+    asset_system.poll();
+    session.poll();
+    std::this_thread::sleep_for(std::chrono::milliseconds{1});
+  }
+
+  CHECK(session.status() == viewer::model_loading_status::failed);
+  CHECK(session.error() == viewer::model_loading_error::resource_read);
+  CHECK(session.result() == granit::result::invalid_argument);
+  std::filesystem::remove_all(directory, filesystem_error);
+}
