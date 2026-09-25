@@ -91,5 +91,36 @@ granit_check_package(unknown_component FALSE -DGRANIT_REQUEST_COMPONENT=Unknown)
 granit_check_package(removed_input FALSE -DGRANIT_REQUEST_COMPONENT=Input)
 granit_check_package(removed_shader_tools FALSE -DGRANIT_REQUEST_COMPONENT=ShaderTools)
 
+set(standalone_quickstart_dir "${GRANIT_TEST_BINARY_DIR}/standalone-window-clear")
+execute_process(
+  COMMAND
+    "${CMAKE_COMMAND}"
+    -S "${GRANIT_SOURCE_DIR}/examples/standalone/window_clear"
+    -B "${standalone_quickstart_dir}"
+    "-DCMAKE_PREFIX_PATH=${GRANIT_INSTALL_PREFIX}"
+    "-DCMAKE_BUILD_TYPE=${GRANIT_TEST_CONFIGURATION}"
+  RESULT_VARIABLE standalone_configure_result
+  OUTPUT_VARIABLE standalone_configure_output
+  ERROR_VARIABLE standalone_configure_error
+)
+if(NOT standalone_configure_result EQUAL 0)
+  message(FATAL_ERROR
+          "安装 SDK Window Quickstart 配置失败：${standalone_configure_result}\n"
+          "${standalone_configure_output}\n${standalone_configure_error}")
+endif()
+execute_process(
+  COMMAND
+    "${CMAKE_COMMAND}" --build "${standalone_quickstart_dir}"
+    --config "${GRANIT_TEST_CONFIGURATION}"
+  RESULT_VARIABLE standalone_build_result
+  OUTPUT_VARIABLE standalone_build_output
+  ERROR_VARIABLE standalone_build_error
+)
+if(NOT standalone_build_result EQUAL 0)
+  message(FATAL_ERROR
+          "安装 SDK Window Quickstart 构建失败：${standalone_build_result}\n"
+          "${standalone_build_output}\n${standalone_build_error}")
+endif()
+
 message(STATUS
-        "安装包选包检查通过：Core 隔离、独立 component、0.x 次版本和未知 component 均符合预期")
+        "安装包检查通过：component、0.x 版本选择与独立 Window Quickstart 均符合预期")

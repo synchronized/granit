@@ -336,8 +336,8 @@ struct viewer_application::implementation {
         limits.max_uniform_buffer_binding_size == 0) {
       return granit::result::internal;
     }
-    if ((limits.framebuffer_sample_counts & quality.sample_count) == 0)
-      quality.sample_count = GRANIT_SAMPLE_COUNT_1;
+    if (!limits.supports_sample_count(quality.sample_count))
+      quality.sample_count = granit::sample_count::one;
     quality.sampler_anisotropy =
         std::clamp(quality.sampler_anisotropy, 1.0F, limits.max_sampler_anisotropy);
     if (desc.observer != nullptr && !renderer_observed) {
@@ -471,8 +471,7 @@ struct viewer_application::implementation {
       return result;
     if (!pipelines.started()) {
       result = pipelines.begin(rendering.renderer(), session.scene_gpu(),
-                               rendering.swapchain_info().format,
-                               static_cast<granit::sample_count>(quality.sample_count));
+                               rendering.swapchain_info().format, quality.sample_count);
       if (result.failed())
         return result;
     }
@@ -495,7 +494,7 @@ struct viewer_application::implementation {
 
   granit::result update_finalize() {
     const granit::render_pipeline_desc pipeline_desc{
-        .samples = static_cast<granit::sample_count>(quality.sample_count),
+        .samples = quality.sample_count,
         .enable_fxaa = quality.enable_fxaa,
         .enable_specular_aa = quality.enable_specular_aa,
     };
@@ -646,17 +645,17 @@ struct viewer_application::implementation {
     if (phase != viewer_runtime_phase::ready || !rendering.valid())
       return granit::result::not_ready;
     const auto& limits = rendering.renderer_limits();
-    if ((replacement.sample_count != GRANIT_SAMPLE_COUNT_1 &&
-         replacement.sample_count != GRANIT_SAMPLE_COUNT_4) ||
+    if ((replacement.sample_count != granit::sample_count::one &&
+         replacement.sample_count != granit::sample_count::four) ||
         replacement.sampler_anisotropy < 1.0F) {
       return granit::result::invalid_argument;
     }
-    if ((limits.framebuffer_sample_counts & replacement.sample_count) == 0 ||
+    if (!limits.supports_sample_count(replacement.sample_count) ||
         replacement.sampler_anisotropy > limits.max_sampler_anisotropy) {
       return granit::result::unsupported;
     }
     const granit::render_pipeline_desc pipeline_desc{
-        .samples = static_cast<granit::sample_count>(replacement.sample_count),
+        .samples = replacement.sample_count,
         .enable_fxaa = replacement.enable_fxaa,
         .enable_specular_aa = replacement.enable_specular_aa,
     };

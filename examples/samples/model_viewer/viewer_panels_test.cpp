@@ -64,7 +64,7 @@ TEST_CASE("查看器 ImGui 面板可在无平台后端上下文中构建", "[tut
   const granit::example::model_viewer::performance_panel_info performance{
       .frames_per_second = 60.0F, .cpu_frame_ms = 2.0F, .history = {}};
   const granit::example::model_viewer::render_quality_config quality{.sample_count =
-                                                                         GRANIT_SAMPLE_COUNT_4,
+                                                                         granit::sample_count::four,
                                                                      .enable_fxaa = true,
                                                                      .enable_specular_aa = true,
                                                                      .sampler_anisotropy = 8.0F};

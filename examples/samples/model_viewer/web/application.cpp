@@ -206,7 +206,7 @@ int granit::example::model_viewer::web::browser_test_control::configure_render_q
   if (enable_fxaa > 1 || enable_specular_aa > 1)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   return granit::to_native(application.configure_render_quality(
-      {.sample_count = sample_count,
+      {.sample_count = static_cast<granit::sample_count>(sample_count),
        .enable_fxaa = enable_fxaa != 0,
        .enable_specular_aa = enable_specular_aa != 0,
        .sampler_anisotropy = static_cast<float>(sampler_anisotropy)}));
@@ -302,7 +302,7 @@ int granit::example::model_viewer::web::run_application(const application_option
       .renderer_backend = granit::renderer_backend::webgpu,
       .present_mode = granit::present_mode::fifo,
       .execution = viewer_execution_mode::inline_current_thread,
-      .initial_quality = {.sample_count = GRANIT_SAMPLE_COUNT_1,
+      .initial_quality = {.sample_count = granit::sample_count::one,
                           .enable_fxaa = true,
                           .enable_specular_aa = true,
                           .sampler_anisotropy = 1.0F},

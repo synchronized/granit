@@ -8,6 +8,13 @@ Model Viewer；完整学习路径见[教程系列](../tutorials/README.md)。版
 查询、离屏清屏、纹理回读和平台窗口等单能力验证位于 `tests/smoke`，由构建与 CTest 覆盖，不再
 作为示例发布。
 
+## 安装 SDK Quickstart
+
+[`examples/standalone/window_clear`](../../examples/standalone/window_clear) 是一个独立 CMake
+工程，只使用安装包的公共头文件和 `granit::window` 导出目标。它展示 Window、Surface、Swapchain、
+Frame Context、清屏、提交和 Present 的最小完整帧循环，也用于验证 shared SDK 的动态库定位和
+运行时消费路径。具体配置、运行和 Smoke 命令见该目录的 README。
+
 ## SDL3 + ImGui
 
 `granit_sdl3_imgui_example` 展示 SDL3 窗口、输入、ImGui Platform Backend、Canvas 转换、

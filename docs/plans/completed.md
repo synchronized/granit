@@ -125,3 +125,4 @@
 - [S-61：Model Viewer 共享 ImGui 与浏览器测试边界](S-61-model-viewer-shared-imgui-browser-tests.md)
 - [S-62：Model Viewer 统一 Render Service](S-62-model-viewer-render-service.md)
 - [S-63：Model Viewer Session 与平台壳收敛](S-63-model-viewer-session-platform-shells.md)
+- [S-64：0.31.0 SDK-first 示例与资产入口](S-64-0.31.0-sdk-first-examples.md)

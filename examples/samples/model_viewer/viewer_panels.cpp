@@ -189,14 +189,15 @@ void draw_renderer_panel(const renderer_panel_info& info, const render_quality_c
   ImGui::SeparatorText("Quality");
   auto edited = quality;
   const std::array sample_labels{"1x", "4x"};
-  int sample_index = quality.sample_count == GRANIT_SAMPLE_COUNT_4 ? 1 : 0;
+  int sample_index = quality.sample_count == granit::sample_count::four ? 1 : 0;
   if (ImGui::Combo("MSAA", &sample_index, sample_labels.data(),
                    static_cast<int>(sample_labels.size()))) {
-    const auto requested = sample_index == 1 ? GRANIT_SAMPLE_COUNT_4 : GRANIT_SAMPLE_COUNT_1;
-    if ((info.supported_sample_counts & requested) != 0)
+    const auto requested =
+        sample_index == 1 ? granit::sample_count::four : granit::sample_count::one;
+    if ((info.supported_sample_counts & static_cast<std::uint32_t>(requested)) != 0)
       edited.sample_count = requested;
   }
-  if ((info.supported_sample_counts & GRANIT_SAMPLE_COUNT_4) == 0)
+  if ((info.supported_sample_counts & static_cast<std::uint32_t>(granit::sample_count::four)) == 0)
     ImGui::TextDisabled("4x MSAA unsupported; using 1x");
   ImGui::Checkbox("FXAA", &edited.enable_fxaa);
   ImGui::Checkbox("Specular AA", &edited.enable_specular_aa);
