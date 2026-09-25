@@ -36,8 +36,7 @@ struct instance_data {
 
 struct scene_uniforms {
   matrix4 view_projection;
-  float time{};
-  std::array<float, 3> padding{};
+  std::array<float, 4> animation{};
 };
 
 static_assert(sizeof(instance_data) == sizeof(float) * 8);
@@ -301,7 +300,7 @@ private:
     scene_uniforms uniforms{};
     if (result.ok() && !make_view_projection(aspect, uniforms.view_projection))
       result = granit::result::invalid_argument;
-    uniforms.time = time_;
+    uniforms.animation[0] = time_;
     const auto uniform_offset = uniform_stride_ * recording.frame_slot();
     if (result.ok())
       result = uniform_buffer_.write(uniform_offset, std::as_bytes(std::span{&uniforms, 1}));

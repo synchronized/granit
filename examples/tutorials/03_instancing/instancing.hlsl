@@ -3,8 +3,7 @@
 
 struct scene_uniforms {
   float4x4 view_projection;
-  float time;
-  float3 padding;
+  float4 animation;
 };
 
 [[vk::binding(0, 0)]] ConstantBuffer<scene_uniforms> scene;
@@ -21,7 +20,8 @@ struct vertex_output {
 };
 
 vertex_output vertex_main(vertex_input input) {
-  const float angle = scene.time + input.offset_scale.x * 0.17 + input.offset_scale.y * 0.11;
+  const float angle =
+      scene.animation.x + input.offset_scale.x * 0.17 + input.offset_scale.y * 0.11;
   const float sine = sin(angle);
   const float cosine = cos(angle);
   const float3 local = input.position * input.offset_scale.w;

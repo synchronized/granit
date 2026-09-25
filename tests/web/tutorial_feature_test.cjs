@@ -57,11 +57,17 @@ async function main() {
     headless: process.env.GRANIT_BROWSER_HEADLESS !== "0",
     args: arguments,
   });
-  const page = await browser.newPage({ viewport: { width: 640, height: 360 } });
+  // Example Application 默认创建 1280×720 窗口。视口与 Canvas CSS 尺寸一致，避免 Locator
+  // 截图把视口之外的区域补成透明像素，进而误判中心像素。
+  const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => {
-    if (message.type() === "error") errors.push(message.text());
+    const text = message.text();
+    if (message.type() === "error" ||
+        (message.type() === "warning" && /is invalid|too small|validation/i.test(text))) {
+      errors.push(text);
+    }
   });
   const exportName = (suffix) => `_granit_tutorial_${tutorialNumber}_${suffix}`;
   try {
@@ -82,6 +88,7 @@ async function main() {
     );
 
     const canvas = page.locator("#canvas");
+    await page.waitForTimeout(500);
     const image = decodePng(await canvas.screenshot());
     const center = pixelAt(image, Math.floor(image.width / 2), Math.floor(image.height / 2));
     const corner = pixelAt(image, 4, 4);
