@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+## 0.31.0 - 2026-09-25
+
 ### 新增
 
 - 新增只依赖安装后 `granit::window` CMake component 的独立 C++ Window Quickstart，展示 Window、
