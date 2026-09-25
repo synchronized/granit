@@ -8,6 +8,20 @@
 
 ## Unreleased
 
+### 新增
+
+- 新增只依赖安装后 `granit::window` CMake component 的独立 C++ Window Quickstart，展示 Window、
+  Surface、Swapchain、Frame Context、清屏提交与 Present 的完整公共 SDK 路径。
+
+### 变更
+
+- shared SDK 安装验收现在会配置、构建并运行独立 Window Quickstart，验证动态库定位和真实三帧
+  呈现；Linux CI 在虚拟显示环境中执行相同消费端程序。
+- 示例私有 Asset System 明确 Mount、逻辑路径、Desktop/Web Source、glTF 相对资源与 Shader
+  Library 的职责边界，并锁定规范化诊断位置。
+- Model Viewer 的场景值和采样配置统一使用 C++ 强类型包装；裸句柄只保留在 C ABI 浏览器验收钩子
+  和资源身份单元测试中。
+
 ## 0.30.0 - 2026-09-25
 
 ### 新增

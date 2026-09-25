@@ -21,6 +21,7 @@
 
 ## 稳定化与跨平台
 
+- [2026-09-25 S-64 SDK-first 示例本地验收](2026-09-25-s64-sdk-first-examples-local-acceptance.md)
 - [2026-09-24 S-62 Model Viewer 统一 Render Service 本地验收](2026-09-24-s62-model-viewer-render-service-local-acceptance.md)
 - [2026-09-24 S-60 Model Viewer 共享渲染运行时本地验收](2026-09-24-s60-shared-render-runtime-local-acceptance.md)
 - [2026-09-24 S-59 Model Viewer 渲染任务运行时本地验收](2026-09-24-s59-model-viewer-render-runtime-local-acceptance.md)
