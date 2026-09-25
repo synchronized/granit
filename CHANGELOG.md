@@ -8,6 +8,18 @@
 
 ## Unreleased
 
+### 新增
+
+- 新增 Instancing、Raymarch 与 Metaballs 三个跨后端特性教程；桌面 Vulkan 与浏览器 WebGPU
+  编译同一份 C++ 主体源码，并通过 HLSL-first Shader Library 提供对应后端 Shader。
+- 三个教程均提供确定性 Smoke 模式与浏览器多帧、特性状态、Resize 和 WebGPU validation 验收，
+  Instancing 使用单次索引实例绘制，Raymarch 与 Metaballs 使用全屏三角形展示程序化效果。
+
+### 文档
+
+- 新增三个特性教程的连续说明与 API 能力审计；现有接口可以表达本轮效果，Indirect
+  Draw/Dispatch 作为后续独立设计候选，不在本版本扩展公共 API。
+
 ## 0.36.0 - 2026-09-25
 
 ### 新增
