@@ -29,14 +29,16 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 
 ## 当前计划
 
-### S-67：0.34.0 公共 SDK 与 AssetTools 契约收敛
-
-**状态：实施中，P1。**
-
-[S-67](plans/S-67-0.34.0-sdk-contract-convergence.md) 将统一 AssetTools 结果查询，建立 component 级
-跨版本 ABI 门禁，明确稳定候选边界，并收口普通 C++ 用户路径与安装 SDK 验收。
+当前没有正在实施的计划；新的版本范围确认后再进入本节。
 
 ## 最近完成
+
+### S-67：0.34.0 公共 SDK 与 AssetTools 契约收敛
+
+**状态：已完成，P1。**
+
+[S-67](plans/S-67-0.34.0-sdk-contract-convergence.md) 已统一四类 AssetTools 结果查询，建立稳定候选
+component 的跨版本 ABI 门禁，收口普通 C++ 用户路径与安装 SDK 验收，并发布 `v0.34.0`。
 
 ### S-66：0.33.0 AssetTools 诊断与 CI 收敛
 

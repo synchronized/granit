@@ -128,3 +128,4 @@
 - [S-64：0.31.0 SDK-first 示例与资产入口](S-64-0.31.0-sdk-first-examples.md)
 - [S-65：0.32.0 安装 SDK 图形工作流](S-65-0.32.0-sdk-graphics-workflow.md)
 - [S-66：0.33.0 AssetTools 诊断与 CI 收敛](S-66-0.33.0-asset-tools-ci-convergence.md)
+- [S-67：0.34.0 公共 SDK 与 AssetTools 契约收敛](S-67-0.34.0-sdk-contract-convergence.md)
