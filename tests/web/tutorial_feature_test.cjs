@@ -88,12 +88,21 @@ async function main() {
     );
 
     const canvas = page.locator("#canvas");
-    await page.waitForTimeout(500);
-    const image = decodePng(await canvas.screenshot());
-    const center = pixelAt(image, Math.floor(image.width / 2), Math.floor(image.height / 2));
-    const corner = pixelAt(image, 4, 4);
-    const colorDistance = Math.abs(center[0] - corner[0]) + Math.abs(center[1] - corner[1]) +
-      Math.abs(center[2] - corner[2]);
+    let center = [];
+    let corner = [];
+    let colorDistance = 0;
+    // Xvfb 下 WebGPU 已 Present 的帧偶尔尚未进入浏览器合成结果。短时间轮询合成帧，仍由
+    // WebGPU validation 消息和最终像素差异判定真实渲染失败。
+    for (let attempt = 0; attempt < 20 && colorDistance < 60; ++attempt) {
+      await page.waitForTimeout(250);
+      const image = decodePng(await canvas.screenshot());
+      center = pixelAt(image, Math.floor(image.width / 2), Math.floor(image.height / 2));
+      corner = pixelAt(image, 4, 4);
+      colorDistance = Math.abs(center[0] - corner[0]) + Math.abs(center[1] - corner[1]) +
+        Math.abs(center[2] - corner[2]);
+    }
+    if (errors.length !== 0)
+      throw new Error(`教程 ${tutorialNumber} 浏览器错误：\n${errors.join("\n")}`);
     if (colorDistance < 60)
       throw new Error(`教程 ${tutorialNumber} 中心像素与背景差异不足：${center} / ${corner}`);
 
