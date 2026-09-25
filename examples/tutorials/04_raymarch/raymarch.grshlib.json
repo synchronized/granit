@@ -1,0 +1,20 @@
+{
+  "format_version": 1,
+  "name": "tutorial_raymarch",
+  "target_profile": "portable",
+  "target_backends": ["vulkan", "webgpu"],
+  "shaders": [
+    {
+      "name": "raymarch.vertex",
+      "source": "raymarch.hlsl",
+      "stage": "vertex",
+      "entry_point": "vertex_main"
+    },
+    {
+      "name": "raymarch.fragment",
+      "source": "raymarch.hlsl",
+      "stage": "fragment",
+      "entry_point": "fragment_main"
+    }
+  ]
+}

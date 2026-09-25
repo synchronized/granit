@@ -14,6 +14,9 @@
 1. [教程系列说明](tutorials/README.md)
 2. [纹理立方体](tutorials/01-cube.md)
 3. [PBR 资产与参考渲染管线](tutorials/02-pbr-assets.md)
+4. [实例绘制](tutorials/03-instancing.md)
+5. [Raymarch](tutorials/04-raymarch.md)
+6. [Metaballs](tutorials/05-metaballs.md)
 4. [运行跨后端 Model Viewer](guides/model-viewer.md)
 
 ### 使用核心 Renderer
@@ -61,12 +64,15 @@
 
 ## 教程
 
-教程以两个完整的可运行目标介绍低层 Renderer 与高级 Render Pipeline。章节顺序、配套源码和平台
+教程以五个完整的可运行目标介绍低层 Renderer、高级 Render Pipeline 与单项图形特性。章节顺序、配套源码和平台
 验证范围统一由教程系列说明维护；完整应用进入 Samples，API 细节以对应 Reference 为准。
 
 - [教程系列说明](tutorials/README.md)
 - [01：纹理立方体](tutorials/01-cube.md)
 - [02：PBR 资产与参考渲染管线](tutorials/02-pbr-assets.md)
+- [03：实例绘制](tutorials/03-instancing.md)
+- [04：Raymarch](tutorials/04-raymarch.md)
+- [05：Metaballs](tutorials/05-metaballs.md)
 
 ## API 与行为参考
 

@@ -21,6 +21,7 @@
 
 ## 稳定化与跨平台
 
+- [2026-09-25 S-70 特性教程能力审计](2026-09-25-s70-feature-tutorial-capability-audit.md)
 - [2026-09-25 Granit 0.36.0 发布验收](2026-09-25-v0.36.0-release-acceptance.md)
 - [2026-09-25 Granit 0.35.0 发布验收](2026-09-25-v0.35.0-release-acceptance.md)
 - [2026-09-25 Granit 0.34.0 发布验收](2026-09-25-v0.34.0-release-acceptance.md)
