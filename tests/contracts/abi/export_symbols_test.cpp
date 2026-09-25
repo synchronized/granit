@@ -7,7 +7,7 @@
 
 #include <catch2/catch_all.hpp>
 
-#include "snapshots/0.4.0/export_identity.h"
+#include "snapshots/0.35.0/export_identity.h"
 
 #if defined(_WIN32)
 #include <windows.h>
