@@ -4,8 +4,8 @@
 #ifndef GRANIT_TEXTURE_BUILDER_HPP_
 #define GRANIT_TEXTURE_BUILDER_HPP_
 
-#include <granit/core/result.hpp>
 #include <granit/asset_tools/texture_builder.h>
+#include <granit/core/result.hpp>
 #include <granit/renderer/resource_types.hpp>
 
 #include <cstddef>
@@ -18,6 +18,13 @@
 namespace granit::asset_tools::texture {
 
 struct build_desc;
+
+struct result_info {
+  std::span<const std::byte> manifest;
+  std::span<const std::byte> payload;
+  std::string_view debug_json;
+  std::string_view diagnostic;
+};
 
 class result final {
 public:
@@ -34,34 +41,21 @@ public:
     return *this;
   }
   explicit operator bool() const noexcept { return handle_ != 0; }
-  [[nodiscard]] std::span<const std::byte> manifest() const noexcept {
-    const void* data = nullptr;
-    std::uint64_t size = 0;
-    if (granit_asset_tools_texture_result_get_manifest(handle_, &data, &size) != GRANIT_SUCCESS)
+  [[nodiscard]] result_info info() const noexcept {
+    granit_asset_tools_texture_result_info value = GRANIT_ASSET_TOOLS_TEXTURE_RESULT_INFO_INIT;
+    if (granit_asset_tools_texture_result_get_info(handle_, &value) != GRANIT_SUCCESS)
       return {};
-    return {static_cast<const std::byte*>(data), static_cast<std::size_t>(size)};
+    return {.manifest = {static_cast<const std::byte*>(value.manifest),
+                         static_cast<std::size_t>(value.manifest_size)},
+            .payload = {static_cast<const std::byte*>(value.payload),
+                        static_cast<std::size_t>(value.payload_size)},
+            .debug_json = {value.debug_json, static_cast<std::size_t>(value.debug_json_length)},
+            .diagnostic = {value.diagnostic, static_cast<std::size_t>(value.diagnostic_length)}};
   }
-  [[nodiscard]] std::span<const std::byte> payload() const noexcept {
-    const void* data = nullptr;
-    std::uint64_t size = 0;
-    if (granit_asset_tools_texture_result_get_payload(handle_, &data, &size) != GRANIT_SUCCESS)
-      return {};
-    return {static_cast<const std::byte*>(data), static_cast<std::size_t>(size)};
-  }
-  [[nodiscard]] std::string_view debug_json() const noexcept {
-    const char* data = nullptr;
-    std::uint64_t size = 0;
-    if (granit_asset_tools_texture_result_get_debug_json(handle_, &data, &size) != GRANIT_SUCCESS)
-      return {};
-    return {data, static_cast<std::size_t>(size)};
-  }
-  [[nodiscard]] std::string_view diagnostic() const noexcept {
-    const char* data = nullptr;
-    std::uint64_t size = 0;
-    if (granit_asset_tools_texture_result_get_diagnostic(handle_, &data, &size) != GRANIT_SUCCESS)
-      return {};
-    return {data, static_cast<std::size_t>(size)};
-  }
+  [[nodiscard]] std::span<const std::byte> manifest() const noexcept { return info().manifest; }
+  [[nodiscard]] std::span<const std::byte> payload() const noexcept { return info().payload; }
+  [[nodiscard]] std::string_view debug_json() const noexcept { return info().debug_json; }
+  [[nodiscard]] std::string_view diagnostic() const noexcept { return info().diagnostic; }
   void reset() noexcept {
     if (handle_ != 0)
       static_cast<void>(granit_asset_tools_texture_result_destroy(std::exchange(handle_, 0)));

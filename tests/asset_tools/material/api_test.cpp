@@ -39,9 +39,10 @@ int main(int argc, char** argv) {
   const std::span<const std::byte> libraries[]{library};
   auto [build_status, built] =
       granit::asset_tools::material::build({.source_json = source, .shader_libraries = libraries});
-  if (build_status.failed() || !built || built.archive().empty() ||
-      built.debug_json().find("\"magic\": \"GRMAT\"") == std::string_view::npos ||
-      !built.diagnostic().empty())
+  const auto built_info = built.info();
+  if (build_status.failed() || !built || built_info.archive.empty() ||
+      built_info.debug_json.find("\"magic\": \"GRMAT\"") == std::string_view::npos ||
+      !built_info.diagnostic.empty())
     return 2;
 
   auto [inspect_status, inspected] = granit::asset_tools::material::inspect(built.archive());
@@ -55,7 +56,7 @@ int main(int argc, char** argv) {
   auto [invalid_status, invalid] = granit::asset_tools::material::build(
       {.source_json = source, .shader_libraries = invalid_libraries});
   if (invalid_status != granit::result::invalid_argument || !invalid ||
-      invalid.diagnostic().empty() || !invalid.archive().empty())
+      invalid.info().diagnostic.empty() || !invalid.info().archive.empty())
     return 4;
   return 0;
 }

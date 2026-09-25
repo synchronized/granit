@@ -16,19 +16,23 @@ typedef uint64_t granit_asset_tools_shader_library_result;
 /** Shader Library 源构建结果信息；字符串视图在结果句柄销毁前有效。 */
 typedef struct granit_asset_tools_shader_library_result_info {
   uint32_t struct_size;
+  uint32_t reserved;
   uint32_t cache_hit;
+  uint32_t reserved2;
   const char* failed_shader;
   uint64_t failed_shader_length;
   const char* diagnostic;
   uint64_t diagnostic_length;
 } granit_asset_tools_shader_library_result_info;
 
-#define GRANIT_ASSET_TOOLS_SHADER_LIBRARY_RESULT_INFO_INIT                                        \
-  {(uint32_t)sizeof(granit_asset_tools_shader_library_result_info),                               \
-   UINT32_C(0),                                                                                   \
-   0,                                                                                             \
-   UINT64_C(0),                                                                                   \
-   0,                                                                                             \
+#define GRANIT_ASSET_TOOLS_SHADER_LIBRARY_RESULT_INFO_INIT                                         \
+  {(uint32_t)sizeof(granit_asset_tools_shader_library_result_info),                                \
+   UINT32_C(0),                                                                                    \
+   UINT32_C(0),                                                                                    \
+   UINT32_C(0),                                                                                    \
+   0,                                                                                              \
+   UINT64_C(0),                                                                                    \
+   0,                                                                                              \
    UINT64_C(0)}
 
 /** HLSL-first Shader Library 源构建描述。所有路径只需在调用期间有效。 */
@@ -77,8 +81,8 @@ GRANIT_ASSET_TOOLS_API granit_result granit_asset_tools_shader_library_result_ge
     granit_asset_tools_shader_library_result_info* info);
 
 /** 销毁结果。零值和已经销毁的句柄返回 GRANIT_ERROR_INVALID_HANDLE。 */
-GRANIT_ASSET_TOOLS_API granit_result granit_asset_tools_shader_library_result_destroy(
-    granit_asset_tools_shader_library_result result);
+GRANIT_ASSET_TOOLS_API granit_result
+granit_asset_tools_shader_library_result_destroy(granit_asset_tools_shader_library_result result);
 
 #ifdef __cplusplus
 }

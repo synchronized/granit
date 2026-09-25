@@ -18,8 +18,10 @@ int main() {
       granit::texture_dimension::two_dimensional, 4, 4, 1, 1, 1, variants};
   auto [first_status, first] = granit::asset_tools::texture::build(desc);
   auto [second_status, second] = granit::asset_tools::texture::build(desc);
+  const auto first_info = first.info();
   if (first_status.failed() || second_status.failed() || !first || !second ||
-      first.manifest().size() != 192 || first.payload().size() != payload.size() ||
+      first_info.manifest.size() != 192 || first_info.payload.size() != payload.size() ||
+      first_info.debug_json.empty() || !first_info.diagnostic.empty() ||
       !std::ranges::equal(first.manifest(), second.manifest()) ||
       !std::ranges::equal(first.payload(), payload) ||
       first.debug_json().find("\"content_id\"") == std::string_view::npos)
@@ -28,8 +30,7 @@ int main() {
   if (inspect_status.failed() || !inspected || !inspected.payload().empty() ||
       inspected.debug_json() != first.debug_json())
     return 2;
-  const granit::asset_tools::texture::subresource_info invalid_subresources[]{
-      {0, 0, 0, 63, 16, 4}};
+  const granit::asset_tools::texture::subresource_info invalid_subresources[]{{0, 0, 0, 63, 16, 4}};
   const granit::asset_tools::texture::variant_desc invalid_variants[]{
       {granit::texture_format::rgba8_srgb,
        granit::texture_usage::sampled | granit::texture_usage::transfer_destination, payload,
@@ -37,7 +38,8 @@ int main() {
   auto invalid_desc = desc;
   invalid_desc.variants = invalid_variants;
   auto [invalid_status, failed] = granit::asset_tools::texture::build(invalid_desc);
-  if (invalid_status != granit::result::invalid_argument || !failed || failed.diagnostic().empty())
+  if (invalid_status != granit::result::invalid_argument || !failed ||
+      failed.info().diagnostic.empty() || !failed.info().manifest.empty())
     return 3;
   return 0;
 }

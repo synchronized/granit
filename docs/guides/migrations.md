@@ -12,6 +12,8 @@
 > 本页及下方迁移文档描述对应历史版本的升级方式，不定义当前 API。当前接口和兼容承诺以
 > [版本与兼容策略](../reference/compatibility.md)及对应 Reference 为准。
 
+- [从 0.33 迁移到 0.34](migrate-0.33-to-0.34.md)：AssetTools Builder 结果统一改为单次
+  `result_get_info` 查询。
 - [从 0.28 迁移到 0.29](migrate-0.28-to-0.29.md)
 - [从 0.24 迁移到 0.25](migrate-0.24-to-0.25.md)
 - [从 0.23 迁移到 0.24](migrate-0.23-to-0.24.md)

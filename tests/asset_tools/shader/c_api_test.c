@@ -40,6 +40,10 @@ int main(int argc, char** argv) {
           GRANIT_ERROR_INVALID_HANDLE ||
       granit_asset_tools_shader_library_result_destroy(0) != GRANIT_ERROR_INVALID_HANDLE)
     return 17;
+  library_info.reserved = 1;
+  if (granit_asset_tools_shader_library_result_get_info(0, &library_info) !=
+      GRANIT_ERROR_INVALID_ARGUMENT)
+    return 17;
   if (granit_asset_tools_shader_compiler_create(&compiler_desc, &compiler) !=
           GRANIT_ERROR_INVALID_ARGUMENT ||
       compiler != 0)

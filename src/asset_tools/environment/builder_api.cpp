@@ -166,47 +166,19 @@ granit_asset_tools_environment_inspect(const void* package_data, uint64_t packag
 }
 
 granit_result
-granit_asset_tools_environment_result_get_package(granit_asset_tools_environment_result result,
-                                                  const void** data, uint64_t* size) {
-  if (data == nullptr || size == nullptr)
+granit_asset_tools_environment_result_get_info(granit_asset_tools_environment_result result,
+                                               granit_asset_tools_environment_result_info* info) {
+  if (info == nullptr || info->struct_size < sizeof(*info) || info->reserved != 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  *data = nullptr;
-  *size = 0;
   const auto value = find_environment_result(result);
   if (value == nullptr)
     return GRANIT_ERROR_INVALID_HANDLE;
-  *data = value->package.data();
-  *size = value->package.size();
-  return GRANIT_SUCCESS;
-}
-
-granit_result
-granit_asset_tools_environment_result_get_debug_json(granit_asset_tools_environment_result result,
-                                                     const char** json, uint64_t* length) {
-  if (json == nullptr || length == nullptr)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  *json = nullptr;
-  *length = 0;
-  const auto value = find_environment_result(result);
-  if (value == nullptr)
-    return GRANIT_ERROR_INVALID_HANDLE;
-  *json = value->debug_json.data();
-  *length = value->debug_json.size();
-  return GRANIT_SUCCESS;
-}
-
-granit_result
-granit_asset_tools_environment_result_get_diagnostic(granit_asset_tools_environment_result result,
-                                                     const char** diagnostic, uint64_t* length) {
-  if (diagnostic == nullptr || length == nullptr)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  *diagnostic = nullptr;
-  *length = 0;
-  const auto value = find_environment_result(result);
-  if (value == nullptr)
-    return GRANIT_ERROR_INVALID_HANDLE;
-  *diagnostic = value->diagnostic.data();
-  *length = value->diagnostic.size();
+  info->package = value->package.data();
+  info->package_size = value->package.size();
+  info->debug_json = value->debug_json.data();
+  info->debug_json_length = value->debug_json.size();
+  info->diagnostic = value->diagnostic.data();
+  info->diagnostic_length = value->diagnostic.size();
   return GRANIT_SUCCESS;
 }
 

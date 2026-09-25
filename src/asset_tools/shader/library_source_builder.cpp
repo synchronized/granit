@@ -147,8 +147,8 @@ struct stored_library_result {
   std::string diagnostic;
 };
 
-granit::detail::shared_handle_table<
-    stored_library_result, granit::detail::handle_type::asset_tools_shader_library_result>
+granit::detail::shared_handle_table<stored_library_result,
+                                    granit::detail::handle_type::asset_tools_shader_library_result>
     library_results;
 
 granit_asset_tools_shader_library_result
@@ -232,10 +232,9 @@ extern "C" granit_result granit_asset_tools_shader_build_library_from_manifest(
     const auto toolchain_root = copy_path(desc->toolchain_root, desc->toolchain_root_length);
     const auto toolchain = granit::asset_tools::detail::resolve_shader_toolchain(toolchain_root);
     if (!granit::asset_tools::detail::shader_toolchain_ready(toolchain)) {
-      return finish_with_result(value, GRANIT_ERROR_NOT_READY,
-                                "Shader 工具链缺少可执行的 DXC 或 Tint：" +
-                                    path_text(toolchain_root) + "\n",
-                                result);
+      return finish_with_result(
+          value, GRANIT_ERROR_NOT_READY,
+          "Shader 工具链缺少可执行的 DXC 或 Tint：" + path_text(toolchain_root) + "\n", result);
     }
     const auto dxc_identity = tool_identity(toolchain.dxc);
     const auto tint_identity = tool_identity(toolchain.tint);
@@ -348,7 +347,7 @@ extern "C" granit_result granit_asset_tools_shader_build_library_from_manifest(
           std::string diagnostic = "Shader 编译失败\n";
           if (compilation.value != 0 &&
               granit_asset_tools_shader_compilation_get_info(compilation.value,
-                                                              &compilation_info) == GRANIT_SUCCESS &&
+                                                             &compilation_info) == GRANIT_SUCCESS &&
               compilation_info.diagnostic != nullptr) {
             diagnostic.assign(compilation_info.diagnostic,
                               static_cast<std::size_t>(compilation_info.diagnostic_length));
@@ -367,8 +366,8 @@ extern "C" granit_result granit_asset_tools_shader_build_library_from_manifest(
       const auto object_bytes = read_bytes(object);
       if (granit::detail::shader_format::decode_shader_object(object_bytes, object_view) !=
           granit::detail::shader_format::shader_object_error::success)
-        return finish_with_result(value, GRANIT_ERROR_INTERNAL,
-                                  "生成的 Shader Object 无法解码\n", result, item.name);
+        return finish_with_result(value, GRANIT_ERROR_INTERNAL, "生成的 Shader Object 无法解码\n",
+                                  result, item.name);
       object_paths.push_back(object);
       logical_names.push_back(item.name);
     }
@@ -395,7 +394,8 @@ extern "C" granit_result granit_asset_tools_shader_build_library_from_manifest(
 extern "C" granit_result granit_asset_tools_shader_library_result_get_info(
     granit_asset_tools_shader_library_result result,
     granit_asset_tools_shader_library_result_info* info) {
-  if (info == nullptr || info->struct_size < sizeof(*info))
+  if (info == nullptr || info->struct_size < sizeof(*info) || info->reserved != 0 ||
+      info->reserved2 != 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto value = find_library_result(result);
   if (value == nullptr)
@@ -408,7 +408,7 @@ extern "C" granit_result granit_asset_tools_shader_library_result_get_info(
   return GRANIT_SUCCESS;
 }
 
-extern "C" granit_result granit_asset_tools_shader_library_result_destroy(
-    granit_asset_tools_shader_library_result result) {
+extern "C" granit_result
+granit_asset_tools_shader_library_result_destroy(granit_asset_tools_shader_library_result result) {
   return library_results.erase(result);
 }

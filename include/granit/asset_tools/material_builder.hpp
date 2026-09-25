@@ -21,6 +21,12 @@ struct build_desc {
   std::span<const std::span<const std::byte>> shader_libraries;
 };
 
+struct result_info {
+  std::span<const std::byte> archive;
+  std::string_view debug_json;
+  std::string_view diagnostic;
+};
+
 class result {
 public:
   result() = default;
@@ -37,6 +43,7 @@ public:
   }
 
   [[nodiscard]] explicit operator bool() const noexcept { return handle_ != 0; }
+  [[nodiscard]] result_info info() const noexcept;
   [[nodiscard]] std::span<const std::byte> archive() const noexcept;
   [[nodiscard]] std::string_view debug_json() const noexcept;
   [[nodiscard]] std::string_view diagnostic() const noexcept;
@@ -55,28 +62,20 @@ private:
 [[nodiscard]] std::pair<::granit::result, result>
 inspect(std::span<const std::byte> archive) noexcept;
 
-inline std::span<const std::byte> result::archive() const noexcept {
-  const void* data = nullptr;
-  uint64_t size = 0;
-  if (granit_asset_tools_material_result_get_archive(handle_, &data, &size) != GRANIT_SUCCESS)
-    return {};
-  return {static_cast<const std::byte*>(data), static_cast<std::size_t>(size)};
-}
+inline std::span<const std::byte> result::archive() const noexcept { return info().archive; }
 
-inline std::string_view result::debug_json() const noexcept {
-  const char* data = nullptr;
-  uint64_t size = 0;
-  if (granit_asset_tools_material_result_get_debug_json(handle_, &data, &size) != GRANIT_SUCCESS)
-    return {};
-  return {data, static_cast<std::size_t>(size)};
-}
+inline std::string_view result::debug_json() const noexcept { return info().debug_json; }
 
-inline std::string_view result::diagnostic() const noexcept {
-  const char* data = nullptr;
-  uint64_t size = 0;
-  if (granit_asset_tools_material_result_get_diagnostic(handle_, &data, &size) != GRANIT_SUCCESS)
+inline std::string_view result::diagnostic() const noexcept { return info().diagnostic; }
+
+inline result_info result::info() const noexcept {
+  granit_asset_tools_material_result_info value = GRANIT_ASSET_TOOLS_MATERIAL_RESULT_INFO_INIT;
+  if (granit_asset_tools_material_result_get_info(handle_, &value) != GRANIT_SUCCESS)
     return {};
-  return {data, static_cast<std::size_t>(size)};
+  return {.archive = {static_cast<const std::byte*>(value.archive),
+                      static_cast<std::size_t>(value.archive_size)},
+          .debug_json = {value.debug_json, static_cast<std::size_t>(value.debug_json_length)},
+          .diagnostic = {value.diagnostic, static_cast<std::size_t>(value.diagnostic_length)}};
 }
 
 inline void result::reset() noexcept {

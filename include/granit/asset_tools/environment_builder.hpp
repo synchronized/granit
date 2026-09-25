@@ -4,8 +4,8 @@
 #ifndef GRANIT_ENVIRONMENT_BUILDER_HPP_
 #define GRANIT_ENVIRONMENT_BUILDER_HPP_
 
-#include <granit/core/result.hpp>
 #include <granit/asset_tools/environment_builder.h>
+#include <granit/core/result.hpp>
 
 #include <cstddef>
 #include <new>
@@ -17,6 +17,12 @@
 namespace granit::asset_tools::environment {
 
 struct build_desc;
+
+struct result_info {
+  std::span<const std::byte> package;
+  std::string_view debug_json;
+  std::string_view diagnostic;
+};
 
 class result final {
 public:
@@ -33,29 +39,19 @@ public:
     return *this;
   }
   explicit operator bool() const noexcept { return handle_ != 0; }
-  [[nodiscard]] std::span<const std::byte> package() const noexcept {
-    const void* data = nullptr;
-    std::uint64_t size = 0;
-    if (granit_asset_tools_environment_result_get_package(handle_, &data, &size) != GRANIT_SUCCESS)
+  [[nodiscard]] result_info info() const noexcept {
+    granit_asset_tools_environment_result_info value =
+        GRANIT_ASSET_TOOLS_ENVIRONMENT_RESULT_INFO_INIT;
+    if (granit_asset_tools_environment_result_get_info(handle_, &value) != GRANIT_SUCCESS)
       return {};
-    return {static_cast<const std::byte*>(data), static_cast<std::size_t>(size)};
+    return {.package = {static_cast<const std::byte*>(value.package),
+                        static_cast<std::size_t>(value.package_size)},
+            .debug_json = {value.debug_json, static_cast<std::size_t>(value.debug_json_length)},
+            .diagnostic = {value.diagnostic, static_cast<std::size_t>(value.diagnostic_length)}};
   }
-  [[nodiscard]] std::string_view debug_json() const noexcept {
-    const char* data = nullptr;
-    std::uint64_t size = 0;
-    if (granit_asset_tools_environment_result_get_debug_json(handle_, &data, &size) !=
-        GRANIT_SUCCESS)
-      return {};
-    return {data, static_cast<std::size_t>(size)};
-  }
-  [[nodiscard]] std::string_view diagnostic() const noexcept {
-    const char* data = nullptr;
-    std::uint64_t size = 0;
-    if (granit_asset_tools_environment_result_get_diagnostic(handle_, &data, &size) !=
-        GRANIT_SUCCESS)
-      return {};
-    return {data, static_cast<std::size_t>(size)};
-  }
+  [[nodiscard]] std::span<const std::byte> package() const noexcept { return info().package; }
+  [[nodiscard]] std::string_view debug_json() const noexcept { return info().debug_json; }
+  [[nodiscard]] std::string_view diagnostic() const noexcept { return info().diagnostic; }
   void reset() noexcept {
     if (handle_ != 0)
       static_cast<void>(granit_asset_tools_environment_result_destroy(std::exchange(handle_, 0)));
