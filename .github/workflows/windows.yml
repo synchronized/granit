@@ -43,6 +43,7 @@ jobs:
             -R 'granit\.asset_tools\.shader\.hlsl_api' --output-on-failure
 
   msvc-install-consumer:
+    needs: restore-shader-toolchain
     runs-on: windows-2022
     strategy:
       fail-fast: false
@@ -53,6 +54,14 @@ jobs:
       - uses: ./.github/actions/setup-msvc
         with:
           arch: x64
+      - name: 恢复锁定 Shader 工具链
+        uses: actions/cache@v5
+        with:
+          path: build/toolchains
+          key: >-
+            shader-toolchain-${{ runner.os }}-
+            ${{ hashFiles('cmake/toolchain/download_shader_toolchain.cmake',
+            'cmake/toolchain/GranitShaderToolchain.cmake') }}
       - name: 启用 MSVC 编译缓存
         uses: mozilla-actions/sccache-action@v0.0.11
       - name: 选择 preset
@@ -93,12 +102,9 @@ jobs:
             -DGRANIT_SOURCE_DIR="$PWD" `
             -DGRANIT_INSTALL_PREFIX="$prefix" `
             -DGRANIT_TEST_BINARY_DIR="$PWD/build/package/$preset" `
-            -DGRANIT_TEST_SHADER_TOOLCHAIN_ROOT="$PWD/build/$preset/toolchains/granit-shader-toolchain-v20260720.160313-windows-x64" `
+            -DGRANIT_TEST_SHADER_TOOLCHAIN_ROOT="$PWD/build/toolchains/granit-shader-toolchain-v20260720.160313-windows-x64" `
             -P tests/packaging/check_installed_package.cmake
-          ctest --test-dir "$PWD/build/package/$preset/standalone-window-clear" `
-            -C Release --output-on-failure
-          ctest --test-dir "$PWD/build/package/$preset/standalone-triangle" `
-            -C Release --output-on-failure
+          if ($LASTEXITCODE -ne 0) { throw '安装 SDK 消费验证失败' }
       - name: 构建并运行独立 C 和 C++ Consumer
         shell: pwsh
         run: |
