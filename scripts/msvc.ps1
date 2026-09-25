@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-# Copyright (c) 2026 CAORS contributors
+# Copyright (c) 2026 Granit contributors
 
 [CmdletBinding()]
 param(
@@ -65,6 +65,15 @@ foreach ($line in $environmentLines) {
 
 $buildArguments = @("--build", "--preset", $Preset)
 $configureArguments = @("--preset", $Preset)
+
+# PATH 中可能存在 Scoop 或 Git 提供的 GNU ld/link。显式传入 MSVC linker，避免 CMake 在
+# Ninja 生成器下把 cl.exe 与不兼容的链接器组合起来。
+$msvcLinker = Join-Path $env:VCToolsInstallDir "bin\Hostx64\$Architecture\link.exe"
+if (-not (Test-Path -LiteralPath $msvcLinker)) {
+    throw "未找到 MSVC 链接器：$msvcLinker"
+}
+$configureArguments += "-DCMAKE_LINKER=$msvcLinker"
+
 if ($Fresh) {
     $configureArguments += "--fresh"
 }
