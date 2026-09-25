@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include <granit/granit.h>
+#include <granit/asset_tools/asset_tools.h>
 #include <granit/renderer/native_surface.h>
 #include <granit/window.h>
 #include <granit/window/native.h>
@@ -226,6 +227,22 @@ GRANIT_ABI_ASSERT(granit_abi_texture_asset_selection_desc_size,
                   sizeof(granit_texture_asset_selection_desc) == 16);
 GRANIT_ABI_ASSERT(granit_abi_texture_asset_selection_size,
                   sizeof(granit_texture_asset_selection) == 32);
+GRANIT_ABI_ASSERT(granit_abi_asset_tools_material_result_info_size,
+                  sizeof(granit_asset_tools_material_result_info) == 56);
+GRANIT_ABI_ASSERT(granit_abi_asset_tools_material_result_info_archive,
+                  offsetof(granit_asset_tools_material_result_info, archive) == 8);
+GRANIT_ABI_ASSERT(granit_abi_asset_tools_texture_result_info_size,
+                  sizeof(granit_asset_tools_texture_result_info) == 72);
+GRANIT_ABI_ASSERT(granit_abi_asset_tools_texture_result_info_payload,
+                  offsetof(granit_asset_tools_texture_result_info, payload) == 24);
+GRANIT_ABI_ASSERT(granit_abi_asset_tools_environment_result_info_size,
+                  sizeof(granit_asset_tools_environment_result_info) == 56);
+GRANIT_ABI_ASSERT(granit_abi_asset_tools_environment_result_info_package,
+                  offsetof(granit_asset_tools_environment_result_info, package) == 8);
+GRANIT_ABI_ASSERT(granit_abi_asset_tools_shader_library_result_info_size,
+                  sizeof(granit_asset_tools_shader_library_result_info) == 48);
+GRANIT_ABI_ASSERT(granit_abi_asset_tools_shader_library_result_info_failed_shader,
+                  offsetof(granit_asset_tools_shader_library_result_info, failed_shader) == 16);
 
 typedef struct granit_abi_renderer_desc_alignment_probe {
   char prefix;

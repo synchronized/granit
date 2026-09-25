@@ -4,7 +4,8 @@
 add_library(granit_abi_layout_test OBJECT layout_h.c)
 target_compile_features(granit_abi_layout_test PRIVATE c_std_11)
 target_link_libraries(
-  granit_abi_layout_test PRIVATE granit::granit granit::render_pipeline granit::window
+  granit_abi_layout_test
+  PRIVATE granit::granit granit::render_pipeline granit::window granit::asset_tools
 )
 granit_target_compile_warnings(granit_abi_layout_test)
 
