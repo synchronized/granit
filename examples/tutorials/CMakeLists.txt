@@ -8,6 +8,7 @@ if(GRANIT_HAS_NATIVE_TOOLS AND GRANIT_SHADER_TOOLCHAIN_ROOT AND GRANIT_DXC_EXECU
     add_subdirectory(02_pbr_assets)
   endif()
   add_subdirectory(03_instancing)
+  add_subdirectory(04_raymarch)
 endif()
 
 if(EMSCRIPTEN)
@@ -16,4 +17,5 @@ if(EMSCRIPTEN)
     add_subdirectory(02_pbr_assets)
   endif()
   add_subdirectory(03_instancing)
+  add_subdirectory(04_raymarch)
 endif()
