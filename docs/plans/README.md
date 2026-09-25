@@ -9,11 +9,13 @@
 
 ## 当前计划
 
-- [S-67：0.34.0 公共 SDK 与 AssetTools 契约收敛](S-67-0.34.0-sdk-contract-convergence.md)——统一
-  AssetTools 结果查询、component 级跨版本 ABI 门禁、普通 C++ 用户路径和安装 SDK 验收。
+当前没有正在实施的计划；下一项工作应先完成范围确认并建立独立计划。
 
 ## 最近完成
 
+- [S-67：0.34.0 公共 SDK 与 AssetTools 契约收敛](S-67-0.34.0-sdk-contract-convergence.md)——统一
+  AssetTools 结果查询、component 级跨版本 ABI 门禁、普通 C++ 用户路径和安装 SDK 验收，并发布
+  `v0.34.0`。
 - [S-66：0.33.0 AssetTools 诊断与 CI 收敛](S-66-0.33.0-asset-tools-ci-convergence.md)——为
   Shader Library 源构建补齐结构化诊断，统一 CI 工具链入口、变更范围门禁和安装 SDK Shader helper，
   并发布 `v0.33.0`。
