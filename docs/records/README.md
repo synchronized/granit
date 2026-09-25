@@ -21,6 +21,7 @@
 
 ## 稳定化与跨平台
 
+- [2026-09-25 Granit 0.36.0 发布验收](2026-09-25-v0.36.0-release-acceptance.md)
 - [2026-09-25 Granit 0.35.0 发布验收](2026-09-25-v0.35.0-release-acceptance.md)
 - [2026-09-25 Granit 0.34.0 发布验收](2026-09-25-v0.34.0-release-acceptance.md)
 - [2026-09-25 Granit 0.33.0 发布验收](2026-09-25-v0.33.0-release-acceptance.md)

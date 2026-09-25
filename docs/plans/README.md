@@ -9,11 +9,13 @@
 
 ## 当前计划
 
-- [S-69：0.36.0 公共 API 稳定边界与最小数学库](S-69-0.36.0-api-stability-and-math.md)——逐公共头
-  确定稳定候选与实验性范围，公开轻量渲染数学函数，收敛内部、Sample 与 Tutorial 使用路径。
+暂无正在实施的版本计划；下一项工作应在目标和验收边界确认后建立独立计划。
 
 ## 最近完成
 
+- [S-69：0.36.0 公共 API 稳定边界与最小数学库](S-69-0.36.0-api-stability-and-math.md)——逐公共头
+  确定稳定候选与实验性范围，公开轻量渲染数学函数，收敛内部、Sample 与 Tutorial 使用路径，
+  并发布 `v0.36.0`。
 - [S-68：0.35.0 稳定候选契约审计](S-68-0.35.0-stable-candidate-contracts.md)——建立按 component
   维护的布局与符号快照、负向行为契约、安装 SDK Consumer 和统一证据参考，并发布 `v0.35.0`。
 - [S-67：0.34.0 公共 SDK 与 AssetTools 契约收敛](S-67-0.34.0-sdk-contract-convergence.md)——统一

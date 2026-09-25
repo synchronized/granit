@@ -29,15 +29,17 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 
 ## 当前计划
 
-### S-69：0.36.0 公共 API 稳定边界与最小数学库
-
-**状态：功能实施完成，等待远端矩阵与发布验收，P1。**
-
-[S-69](plans/S-69-0.36.0-api-stability-and-math.md) 将逐公共头确定 Core、Window、RenderPipeline
-与实验性组件的等级，明确 Native 和平台 Backend 边界；同时把现有内部最小数学运算提升为公共
-C++20 接口，统一 Renderer、Model Viewer 与 Tutorial。0.36.0 仍不宣布整个 ABI 冻结。
+暂无正在实施的版本计划；下一项工作应在目标和验收边界确认后建立独立计划。
 
 ## 最近完成
+
+### S-69：0.36.0 公共 API 稳定边界与最小数学库
+
+**状态：已完成，P1。**
+
+[S-69](plans/S-69-0.36.0-api-stability-and-math.md) 已逐公共头确定长期保留候选、观察期、实验性
+与内部范围，公开统一坐标约定的最小 C++20 数学接口，收敛 Renderer、Model Viewer 与 Tutorial
+使用路径，并发布 `v0.36.0`。本版本仍未冻结整个 ABI。
 
 ### S-68：0.35.0 稳定候选契约审计
 
