@@ -8,6 +8,23 @@
 
 ## Unreleased
 
+### 新增
+
+- 新增只依赖安装后 SDK 的 Triangle Consumer，使用同一 HLSL 清单与逻辑 Shader 名称覆盖
+  `.grshlib` 重建、Graphics Pipeline、Draw、Present 和确定性像素回读。
+- Windows/Linux shared SDK 现在包含实验性的 AssetTools component 与 `granit_asset_tool`；锁定的
+  DXC、Tint 工具链保持独立按需下载，不成为应用运行时依赖。
+
+### 修复
+
+- 发布准备脚本只更新 README 的当前版本提示和 Release 链接，不再误改历史版本说明；PowerShell
+  与 Bash 入口共享同一个带唯一锚点校验的变更器。
+
+### 变更
+
+- 安装包验收新增 Window Triangle、HLSL Shader Library 重建和上下异色像素方向检查；正式 Release
+  在打包前执行相同 Consumer 矩阵。
+
 ## 0.31.0 - 2026-09-25
 
 ### 新增
