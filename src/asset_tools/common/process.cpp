@@ -4,6 +4,8 @@
 #include "asset_tools/common/child_process.h"
 
 #include <array>
+#include <cstdlib>
+#include <string>
 #include <thread>
 
 #if defined(_WIN32)
@@ -80,11 +82,13 @@ void read_descriptor(int descriptor, std::string& output) {
 
 } // namespace
 
-bool run_process(const std::vector<std::string>& arguments, process_result& result) {
+bool run_process(const std::vector<std::string>& arguments, process_result& result,
+                 std::string_view library_directory) {
   result = {};
   if (arguments.empty() || arguments.front().empty())
     return false;
 #if defined(_WIN32)
+  static_cast<void>(library_directory);
   SECURITY_ATTRIBUTES attributes{sizeof(SECURITY_ATTRIBUTES), nullptr, TRUE};
   HANDLE output_read = nullptr;
   HANDLE output_write = nullptr;
@@ -173,6 +177,21 @@ bool run_process(const std::vector<std::string>& arguments, process_result& resu
     close(output_pipe[1]);
     close(error_pipe[0]);
     close(error_pipe[1]);
+    if (!library_directory.empty()) {
+#if defined(__APPLE__)
+      constexpr const char* library_path_name = "DYLD_LIBRARY_PATH";
+#else
+      constexpr const char* library_path_name = "LD_LIBRARY_PATH";
+#endif
+      std::string library_path{library_directory};
+      if (const auto* inherited = std::getenv(library_path_name);
+          inherited != nullptr && inherited[0] != '\0') {
+        library_path.push_back(':');
+        library_path.append(inherited);
+      }
+      if (setenv(library_path_name, library_path.c_str(), 1) != 0)
+        _exit(126);
+    }
     std::vector<char*> native_arguments;
     native_arguments.reserve(arguments.size() + 1);
     for (const auto& argument : arguments)
