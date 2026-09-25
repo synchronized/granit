@@ -9,6 +9,7 @@ if(GRANIT_HAS_NATIVE_TOOLS AND GRANIT_SHADER_TOOLCHAIN_ROOT AND GRANIT_DXC_EXECU
   endif()
   add_subdirectory(03_instancing)
   add_subdirectory(04_raymarch)
+  add_subdirectory(05_metaballs)
 endif()
 
 if(EMSCRIPTEN)
@@ -18,4 +19,5 @@ if(EMSCRIPTEN)
   endif()
   add_subdirectory(03_instancing)
   add_subdirectory(04_raymarch)
+  add_subdirectory(05_metaballs)
 endif()

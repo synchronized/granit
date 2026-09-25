@@ -69,7 +69,8 @@ jobs:
           done
           test -s build/emscripten-release/web/granit_web_platform_smoke.data
           for name in granit_imgui_web granit_tutorial_01_cube granit_tutorial_02_pbr_assets \
-            granit_tutorial_03_instancing granit_tutorial_04_raymarch; do
+            granit_tutorial_03_instancing granit_tutorial_04_raymarch \
+            granit_tutorial_05_metaballs; do
             output="build/emscripten-release/web/${name}"
             test -s "${output}.html"
             test -s "${output}.js"
@@ -90,6 +91,7 @@ jobs:
             build/emscripten-release/web/granit_tutorial_02_pbr_assets.*
             build/emscripten-release/web/granit_tutorial_03_instancing.*
             build/emscripten-release/web/granit_tutorial_04_raymarch.*
+            build/emscripten-release/web/granit_tutorial_05_metaballs.*
             build/emscripten-release/web/model_viewer_fixture.gltf
             build/emscripten-release/web/model_viewer_fixture.bin
           if-no-files-found: error
@@ -139,6 +141,11 @@ jobs:
             script: test:tutorial-feature
             arguments: >-
               ../../build/emscripten-release/web granit_tutorial_04_raymarch 04
+            expect_software_fallback: "0"
+          - name: tutorial-05
+            script: test:tutorial-feature
+            arguments: >-
+              ../../build/emscripten-release/web granit_tutorial_05_metaballs 05
             expect_software_fallback: "0"
     steps:
       - uses: actions/checkout@v5
