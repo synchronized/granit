@@ -19,7 +19,8 @@
 | ImGui | `samples/imgui` | `granit_sdl3_imgui_example`、`granit_imgui_web` | 验证 SDL3、ImGui 和 Canvas 集成 |
 | Model Viewer | `samples/model_viewer` | `granit_sample_model_viewer`、Web 目标 | 展示完整跨后端 PBR 工具 |
 
-低层纹理立方体和 PBR 资产路径位于 `tutorials`，公共应用生命周期位于 `common/application`。
+低层纹理立方体、PBR 资产、Instancing、Raymarch 和 Metaballs 位于 `tutorials`，公共应用生命周期
+位于 `common/application`。
 
 ## 目录职责
 
