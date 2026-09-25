@@ -7,7 +7,7 @@
 #include <granit/renderer/pipeline.h>
 #include <granit/renderer/pipeline_warmup.h>
 #include <granit/renderer/renderer.h>
-#include <granit/renderer/renderer_ref.hpp>
+#include <granit/renderer/renderer.hpp>
 #include <granit/renderer/shader.h>
 
 #include <cstdint>
