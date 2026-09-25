@@ -8,7 +8,7 @@ Granit 是面向桌面 Vulkan 与浏览器 WebGPU 的 C++20 渲染库，服务�
 项目通过 C ABI 隔离动态库边界，并在其上提供现代 C++20 RAII 包装；普通用户无需接触后端原生
 类型、句柄和生命周期管理。
 
-> **最新发布版本：0.36.0。** 0.x 不保证 API/ABI 稳定；升级前请阅读
+> **最新发布版本：0.37.0。** 0.x 不保证 API/ABI 稳定；升级前请阅读
 > [变更记录](CHANGELOG.md)和[兼容策略](docs/reference/compatibility.md)。
 
 ## 项目定位
@@ -53,7 +53,7 @@ Granit 采用“Bring Your Own Engine”边界，不接管使用者的 ECS、Sce
 
 ## 使用发布包
 
-[Granit 0.36.0 Release](https://github.com/synchronized/granit/releases/tag/v0.36.0) 含 Windows/Linux x64 SDK 及 `SHA256SUMS`；
+[Granit 0.37.0 Release](https://github.com/synchronized/granit/releases/tag/v0.37.0) 含 Windows/Linux x64 SDK 及 `SHA256SUMS`；
 普通使用者应选择 `-shared` 包，0.30.0 起只发布共享库 SDK。验证校验和并解压后，压缩包
 内的顶层目录就是 CMake package 前缀：
 
