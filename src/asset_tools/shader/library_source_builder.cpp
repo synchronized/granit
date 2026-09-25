@@ -11,6 +11,7 @@
 #include "asset_tools/shader/library_source_manifest.h"
 #include "asset_tools/shader/object_cache.h"
 #include "asset_tools/shader/object_storage.h"
+#include "core/shared_handle_table.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -19,6 +20,7 @@
 #include <filesystem>
 #include <fstream>
 #include <limits>
+#include <memory>
 #include <new>
 #include <span>
 #include <string>
@@ -139,13 +141,65 @@ struct expanded_shader {
 
 constexpr std::size_t maximum_expanded_shader_count = 4096;
 
+struct stored_library_result {
+  std::uint32_t cache_hit{};
+  std::string failed_shader;
+  std::string diagnostic;
+};
+
+granit::detail::shared_handle_table<
+    stored_library_result, granit::detail::handle_type::asset_tools_shader_library_result>
+    library_results;
+
+granit_asset_tools_shader_library_result
+store_library_result(std::shared_ptr<const stored_library_result> value) {
+  return library_results.insert(std::move(value));
+}
+
+std::shared_ptr<const stored_library_result>
+find_library_result(granit_asset_tools_shader_library_result handle) {
+  return library_results.find(handle);
+}
+
+granit_result finish_with_result(const std::shared_ptr<stored_library_result>& value,
+                                 granit_result status, std::string diagnostic,
+                                 granit_asset_tools_shader_library_result* result,
+                                 std::string failed_shader = {}) {
+  value->diagnostic = std::move(diagnostic);
+  value->failed_shader = std::move(failed_shader);
+  *result = store_library_result(value);
+  return status;
+}
+
+std::string source_diagnostic(granit::asset_tools::detail::shader_library_source_error error) {
+  using enum granit::asset_tools::detail::shader_library_source_error;
+  switch (error) {
+  case invalid_json:
+    return "Shader Library 清单不是有效 JSON\n";
+  case invalid_schema:
+    return "Shader Library 清单字段或 Shader 定义无效\n";
+  case unsupported_version:
+    return "Shader Library 清单版本不受支持\n";
+  case invalid_argument:
+    return "Shader Library 清单为空或路径无效\n";
+  case out_of_memory:
+    return "Shader Library 清单解析内存不足\n";
+  case internal:
+    return "Shader Library 清单解析发生内部错误\n";
+  case none:
+    break;
+  }
+  return {};
+}
+
 } // namespace
 
 extern "C" granit_result granit_asset_tools_shader_build_library_from_manifest(
-    const granit_asset_tools_shader_source_library_desc* desc, std::uint32_t* cache_hit) {
-  if (cache_hit == nullptr)
+    const granit_asset_tools_shader_source_library_desc* desc,
+    granit_asset_tools_shader_library_result* result) {
+  if (result == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  *cache_hit = 0;
+  *result = 0;
   if (desc == nullptr || desc->struct_size < sizeof(*desc) || desc->reserved != 0 ||
       !valid_string(desc->manifest_path, desc->manifest_path_length) ||
       !valid_string(desc->toolchain_root, desc->toolchain_root_length) ||
@@ -156,23 +210,33 @@ extern "C" granit_result granit_asset_tools_shader_build_library_from_manifest(
     return GRANIT_ERROR_INVALID_ARGUMENT;
 
   try {
+    const auto value = std::make_shared<stored_library_result>();
     const auto manifest_path = copy_path(desc->manifest_path, desc->manifest_path_length);
     granit::asset_tools::detail::shader_library_source_manifest manifest;
     const auto parse_result = granit::asset_tools::detail::parse_shader_library_source_manifest(
         read_text(manifest_path), manifest);
-    if (parse_result != granit::asset_tools::detail::shader_library_source_error::none)
-      return source_error(parse_result);
+    if (parse_result != granit::asset_tools::detail::shader_library_source_error::none) {
+      return finish_with_result(value, source_error(parse_result), source_diagnostic(parse_result),
+                                result);
+    }
 
     const auto cache_path = copy_path(desc->cache_path, desc->cache_path_length);
     std::error_code filesystem_error;
     std::filesystem::create_directories(cache_path, filesystem_error);
-    if (filesystem_error)
-      return GRANIT_ERROR_INITIALIZATION_FAILED;
+    if (filesystem_error) {
+      return finish_with_result(value, GRANIT_ERROR_INITIALIZATION_FAILED,
+                                "无法创建 Shader Object 缓存目录：" + path_text(cache_path) + "\n",
+                                result);
+    }
 
     const auto toolchain_root = copy_path(desc->toolchain_root, desc->toolchain_root_length);
     const auto toolchain = granit::asset_tools::detail::resolve_shader_toolchain(toolchain_root);
-    if (!granit::asset_tools::detail::shader_toolchain_ready(toolchain))
-      return GRANIT_ERROR_NOT_READY;
+    if (!granit::asset_tools::detail::shader_toolchain_ready(toolchain)) {
+      return finish_with_result(value, GRANIT_ERROR_NOT_READY,
+                                "Shader 工具链缺少可执行的 DXC 或 Tint：" +
+                                    path_text(toolchain_root) + "\n",
+                                result);
+    }
     const auto dxc_identity = tool_identity(toolchain.dxc);
     const auto tint_identity = tool_identity(toolchain.tint);
     const auto revisions = "dxc=" + dxc_identity + ";tint=" + tint_identity;
@@ -186,19 +250,24 @@ extern "C" granit_result granit_asset_tools_shader_build_library_from_manifest(
         .toolchain_root_length = desc->toolchain_root_length,
     };
     auto status = granit_asset_tools_shader_compiler_create(&compiler_desc, &compiler.value);
-    if (status != GRANIT_SUCCESS)
-      return status;
+    if (status != GRANIT_SUCCESS) {
+      return finish_with_result(value, status, "无法创建 Shader Compiler\n", result);
+    }
 
     std::vector<expanded_shader> expanded;
     for (const auto& shader : manifest.shaders) {
       if (shader.variants.empty()) {
-        if (expanded.size() == maximum_expanded_shader_count)
-          return GRANIT_ERROR_INVALID_ARGUMENT;
+        if (expanded.size() == maximum_expanded_shader_count) {
+          return finish_with_result(value, GRANIT_ERROR_INVALID_ARGUMENT,
+                                    "Shader Library 展开后的 Shader 数量超过限制\n", result);
+        }
         expanded.push_back({shader.name, &shader, nullptr});
       } else {
         for (const auto& variant : shader.variants) {
-          if (expanded.size() == maximum_expanded_shader_count)
-            return GRANIT_ERROR_INVALID_ARGUMENT;
+          if (expanded.size() == maximum_expanded_shader_count) {
+            return finish_with_result(value, GRANIT_ERROR_INVALID_ARGUMENT,
+                                      "Shader Library 展开后的 Shader 数量超过限制\n", result);
+          }
           expanded.push_back({shader.name + "/" + variant.name, &shader, &variant.defines});
         }
       }
@@ -240,8 +309,10 @@ extern "C" granit_result granit_asset_tools_shader_build_library_from_manifest(
       };
       bool object_hit = false;
       status = granit::asset_tools::detail::restore_shader_object_cache(object_context, object_hit);
-      if (status != GRANIT_SUCCESS)
-        return status;
+      if (status != GRANIT_SUCCESS) {
+        return finish_with_result(value, status, "无法读取 Shader Object 缓存\n", result,
+                                  item.name);
+      }
 
       if (!object_hit) {
         std::vector<granit_asset_tools_shader_define> native_defines;
@@ -271,11 +342,24 @@ extern "C" granit_result granit_asset_tools_shader_build_library_from_manifest(
         compilation_owner compilation;
         status = granit_asset_tools_shader_compiler_compile(compiler.value, &compile,
                                                             &compilation.value);
-        if (status != GRANIT_SUCCESS)
-          return status;
+        if (status != GRANIT_SUCCESS) {
+          granit_asset_tools_shader_compilation_info compilation_info{};
+          compilation_info.struct_size = sizeof(compilation_info);
+          std::string diagnostic = "Shader 编译失败\n";
+          if (compilation.value != 0 &&
+              granit_asset_tools_shader_compilation_get_info(compilation.value,
+                                                              &compilation_info) == GRANIT_SUCCESS &&
+              compilation_info.diagnostic != nullptr) {
+            diagnostic.assign(compilation_info.diagnostic,
+                              static_cast<std::size_t>(compilation_info.diagnostic_length));
+          }
+          return finish_with_result(value, status, std::move(diagnostic), result, item.name);
+        }
         status = granit::asset_tools::detail::write_shader_object_cache(object_context, object_hit);
-        if (status != GRANIT_SUCCESS)
-          return status;
+        if (status != GRANIT_SUCCESS) {
+          return finish_with_result(value, status, "无法写入 Shader Object 缓存\n", result,
+                                    item.name);
+        }
         all_objects_hit = false;
       }
 
@@ -283,7 +367,8 @@ extern "C" granit_result granit_asset_tools_shader_build_library_from_manifest(
       const auto object_bytes = read_bytes(object);
       if (granit::detail::shader_format::decode_shader_object(object_bytes, object_view) !=
           granit::detail::shader_format::shader_object_error::success)
-        return GRANIT_ERROR_INTERNAL;
+        return finish_with_result(value, GRANIT_ERROR_INTERNAL,
+                                  "生成的 Shader Object 无法解码\n", result, item.name);
       object_paths.push_back(object);
       logical_names.push_back(item.name);
     }
@@ -293,14 +378,37 @@ extern "C" granit_result granit_asset_tools_shader_build_library_from_manifest(
         object_paths, logical_names, manifest.name,
         static_cast<granit_shader_backend_flags>(manifest.target_backends),
         copy_path(desc->output_path, desc->output_path_length), library_hit);
-    if (status != GRANIT_SUCCESS)
-      return status;
+    if (status != GRANIT_SUCCESS) {
+      return finish_with_result(value, status, "无法链接 Shader Library\n", result);
+    }
 
-    *cache_hit = all_objects_hit && library_hit ? 1U : 0U;
+    value->cache_hit = all_objects_hit && library_hit ? 1U : 0U;
+    *result = store_library_result(value);
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
+}
+
+extern "C" granit_result granit_asset_tools_shader_library_result_get_info(
+    granit_asset_tools_shader_library_result result,
+    granit_asset_tools_shader_library_result_info* info) {
+  if (info == nullptr || info->struct_size < sizeof(*info))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto value = find_library_result(result);
+  if (value == nullptr)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  info->cache_hit = value->cache_hit;
+  info->failed_shader = value->failed_shader.data();
+  info->failed_shader_length = value->failed_shader.size();
+  info->diagnostic = value->diagnostic.data();
+  info->diagnostic_length = value->diagnostic.size();
+  return GRANIT_SUCCESS;
+}
+
+extern "C" granit_result granit_asset_tools_shader_library_result_destroy(
+    granit_asset_tools_shader_library_result result) {
+  return library_results.erase(result);
 }

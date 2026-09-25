@@ -23,12 +23,20 @@ int build_shader_library(int argc, char** argv) {
       .cache_path = *cache,
       .output_path = *output,
   };
-  const auto [status, cache_hit] = granit::asset_tools::shader::build_library_from_manifest(desc);
+  const auto [status, build_result] =
+      granit::asset_tools::shader::build_library_from_manifest(desc);
+  const auto info = build_result.info();
   if (status.failed()) {
-    std::cerr << "无法从源清单构建 Shader Library：" << *manifest << '\n';
+    std::cerr << "无法从源清单构建 Shader Library：" << *manifest;
+    if (!info.failed_shader.empty())
+      std::cerr << "\nShader：" << info.failed_shader;
+    if (!info.diagnostic.empty())
+      std::cerr << '\n' << info.diagnostic;
+    else
+      std::cerr << '\n';
     return 1;
   }
-  std::cout << (cache_hit ? "Shader Library 源构建缓存命中：" : "已构建 Shader Library：")
+  std::cout << (info.cache_hit ? "Shader Library 源构建缓存命中：" : "已构建 Shader Library：")
             << *output << '\n';
   return 0;
 }
