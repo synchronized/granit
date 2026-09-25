@@ -130,3 +130,4 @@
 - [S-66：0.33.0 AssetTools 诊断与 CI 收敛](S-66-0.33.0-asset-tools-ci-convergence.md)
 - [S-67：0.34.0 公共 SDK 与 AssetTools 契约收敛](S-67-0.34.0-sdk-contract-convergence.md)
 - [S-68：0.35.0 稳定候选契约审计](S-68-0.35.0-stable-candidate-contracts.md)
+- [S-69：0.36.0 公共 API 稳定边界与最小数学库](S-69-0.36.0-api-stability-and-math.md)
