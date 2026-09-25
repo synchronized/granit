@@ -18,21 +18,13 @@ jobs:
       - uses: ./.github/actions/setup-msvc
         with:
           arch: x64
-      - name: 恢复锁定 Shader 工具链
-        uses: actions/cache@v5
-        with:
-          path: build/toolchains
-          key: >-
-            shader-toolchain-${{ runner.os }}-
-            ${{ hashFiles('cmake/toolchain/download_shader_toolchain.cmake',
-            'cmake/toolchain/GranitShaderToolchain.cmake') }}
-      - name: 下载并校验锁定 Shader 工具链
-        shell: pwsh
-        run: cmake -DDESTINATION=build/toolchains -P cmake/toolchain/download_shader_toolchain.cmake
+      - name: 准备锁定 Shader 工具链
+        id: shader-toolchain
+        uses: ./.github/actions/setup-shader-toolchain
       - name: 验证锁定 Shader 工具链
         shell: pwsh
         run: |
-          $root = "$PWD/build/toolchains/granit-shader-toolchain-v20260720.160313-windows-x64"
+          $root = '${{ steps.shader-toolchain.outputs.root }}'
           cmake -S . -B build/shader-toolchain-test -G Ninja -DCMAKE_BUILD_TYPE=Release `
             -DGRANIT_BUILD_EXAMPLES=OFF -DGRANIT_BUILD_TESTING=ON -DGRANIT_BUILD_TOOLS=ON `
             -DGRANIT_SHADER_TOOLCHAIN_ROOT="$root" -DGRANIT_SHADER_TOOLCHAIN_POLICY=locked `
@@ -54,14 +46,9 @@ jobs:
       - uses: ./.github/actions/setup-msvc
         with:
           arch: x64
-      - name: 恢复锁定 Shader 工具链
-        uses: actions/cache@v5
-        with:
-          path: build/toolchains
-          key: >-
-            shader-toolchain-${{ runner.os }}-
-            ${{ hashFiles('cmake/toolchain/download_shader_toolchain.cmake',
-            'cmake/toolchain/GranitShaderToolchain.cmake') }}
+      - name: 准备锁定 Shader 工具链
+        id: shader-toolchain
+        uses: ./.github/actions/setup-shader-toolchain
       - name: 启用 MSVC 编译缓存
         uses: mozilla-actions/sccache-action@v0.0.11
       - name: 选择 preset
@@ -102,7 +89,7 @@ jobs:
             -DGRANIT_SOURCE_DIR="$PWD" `
             -DGRANIT_INSTALL_PREFIX="$prefix" `
             -DGRANIT_TEST_BINARY_DIR="$PWD/build/package/$preset" `
-            -DGRANIT_TEST_SHADER_TOOLCHAIN_ROOT="$PWD/build/toolchains/granit-shader-toolchain-v20260720.160313-windows-x64" `
+            -DGRANIT_TEST_SHADER_TOOLCHAIN_ROOT="${{ steps.shader-toolchain.outputs.root }}" `
             -P tests/packaging/check_installed_package.cmake
           if ($LASTEXITCODE -ne 0) { throw '安装 SDK 消费验证失败' }
       - name: 构建并运行独立 C 和 C++ Consumer

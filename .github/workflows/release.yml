@@ -57,14 +57,9 @@ jobs:
           arch: x64
       - name: 启用 MSVC 编译缓存
         uses: mozilla-actions/sccache-action@v0.0.11
-      - name: 恢复锁定 Shader 工具链
-        uses: actions/cache@v5
-        with:
-          path: build/toolchains
-          key: >-
-            shader-toolchain-${{ runner.os }}-
-            ${{ hashFiles('cmake/toolchain/download_shader_toolchain.cmake',
-            'cmake/toolchain/GranitShaderToolchain.cmake') }}
+      - name: 准备锁定 Shader 工具链
+        id: shader-toolchain
+        uses: ./.github/actions/setup-shader-toolchain
       - name: 设置 preset 和产物名
         id: package
         shell: pwsh
@@ -72,9 +67,6 @@ jobs:
           "preset=windows-msvc-release" >> $env:GITHUB_OUTPUT
           "name=granit-$($env:RELEASE_TAG.TrimStart('v'))-windows-x64-shared" `
             >> $env:GITHUB_OUTPUT
-      - name: 下载并校验锁定 Shader 工具链
-        shell: pwsh
-        run: cmake -DDESTINATION=build/toolchains -P cmake/toolchain/download_shader_toolchain.cmake
       - name: 配置、构建与测试
         shell: pwsh
         run: |
@@ -101,7 +93,7 @@ jobs:
             -DGRANIT_SOURCE_DIR="$PWD" `
             -DGRANIT_INSTALL_PREFIX="$stage" `
             -DGRANIT_TEST_BINARY_DIR="$PWD/build/release-package/windows" `
-            -DGRANIT_TEST_SHADER_TOOLCHAIN_ROOT="$PWD/build/toolchains/granit-shader-toolchain-v20260720.160313-windows-x64" `
+            -DGRANIT_TEST_SHADER_TOOLCHAIN_ROOT="${{ steps.shader-toolchain.outputs.root }}" `
             -P tests/packaging/check_installed_package.cmake
           if ($LASTEXITCODE -ne 0) { throw '安装 SDK 消费验证失败' }
           Compress-Archive -Path $stage -DestinationPath "${{ steps.package.outputs.name }}.zip"
@@ -130,22 +122,15 @@ jobs:
             release-linux-ccache-v1-shared-${{ github.sha }}
           restore-keys: |
             release-linux-ccache-v1-shared-
-      - name: 恢复锁定 Shader 工具链
-        uses: actions/cache@v5
-        with:
-          path: build/toolchains
-          key: >-
-            shader-toolchain-${{ runner.os }}-
-            ${{ hashFiles('cmake/toolchain/download_shader_toolchain.cmake',
-            'cmake/toolchain/GranitShaderToolchain.cmake') }}
+      - name: 准备锁定 Shader 工具链
+        id: shader-toolchain
+        uses: ./.github/actions/setup-shader-toolchain
       - name: 设置 preset 和产物名
         id: package
         shell: bash
         run: |
           echo "preset=linux-clang-release" >> "$GITHUB_OUTPUT"
           echo "name=granit-${RELEASE_TAG#v}-linux-x64-shared" >> "$GITHUB_OUTPUT"
-      - name: 下载并校验锁定 Shader 工具链
-        run: cmake -DDESTINATION=build/toolchains -P cmake/toolchain/download_shader_toolchain.cmake
       - name: 配置、构建与测试
         shell: bash
         run: |
@@ -183,7 +168,7 @@ jobs:
             -DGRANIT_SOURCE_DIR="$PWD" \
             -DGRANIT_INSTALL_PREFIX="$stage" \
             -DGRANIT_TEST_BINARY_DIR="$PWD/build/release-package/linux" \
-            -DGRANIT_TEST_SHADER_TOOLCHAIN_ROOT="$PWD/build/toolchains/granit-shader-toolchain-v20260720.160313-linux-x64" \
+            -DGRANIT_TEST_SHADER_TOOLCHAIN_ROOT="${{ steps.shader-toolchain.outputs.root }}" \
             -P tests/packaging/check_installed_package.cmake
           xvfb-run -a ctest --test-dir "$PWD/build/release-package/linux/standalone-window-clear" \
             --output-on-failure

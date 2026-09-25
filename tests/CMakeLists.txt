@@ -37,4 +37,15 @@ add_test(
     -P "${PROJECT_SOURCE_DIR}/tests/cmake/check_documentation.cmake"
 )
 
-set_property(TEST granit.documentation.links APPEND PROPERTY LABELS unit)
+add_test(
+  NAME granit.ci.shader_toolchain_contract
+  COMMAND
+    "${CMAKE_COMMAND}"
+    "-DGRANIT_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
+    -P "${PROJECT_SOURCE_DIR}/tests/cmake/check_ci_workflows.cmake"
+)
+
+set_property(
+  TEST granit.documentation.links granit.ci.shader_toolchain_contract
+  APPEND PROPERTY LABELS unit
+)
