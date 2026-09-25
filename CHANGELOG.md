@@ -8,6 +8,20 @@
 
 ## Unreleased
 
+### 新增
+
+- Shader Library 源构建新增可拥有的结果句柄和 C++ RAII 包装；缓存命中、失败 Shader 逻辑名称与
+  DXC/Tint 诊断现在可由 API 查询，`granit_asset_tool` 会输出同一诊断。
+- 安装后的 AssetTools component 新增 `granit_SHADER_ASSETS_MODULE`，独立 CMake Consumer 可通过
+  `granit_add_hlsl_shader_library()` 复用源码树的 HLSL-first Library 构建声明。
+
+### 变更
+
+- Windows、Linux 与 Release Workflow 统一通过仓库内 Action 恢复和校验 Shader 工具链，并消费
+  动态返回的根目录，不再硬编码工具链版本目录。
+- 纯文档和版本身份 Pull Request 由 Quick Check 验证，不再自动启动完整平台矩阵；手动矩阵和正式
+  Release 的完整验证保持不变。
+
 ## 0.32.0 - 2026-09-25
 
 ### 新增
