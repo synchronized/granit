@@ -31,6 +31,7 @@ Granit 当前版本为 0.x，公共 API、C ABI、C++ 包装、CMake component �
 
 所有 component 使用统一的 Granit 包版本，但“核心稳定”不自动表示尚未宣布稳定的可选 component
 同时冻结。稳定等级必须在发布说明和对应参考文档中明确标注。
+逐安装公共头的长期候选、观察候选和实验性分类见[公共 API 稳定等级](api-stability.md)。
 
 ## 可安装 component 当前等级
 
