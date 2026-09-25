@@ -34,4 +34,5 @@
 - Emscripten 工作流通过平台、ImGui、两个教程及 Model Viewer 正式/运行时浏览器验收。
 - Quick Check 与 Documentation 工作流通过。
 
-功能合入 `main` 后，按发布流程从最新 `main` 创建 `release/0.31.0`，再修改版本文件并发布。
+功能与版本提交均已合入 `main`，`v0.31.0` 的构建、公开附件和下载复验结果见
+[0.31.0 发布验收](2026-09-25-v0.31.0-release-acceptance.md)。
