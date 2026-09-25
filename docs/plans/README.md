@@ -9,11 +9,13 @@
 
 ## 当前计划
 
-- [S-66：0.33.0 AssetTools 诊断与 CI 收敛](S-66-0.33.0-asset-tools-ci-convergence.md)——为
-  Shader Library 源构建补齐结构化诊断，统一 CI 工具链入口、变更范围门禁和安装 SDK Shader helper。
+当前没有正在实施的版本计划。新工作进入实施前应先建立对应计划并更新路线图。
 
 ## 最近完成
 
+- [S-66：0.33.0 AssetTools 诊断与 CI 收敛](S-66-0.33.0-asset-tools-ci-convergence.md)——为
+  Shader Library 源构建补齐结构化诊断，统一 CI 工具链入口、变更范围门禁和安装 SDK Shader helper，
+  并发布 `v0.33.0`。
 - [S-65：0.32.0 安装 SDK 图形工作流](S-65-0.32.0-sdk-graphics-workflow.md)——加固版本准备，
   补齐安装后 SDK 从 HLSL Shader Library 到首个 Draw 的独立消费与发布验收。
 - [S-64：0.31.0 SDK-first 示例与资产入口](S-64-0.31.0-sdk-first-examples.md)——增加只依赖安装包
