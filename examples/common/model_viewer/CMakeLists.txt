@@ -83,7 +83,7 @@ target_include_directories(
 )
 target_link_libraries(
   granit_example_model_scene
-  PUBLIC granit_example_gltf_support granit::math granit::render_pipeline
+  PUBLIC granit_example_gltf_support granit::render_pipeline
 )
 set_target_properties(granit_example_model_scene PROPERTIES FOLDER "Examples/Common")
 granit_target_compile_warnings(granit_example_model_scene)

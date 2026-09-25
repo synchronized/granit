@@ -5,7 +5,7 @@
 #define GRANIT_LIGHTING_TONE_MAPPING_REFERENCE_H
 
 #include "lighting/tone_mapping_types.h"
-#include "math/math.h"
+#include <granit/math/functions.hpp>
 
 namespace granit::lighting {
 

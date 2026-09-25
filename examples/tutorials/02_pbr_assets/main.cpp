@@ -10,6 +10,7 @@
 #include "model_viewer/gpu_scene.h"
 
 #include <granit/integrations/imgui/renderer.hpp>
+#include <granit/math/functions.hpp>
 #include <granit/pipeline/canvas_draw_list.hpp>
 #include <granit/pipeline/render_pipeline.hpp>
 #include <granit/pipeline/scene.hpp>
@@ -20,6 +21,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
+#include <numbers>
 #include <span>
 #include <string_view>
 #include <vector>
@@ -30,28 +32,6 @@
 namespace {
 
 using granit::math::matrix4;
-
-matrix4 multiply(const matrix4& left, const matrix4& right) {
-  matrix4 output{};
-  for (std::size_t column = 0; column < 4; ++column) {
-    for (std::size_t row = 0; row < 4; ++row) {
-      for (std::size_t inner = 0; inner < 4; ++inner)
-        output[column * 4 + row] += left[inner * 4 + row] * right[column * 4 + inner];
-    }
-  }
-  return output;
-}
-
-matrix4 view_matrix() { return {{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, -4, 1}}; }
-
-matrix4 projection_matrix(float aspect) {
-  constexpr float near_plane = 0.1F;
-  constexpr float far_plane = 100.0F;
-  constexpr float vertical_scale = 1.7320508F;
-  return {{vertical_scale / aspect, 0, 0, 0, 0, -vertical_scale, 0, 0, 0, 0,
-           far_plane / (near_plane - far_plane), -1, 0, 0,
-           (near_plane * far_plane) / (near_plane - far_plane), 0}};
-}
 
 int report_failure(std::string_view operation, granit::result result) {
   std::cerr << operation << " failed: " << result.message() << '\n';
@@ -141,8 +121,8 @@ private:
       return granit::result::invalid_argument;
     }
 
-    granit::example::assets::asset_system_resolver resolver{
-        assets(), assets().bundled(), "tutorials/02_pbr_assets"};
+    granit::example::assets::asset_system_resolver resolver{assets(), assets().bundled(),
+                                                            "tutorials/02_pbr_assets"};
     const auto loaded =
         granit::example::gltf::import_scene(model_request->bytes(), &resolver, model_scene_);
     if (!loaded) {
@@ -167,12 +147,15 @@ private:
 
     const auto aspect = static_cast<float>(presentation_info().width) /
                         static_cast<float>(presentation_info().height);
-    const auto view = view_matrix();
-    const auto projection = projection_matrix(aspect);
+    const auto view = granit::math::translation_matrix4({0, 0, -4});
+    matrix4 projection{};
+    if (!granit::math::perspective_rh_zo(std::numbers::pi_v<float> / 3.0F, aspect, 0.1F, 100.0F,
+                                         projection))
+      return granit::result::invalid_argument;
     const granit::scene_view scene_view{
         .view = view,
         .projection = projection,
-        .view_projection = multiply(projection, view),
+        .view_projection = granit::math::multiply(projection, view),
         .camera_position = {0, 0, 4},
         .viewport_x = 0,
         .viewport_y = 0,

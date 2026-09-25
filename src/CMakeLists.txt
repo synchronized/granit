@@ -126,6 +126,7 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/frame_context.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/granit.h"
       "${PROJECT_SOURCE_DIR}/include/granit/granit.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/math/functions.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/math/types.h"
       "${PROJECT_SOURCE_DIR}/include/granit/math/types.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/pipeline.h"
@@ -223,7 +224,6 @@ install(
 
 include(granit_modules)
 granit_add_render_graph_module()
-granit_add_math_module()
 granit_add_material_module()
 granit_add_pbr_module()
 granit_add_scene_module()
@@ -233,7 +233,6 @@ granit_add_render_pipeline_module()
 install(
   TARGETS
     granit_render_graph
-    granit_math
     granit_material
     granit_pbr
     granit_scene

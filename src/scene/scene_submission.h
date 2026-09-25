@@ -4,7 +4,7 @@
 #ifndef GRANIT_SCENE_SCENE_SUBMISSION_H
 #define GRANIT_SCENE_SCENE_SUBMISSION_H
 
-#include "math/math.h"
+#include <granit/math/functions.hpp>
 
 #include <cstdint>
 #include <span>

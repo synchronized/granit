@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "math/math.h"
+#include <granit/math/functions.hpp>
 
 #include <catch2/catch_all.hpp>
 
@@ -27,18 +27,19 @@ TEST_CASE("向量运算使用右手坐标约定") {
 }
 
 TEST_CASE("列主序矩阵乘法和点变换保持顺序") {
-  auto translation = granit::math::identity_matrix4;
-  translation[12] = 2.0F;
-  translation[13] = 3.0F;
-  translation[14] = 4.0F;
-  auto scale = granit::math::identity_matrix4;
-  scale[0] = 2.0F;
-  scale[5] = 3.0F;
-  scale[10] = 4.0F;
+  const auto translation = granit::math::translation_matrix4({2, 3, 4});
+  const auto scale = granit::math::scaling_matrix4({2, 3, 4});
   const auto combined = granit::math::multiply(translation, scale);
   granit::math::float3 result;
   REQUIRE(granit::math::transform_point(combined, {1, 1, 1}, result));
   check_float3(result, {4, 6, 8});
+}
+
+TEST_CASE("轴旋转矩阵遵循右手坐标系") {
+  granit::math::float3 result;
+  REQUIRE(granit::math::transform_point(
+      granit::math::rotation_y_matrix4(std::numbers::pi_v<float> / 2.0F), {1, 0, 0}, result));
+  check_float3(result, {0, 0, -1});
 }
 
 TEST_CASE("右手View矩阵将观察目标置于负Z轴") {

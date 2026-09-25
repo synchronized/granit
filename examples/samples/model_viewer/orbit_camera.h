@@ -6,7 +6,7 @@
 
 #include "model_viewer/viewer_input.h"
 
-#include "math/math.h"
+#include <granit/math/functions.hpp>
 
 #include <cstdint>
 
