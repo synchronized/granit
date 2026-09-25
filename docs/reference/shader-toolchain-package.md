@@ -122,6 +122,8 @@ cmake -S . -B build \
 `system`（默认）不访问网络，`off` 完全禁用 Shader 工具链，`auto` 仅在本机工具不完整时下载，
 `download` 固定使用锁定发布包。显式 `GRANIT_SHADER_TOOLCHAIN_ROOT` 始终优先。安装 Consumer 在
 请求 `AssetTools` component 后可 `include("${granit_SHADER_TOOLCHAIN_MODULE}")` 并调用
-`granit_find_shader_toolchain()`。
+`granit_find_shader_toolchain()`。从 HLSL 清单声明 Library 构建时，再包含
+`granit_SHADER_ASSETS_MODULE` 并调用 `granit_add_hlsl_shader_library()`；源码树与安装 SDK 使用同一
+参数契约。
 
 锁定工具链发布页见 [Granit Releases](https://github.com/synchronized/granit/releases)。

@@ -70,6 +70,7 @@ endforeach()
 
 if(EXISTS "${install_prefix}/lib/cmake/granit/granitAssetToolsTargets.cmake")
   foreach(toolchain_module IN ITEMS GranitShaderToolchain.cmake GranitShaderToolchainLock.cmake
+                                   GranitShaderAssets.cmake
                                    granit_shader_toolchain.cmake download_shader_toolchain.cmake
                                    verify_shader_toolchain_manifest.cmake)
     if(NOT EXISTS "${install_prefix}/lib/cmake/granit/${toolchain_module}")

@@ -96,7 +96,9 @@ ID，也不可保存到文件或跨进程使用。不同结果的查询仍可并
   诊断。参数结构无效时不创建结果句柄，清单解析、工具发现或编译已经开始后的失败通常会创建。
 - CMake 的 `granit_add_hlsl_shader_library` 接收 `MANIFEST`、`SOURCES`、`OUTPUT` 和 `CACHE_DIR`。
   `SOURCES` 只声明构建依赖；清单解析、变体规范化、缓存身份和资产编码仍由 AssetTools 处理。
-  可选的 `REFERENCE` 用于逐字节校验发布快照。
+  可选的 `REFERENCE` 用于逐字节校验发布快照。安装 SDK 的 Consumer 请求 `AssetTools` component
+  后可包含 `granit_SHADER_ASSETS_MODULE` 使用同一函数；它会自动选择源码树目标或安装后的
+  `granit_asset_tool`。
 - HLSL portable 路径让 DXC 直接生成最终 Vulkan 1.3 SPIR-V；另行生成临时 Vulkan 1.1 /
   SPIR-V 1.3 中间文件供锁定 Tint 的 SPIR-V Reader 转换 WGSL，并要求两份 SPIR-V 的反射契约
   一致。临时文件不会进入资产。DXC 或 Tint 拒绝源代码及其能力时，调用返回

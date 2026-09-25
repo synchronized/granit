@@ -23,6 +23,7 @@ install(
 
 install(
   FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/GranitShaderAssets.cmake"
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/toolchain/GranitShaderToolchain.cmake"
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/toolchain/GranitShaderToolchainLock.cmake"
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/toolchain/granit_shader_toolchain.cmake"
