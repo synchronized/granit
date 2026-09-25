@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+## 0.32.0 - 2026-09-25
+
 ### 新增
 
 - 新增只依赖安装后 SDK 的 Triangle Consumer，使用同一 HLSL 清单与逻辑 Shader 名称覆盖
