@@ -131,3 +131,4 @@
 - [S-67：0.34.0 公共 SDK 与 AssetTools 契约收敛](S-67-0.34.0-sdk-contract-convergence.md)
 - [S-68：0.35.0 稳定候选契约审计](S-68-0.35.0-stable-candidate-contracts.md)
 - [S-69：0.36.0 公共 API 稳定边界与最小数学库](S-69-0.36.0-api-stability-and-math.md)
+- [S-70：0.37.0 特性教程与 API 能力验证](S-70-0.37.0-feature-tutorials.md)
