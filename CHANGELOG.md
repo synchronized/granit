@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+## 0.35.0 - 2026-09-25
+
 ### 新增
 
 - Core、RenderPipeline 与 Window 新增按 component 维护的 0.35.0 x86_64 C 结构布局快照，覆盖
