@@ -42,10 +42,7 @@ int main(int argc, char** argv) {
       GRANIT_ASSET_TOOLS_MATERIAL_SHADER_LIBRARY_INIT;
   granit_asset_tools_material_result built = 0;
   granit_asset_tools_material_result inspected = 0;
-  const void* archive = NULL;
-  const char* text = NULL;
-  uint64_t archive_size = 0;
-  uint64_t text_size = 0;
+  granit_asset_tools_material_result_info info = GRANIT_ASSET_TOOLS_MATERIAL_RESULT_INFO_INIT;
   uint64_t source_size = 0;
   uint64_t library_size = 0;
   void* source;
@@ -66,13 +63,11 @@ int main(int argc, char** argv) {
   library.archive = library_archive;
   library.archive_size = library_size;
   if (granit_asset_tools_material_build(&desc, &built) != GRANIT_SUCCESS || built == 0 ||
-      granit_asset_tools_material_result_get_archive(built, &archive, &archive_size) !=
+      granit_asset_tools_material_result_get_info(built, &info) != GRANIT_SUCCESS ||
+      info.archive == NULL || info.archive_size == 0 || info.debug_json == NULL ||
+      info.debug_json_length == 0 || info.diagnostic_length != 0 ||
+      granit_asset_tools_material_inspect(info.archive, info.archive_size, &inspected) !=
           GRANIT_SUCCESS ||
-      archive == NULL || archive_size == 0 ||
-      granit_asset_tools_material_result_get_debug_json(built, &text, &text_size) !=
-          GRANIT_SUCCESS ||
-      text == NULL || text_size == 0 ||
-      granit_asset_tools_material_inspect(archive, archive_size, &inspected) != GRANIT_SUCCESS ||
       inspected == 0) {
     free(source);
     free(library_archive);
@@ -85,11 +80,9 @@ int main(int argc, char** argv) {
     free(library_archive);
     return 4;
   }
-  archive = (const void*)1;
-  archive_size = 1;
-  if (granit_asset_tools_material_result_get_archive(0, &archive, &archive_size) !=
-          GRANIT_ERROR_INVALID_HANDLE ||
-      archive != NULL || archive_size != 0 ||
+  info = (granit_asset_tools_material_result_info)GRANIT_ASSET_TOOLS_MATERIAL_RESULT_INFO_INIT;
+  if (granit_asset_tools_material_result_get_info(0, &info) != GRANIT_ERROR_INVALID_HANDLE ||
+      info.archive != NULL || info.archive_size != 0 ||
       granit_asset_tools_material_inspect(NULL, 0, &inspected) != GRANIT_ERROR_INVALID_ARGUMENT ||
       inspected != 0) {
     free(source);

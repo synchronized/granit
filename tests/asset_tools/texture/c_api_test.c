@@ -11,9 +11,8 @@ int main(void) {
   granit_asset_tools_texture_variant_desc variant = GRANIT_ASSET_TOOLS_TEXTURE_VARIANT_DESC_INIT;
   granit_asset_tools_texture_build_desc desc = GRANIT_ASSET_TOOLS_TEXTURE_BUILD_DESC_INIT;
   granit_asset_tools_texture_result result = 0;
+  granit_asset_tools_texture_result_info info = GRANIT_ASSET_TOOLS_TEXTURE_RESULT_INFO_INIT;
   unsigned char bytes[64] = {0};
-  const void* output = NULL;
-  uint64_t output_size = 0;
   subresource.data_size = 64;
   subresource.bytes_per_row = 16;
   subresource.rows_per_image = 4;
@@ -28,20 +27,20 @@ int main(void) {
   desc.variants = &variant;
   desc.variant_count = 1;
   if (granit_asset_tools_texture_build(&desc, &result) != GRANIT_SUCCESS || result == 0 ||
-      granit_asset_tools_texture_result_get_manifest(result, &output, &output_size) !=
-          GRANIT_SUCCESS ||
-      output == NULL || output_size != 192 ||
-      granit_asset_tools_texture_result_get_payload(result, &output, &output_size) !=
-          GRANIT_SUCCESS ||
-      output == NULL || output_size != sizeof(bytes) || memcmp(output, bytes, sizeof(bytes)) != 0 ||
+      granit_asset_tools_texture_result_get_info(result, &info) != GRANIT_SUCCESS ||
+      info.manifest == NULL || info.manifest_size != 192 || info.payload == NULL ||
+      info.payload_size != sizeof(bytes) || memcmp(info.payload, bytes, sizeof(bytes)) != 0 ||
+      info.debug_json == NULL || info.debug_json_length == 0 || info.diagnostic_length != 0 ||
       granit_asset_tools_texture_result_destroy(result) != GRANIT_SUCCESS ||
       granit_asset_tools_texture_result_destroy(result) != GRANIT_ERROR_INVALID_HANDLE)
     return 1;
-  output = (const void*)1;
-  output_size = 1;
-  if (granit_asset_tools_texture_result_get_manifest(0, &output, &output_size) !=
-          GRANIT_ERROR_INVALID_HANDLE ||
-      output != NULL || output_size != 0)
+  info = (granit_asset_tools_texture_result_info)GRANIT_ASSET_TOOLS_TEXTURE_RESULT_INFO_INIT;
+  info.reserved = 1;
+  if (granit_asset_tools_texture_result_get_info(0, &info) != GRANIT_ERROR_INVALID_ARGUMENT)
     return 2;
+  info = (granit_asset_tools_texture_result_info)GRANIT_ASSET_TOOLS_TEXTURE_RESULT_INFO_INIT;
+  if (granit_asset_tools_texture_result_get_info(0, &info) != GRANIT_ERROR_INVALID_HANDLE ||
+      info.manifest != NULL || info.manifest_size != 0)
+    return 3;
   return 0;
 }

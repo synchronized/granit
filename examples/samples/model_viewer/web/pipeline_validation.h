@@ -7,6 +7,7 @@
 #include <granit/renderer/pipeline.h>
 #include <granit/renderer/pipeline_warmup.h>
 #include <granit/renderer/renderer.h>
+#include <granit/renderer/renderer.hpp>
 #include <granit/renderer/shader.h>
 
 #include <cstdint>
@@ -20,7 +21,7 @@ public:
   pipeline_validation(const pipeline_validation&) = delete;
   pipeline_validation& operator=(const pipeline_validation&) = delete;
 
-  [[nodiscard]] granit_result begin(granit_renderer renderer);
+  [[nodiscard]] granit_result begin(granit::renderer_ref renderer);
   [[nodiscard]] granit_result poll();
 
   /** 必须在所属 Renderer 销毁前调用；允许对空闲或已完成对象重复调用。 */

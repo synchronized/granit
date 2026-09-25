@@ -8,6 +8,25 @@
 
 ## Unreleased
 
+### 新增
+
+- Core、RenderPipeline、Window 与 AssetTools 新增统一的 0.34.0 导出快照和跨版本 ABI 门禁；稳定
+  候选 component 禁止删除历史符号，实验性 component 的移除必须与显式清单完全一致。
+- 安装后的 AssetTools C11/C++20 Consumer 会编译统一结果信息结构与查询路径，并由 ABI 测试锁定
+  公开结构布局。
+
+### 变更
+
+- Material、Texture、Environment 和 Shader Library 的构建结果统一通过强类型 `result_info` 与单个
+  `result_get_info` 查询；C++ 包装统一提供 `info()`，原有语义化便利访问器复用该查询。
+- 示例公共 C++ 路径继续使用 `renderer_ref`、`window_ref` 等强类型引用，裸句柄只保留在明确的
+  C ABI、原生互操作和身份验证边界。
+
+### 移除
+
+- 实验性的 AssetTools component 删除 0.33.0 中 Material、Texture、Environment 的十个分散结果
+  getter。迁移方式见[0.33 到 0.34 迁移指南](docs/guides/migrate-0.33-to-0.34.md)。
+
 ## 0.33.0 - 2026-09-25
 
 ### 新增

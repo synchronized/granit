@@ -38,7 +38,7 @@ result application_host::poll_events() noexcept {
   window_event window_event_value;
   result operation;
   while ((operation = window_system_.poll(window_event_value)).ok()) {
-    if (window_event_value.window.native_handle() != window_.native_handle())
+    if (window_event_value.window != window_.ref())
       continue;
     if (window_event_value.type == window_event_type::close_requested)
       running_ = false;
@@ -51,7 +51,7 @@ result application_host::poll_events() noexcept {
 
   input_event input_event_value;
   while ((operation = window_system_.poll(input_event_value)).ok()) {
-    if (input_event_value.window.native_handle() != window_.native_handle())
+    if (input_event_value.window != window_.ref())
       continue;
     if (input_event_value.type == input_event_type::key &&
         input_event_value.data.key.action == key_action::released &&

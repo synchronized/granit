@@ -13,6 +13,32 @@
 /** Texture Asset 构建或检查结果句柄。零值无效。 */
 typedef uint64_t granit_asset_tools_texture_result;
 
+/** Texture Asset 构建或检查结果信息；所有视图在结果句柄销毁前有效。 */
+typedef struct granit_asset_tools_texture_result_info {
+  uint32_t struct_size;
+  uint32_t reserved;
+  const void* manifest;
+  uint64_t manifest_size;
+  const void* payload;
+  uint64_t payload_size;
+  const char* debug_json;
+  uint64_t debug_json_length;
+  const char* diagnostic;
+  uint64_t diagnostic_length;
+} granit_asset_tools_texture_result_info;
+
+#define GRANIT_ASSET_TOOLS_TEXTURE_RESULT_INFO_INIT                                                \
+  {(uint32_t)sizeof(granit_asset_tools_texture_result_info),                                       \
+   UINT32_C(0),                                                                                    \
+   0,                                                                                              \
+   UINT64_C(0),                                                                                    \
+   0,                                                                                              \
+   UINT64_C(0),                                                                                    \
+   0,                                                                                              \
+   UINT64_C(0),                                                                                    \
+   0,                                                                                              \
+   UINT64_C(0)}
+
 /**
  * 一个 GPU 格式变体及其子资源布局。subresources 和 subresource_count 同时为零时，Builder
  * 根据构建描述生成紧密排列的完整 mip/层布局。所有输入只需在构建调用期间有效。
@@ -77,21 +103,9 @@ GRANIT_ASSET_TOOLS_API granit_result granit_asset_tools_texture_build(
 GRANIT_ASSET_TOOLS_API granit_result granit_asset_tools_texture_inspect(
     const void* manifest, uint64_t manifest_size, granit_asset_tools_texture_result* result);
 
-/** 查询 Manifest 字节；视图在结果句柄销毁前有效。 */
-GRANIT_ASSET_TOOLS_API granit_result granit_asset_tools_texture_result_get_manifest(
-    granit_asset_tools_texture_result result, const void** data, uint64_t* size);
-
-/** 查询拼接负载；检查结果返回空视图。视图在结果句柄销毁前有效。 */
-GRANIT_ASSET_TOOLS_API granit_result granit_asset_tools_texture_result_get_payload(
-    granit_asset_tools_texture_result result, const void** data, uint64_t* size);
-
-/** 查询稳定调试 JSON；视图在结果句柄销毁前有效。 */
-GRANIT_ASSET_TOOLS_API granit_result granit_asset_tools_texture_result_get_debug_json(
-    granit_asset_tools_texture_result result, const char** json, uint64_t* length);
-
-/** 查询失败诊断；视图在结果句柄销毁前有效。 */
-GRANIT_ASSET_TOOLS_API granit_result granit_asset_tools_texture_result_get_diagnostic(
-    granit_asset_tools_texture_result result, const char** diagnostic, uint64_t* length);
+/** 查询 Manifest、负载、调试 JSON 和诊断；检查结果的负载为空。 */
+GRANIT_ASSET_TOOLS_API granit_result granit_asset_tools_texture_result_get_info(
+    granit_asset_tools_texture_result result, granit_asset_tools_texture_result_info* info);
 
 /** 销毁结果。零值和已经销毁的句柄返回 GRANIT_ERROR_INVALID_HANDLE。 */
 GRANIT_ASSET_TOOLS_API granit_result

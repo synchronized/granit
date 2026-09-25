@@ -61,11 +61,17 @@ Library Builder 自动将 DXC 与 Tint 二进制的 SHA-256 身份纳入缓存�
 
 ## 接口与生命周期
 
-Compiler、Compilation、Reflection 及 Material、Texture、Environment 构建结果均使用独立的 64 位
+Compiler、Compilation、Reflection 及 Shader Library、Material、Texture、Environment 构建结果
+均使用独立的 64 位
 不透明句柄。零值无效；把一种句柄传给另一种结果 API、重复销毁或使用已销毁句柄，会返回
 `GRANIT_ERROR_INVALID_HANDLE`。句柄编码包含内部类型、槽位和 generation，数值不可作为资产内容
 ID，也不可保存到文件或跨进程使用。不同结果的查询仍可并行；销毁同一句柄前，调用者须完成使用
 该句柄的查询。
+
+四类 Builder 结果统一通过各自的 `*_result_get_info` 一次取得领域输出、稳定调试 JSON 和诊断；
+Shader Library 结果还包含缓存命中状态与失败 Shader 逻辑名称。所有指针均为结果句柄拥有的借用
+视图，在句柄销毁前有效。C++ 包装的 `info()` 返回对应强类型视图，并保留 `archive()`、`package()`、
+`manifest()` 等语义化便利访问器。
 
 - C11 的编译、反射和 Library Builder 入口分别位于对应的
   `<granit/asset_tools/shader_*.h>`；`.hpp` 提供 C++20 包装。`asset_tools.h/.hpp` 是 AssetTools 的聚合
@@ -150,7 +156,8 @@ ID，也不可保存到文件或跨进程使用。不同结果的查询仍可并
   SDK 内从 Library 自带的名称表解析内容 ID，并生成确定性的 `.grmat` 与稳定调试 JSON。最终资产
   不保存逻辑名称或 Library 路径。
 - `granit_asset_tools_material_inspect` 从内存检查已有 `.grmat`，使用与 Runtime 相同的格式实现。
-  build 和 inspect 均返回移动独占的结果句柄；Archive、调试 JSON 和诊断视图在句柄销毁前有效。
+  build 和 inspect 均返回移动独占的结果句柄；`granit_asset_tools_material_result_get_info` 一次返回
+  Archive、调试 JSON 和诊断视图。
 - 描述结构无效时不创建结果；输入内容或资产语义无效时返回 `invalid_argument`，并尽量返回包含
   诊断的结果句柄。CLI 把诊断写入标准错误，并只在构建成功后原子替换输出文件。
 - CLI 使用 `granit_asset_tool material build` 和 `granit_asset_tool material inspect`。Material
@@ -168,6 +175,8 @@ ID，也不可保存到文件或跨进程使用。不同结果的查询仍可并
   Manifest、合并负载与内容 ID；改变变体顺序、格式、用途、布局或负载都会改变身份。
 - `granit_asset_tools_texture_inspect` 检查 Manifest 并提供稳定调试 JSON。Builder 和 Inspector
   都不创建 GPU 对象，也不依赖 Renderer 状态或 Shader Toolchain。
+- `granit_asset_tools_texture_result_get_info` 一次返回 Manifest、拼接负载、调试 JSON 和诊断；
+  inspect 结果的负载为空。
 - CLI 的 `texture build` 接受 `--variant <format=payload>`，当前要求每个文件按 layer、mip 顺序
   紧密保存完整链；`texture inspect` 输出 JSON。图片解码和 GPU 格式压缩仍由上游资产管线负责。
 
@@ -181,6 +190,7 @@ ID，也不可保存到文件或跨进程使用。不同结果的查询仍可并
   每个 mip 的像素字节数必须与分辨率严格一致。Builder 不执行 HDR 卷积、图片解码或格式转换。
 - `granit_asset_tools_environment_inspect` 使用与 Runtime 相同的私有格式实现检查版本、布局、参数
   和摘要，并输出稳定调试 JSON。Builder 与 Inspector 均不创建 GPU 对象或依赖 Shader Toolchain。
+- `granit_asset_tools_environment_result_get_info` 一次返回 GRENV 包、调试 JSON 和诊断。
 - CLI 使用 `granit_asset_tool environment build` 和 `environment inspect`。旧的 Model Viewer 私有
   打包工具已删除，输入容器解析与 RGBA16F 预处理由上游资产管线负责。
 

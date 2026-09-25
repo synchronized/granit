@@ -52,7 +52,7 @@
 - [CI 与验证](guides/ci.md)
 - [发布验收](guides/release.md)
 - [版本迁移指南索引](guides/migrations.md)
-- [从 0.28 迁移到 0.29](guides/migrate-0.28-to-0.29.md)
+- [从 0.33 迁移到 0.34](guides/migrate-0.33-to-0.34.md)
 - [示例程序及运行方式](guides/examples.md)
 - [运行跨后端模型查看器](guides/model-viewer.md)
 - [运行浏览器 WebGPU 平台 Smoke](guides/webgpu-browser-example.md)

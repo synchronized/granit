@@ -15,8 +15,11 @@ int main(void) {
   granit_asset_tools_shader_reflection reflection = 0;
   granit_asset_tools_shader_inspect_desc shader_desc = {0};
   granit_asset_tools_shader_reflection_info reflection_info = {0};
-  const void* bytes = 0;
-  uint64_t byte_count = 0;
+  granit_asset_tools_material_result_info material_info =
+      GRANIT_ASSET_TOOLS_MATERIAL_RESULT_INFO_INIT;
+  granit_asset_tools_texture_result_info texture_info = GRANIT_ASSET_TOOLS_TEXTURE_RESULT_INFO_INIT;
+  granit_asset_tools_environment_result_info environment_info =
+      GRANIT_ASSET_TOOLS_ENVIRONMENT_RESULT_INFO_INIT;
 
   shader_desc.struct_size = (uint32_t)sizeof(shader_desc);
   shader_desc.input_path = missing_shader;
@@ -38,11 +41,11 @@ int main(void) {
       texture == environment || texture == reflection || environment == reflection)
     return 2;
 
-  if (granit_asset_tools_material_result_get_archive(texture, &bytes, &byte_count) !=
+  if (granit_asset_tools_material_result_get_info(texture, &material_info) !=
           GRANIT_ERROR_INVALID_HANDLE ||
-      granit_asset_tools_texture_result_get_manifest(environment, &bytes, &byte_count) !=
+      granit_asset_tools_texture_result_get_info(environment, &texture_info) !=
           GRANIT_ERROR_INVALID_HANDLE ||
-      granit_asset_tools_environment_result_get_package(material, &bytes, &byte_count) !=
+      granit_asset_tools_environment_result_get_info(material, &environment_info) !=
           GRANIT_ERROR_INVALID_HANDLE ||
       granit_asset_tools_shader_reflection_get_info(material, &reflection_info) !=
           GRANIT_ERROR_INVALID_HANDLE)
@@ -58,7 +61,7 @@ int main(void) {
       granit_asset_tools_texture_inspect(invalid_asset, sizeof(invalid_asset),
                                          &replacement_texture) != GRANIT_ERROR_INVALID_ARGUMENT ||
       replacement_texture == 0 || replacement_texture == texture ||
-      granit_asset_tools_texture_result_get_manifest(texture, &bytes, &byte_count) !=
+      granit_asset_tools_texture_result_get_info(texture, &texture_info) !=
           GRANIT_ERROR_INVALID_HANDLE)
     return 5;
 

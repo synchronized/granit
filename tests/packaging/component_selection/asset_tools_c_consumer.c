@@ -9,6 +9,15 @@ int main(void) {
   granit_asset_tools_material_result material = 0;
   granit_asset_tools_texture_result texture = 0;
   granit_asset_tools_environment_result environment = 0;
+  granit_asset_tools_shader_library_result shader_library = 0;
+  granit_asset_tools_material_result_info material_info =
+      GRANIT_ASSET_TOOLS_MATERIAL_RESULT_INFO_INIT;
+  granit_asset_tools_texture_result_info texture_info =
+      GRANIT_ASSET_TOOLS_TEXTURE_RESULT_INFO_INIT;
+  granit_asset_tools_environment_result_info environment_info =
+      GRANIT_ASSET_TOOLS_ENVIRONMENT_RESULT_INFO_INIT;
+  granit_asset_tools_shader_library_result_info shader_library_info =
+      GRANIT_ASSET_TOOLS_SHADER_LIBRARY_RESULT_INFO_INIT;
   if (granit_asset_tools_shader_get_target_capabilities(GRANIT_SHADER_BACKEND_VULKAN_BIT,
                                                         GRANIT_SHADER_PROFILE_PORTABLE,
                                                         &capabilities) != GRANIT_SUCCESS)
@@ -17,7 +26,16 @@ int main(void) {
                  granit_asset_tools_texture_inspect(NULL, 0, &texture) ==
                      GRANIT_ERROR_INVALID_ARGUMENT &&
                  granit_asset_tools_environment_inspect(NULL, 0, &environment) ==
-                     GRANIT_ERROR_INVALID_ARGUMENT
+                     GRANIT_ERROR_INVALID_ARGUMENT &&
+                 granit_asset_tools_material_result_get_info(material, &material_info) ==
+                     GRANIT_ERROR_INVALID_HANDLE &&
+                 granit_asset_tools_texture_result_get_info(texture, &texture_info) ==
+                     GRANIT_ERROR_INVALID_HANDLE &&
+                 granit_asset_tools_environment_result_get_info(environment, &environment_info) ==
+                     GRANIT_ERROR_INVALID_HANDLE &&
+                 granit_asset_tools_shader_library_result_get_info(shader_library,
+                                                                   &shader_library_info) ==
+                     GRANIT_ERROR_INVALID_HANDLE
              ? 0
              : 1;
 }

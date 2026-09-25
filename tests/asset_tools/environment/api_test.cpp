@@ -19,7 +19,9 @@ int main() {
                                                           mips,  1,     1, brdf};
   auto [first_status, first] = granit::asset_tools::environment::build(desc);
   auto [second_status, second] = granit::asset_tools::environment::build(desc);
-  if (first_status.failed() || second_status.failed() || first.package().empty() ||
+  const auto first_info = first.info();
+  if (first_status.failed() || second_status.failed() || first_info.package.empty() ||
+      first_info.debug_json.empty() || !first_info.diagnostic.empty() ||
       first.package().size() != second.package().size() ||
       !std::ranges::equal(first.package(), second.package()) ||
       first.debug_json().find("\"magic\": \"GRENV03\"") == std::string_view::npos) {
@@ -31,7 +33,8 @@ int main() {
   std::vector<std::byte> corrupted(first.package().begin(), first.package().end());
   corrupted.back() = std::byte{1};
   auto [corrupt_status, corrupt_result] = granit::asset_tools::environment::inspect(corrupted);
-  if (corrupt_status != granit::result::invalid_argument || corrupt_result.diagnostic().empty())
+  if (corrupt_status != granit::result::invalid_argument ||
+      corrupt_result.info().diagnostic.empty() || !corrupt_result.info().package.empty())
     return 3;
   const std::array invalid_mips{granit::asset_tools::environment::mip_desc{2, prefiltered_2x2},
                                 granit::asset_tools::environment::mip_desc{2, prefiltered_1x1}};

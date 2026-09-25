@@ -6,11 +6,33 @@
 
 #include <stdint.h>
 
-#include <granit/core/result.h>
 #include <granit/asset_tools/export.h>
+#include <granit/core/result.h>
 
 /** Environment Asset 构建或检查结果句柄。零值无效。 */
 typedef uint64_t granit_asset_tools_environment_result;
+
+/** Environment Asset 构建或检查结果信息；所有视图在结果句柄销毁前有效。 */
+typedef struct granit_asset_tools_environment_result_info {
+  uint32_t struct_size;
+  uint32_t reserved;
+  const void* package;
+  uint64_t package_size;
+  const char* debug_json;
+  uint64_t debug_json_length;
+  const char* diagnostic;
+  uint64_t diagnostic_length;
+} granit_asset_tools_environment_result_info;
+
+#define GRANIT_ASSET_TOOLS_ENVIRONMENT_RESULT_INFO_INIT                                            \
+  {(uint32_t)sizeof(granit_asset_tools_environment_result_info),                                   \
+   UINT32_C(0),                                                                                    \
+   0,                                                                                              \
+   UINT64_C(0),                                                                                    \
+   0,                                                                                              \
+   UINT64_C(0),                                                                                    \
+   0,                                                                                              \
+   UINT64_C(0)}
 
 /** 一个紧密排列的 RGBA16F Prefiltered Cube mip；六个面按层连续排列。 */
 typedef struct granit_asset_tools_environment_mip_desc {
@@ -69,17 +91,9 @@ granit_asset_tools_environment_build(const granit_asset_tools_environment_build_
 GRANIT_ASSET_TOOLS_API granit_result granit_asset_tools_environment_inspect(
     const void* package, uint64_t package_size, granit_asset_tools_environment_result* result);
 
-/** 查询 GRENV 包字节；视图在结果句柄销毁前有效。 */
-GRANIT_ASSET_TOOLS_API granit_result granit_asset_tools_environment_result_get_package(
-    granit_asset_tools_environment_result result, const void** data, uint64_t* size);
-
-/** 查询稳定调试 JSON；视图在结果句柄销毁前有效。 */
-GRANIT_ASSET_TOOLS_API granit_result granit_asset_tools_environment_result_get_debug_json(
-    granit_asset_tools_environment_result result, const char** json, uint64_t* length);
-
-/** 查询失败诊断；视图在结果句柄销毁前有效。 */
-GRANIT_ASSET_TOOLS_API granit_result granit_asset_tools_environment_result_get_diagnostic(
-    granit_asset_tools_environment_result result, const char** diagnostic, uint64_t* length);
+/** 查询 GRENV 包字节、调试 JSON 和诊断。 */
+GRANIT_ASSET_TOOLS_API granit_result granit_asset_tools_environment_result_get_info(
+    granit_asset_tools_environment_result result, granit_asset_tools_environment_result_info* info);
 
 /** 销毁结果。零值和已经销毁的句柄返回 GRANIT_ERROR_INVALID_HANDLE。 */
 GRANIT_ASSET_TOOLS_API granit_result
