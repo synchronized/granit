@@ -54,7 +54,7 @@ int granit::example::model_viewer::desktop::application::run() {
       .renderer_backend = options.backend,
       .present_mode = options.presentation,
       .execution = viewer_execution_mode::dedicated_thread,
-      .initial_quality = {.sample_count = GRANIT_SAMPLE_COUNT_4,
+      .initial_quality = {.sample_count = granit::sample_count::four,
                           .enable_fxaa = true,
                           .enable_specular_aa = true,
                           .sampler_anisotropy = 8.0F},

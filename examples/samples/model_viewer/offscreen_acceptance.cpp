@@ -36,7 +36,7 @@ struct options {
   std::filesystem::path expected;
   granit::example::model_viewer::debug_display_mode debug_display{
       granit::example::model_viewer::debug_display_mode::shaded};
-  granit_sample_count sample_count{GRANIT_SAMPLE_COUNT_4};
+  granit::sample_count sample_count{granit::sample_count::four};
   float sampler_anisotropy{8.0F};
   bool enable_fxaa{true};
   bool enable_specular_aa{true};
@@ -129,9 +129,9 @@ bool parse_options(int argc, char** argv, options& output) {
     } else if (argument.starts_with(msaa_prefix)) {
       const auto value = argument.substr(msaa_prefix.size());
       if (value == "1")
-        candidate.sample_count = GRANIT_SAMPLE_COUNT_1;
+        candidate.sample_count = granit::sample_count::one;
       else if (value == "4")
-        candidate.sample_count = GRANIT_SAMPLE_COUNT_4;
+        candidate.sample_count = granit::sample_count::four;
       else
         return false;
     } else if (argument.starts_with(fxaa_prefix)) {
@@ -238,7 +238,8 @@ bool compare_expected(const options& arguments, const granit::renderer_info& ren
   // 单采样基准没有 MSAA/FXAA 的轮廓稳定性，允许极少量后端光栅化边缘差异；
   // 高质量路径继续使用严格阈值，颜色和深度阈值不变。
   const granit::example::validation::screenshot_comparison_options comparison_options{
-      .max_silhouette_mismatch_count = arguments.sample_count == GRANIT_SAMPLE_COUNT_1 ? 64U : 4U};
+      .max_silhouette_mismatch_count =
+          arguments.sample_count == granit::sample_count::one ? 64U : 4U};
   granit::example::validation::screenshot_comparison_report report;
   const auto error = granit::example::validation::compare_screenshots(
       {render_size, render_size, expected, {}}, {render_size, render_size, actual, {}},
@@ -330,7 +331,7 @@ int main(int argc, char** argv) {
     stage = "查询 Renderer 限制";
     result = renderer.get_limits(renderer_limits);
   }
-  if (result.ok() && ((renderer_limits.framebuffer_sample_counts & arguments.sample_count) == 0 ||
+  if (result.ok() && (!renderer_limits.supports_sample_count(arguments.sample_count) ||
                       arguments.sampler_anisotropy > renderer_limits.max_sampler_anisotropy)) {
     stage = "校验质量配置";
     result = granit::result::unsupported;
@@ -385,7 +386,7 @@ int main(int argc, char** argv) {
     const granit::render_pipeline_desc pipeline_desc{
         .record = {},
         .user_data = nullptr,
-        .samples = static_cast<granit::sample_count>(arguments.sample_count),
+        .samples = arguments.sample_count,
         .enable_fxaa = arguments.enable_fxaa != 0,
         .enable_specular_aa = arguments.enable_specular_aa != 0,
     };
@@ -463,7 +464,7 @@ int main(int argc, char** argv) {
     std::cerr << "固定截图回归失败，实际图已写入：" << arguments.output << '\n';
     return 1;
   }
-  std::cout << "固定截图验收通过：MSAA=" << arguments.sample_count
+  std::cout << "固定截图验收通过：MSAA=" << static_cast<std::uint32_t>(arguments.sample_count)
             << "x，FXAA=" << (arguments.enable_fxaa ? "on" : "off")
             << "，Specular AA=" << (arguments.enable_specular_aa ? "on" : "off")
             << "，Anisotropy=" << arguments.sampler_anisotropy << "x；实际图已写入："

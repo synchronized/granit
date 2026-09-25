@@ -190,15 +190,15 @@ granit::result application_core::tick(const application_tick_input& input, viewe
   camera_matrices matrices;
   if (!state_.camera().matrices(input.width, input.height, matrices))
     return granit::result::invalid_argument;
-  const granit_scene_view view{.view = matrices.view,
-                               .projection = matrices.projection,
-                               .view_projection = matrices.view_projection,
-                               .camera_position = matrices.position,
-                               .viewport_x = 0.0F,
-                               .viewport_y = 0.0F,
-                               .viewport_width = static_cast<float>(input.width),
-                               .viewport_height = static_cast<float>(input.height),
-                               .layer_mask = std::numeric_limits<std::uint64_t>::max()};
+  const granit::scene_view view{.view = matrices.view,
+                                .projection = matrices.projection,
+                                .view_projection = matrices.view_projection,
+                                .camera_position = matrices.position,
+                                .viewport_x = 0.0F,
+                                .viewport_y = 0.0F,
+                                .viewport_width = static_cast<float>(input.width),
+                                .viewport_height = static_cast<float>(input.height),
+                                .layer_mask = std::numeric_limits<std::uint64_t>::max()};
   const auto& light_state = state_.directional_light();
   const auto camera_forward =
       math::normalize(math::subtract(state_.camera().target(), matrices.position));
@@ -208,7 +208,7 @@ granit::result application_core::tick(const application_tick_input& input, viewe
       math::normalize(math::add(math::add(math::multiply(camera_right, light_state.direction.x),
                                           math::multiply(camera_up, light_state.direction.y)),
                                 math::multiply(camera_forward, light_state.direction.z)));
-  const granit_scene_directional_light light{
+  const granit::scene_directional_light light{
       .direction_to_light = {-light_direction.x, -light_direction.y, -light_direction.z},
       .radiance = light_state.radiance,
       .layer_mask = std::numeric_limits<std::uint64_t>::max()};

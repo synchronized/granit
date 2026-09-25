@@ -59,7 +59,7 @@ struct viewer_application_desc {
   granit::renderer_backend renderer_backend{granit::renderer_backend::automatic};
   granit::present_mode present_mode{granit::present_mode::fifo};
   viewer_execution_mode execution{viewer_execution_mode::inline_current_thread};
-  render_quality_config initial_quality{.sample_count = GRANIT_SAMPLE_COUNT_1,
+  render_quality_config initial_quality{.sample_count = granit::sample_count::one,
                                         .enable_fxaa = true,
                                         .enable_specular_aa = true,
                                         .sampler_anisotropy = 1.0F};

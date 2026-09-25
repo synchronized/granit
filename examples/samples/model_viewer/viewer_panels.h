@@ -8,7 +8,7 @@
 #include "model_viewer/performance_history.h"
 #include "model_viewer/viewer_state.h"
 
-#include <granit/renderer/resource_types.h>
+#include <granit/renderer/resource_types.hpp>
 #include <imgui.h>
 
 #include <cstddef>
@@ -27,12 +27,12 @@ struct renderer_panel_info {
   std::uint32_t width{};
   std::uint32_t height{};
   std::uint32_t frame_slots{};
-  std::uint32_t supported_sample_counts{GRANIT_SAMPLE_COUNT_1};
+  std::uint32_t supported_sample_counts{static_cast<std::uint32_t>(granit::sample_count::one)};
   float max_sampler_anisotropy{1.0F};
 };
 
 struct render_quality_config {
-  granit_sample_count sample_count{GRANIT_SAMPLE_COUNT_1};
+  granit::sample_count sample_count{granit::sample_count::one};
   bool enable_fxaa{true};
   bool enable_specular_aa{true};
   float sampler_anisotropy{1.0F};
