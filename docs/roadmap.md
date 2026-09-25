@@ -29,7 +29,12 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 
 ## 当前计划
 
-当前没有正在实施的计划；新增工作应先建立独立计划并明确验收条件。
+### S-66：0.33.0 AssetTools 诊断与 CI 收敛
+
+**状态：实施中，P1。**
+
+[S-66](plans/S-66-0.33.0-asset-tools-ci-convergence.md) 将为 Shader Library 源构建补齐结构化诊断，
+统一锁定 Shader 工具链的 CI 入口和安装 SDK CMake helper，并让 Pull Request 门禁与变更风险匹配。
 
 ## 最近完成
 
