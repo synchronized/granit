@@ -29,16 +29,18 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段通过可运行�
 
 ## 当前计划
 
-### S-70：0.37.0 特性教程与 API 能力验证
-
-**状态：实施中，P1。** 三个教程、自动 Smoke 与能力审计已落地，正在进行跨平台和发布验收。
-
-[S-70](plans/S-70-0.37.0-feature-tutorials.md) 将新增 Instancing、Raymarch 与 Metaballs 三个独立
-教程，让桌面 Vulkan 与浏览器 WebGPU 编译同一主体代码，并把实现结果分类为现有 API 足够、教程
-局部辅助、公共便利接口候选、后端能力缺口或暂缓方向。0.37.0 不提前冻结 ABI，也不把示例框架
-提升为公共 SDK。
+当前没有实施中的编号计划。下一项工作将依据特性教程能力审计中的真实缺口单独规划。
 
 ## 最近完成
+
+### S-70：0.37.0 特性教程与 API 能力验证
+
+**状态：已完成，P1。**
+
+[S-70](plans/S-70-0.37.0-feature-tutorials.md) 已交付 Instancing、Raymarch 与 Metaballs 三个独立
+教程，让桌面 Vulkan 与浏览器 WebGPU 编译同一主体代码，并通过自动 Smoke、浏览器验收和能力
+审计确认现有 API 足以表达本轮效果。Indirect Draw/Dispatch 留作后续独立候选，版本已发布为
+`v0.37.0`。
 
 ### S-69：0.36.0 公共 API 稳定边界与最小数学库
 

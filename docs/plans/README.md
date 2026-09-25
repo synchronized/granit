@@ -9,11 +9,12 @@
 
 ## 当前计划
 
-- [S-70：0.37.0 特性教程与 API 能力验证](S-70-0.37.0-feature-tutorials.md)——新增 Instancing、
-  Raymarch 与 Metaballs 跨后端教程，用可运行效果验证现有公共 API 并形成后续能力候选清单。
+当前没有实施中的编号计划；下一项工作应基于已记录的能力证据单独立项。
 
 ## 最近完成
 
+- [S-70：0.37.0 特性教程与 API 能力验证](S-70-0.37.0-feature-tutorials.md)——交付 Instancing、
+  Raymarch 与 Metaballs 跨后端教程、自动验收和能力审计，并发布 `v0.37.0`。
 - [S-69：0.36.0 公共 API 稳定边界与最小数学库](S-69-0.36.0-api-stability-and-math.md)——逐公共头
   确定稳定候选与实验性范围，公开轻量渲染数学函数，收敛内部、Sample 与 Tutorial 使用路径，
   并发布 `v0.36.0`。
