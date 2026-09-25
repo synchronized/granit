@@ -31,7 +31,7 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 
 ### S-69：0.36.0 公共 API 稳定边界与最小数学库
 
-**状态：计划中，P1。**
+**状态：功能实施完成，等待远端矩阵与发布验收，P1。**
 
 [S-69](plans/S-69-0.36.0-api-stability-and-math.md) 将逐公共头确定 Core、Window、RenderPipeline
 与实验性组件的等级，明确 Native 和平台 Backend 边界；同时把现有内部最小数学运算提升为公共
