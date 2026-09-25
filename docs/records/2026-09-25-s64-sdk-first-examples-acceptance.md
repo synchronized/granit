@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: MIT -->
 <!-- Copyright (c) 2026 Granit contributors -->
 
-# 2026-09-25 S-64 SDK-first 示例本地验收
+# 2026-09-25 S-64 SDK-first 示例验收
 
 ## 验收范围
 
@@ -27,7 +27,11 @@
 - 当前 shared SDK 安装包检查通过，独立 Quickstart 构建并完成三帧 Smoke。
 - Documentation、clang-format 和 `git diff --check` 通过。
 
-## 待完成
+## 远端验证
 
-功能分支仍需通过 Linux、Windows、Emscripten、Quick Check 与 Documentation 远端工作流。合入
-`main` 后按发布流程从最新 `main` 创建 `release/0.31.0`，再修改版本文件并发布。
+- PR #88 的 Linux 工作流通过 GCC/Clang shared/static、运行时集成和安装 Consumer。
+- Windows 工作流通过 MSVC shared/static、安装审计与独立 Window Quickstart Smoke。
+- Emscripten 工作流通过平台、ImGui、两个教程及 Model Viewer 正式/运行时浏览器验收。
+- Quick Check 与 Documentation 工作流通过。
+
+功能合入 `main` 后，按发布流程从最新 `main` 创建 `release/0.31.0`，再修改版本文件并发布。

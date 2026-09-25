@@ -9,11 +9,12 @@
 
 ## 当前计划
 
-- [S-64：0.31.0 SDK-first 示例与资产入口](S-64-0.31.0-sdk-first-examples.md)——增加只依赖安装包
-  的 Window Quickstart，统一资产职责与部署验收，并审计示例的公共 C++ 使用面。
+当前没有正在实施的计划；下一项工作从[路线图](../roadmap.md)选择并建立独立计划。
 
 ## 最近完成
 
+- [S-64：0.31.0 SDK-first 示例与资产入口](S-64-0.31.0-sdk-first-examples.md)——增加只依赖安装包
+  的 Window Quickstart，统一资产职责与部署验收，并审计示例的公共 C++ 使用面。
 - [S-53～S-63：0.30.0 文档、教程、Window、资产与 Model Viewer 收敛](S-53-0.30.0-documentation-tutorial-release.md)
   ——完成 Frame 生命周期文档、两个特性教程、Window Target/SDL3、统一 Example Asset System、
   唯一 Model Viewer Application 与 shared-only Release，并发布 `v0.30.0`。
