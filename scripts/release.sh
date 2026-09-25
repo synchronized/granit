@@ -52,22 +52,13 @@ if [ "$old_version" = "$new_version" ]; then
   exit 1
 fi
 
-old_version_escaped="$(printf '%s' "$old_version" | sed 's/[.]/\\./g')"
 date_today="$(date +%F)"
 
 echo "从 ${old_version} 升级到 ${new_version}（日期 ${date_today}）"
 echo ""
 
-# 1. 唯一工程版本文件
-sed -i \
-  "s/^set(GRANIT_PROJECT_VERSION \"[0-9.]*\")$/set(GRANIT_PROJECT_VERSION \"${new_version}\")/" \
-  "$version_file"
-
-# 2. README.md：最新版本号与 release 链接 tag
-sed -i "s/${old_version_escaped}/${new_version}/g" README.md
-
-# 3. CHANGELOG.md：在 Unreleased 下插入带日期的新版本章节
-sed -i "s/^## Unreleased$/## Unreleased\n\n## ${new_version} - ${date_today}/" CHANGELOG.md
+cmake -DGRANIT_SOURCE_DIR="$repo_root" -DGRANIT_NEW_VERSION="$new_version" \
+  -DGRANIT_RELEASE_DATE="$date_today" -P scripts/prepare_release.cmake
 
 echo "改动如下（确认无误后提交，再触发发布工作流）："
 git diff --stat
