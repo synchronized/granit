@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+## 0.37.0 - 2026-09-25
+
 ### 新增
 
 - 新增 Instancing、Raymarch 与 Metaballs 三个跨后端特性教程；桌面 Vulkan 与浏览器 WebGPU
