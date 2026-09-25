@@ -9,7 +9,8 @@
 
 ## 当前计划
 
-当前没有正在实施的版本计划。新工作进入实施前应先建立对应计划并更新路线图。
+- [S-67：0.34.0 公共 SDK 与 AssetTools 契约收敛](S-67-0.34.0-sdk-contract-convergence.md)——统一
+  AssetTools 结果查询、component 级跨版本 ABI 门禁、普通 C++ 用户路径和安装 SDK 验收。
 
 ## 最近完成
 
