@@ -85,7 +85,7 @@ TEST_CASE("方向光阴影从独立光源视锥筛选全部投影者") {
   CHECK(desc.casters[0].source_index == 1);
   CHECK(desc.casters[1].payload == 11);
 
-  granit::math::float3 focus_clip;
+  granit::math::float3 focus_clip{};
   REQUIRE(granit::math::transform_point(desc.frame.light_view_projection, {}, focus_clip));
   CHECK(focus_clip.x == Catch::Approx(0.0F));
   CHECK(focus_clip.y == Catch::Approx(0.0F));

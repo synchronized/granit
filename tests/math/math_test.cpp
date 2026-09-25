@@ -30,13 +30,13 @@ TEST_CASE("列主序矩阵乘法和点变换保持顺序") {
   const auto translation = granit::math::translation_matrix4({2, 3, 4});
   const auto scale = granit::math::scaling_matrix4({2, 3, 4});
   const auto combined = granit::math::multiply(translation, scale);
-  granit::math::float3 result;
+  granit::math::float3 result{};
   REQUIRE(granit::math::transform_point(combined, {1, 1, 1}, result));
   check_float3(result, {4, 6, 8});
 }
 
 TEST_CASE("轴旋转矩阵遵循右手坐标系") {
-  granit::math::float3 result;
+  granit::math::float3 result{};
   REQUIRE(granit::math::transform_point(
       granit::math::rotation_y_matrix4(std::numbers::pi_v<float> / 2.0F), {1, 0, 0}, result));
   check_float3(result, {0, 0, -1});
@@ -45,7 +45,7 @@ TEST_CASE("轴旋转矩阵遵循右手坐标系") {
 TEST_CASE("右手View矩阵将观察目标置于负Z轴") {
   auto view = granit::math::identity_matrix4;
   REQUIRE(granit::math::look_at_rh({0, 0, 1}, {0, 0, 0}, {0, 1, 0}, view));
-  granit::math::float3 target;
+  granit::math::float3 target{};
   REQUIRE(granit::math::transform_point(view, {0, 0, 0}, target));
   check_float3(target, {0, 0, -1});
 
@@ -58,8 +58,8 @@ TEST_CASE("透视投影使用Vulkan零到一深度") {
   granit::math::matrix4 projection{};
   REQUIRE(granit::math::perspective_rh_zo(std::numbers::pi_v<float> / 2.0F, 1.0F, 1.0F, 10.0F,
                                           projection));
-  granit::math::float3 near_point;
-  granit::math::float3 far_point;
+  granit::math::float3 near_point{};
+  granit::math::float3 far_point{};
   REQUIRE(granit::math::transform_point(projection, {0, 0, -1}, near_point));
   REQUIRE(granit::math::transform_point(projection, {0, 0, -10}, far_point));
   CHECK(near_point.z == Catch::Approx(0.0F).margin(0.00001F));
@@ -69,8 +69,8 @@ TEST_CASE("透视投影使用Vulkan零到一深度") {
 TEST_CASE("正交投影使用Vulkan零到一深度并拒绝非法参数") {
   granit::math::matrix4 projection{};
   REQUIRE(granit::math::orthographic_rh_zo(-2, 2, -1, 1, 1, 11, projection));
-  granit::math::float3 near_point;
-  granit::math::float3 far_point;
+  granit::math::float3 near_point{};
+  granit::math::float3 far_point{};
   REQUIRE(granit::math::transform_point(projection, {-2, -1, -1}, near_point));
   REQUIRE(granit::math::transform_point(projection, {2, 1, -11}, far_point));
   check_float3(near_point, {-1, -1, 0});
