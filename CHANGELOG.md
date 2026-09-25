@@ -8,6 +8,25 @@
 
 ## Unreleased
 
+## 0.35.0 - 2026-09-25
+
+### 新增
+
+- Core、RenderPipeline 与 Window 新增按 component 维护的 0.35.0 x86_64 C 结构布局快照，覆盖
+  Windows/Linux 上的 MSVC、Clang 和 GCC，并与同版本精确导出符号快照共同形成稳定候选证据。
+- 新增稳定候选负向行为契约，固定非法描述、无效所有者和创建失败清空输出句柄的结果语义；安装
+  SDK Consumer 新增 Window C++20 RAII 生命周期路径。
+
+### 修复
+
+- `scripts/msvc.ps1` 现在显式选择 Visual Studio `link.exe`，避免 Ninja 配置受 PATH 中 GNU
+  `ld.exe` 或 Git `link.exe` 干扰。
+
+### 文档
+
+- 新增稳定候选契约证据入口，分别记录 Core、Window、RenderPipeline 和 AssetTools 的当前结论；
+  本版本仍处于 0.x，不宣布 ABI 冻结。
+
 ## 0.34.0 - 2026-09-25
 
 ### 新增
