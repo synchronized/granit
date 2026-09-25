@@ -26,4 +26,3 @@ ctest --test-dir build/windows-clang-debug -R "^granit\.tutorial\.05_metaballs$"
 
 Smoke 模式固定动画时间。浏览器自动测试检查五个球体这一特性值、帧推进、物体与背景差异、Resize
 恢复和 Console 错误。
-

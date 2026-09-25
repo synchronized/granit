@@ -37,4 +37,3 @@ ctest --test-dir build/windows-clang-debug -R "^granit\.tutorial\.03_instancing$
 
 浏览器构建产生 `granit_tutorial_03_instancing.html`。自动测试检查页面初始化、帧推进、实例数量、
 中心与背景像素差异，以及 Resize 后的 Swapchain 重建。
-

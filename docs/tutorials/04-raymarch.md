@@ -32,4 +32,3 @@ ctest --test-dir build/windows-clang-debug -R "^granit\.tutorial\.04_raymarch$" 
 ```
 
 浏览器自动测试还会比较物体区域与背景像素，并确认 Resize 后继续呈现。
-
