@@ -11,14 +11,17 @@ AssetTools 是供编辑器、资产构建器和命令行工具直接链接的可
 
 ## 构建与链接
 
-配置时启用 `GRANIT_BUILD_ASSET_TOOLS=ON`，安装后通过独立组件链接：
+官方 Windows/Linux shared SDK 包含实验性的 AssetTools component 和 `granit_asset_tool`；DXC、Tint
+仍使用独立锁定工具链包，避免增加应用运行时体积。源码构建时启用
+`GRANIT_BUILD_ASSET_TOOLS=ON`，安装后通过独立组件链接：
 
 ```cmake
 find_package(granit CONFIG REQUIRED COMPONENTS AssetTools)
 target_link_libraries(editor PRIVATE granit::asset_tools)
 ```
 
-`GRANIT_BUILD_TOOLS=ON` 也会构建该 SDK，因为 `granit_asset_tool` 是它的命令行薄适配层。Shader
+`GRANIT_BUILD_TOOLS=ON` 也会构建该 SDK，因为 `granit_asset_tool` 是它的命令行薄适配层。安装包的
+`granit_ASSET_TOOL_EXECUTABLE` 指向 CLI；未安装 CLI 时该变量为空。Shader
 Compiler 只接收工具链根目录，按固定的 `bin/dxc` 与 `bin/tint` 布局解析工具，不会形成公共链接
 依赖。
 

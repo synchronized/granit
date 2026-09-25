@@ -18,6 +18,8 @@
         "CMAKE_EXPORT_COMPILE_COMMANDS": true,
         "GRANIT_BUILD_TESTING": true,
         "GRANIT_BUILD_EXAMPLES": true,
+        "GRANIT_BUILD_TOOLS": true,
+        "GRANIT_BUILD_ASSET_TOOLS": true,
         "GRANIT_DEPENDENCY_POLICY": "auto",
         "GRANIT_WARNINGS_AS_ERRORS": true
       }
@@ -148,6 +150,8 @@
       "cacheVariables": {
         "GRANIT_BUILD_TESTING": true,
         "GRANIT_BUILD_EXAMPLES": true,
+        "GRANIT_BUILD_TOOLS": true,
+        "GRANIT_BUILD_ASSET_TOOLS": true,
         "GRANIT_DEPENDENCY_POLICY": "auto",
         "GRANIT_WARNINGS_AS_ERRORS": true
       }

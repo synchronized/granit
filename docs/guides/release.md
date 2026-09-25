@@ -65,7 +65,8 @@ ctest --preset <static-release-preset>
 目录。
 
 仓库的 `Release` Actions 采用单次受控发布：手动运行在固定的 `main` 提交上构建 Windows/Linux
-共享库 SDK，运行测试与安装审计，生成 `SHA256SUMS` 和 manifest；全部成功后才为该
+共享库 SDK（含实验性 AssetTools/CLI，不内置 DXC/Tint），运行测试与安装审计，生成
+`SHA256SUMS` 和 manifest；全部成功后才为该
 提交创建 tag 和 GitHub Release，最后从公开 Release 重新下载同一批字节复验。
 
 正式 Release 不提供预构建静态库。项目仍支持静态源码构建，并在平台 CI 和安装 Consumer 中持续

@@ -72,12 +72,17 @@ jobs:
           "preset=windows-msvc-release" >> $env:GITHUB_OUTPUT
           "name=granit-$($env:RELEASE_TAG.TrimStart('v'))-windows-x64-shared" `
             >> $env:GITHUB_OUTPUT
+      - name: 下载并校验锁定 Shader 工具链
+        shell: pwsh
+        run: cmake -DDESTINATION=build/toolchains -P cmake/toolchain/download_shader_toolchain.cmake
       - name: 配置、构建与测试
         shell: pwsh
         run: |
           cmake --preset '${{ steps.package.outputs.preset }}' `
             -DCMAKE_C_COMPILER_LAUNCHER=sccache `
-            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache `
+            -DGRANIT_BUILD_TOOLS=ON `
+            -DGRANIT_BUILD_ASSET_TOOLS=ON
           cmake --build --preset '${{ steps.package.outputs.preset }}'
           # 托管 Windows Runner 没有 Vulkan ICD；完整 GPU 门禁由 Linux 发布矩阵执行。
           ctest --preset '${{ steps.package.outputs.preset }}' `
@@ -92,6 +97,13 @@ jobs:
             -DGRANIT_BUILD_DIR="$PWD/build/${{ steps.package.outputs.preset }}" `
             -DGRANIT_INSTALL_PREFIX="$stage" `
             -P tests/cmake/check_install_exports.cmake
+          cmake `
+            -DGRANIT_SOURCE_DIR="$PWD" `
+            -DGRANIT_INSTALL_PREFIX="$stage" `
+            -DGRANIT_TEST_BINARY_DIR="$PWD/build/release-package/windows" `
+            -DGRANIT_TEST_SHADER_TOOLCHAIN_ROOT="$PWD/build/toolchains/granit-shader-toolchain-v20260720.160313-windows-x64" `
+            -P tests/packaging/check_installed_package.cmake
+          if ($LASTEXITCODE -ne 0) { throw '安装 SDK 消费验证失败' }
           Compress-Archive -Path $stage -DestinationPath "${{ steps.package.outputs.name }}.zip"
       - uses: actions/upload-artifact@v6
         with:
@@ -132,13 +144,17 @@ jobs:
         run: |
           echo "preset=linux-clang-release" >> "$GITHUB_OUTPUT"
           echo "name=granit-${RELEASE_TAG#v}-linux-x64-shared" >> "$GITHUB_OUTPUT"
+      - name: 下载并校验锁定 Shader 工具链
+        run: cmake -DDESTINATION=build/toolchains -P cmake/toolchain/download_shader_toolchain.cmake
       - name: 配置、构建与测试
         shell: bash
         run: |
           ccache --zero-stats
           cmake --preset "${{ steps.package.outputs.preset }}" \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DGRANIT_BUILD_TOOLS=ON \
+            -DGRANIT_BUILD_ASSET_TOOLS=ON
           cmake --build --preset "${{ steps.package.outputs.preset }}"
           export XDG_RUNTIME_DIR="$RUNNER_TEMP/granit-release-wayland"
           install -d -m 700 "$XDG_RUNTIME_DIR"
@@ -163,6 +179,19 @@ jobs:
             -DGRANIT_BUILD_DIR="$PWD/build/${{ steps.package.outputs.preset }}" \
             -DGRANIT_INSTALL_PREFIX="$stage" \
             -P tests/cmake/check_install_exports.cmake
+          cmake \
+            -DGRANIT_SOURCE_DIR="$PWD" \
+            -DGRANIT_INSTALL_PREFIX="$stage" \
+            -DGRANIT_TEST_BINARY_DIR="$PWD/build/release-package/linux" \
+            -DGRANIT_TEST_SHADER_TOOLCHAIN_ROOT="$PWD/build/toolchains/granit-shader-toolchain-v20260720.160313-linux-x64" \
+            -P tests/packaging/check_installed_package.cmake
+          xvfb-run -a ctest --test-dir "$PWD/build/release-package/linux/standalone-window-clear" \
+            --output-on-failure
+          xvfb-run -a ctest --test-dir "$PWD/build/release-package/linux/standalone-triangle" \
+            --output-on-failure
+          xvfb-run -a ctest \
+            --test-dir "$PWD/build/release-package/linux/standalone-triangle-source" \
+            --output-on-failure
           tar -C "$PWD/stage" -czf "${{ steps.package.outputs.name }}.tar.gz" \
             "${{ steps.package.outputs.name }}"
       - uses: actions/upload-artifact@v6

@@ -392,6 +392,7 @@ int compile_hlsl_shader(const hlsl_compile_options& options, shader_info& info,
                        : options.stage == "fragment" ? "ps_6_6"
                        : options.stage == "compute"  ? "cs_6_6"
                                                      : nullptr;
+  const auto tool_library_directory = options.dxc.parent_path().parent_path() / "lib";
   if (profile == nullptr) {
     error << "不支持的 HLSL Shader 阶段：" << options.stage << '\n';
     return 1;
@@ -414,7 +415,7 @@ int compile_hlsl_shader(const hlsl_compile_options& options, shader_info& info,
     vulkan_arguments.emplace_back("-D");
     vulkan_arguments.push_back(name + "=" + value);
   }
-  if (!run_process(vulkan_arguments, vulkan_process)) {
+  if (!run_process(vulkan_arguments, vulkan_process, tool_library_directory.string())) {
     error << "无法启动 DXC：" << options.dxc.string() << '\n';
     return 1;
   }
@@ -430,7 +431,7 @@ int compile_hlsl_shader(const hlsl_compile_options& options, shader_info& info,
   auto bridge_arguments = vulkan_arguments;
   bridge_arguments[2] = "-fspv-target-env=vulkan1.1";
   bridge_arguments[8] = tint_input.string();
-  if (!run_process(bridge_arguments, bridge_process)) {
+  if (!run_process(bridge_arguments, bridge_process, tool_library_directory.string())) {
     error << "无法启动用于 WebGPU 转换的 DXC\n";
     std::filesystem::remove(options.spirv_output, filesystem_error);
     return 1;
@@ -468,7 +469,7 @@ int compile_hlsl_shader(const hlsl_compile_options& options, shader_info& info,
       "--validate",
       tint_input.string(),
   };
-  if (!run_process(tint_arguments, tint_process)) {
+  if (!run_process(tint_arguments, tint_process, tool_library_directory.string())) {
     error << "无法启动 Tint：" << options.tint.string() << '\n';
     std::filesystem::remove(options.spirv_output, filesystem_error);
     std::filesystem::remove(tint_input, filesystem_error);

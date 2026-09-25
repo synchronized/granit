@@ -9,7 +9,8 @@
 
 ## 当前计划
 
-当前没有正在实施的计划；下一项工作从[路线图](../roadmap.md)选择并建立独立计划。
+- [S-65：0.32.0 安装 SDK 图形工作流](S-65-0.32.0-sdk-graphics-workflow.md)——加固版本准备，
+  补齐安装后 SDK 从 HLSL Shader Library 到首个 Draw 的独立消费与发布验收。
 
 ## 最近完成
 

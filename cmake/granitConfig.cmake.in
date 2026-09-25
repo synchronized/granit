@@ -41,6 +41,11 @@ if("AssetTools" IN_LIST granit_FIND_COMPONENTS)
     set_and_check(granit_SHADER_TOOLCHAIN_MODULE
                   "${CMAKE_CURRENT_LIST_DIR}/GranitShaderToolchain.cmake")
     set(granit_AssetTools_FOUND TRUE)
+    set(granit_ASSET_TOOL_EXECUTABLE "")
+    if(EXISTS "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_BINDIR@/granit_asset_tool@CMAKE_EXECUTABLE_SUFFIX@")
+      set(granit_ASSET_TOOL_EXECUTABLE
+          "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_BINDIR@/granit_asset_tool@CMAKE_EXECUTABLE_SUFFIX@")
+    endif()
   else()
     set(granit_AssetTools_FOUND FALSE)
   endif()

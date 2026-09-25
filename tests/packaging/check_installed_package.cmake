@@ -122,5 +122,74 @@ if(NOT standalone_build_result EQUAL 0)
           "${standalone_build_output}\n${standalone_build_error}")
 endif()
 
+set(standalone_triangle_dir "${GRANIT_TEST_BINARY_DIR}/standalone-triangle")
+execute_process(
+  COMMAND
+    "${CMAKE_COMMAND}"
+    -S "${GRANIT_SOURCE_DIR}/examples/standalone/triangle"
+    -B "${standalone_triangle_dir}"
+    "-DCMAKE_PREFIX_PATH=${GRANIT_INSTALL_PREFIX}"
+    "-DCMAKE_BUILD_TYPE=${GRANIT_TEST_CONFIGURATION}"
+  RESULT_VARIABLE triangle_configure_result
+  OUTPUT_VARIABLE triangle_configure_output
+  ERROR_VARIABLE triangle_configure_error
+)
+if(NOT triangle_configure_result EQUAL 0)
+  message(FATAL_ERROR
+          "安装 SDK Triangle 配置失败：${triangle_configure_result}\n"
+          "${triangle_configure_output}\n${triangle_configure_error}")
+endif()
+execute_process(
+  COMMAND
+    "${CMAKE_COMMAND}" --build "${standalone_triangle_dir}"
+    --config "${GRANIT_TEST_CONFIGURATION}"
+  RESULT_VARIABLE triangle_build_result
+  OUTPUT_VARIABLE triangle_build_output
+  ERROR_VARIABLE triangle_build_error
+)
+if(NOT triangle_build_result EQUAL 0)
+  message(FATAL_ERROR
+          "安装 SDK Triangle 构建失败：${triangle_build_result}\n"
+          "${triangle_build_output}\n${triangle_build_error}")
+endif()
+
+if(DEFINED GRANIT_TEST_SHADER_TOOLCHAIN_ROOT AND
+   NOT GRANIT_TEST_SHADER_TOOLCHAIN_ROOT STREQUAL "" AND
+   EXISTS "${GRANIT_INSTALL_PREFIX}/lib/cmake/granit/granitAssetToolsTargets.cmake")
+  set(standalone_triangle_source_dir "${GRANIT_TEST_BINARY_DIR}/standalone-triangle-source")
+  execute_process(
+    COMMAND
+      "${CMAKE_COMMAND}"
+      -S "${GRANIT_SOURCE_DIR}/examples/standalone/triangle"
+      -B "${standalone_triangle_source_dir}"
+      "-DCMAKE_PREFIX_PATH=${GRANIT_INSTALL_PREFIX}"
+      "-DCMAKE_BUILD_TYPE=${GRANIT_TEST_CONFIGURATION}"
+      -DGRANIT_TRIANGLE_REBUILD_SHADERS=ON
+      "-DGRANIT_SHADER_TOOLCHAIN_ROOT=${GRANIT_TEST_SHADER_TOOLCHAIN_ROOT}"
+      -DGRANIT_SHADER_TOOLCHAIN_MODE=system
+    RESULT_VARIABLE source_configure_result
+    OUTPUT_VARIABLE source_configure_output
+    ERROR_VARIABLE source_configure_error
+  )
+  if(NOT source_configure_result EQUAL 0)
+    message(FATAL_ERROR
+            "安装 SDK HLSL Triangle 配置失败：${source_configure_result}\n"
+            "${source_configure_output}\n${source_configure_error}")
+  endif()
+  execute_process(
+    COMMAND
+      "${CMAKE_COMMAND}" --build "${standalone_triangle_source_dir}"
+      --config "${GRANIT_TEST_CONFIGURATION}"
+    RESULT_VARIABLE source_build_result
+    OUTPUT_VARIABLE source_build_output
+    ERROR_VARIABLE source_build_error
+  )
+  if(NOT source_build_result EQUAL 0)
+    message(FATAL_ERROR
+            "安装 SDK HLSL Triangle 构建失败：${source_build_result}\n"
+            "${source_build_output}\n${source_build_error}")
+  endif()
+endif()
+
 message(STATUS
-        "安装包检查通过：component、0.x 版本选择与独立 Window Quickstart 均符合预期")
+        "安装包检查通过：component、版本选择、Window Quickstart 与 Triangle 均符合预期")

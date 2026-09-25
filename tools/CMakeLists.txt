@@ -35,6 +35,11 @@ if(TARGET granit_asset_tools)
   granit_target_compile_warnings(granit_asset_tool)
   granit_target_output_directories(granit_asset_tool)
   set_target_properties(granit_asset_tool PROPERTIES FOLDER "Tools")
+  if(UNIX AND NOT APPLE)
+    set_target_properties(
+      granit_asset_tool PROPERTIES INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}"
+    )
+  endif()
   if(GRANIT_BUILD_TOOLS)
     install(
       TARGETS granit_asset_tool

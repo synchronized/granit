@@ -60,21 +60,11 @@ $dateToday = Get-Date -Format 'yyyy-MM-dd'
 Write-Host "从 $oldVersion 升级到 $NewVersion（日期 $dateToday）"
 Write-Host ""
 
-# 1. 唯一工程版本文件
-$versionContent = $versionContent -replace `
-  '(?m)^(set\(GRANIT_PROJECT_VERSION ")[\d.]+("\))$', `
-  "`${1}$NewVersion`${2}"
-Set-Content -Path $versionFile -Value $versionContent -Encoding UTF8 -NoNewline
-
-# 2. README.md：最新版本号与 release 链接 tag
-$readmeContent = Get-Content -Raw -Encoding UTF8 README.md
-$readmeContent = $readmeContent -replace [regex]::Escape($oldVersion), $NewVersion
-Set-Content -Path README.md -Value $readmeContent -Encoding UTF8 -NoNewline
-
-# 3. CHANGELOG.md：在 Unreleased 下插入带日期的新版本章节
-$changelogContent = Get-Content -Raw -Encoding UTF8 CHANGELOG.md
-$changelogContent = $changelogContent -replace '(?m)^## Unreleased$', "## Unreleased`n`n## $NewVersion - $dateToday"
-Set-Content -Path CHANGELOG.md -Value $changelogContent -Encoding UTF8 -NoNewline
+cmake "-DGRANIT_SOURCE_DIR=$repoRoot" "-DGRANIT_NEW_VERSION=$NewVersion" `
+  "-DGRANIT_RELEASE_DATE=$dateToday" -P scripts/prepare_release.cmake
+if ($LASTEXITCODE -ne 0) {
+  throw '准备版本文件失败'
+}
 
 Write-Host "改动如下（确认无误后提交，再触发发布工作流）："
 git diff --stat

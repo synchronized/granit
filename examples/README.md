@@ -8,9 +8,9 @@
 展示数量复制成独立示例。
 构建与运行命令见[示例程序指南](../docs/guides/examples.md)。
 
-只使用安装后 SDK 的最小外部工程位于
-[`standalone/window_clear`](standalone/window_clear)。它不参与 Granit 主工程构建，用于验证普通
-Consumer 能独立创建窗口、清屏和呈现。
+只使用安装后 SDK 的外部工程位于 [`standalone/window_clear`](standalone/window_clear) 与
+[`standalone/triangle`](standalone/triangle)。它们不参与 Granit 主工程构建，用于验证普通 Consumer
+能独立完成窗口清屏，以及从 HLSL Shader Library 到 Draw 和像素回读。
 
 ## 当前综合入口
 

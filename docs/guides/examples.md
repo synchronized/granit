@@ -10,10 +10,14 @@ Model Viewer；完整学习路径见[教程系列](../tutorials/README.md)。版
 
 ## 安装 SDK Quickstart
 
-[`examples/standalone/window_clear`](../../examples/standalone/window_clear) 是一个独立 CMake
-工程，只使用安装包的公共头文件和 `granit::window` 导出目标。它展示 Window、Surface、Swapchain、
-Frame Context、清屏、提交和 Present 的最小完整帧循环，也用于验证 shared SDK 的动态库定位和
-运行时消费路径。具体配置、运行和 Smoke 命令见该目录的 README。
+`examples/standalone` 保存只使用安装包公共接口的独立 CMake 工程：
+
+- [`window_clear`](../../examples/standalone/window_clear) 展示 Window、Surface、Swapchain、
+  Frame Context、清屏、提交与 Present。
+- [`triangle`](../../examples/standalone/triangle) 增加 HLSL-first Shader Library、Graphics Pipeline、
+  Draw 与确定性像素回读；安装 AssetTools/CLI 时可从源码重建 `.grshlib`。
+
+两者也用于验证 shared SDK 的动态库定位和运行时消费路径。具体命令见各目录的 README。
 
 ## SDL3 + ImGui
 

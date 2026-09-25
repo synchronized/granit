@@ -5,6 +5,7 @@
 #define GRANIT_ASSET_TOOLS_CHILD_PROCESS_H_
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace granit::asset_tools::detail {
@@ -16,7 +17,8 @@ struct process_result {
 };
 
 /** 直接启动子进程并捕获输出，不经过平台 Shell。 */
-bool run_process(const std::vector<std::string>& arguments, process_result& result);
+bool run_process(const std::vector<std::string>& arguments, process_result& result,
+                 std::string_view library_directory = {});
 
 } // namespace granit::asset_tools::detail
 
