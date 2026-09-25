@@ -6,6 +6,15 @@ set(GRANIT_TEST_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 add_subdirectory(core)
 add_subdirectory(window)
 
+add_test(
+  NAME granit.contracts.api_stability
+  COMMAND
+    "${CMAKE_COMMAND}"
+    "-DGRANIT_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
+    -P "${PROJECT_SOURCE_DIR}/tests/cmake/check_api_stability.cmake"
+)
+set_property(TEST granit.contracts.api_stability APPEND PROPERTY LABELS unit contract)
+
 if(NOT GRANIT_HAS_NATIVE_WINDOW)
   add_subdirectory(web)
   return()

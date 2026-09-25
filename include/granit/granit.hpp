@@ -12,6 +12,7 @@
 #include <granit/core/shader_types.hpp>
 #include <granit/core/types.hpp>
 #include <granit/granit.h>
+#include <granit/math/functions.hpp>
 #include <granit/math/types.hpp>
 #include <granit/renderer/async_operation.hpp>
 #include <granit/renderer/buffer.hpp>

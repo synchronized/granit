@@ -9,6 +9,7 @@
 #include "shader_archive.h"
 
 #include <granit/integrations/imgui/renderer.hpp>
+#include <granit/math/functions.hpp>
 #include <granit/pipeline/canvas_draw_list.hpp>
 #include <granit/pipeline/mesh.hpp>
 #include <imgui.h>
@@ -18,6 +19,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
+#include <numbers>
 #include <span>
 #include <string_view>
 #include <vector>
@@ -30,44 +32,17 @@
 
 namespace {
 
-using matrix4 = std::array<float, 16>;
+using granit::math::matrix4;
 
-matrix4 multiply(const matrix4& left, const matrix4& right) {
-  matrix4 output{};
-  for (std::size_t column = 0; column < 4; ++column) {
-    for (std::size_t row = 0; row < 4; ++row) {
-      for (std::size_t inner = 0; inner < 4; ++inner)
-        output[column * 4 + row] += left[inner * 4 + row] * right[column * 4 + inner];
-    }
-  }
-  return output;
-}
-
-matrix4 make_model_view_projection(float angle, float aspect) {
-  const float cosine = std::cos(angle);
-  const float sine = std::sin(angle);
-  const matrix4 model{cosine, 0, -sine, 0, 0, 1, 0, 0, sine, 0, cosine, 0, 0, 0, 0, 1};
-  const matrix4 view{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, -4, 1};
-  constexpr float near_plane = 0.1F;
-  constexpr float far_plane = 100.0F;
-  constexpr float vertical_scale = 1.7320508F;
-  const matrix4 projection{vertical_scale / aspect,
-                           0,
-                           0,
-                           0,
-                           0,
-                           -vertical_scale,
-                           0,
-                           0,
-                           0,
-                           0,
-                           far_plane / (near_plane - far_plane),
-                           -1,
-                           0,
-                           0,
-                           (near_plane * far_plane) / (near_plane - far_plane),
-                           0};
-  return multiply(projection, multiply(view, model));
+bool make_model_view_projection(float angle, float aspect, matrix4& output) {
+  matrix4 projection{};
+  if (!granit::math::perspective_rh_zo(std::numbers::pi_v<float> / 3.0F, aspect, 0.1F, 100.0F,
+                                       projection))
+    return false;
+  const auto model = granit::math::rotation_y_matrix4(angle);
+  const auto view = granit::math::translation_matrix4({0, 0, -4});
+  output = granit::math::multiply(projection, granit::math::multiply(view, model));
+  return true;
 }
 
 std::uint64_t align_up(std::uint64_t value, std::uint64_t alignment) {
@@ -164,12 +139,11 @@ private:
   }
 
   granit::result initialize_texture_resources() noexcept {
-    const auto texture_request = assets().request(
-        {assets().bundled(), "tutorials/01_cube/wooden_crate.png"});
+    const auto texture_request =
+        assets().request({assets().bundled(), "tutorials/01_cube/wooden_crate.png"});
     granit::example::gltf::image decoded_texture;
     if (!texture_request ||
-        texture_request->status() !=
-            granit::example::assets::asset_request_status::ready ||
+        texture_request->status() != granit::example::assets::asset_request_status::ready ||
         granit::example::gltf::decode_image(texture_request->bytes(), decoded_texture) !=
             granit::example::gltf::image_decode_error::none ||
         decoded_texture.mips.size() != 1) {
@@ -369,7 +343,9 @@ private:
       rotation_ += frame.delta_seconds;
     const auto aspect =
         static_cast<float>(frame.swapchain.width) / static_cast<float>(frame.swapchain.height);
-    const auto matrix = make_model_view_projection(rotation_, aspect);
+    matrix4 matrix{};
+    if (result.ok() && !make_model_view_projection(rotation_, aspect, matrix))
+      result = granit::result::invalid_argument;
     const auto uniform_offset = uniform_stride_ * recording.frame_slot();
     if (result.ok())
       result = uniform_buffer_.write(uniform_offset, std::as_bytes(std::span{&matrix, 1}));

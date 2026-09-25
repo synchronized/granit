@@ -4,9 +4,9 @@
 #ifndef GRANIT_LIGHTING_DIRECTIONAL_SHADOW_H
 #define GRANIT_LIGHTING_DIRECTIONAL_SHADOW_H
 
-#include "math/math.h"
 #include "render_graph/serial_graph.h"
 #include "scene/multi_view_submission.h"
+#include <granit/math/functions.hpp>
 
 #include <cstddef>
 #include <cstdint>

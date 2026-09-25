@@ -59,6 +59,7 @@ add_library(
     async_operation_hpp.cpp
     command_recorder_hpp.cpp
     frame_context_hpp.cpp
+    math_functions_hpp.cpp
     math_types_hpp.cpp
     input_hpp.cpp
     timestamp_query_hpp.cpp

@@ -4,7 +4,7 @@
 #ifndef GRANIT_MATERIAL_PBR_TYPES_H
 #define GRANIT_MATERIAL_PBR_TYPES_H
 
-#include "math/math.h"
+#include <granit/math/functions.hpp>
 
 namespace granit::material {
 

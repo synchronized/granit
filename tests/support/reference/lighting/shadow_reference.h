@@ -4,7 +4,7 @@
 #ifndef GRANIT_TESTS_REFERENCE_LIGHTING_SHADOW_REFERENCE_H
 #define GRANIT_TESTS_REFERENCE_LIGHTING_SHADOW_REFERENCE_H
 
-#include "math/math.h"
+#include <granit/math/functions.hpp>
 
 namespace granit::lighting {
 

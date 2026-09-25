@@ -4,7 +4,7 @@
 #ifndef GRANIT_LIGHTING_SHADOW_RESOURCES_H
 #define GRANIT_LIGHTING_SHADOW_RESOURCES_H
 
-#include "math/math.h"
+#include <granit/math/functions.hpp>
 
 #include <granit/renderer/buffer.hpp>
 #include <granit/renderer/pipeline.hpp>

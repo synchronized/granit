@@ -36,7 +36,7 @@ TEST_CASE("轨道相机输出后端无关的投影方向", "[tutorial][model-vie
   granit::example::model_viewer::camera_matrices matrices;
   REQUIRE(camera.matrices(800, 600, matrices));
 
-  granit::math::float3 projected_up;
+  granit::math::float3 projected_up{};
   REQUIRE(granit::math::transform_point(matrices.view_projection, {0, 1, 0}, projected_up));
   CHECK(matrices.projection[5] > 0.0F);
   CHECK(projected_up.y > 0.0F);

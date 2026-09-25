@@ -7,7 +7,9 @@
 
 #include <array>
 #include <atomic>
+#include <cmath>
 #include <cstddef>
+#include <numbers>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -48,6 +50,19 @@ int main() {
       granit::result::not_ready.native() != GRANIT_ERROR_NOT_READY ||
       granit::result::invalid_handle.message() != "invalid handle")
     return 12;
+
+  const auto transform = granit::math::multiply(granit::math::translation_matrix4({2, 3, 4}),
+                                                granit::math::scaling_matrix4({2, 3, 4}));
+  granit::math::float3 transformed{};
+  if (!granit::math::transform_point(transform, {1, 1, 1}, transformed) ||
+      transformed != granit::math::float3{4, 6, 8})
+    return 14;
+  granit::math::matrix4 projection{};
+  if (!granit::math::perspective_rh_zo(std::numbers::pi_v<float> / 2.0F, 1.0F, 1.0F, 10.0F,
+                                       projection) ||
+      !granit::math::transform_point(projection, {0, 0, -1}, transformed) ||
+      std::abs(transformed.z) > 0.00001F)
+    return 15;
 
   diagnostic_capture diagnostics;
   granit::renderer renderer;
