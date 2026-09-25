@@ -29,14 +29,16 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 
 ## 当前计划
 
-### S-65：0.32.0 安装 SDK 图形工作流
-
-**状态：实施中，P1。**
-
-[S-65](plans/S-65-0.32.0-sdk-graphics-workflow.md) 加固版本准备脚本，并补齐安装后 SDK 从 HLSL
-Shader Library 到首个 Draw 的独立消费闭环。该版本不新增渲染特性或公共资产系统。
+当前没有正在实施的计划；新增工作应先建立独立计划并明确验收条件。
 
 ## 最近完成
+
+### S-65：0.32.0 安装 SDK 图形工作流
+
+**状态：已完成，P1。**
+
+[S-65](plans/S-65-0.32.0-sdk-graphics-workflow.md) 已加固版本准备脚本，补齐安装后 SDK 从 HLSL
+Shader Library 到首个 Draw 的独立消费闭环，并发布 `v0.32.0`。
 
 ### S-64：0.31.0 SDK-first 示例与资产入口
 

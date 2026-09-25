@@ -9,11 +9,12 @@
 
 ## 当前计划
 
-- [S-65：0.32.0 安装 SDK 图形工作流](S-65-0.32.0-sdk-graphics-workflow.md)——加固版本准备，
-  补齐安装后 SDK 从 HLSL Shader Library 到首个 Draw 的独立消费与发布验收。
+当前没有正在实施的计划；新增工作应先建立独立计划并更新路线图。
 
 ## 最近完成
 
+- [S-65：0.32.0 安装 SDK 图形工作流](S-65-0.32.0-sdk-graphics-workflow.md)——加固版本准备，
+  补齐安装后 SDK 从 HLSL Shader Library 到首个 Draw 的独立消费与发布验收。
 - [S-64：0.31.0 SDK-first 示例与资产入口](S-64-0.31.0-sdk-first-examples.md)——增加只依赖安装包
   的 Window Quickstart，统一资产职责与部署验收，并审计示例的公共 C++ 使用面。
 - [S-53～S-63：0.30.0 文档、教程、Window、资产与 Model Viewer 收敛](S-53-0.30.0-documentation-tutorial-release.md)
