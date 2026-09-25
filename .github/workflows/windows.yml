@@ -93,8 +93,11 @@ jobs:
             -DGRANIT_SOURCE_DIR="$PWD" `
             -DGRANIT_INSTALL_PREFIX="$prefix" `
             -DGRANIT_TEST_BINARY_DIR="$PWD/build/package/$preset" `
+            -DGRANIT_TEST_SHADER_TOOLCHAIN_ROOT="$PWD/build/$preset/toolchains/granit-shader-toolchain-v20260720.160313-windows-x64" `
             -P tests/packaging/check_installed_package.cmake
           ctest --test-dir "$PWD/build/package/$preset/standalone-window-clear" `
+            -C Release --output-on-failure
+          ctest --test-dir "$PWD/build/package/$preset/standalone-triangle" `
             -C Release --output-on-failure
       - name: 构建并运行独立 C 和 C++ Consumer
         shell: pwsh
