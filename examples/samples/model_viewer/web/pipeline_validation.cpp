@@ -7,11 +7,11 @@
 
 namespace granit::example::model_viewer::web {
 
-granit_result pipeline_validation::begin(granit_renderer renderer) {
-  if (renderer == GRANIT_NULL_HANDLE || phase_ != phase::idle)
+granit_result pipeline_validation::begin(granit::renderer_ref renderer) {
+  if (!renderer || phase_ != phase::idle)
     return GRANIT_ERROR_INVALID_ARGUMENT;
 
-  renderer_ = renderer;
+  renderer_ = renderer.native_handle();
   constexpr char vertex_wgsl[] = R"(
 @vertex fn main(@builtin(vertex_index) index: u32) -> @builtin(position) vec4f {
   var positions = array<vec2f, 3>(vec2f(0.0, 0.5), vec2f(-0.5, -0.5), vec2f(0.5, -0.5));

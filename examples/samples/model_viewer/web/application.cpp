@@ -145,7 +145,7 @@ public:
   granit::result on_pipeline_ready(render_service& rendering) noexcept override {
 #if defined(GRANIT_MODEL_VIEWER_BROWSER_TESTS)
     if (!validation_.started()) {
-      const auto result = validation_.begin(rendering.renderer().native_handle());
+      const auto result = validation_.begin(rendering.renderer());
       if (result != GRANIT_SUCCESS)
         return granit::from_native(result);
     }
