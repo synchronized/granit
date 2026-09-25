@@ -72,6 +72,10 @@ add_executable(granit_window_c_consumer window_main.c)
 target_link_libraries(granit_window_c_consumer PRIVATE granit::window)
 set_target_properties(granit_window_c_consumer PROPERTIES C_STANDARD 11 C_STANDARD_REQUIRED YES)
 
+add_executable(granit_window_cpp_consumer window_main.cpp)
+target_link_libraries(granit_window_cpp_consumer PRIVATE granit::window)
+target_compile_features(granit_window_cpp_consumer PRIVATE cxx_std_20)
+
 add_executable(granit_input_c_consumer input_main.c)
 target_link_libraries(granit_input_c_consumer PRIVATE granit::window)
 set_target_properties(granit_input_c_consumer PROPERTIES C_STANDARD 11 C_STANDARD_REQUIRED YES)
@@ -88,6 +92,7 @@ foreach(
     granit_pipeline_c_consumer
     granit_pipeline_cpp_consumer
     granit_window_c_consumer
+    granit_window_cpp_consumer
     granit_input_c_consumer
     granit_input_cpp_consumer
 )

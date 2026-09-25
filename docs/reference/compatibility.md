@@ -95,3 +95,5 @@ Changelog 中对破坏性变化的说明。
 - 发布说明列出稳定 component、实验性接口、已知限制和升级路径。
 
 在这些门槛全部通过并明确发布稳定版本之前，README 的 0.x 警告继续有效。
+当前按 component 汇总的自动化覆盖与评审结论见
+[稳定候选契约证据](stable-candidate-evidence.md)。
