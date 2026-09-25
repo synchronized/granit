@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+## 0.33.0 - 2026-09-25
+
 ### 新增
 
 - Shader Library 源构建新增可拥有的结果句柄和 C++ RAII 包装；缓存命中、失败 Shader 逻辑名称与
