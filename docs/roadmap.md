@@ -29,15 +29,17 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段优先提高接�
 
 ## 当前计划
 
-### S-68：0.35.0 稳定候选契约审计
-
-**状态：实施中，P1。**
-
-[S-68](plans/S-68-0.35.0-stable-candidate-contracts.md) 将按 component 收敛 Core、RenderPipeline
-与 Window 的结构布局、负向行为、安装 Consumer 和契约参考，并形成是否进入稳定版本规划的证据。
-AssetTools 与第三方 Integration 继续保持实验性。
+当前没有实施中的计划。下一项任务应基于真实 Consumer 证据和稳定候选审计结果单独规划。
 
 ## 最近完成
+
+### S-68：0.35.0 稳定候选契约审计
+
+**状态：已完成，P1。**
+
+[S-68](plans/S-68-0.35.0-stable-candidate-contracts.md) 已为 Core、RenderPipeline 与 Window 建立
+component 级布局和符号快照、负向行为契约、安装 SDK Consumer 与统一证据参考，并发布
+`v0.35.0`。这些证据用于后续稳定决策，本版本仍未冻结 ABI。
 
 ### S-67：0.34.0 公共 SDK 与 AssetTools 契约收敛
 
