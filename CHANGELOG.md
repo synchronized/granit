@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+## 0.34.0 - 2026-09-25
+
 ### 新增
 
 - Core、RenderPipeline、Window 与 AssetTools 新增统一的 0.34.0 导出快照和跨版本 ABI 门禁；稳定
