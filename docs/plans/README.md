@@ -9,11 +9,12 @@
 
 ## 当前计划
 
-- [S-68：0.35.0 稳定候选契约审计](S-68-0.35.0-stable-candidate-contracts.md)——按 component
-  收敛结构布局、负向行为、安装 Consumer 与契约参考，为后续稳定版本决策提供证据。
+当前没有实施中的计划。新任务应先明确用户价值、范围和验收条件，再加入本索引与路线图。
 
 ## 最近完成
 
+- [S-68：0.35.0 稳定候选契约审计](S-68-0.35.0-stable-candidate-contracts.md)——建立按 component
+  维护的布局与符号快照、负向行为契约、安装 SDK Consumer 和统一证据参考，并发布 `v0.35.0`。
 - [S-67：0.34.0 公共 SDK 与 AssetTools 契约收敛](S-67-0.34.0-sdk-contract-convergence.md)——统一
   AssetTools 结果查询、component 级跨版本 ABI 门禁、普通 C++ 用户路径和安装 SDK 验收，并发布
   `v0.34.0`。
