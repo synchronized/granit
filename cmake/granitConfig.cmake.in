@@ -40,6 +40,8 @@ if("AssetTools" IN_LIST granit_FIND_COMPONENTS)
     include("${CMAKE_CURRENT_LIST_DIR}/granitAssetToolsTargets.cmake")
     set_and_check(granit_SHADER_TOOLCHAIN_MODULE
                   "${CMAKE_CURRENT_LIST_DIR}/GranitShaderToolchain.cmake")
+    set_and_check(granit_SHADER_ASSETS_MODULE
+                  "${CMAKE_CURRENT_LIST_DIR}/GranitShaderAssets.cmake")
     set(granit_AssetTools_FOUND TRUE)
     set(granit_ASSET_TOOL_EXECUTABLE "")
     if(EXISTS "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_BINDIR@/granit_asset_tool@CMAKE_EXECUTABLE_SUFFIX@")

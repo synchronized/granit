@@ -25,14 +25,20 @@ int main(int argc, char** argv) {
   granit_asset_tools_shader_expected_binding expected[3];
   const char* reflection_json = NULL;
   uint64_t reflection_json_length = 0;
-  uint32_t library_cache_hit = 1;
+  granit_asset_tools_shader_library_result library_result = 0;
+  granit_asset_tools_shader_library_result_info library_info =
+      GRANIT_ASSET_TOOLS_SHADER_LIBRARY_RESULT_INFO_INIT;
   granit_asset_tools_shader_source_library_desc source_library_desc =
       GRANIT_ASSET_TOOLS_SHADER_SOURCE_LIBRARY_DESC_INIT;
   if (argc != 2)
     return 1;
   if (granit_asset_tools_shader_build_library_from_manifest(
-          &source_library_desc, &library_cache_hit) != GRANIT_ERROR_INVALID_ARGUMENT ||
-      library_cache_hit != 0)
+          &source_library_desc, &library_result) != GRANIT_ERROR_INVALID_ARGUMENT ||
+      library_result != 0)
+    return 17;
+  if (granit_asset_tools_shader_library_result_get_info(0, &library_info) !=
+          GRANIT_ERROR_INVALID_HANDLE ||
+      granit_asset_tools_shader_library_result_destroy(0) != GRANIT_ERROR_INVALID_HANDLE)
     return 17;
   if (granit_asset_tools_shader_compiler_create(&compiler_desc, &compiler) !=
           GRANIT_ERROR_INVALID_ARGUMENT ||

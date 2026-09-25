@@ -56,6 +56,7 @@ enum class handle_type : std::uint8_t {
   asset_tools_material_result = 0x83,
   asset_tools_texture_result = 0x84,
   asset_tools_environment_result = 0x85,
+  asset_tools_shader_library_result = 0x86,
 };
 
 inline constexpr std::uint32_t handle_maximum_generation = UINT32_C(0x00ffffff);
@@ -126,6 +127,7 @@ constexpr std::array registered_handle_types{
     handle_type::asset_tools_material_result,
     handle_type::asset_tools_texture_result,
     handle_type::asset_tools_environment_result,
+    handle_type::asset_tools_shader_library_result,
 };
 
 consteval bool registered_handle_types_are_unique() {

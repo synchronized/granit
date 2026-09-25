@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+include("${CMAKE_CURRENT_LIST_DIR}/GranitShaderAssets.cmake")
+
 function(granit_add_test_shader_object_from_payloads)
   set(options)
   set(one_value_args NAME SPIRV WGSL ENTRY STAGE OUTPUT_DIR OUTPUT_VAR)
@@ -93,49 +95,6 @@ function(granit_add_test_shader_object)
     )
   endif()
   set(${ARG_OUTPUT_VAR} "${output}" PARENT_SCOPE)
-endfunction()
-
-function(granit_add_hlsl_shader_library)
-  set(options ALL)
-  set(one_value_args NAME MANIFEST OUTPUT CACHE_DIR TARGET REFERENCE)
-  set(multi_value_args SOURCES)
-  cmake_parse_arguments(ARG "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
-  if(NOT ARG_NAME OR NOT ARG_MANIFEST OR NOT ARG_OUTPUT OR NOT ARG_CACHE_DIR OR NOT ARG_TARGET)
-    message(FATAL_ERROR "granit_add_hlsl_shader_library 缺少必要参数")
-  endif()
-  if(NOT GRANIT_SHADER_TOOLCHAIN_ROOT OR NOT GRANIT_DXC_EXECUTABLE OR
-     NOT GRANIT_TINT_EXECUTABLE)
-    message(FATAL_ERROR "从 HLSL 源清单构建 Shader Library 需要完整 Shader Toolchain 根目录")
-  endif()
-
-  get_filename_component(output_directory "${ARG_OUTPUT}" DIRECTORY)
-  set(commands
-      COMMAND "${CMAKE_COMMAND}" -E make_directory "${ARG_CACHE_DIR}" "${output_directory}"
-      COMMAND
-        "$<TARGET_FILE:granit_asset_tool>" shader build-library --manifest "${ARG_MANIFEST}"
-        --toolchain "${GRANIT_SHADER_TOOLCHAIN_ROOT}"
-        --cache "${ARG_CACHE_DIR}" --output "${ARG_OUTPUT}")
-  set(dependencies granit_asset_tool "${ARG_MANIFEST}" ${ARG_SOURCES})
-  if(ARG_REFERENCE)
-    list(APPEND commands COMMAND "${CMAKE_COMMAND}" -E compare_files "${ARG_OUTPUT}"
-                                 "${ARG_REFERENCE}")
-    list(APPEND dependencies "${ARG_REFERENCE}")
-  endif()
-  set(stamp "${ARG_OUTPUT}.verified")
-  list(APPEND commands COMMAND "${CMAKE_COMMAND}" -E touch "${stamp}")
-  add_custom_command(
-    OUTPUT "${stamp}"
-    BYPRODUCTS "${ARG_OUTPUT}"
-    ${commands}
-    DEPENDS ${dependencies}
-    COMMENT "从 HLSL 源清单构建 Shader Library ${ARG_NAME}"
-    VERBATIM
-  )
-  if(ARG_ALL)
-    add_custom_target(${ARG_TARGET} ALL DEPENDS "${stamp}")
-  else()
-    add_custom_target(${ARG_TARGET} DEPENDS "${stamp}")
-  endif()
 endfunction()
 
 function(granit_prepare_runtime_shader_libraries)

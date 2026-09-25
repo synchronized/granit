@@ -9,7 +9,8 @@
 
 ## 当前计划
 
-当前没有正在实施的计划；新增工作应先建立独立计划并更新路线图。
+- [S-66：0.33.0 AssetTools 诊断与 CI 收敛](S-66-0.33.0-asset-tools-ci-convergence.md)——为
+  Shader Library 源构建补齐结构化诊断，统一 CI 工具链入口、变更范围门禁和安装 SDK Shader helper。
 
 ## 最近完成
 

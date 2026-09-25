@@ -13,25 +13,20 @@ if(GRANIT_TRIANGLE_REBUILD_SHADERS)
     message(FATAL_ERROR "当前 Granit 安装未包含 granit_asset_tool")
   endif()
   include("${granit_SHADER_TOOLCHAIN_MODULE}")
+  include("${granit_SHADER_ASSETS_MODULE}")
   granit_find_shader_toolchain()
   if(NOT GRANIT_SHADER_TOOLCHAIN_ROOT)
     message(FATAL_ERROR "没有可用的 Granit Shader Toolchain")
   endif()
   set(shader_library "${CMAKE_CURRENT_BINARY_DIR}/generated/triangle.grshlib")
-  add_custom_command(
+  granit_add_hlsl_shader_library(
+    ALL
+    NAME triangle
+    MANIFEST "${CMAKE_CURRENT_SOURCE_DIR}/triangle.grshlib.json"
     OUTPUT "${shader_library}"
-    COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated"
-    COMMAND
-      "${granit_ASSET_TOOL_EXECUTABLE}" shader build-library
-      --manifest "${CMAKE_CURRENT_SOURCE_DIR}/triangle.grshlib.json"
-      --toolchain "${GRANIT_SHADER_TOOLCHAIN_ROOT}"
-      --cache "${CMAKE_CURRENT_BINARY_DIR}/shader-cache"
-      --output "${shader_library}"
-    DEPENDS
-      "${CMAKE_CURRENT_SOURCE_DIR}/triangle.hlsl"
-      "${CMAKE_CURRENT_SOURCE_DIR}/triangle.grshlib.json"
-    COMMENT "从 HLSL 构建 Triangle Shader Library"
-    VERBATIM
+    CACHE_DIR "${CMAKE_CURRENT_BINARY_DIR}/shader-cache"
+    TARGET granit_triangle_shader_library
+    SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/triangle.hlsl"
   )
 else()
   find_package(granit CONFIG REQUIRED COMPONENTS Window)
