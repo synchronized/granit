@@ -21,6 +21,7 @@
 
 ## 稳定化与跨平台
 
+- [2026-09-25 Granit 0.33.0 发布验收](2026-09-25-v0.33.0-release-acceptance.md)
 - [2026-09-25 Granit 0.32.0 发布验收](2026-09-25-v0.32.0-release-acceptance.md)
 - [2026-09-25 Granit 0.31.0 发布验收](2026-09-25-v0.31.0-release-acceptance.md)
 - [2026-09-25 S-64 SDK-first 示例验收](2026-09-25-s64-sdk-first-examples-acceptance.md)
