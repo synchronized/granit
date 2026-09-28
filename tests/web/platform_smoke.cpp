@@ -302,6 +302,34 @@ granit_result validate_public_transfers(granit_renderer renderer) {
   return granit::to_native(result);
 }
 
+granit_result validate_webgpu_rejections(granit_renderer renderer) {
+  const auto owner = granit::renderer_ref::from_native(renderer);
+  const granit::bind_group_layout_entry resource_array{
+      .binding = 0,
+      .type = granit::binding_type::sampled_texture,
+      .array_count = 2,
+      .visibility = granit::shader_stage_flags::fragment};
+  granit::bind_group_layout array_layout;
+  if (array_layout.initialize(owner, std::span{&resource_array, 1}) != granit::result::unsupported)
+    return GRANIT_ERROR_INTERNAL;
+
+  const granit::bind_group_layout_entry read_only_storage{
+      .binding = 0,
+      .type = granit::binding_type::storage_texture,
+      .visibility = granit::shader_stage_flags::compute,
+      .storage_texture_format = granit::texture_format::rgba8_unorm,
+      .storage_access = granit::storage_texture_access::read_only};
+  granit::bind_group_layout storage_layout;
+  if (storage_layout.initialize(owner, std::span{&read_only_storage, 1}) !=
+      granit::result::unsupported)
+    return GRANIT_ERROR_INTERNAL;
+
+  granit::sampler lod_bias_sampler;
+  if (lod_bias_sampler.initialize(owner, {.lod_bias = 1.0F}) != granit::result::unsupported)
+    return GRANIT_ERROR_INTERNAL;
+  return GRANIT_SUCCESS;
+}
+
 granit_result draw_shared_fixture(granit_renderer renderer, granit_frame frame,
                                   granit_texture_view target_view,
                                   granit_texture_format native_format, std::uint32_t width,
@@ -659,6 +687,8 @@ granit_result validate_renderer(granit_renderer renderer, const granit_renderer_
   granit_texture_format_capabilities rgba8 = GRANIT_TEXTURE_FORMAT_CAPABILITIES_INIT;
   granit_texture_format_capabilities bgra8_srgb = GRANIT_TEXTURE_FORMAT_CAPABILITIES_INIT;
   granit_texture_format_capabilities d16 = GRANIT_TEXTURE_FORMAT_CAPABILITIES_INIT;
+  granit_texture_format_capabilities d24s8 = GRANIT_TEXTURE_FORMAT_CAPABILITIES_INIT;
+  granit_texture_format_capabilities d32s8 = GRANIT_TEXTURE_FORMAT_CAPABILITIES_INIT;
   auto result = granit_renderer_get_texture_format_capabilities(
       renderer, GRANIT_TEXTURE_FORMAT_RGBA8_UNORM, &rgba8);
   if (result == GRANIT_SUCCESS)
@@ -667,13 +697,22 @@ granit_result validate_renderer(granit_renderer renderer, const granit_renderer_
   if (result == GRANIT_SUCCESS)
     result = granit_renderer_get_texture_format_capabilities(renderer,
                                                              GRANIT_TEXTURE_FORMAT_D16_UNORM, &d16);
+  if (result == GRANIT_SUCCESS)
+    result = granit_renderer_get_texture_format_capabilities(
+        renderer, GRANIT_TEXTURE_FORMAT_D24_UNORM_S8_UINT, &d24s8);
+  if (result == GRANIT_SUCCESS)
+    result = granit_renderer_get_texture_format_capabilities(
+        renderer, GRANIT_TEXTURE_FORMAT_D32_FLOAT_S8_UINT, &d32s8);
   if (result != GRANIT_SUCCESS)
     return result;
   if ((rgba8.supported_usage & GRANIT_TEXTURE_USAGE_STORAGE_BIT) == 0 ||
       (bgra8_srgb.supported_usage & GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT) == 0 ||
-      (d16.supported_usage & GRANIT_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) == 0)
+      (d16.supported_usage & GRANIT_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) == 0 ||
+      d24s8.supported_usage != 0 || d32s8.supported_usage != 0)
     return GRANIT_ERROR_UNSUPPORTED;
-  result = validate_public_timestamp(renderer, limits);
+  result = validate_webgpu_rejections(renderer);
+  if (result == GRANIT_SUCCESS)
+    result = validate_public_timestamp(renderer, limits);
   return result == GRANIT_SUCCESS ? validate_public_transfers(renderer) : result;
 }
 

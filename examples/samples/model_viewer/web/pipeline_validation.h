@@ -6,6 +6,7 @@
 
 #include <granit/renderer/pipeline.h>
 #include <granit/renderer/pipeline_warmup.h>
+#include <granit/renderer/readback_batch.hpp>
 #include <granit/renderer/renderer.h>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/shader.h>
@@ -13,7 +14,7 @@
 #include <cstdint>
 namespace granit::example::model_viewer::web {
 
-/** 验收 Web 后端异步 Pipeline 预热和公共 C API 资源生命周期。 */
+/** 验收 Web 后端异步 Pipeline、MRT、Storage Texture 和 Readback。 */
 class pipeline_validation final {
 public:
   pipeline_validation() = default;
@@ -30,7 +31,10 @@ public:
   [[nodiscard]] bool started() const noexcept { return phase_ != phase::idle; }
 
 private:
-  enum class phase { idle, running, complete };
+  [[nodiscard]] granit_result begin_capability_readback();
+  [[nodiscard]] granit_result poll_capability_readback();
+
+  enum class phase { idle, warmup, readback, complete };
 
   granit_renderer renderer_{};
   granit_shader vertex_{};
@@ -41,6 +45,11 @@ private:
   granit_async_operation operation_{};
   std::uint32_t graphics_index_{};
   std::uint32_t compute_index_{};
+  granit::readback_batch readback_;
+  granit::async_operation readback_operation_;
+  std::uint32_t storage_result_index_{};
+  std::uint32_t first_color_result_index_{};
+  std::uint32_t second_color_result_index_{};
   phase phase_{phase::idle};
 };
 
