@@ -61,6 +61,7 @@ public:
 private:
   granit::result on_initialize() noexcept override {
     ImGui::CreateContext();
+    ImGui::GetIO().IniFilename = nullptr;
     ImGui::StyleColorsDark();
     imgui_initialized_ = true;
 
