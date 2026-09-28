@@ -1,0 +1,13 @@
+{
+  "format_version": 1,
+  "name": "tutorial_marching_cubes",
+  "target_profile": "portable",
+  "target_backends": ["vulkan", "webgpu"],
+  "shaders": [
+    {"name": "marching_cubes.density", "source": "marching_cubes.hlsl", "stage": "compute", "entry_point": "density_main"},
+    {"name": "marching_cubes.polygonize", "source": "marching_cubes.hlsl", "stage": "compute", "entry_point": "polygonize_main"},
+    {"name": "marching_cubes.finalize", "source": "marching_cubes.hlsl", "stage": "compute", "entry_point": "finalize_main"},
+    {"name": "marching_cubes.vertex", "source": "marching_cubes.hlsl", "stage": "vertex", "entry_point": "vertex_main"},
+    {"name": "marching_cubes.fragment", "source": "marching_cubes.hlsl", "stage": "fragment", "entry_point": "fragment_main"}
+  ]
+}
