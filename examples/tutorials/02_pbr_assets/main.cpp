@@ -3,11 +3,12 @@
 
 #include "application/application.h"
 #include "assets/asset_manager.h"
+#include "camera/orbit_camera.h"
+#include "camera/orbit_camera_input_accumulator.h"
 #include "gltf/scene.h"
 #include "model_viewer/gpu_scene.h"
 #include "tutorial/tutorial_runtime.h"
 
-#include <granit/math/functions.hpp>
 #include <granit/pipeline/render_pipeline.hpp>
 #include <granit/pipeline/scene.hpp>
 #include <imgui.h>
@@ -17,7 +18,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
-#include <numbers>
 #include <span>
 #include <string_view>
 #include <vector>
@@ -27,8 +27,6 @@
 #endif
 namespace {
 
-using granit::math::matrix4;
-
 int report_failure(std::string_view operation, granit::result result) {
   std::cerr << operation << " failed: " << result.message() << '\n';
   return 1;
@@ -36,6 +34,7 @@ int report_failure(std::string_view operation, granit::result result) {
 
 class tutorial_application final : public granit::example::application {
 public:
+  void set_smoke_test(bool enabled) noexcept { smoke_test_ = enabled; }
   [[nodiscard]] std::uint32_t pointer_events() const noexcept { return pointer_events_; }
   [[nodiscard]] std::uint32_t canvas_items() const noexcept { return runtime_.canvas_items(); }
   [[nodiscard]] granit_result shutdown_reason() const noexcept { return shutdown_reason_.native(); }
@@ -72,16 +71,21 @@ private:
       if (result.ok())
         result = runtime_.register_texture(preview_view, preview_sampler, preview_texture_id_);
     }
+    if (result.ok() &&
+        !camera_.focus({.radius = 1.6F}, presentation_info().width, presentation_info().height))
+      result = granit::result::invalid_argument;
     return result;
   }
 
   granit::result on_window_event(const granit::window_event& event) noexcept override {
     runtime_.process(event);
+    camera_input_.process(event);
     return granit::result::success;
   }
 
   granit::result on_input_event(const granit::input_event& event) noexcept override {
     runtime_.process(event);
+    camera_input_.process(event, runtime_.wants_mouse(), runtime_.wants_keyboard());
     if (event.type == granit::input_event_type::pointer_moved ||
         event.type == granit::input_event_type::pointer_button ||
         event.type == granit::input_event_type::pointer_wheel) {
@@ -124,18 +128,14 @@ private:
     if (result.failed())
       return result;
 
-    const auto aspect = static_cast<float>(presentation_info().width) /
-                        static_cast<float>(presentation_info().height);
-    const auto view = granit::math::translation_matrix4({0, 0, -4});
-    matrix4 projection{};
-    if (!granit::math::perspective_rh_zo(std::numbers::pi_v<float> / 3.0F, aspect, 0.1F, 100.0F,
-                                         projection))
+    granit::example::camera::camera_matrices matrices;
+    if (!camera_.matrices(presentation_info().width, presentation_info().height, matrices))
       return granit::result::invalid_argument;
     const granit::scene_view scene_view{
-        .view = view,
-        .projection = projection,
-        .view_projection = granit::math::multiply(projection, view),
-        .camera_position = {0, 0, 4},
+        .view = matrices.view,
+        .projection = matrices.projection,
+        .view_projection = matrices.view_projection,
+        .camera_position = matrices.position,
         .viewport_x = 0,
         .viewport_y = 0,
         .viewport_width = static_cast<float>(presentation_info().width),
@@ -184,6 +184,9 @@ private:
         ImGui::SliderFloat("Roughness", &model_roughness_, 0.04F, 1.0F) || material_changed;
     ImGui::TextUnformatted("Suzanne base color texture:");
     ImGui::Image(ImTextureRef{preview_texture_id_}, {64, 64});
+    ImGui::Checkbox("Auto orbit", &auto_orbit_);
+    if (ImGui::Button("Reset camera"))
+      camera_.reset();
     result = material_changed ? update_model_material() : granit::result::success;
     if (result.ok())
       result = runtime_.end_frame();
@@ -191,8 +194,14 @@ private:
   }
 
   granit::result on_render(granit::example::present_frame& frame) noexcept override {
+    camera_input_.begin_frame();
     last_operation_ = "building ImGui frame";
     auto result = build_imgui_frame(frame.delta_seconds);
+    const auto input = camera_input_.finish(runtime_.wants_mouse(), runtime_.wants_keyboard());
+    if (auto_orbit_ && !smoke_test_ && !camera_.orbit(frame.delta_seconds * 0.25F))
+      result = granit::result::invalid_argument;
+    if (result.ok() && !camera_.update(input, frame.swapchain.width, frame.swapchain.height))
+      result = granit::result::invalid_argument;
     const bool empty_frame = rendered_frames() == 0;
     if (result.ok())
       result = update_scene(!empty_frame);
@@ -224,10 +233,14 @@ private:
   granit::render_pipeline pipeline_;
   granit::scene_snapshot scene_;
   granit::example::tutorial::tutorial_runtime runtime_;
+  granit::example::camera::orbit_camera camera_;
+  granit::example::camera::orbit_camera_input_accumulator camera_input_;
   ImTextureID preview_texture_id_{ImTextureID_Invalid};
   granit::math::float4 model_base_color_{1.0F, 1.0F, 1.0F, 1.0F};
   float model_metallic_{1.0F};
   float model_roughness_{1.0F};
+  bool auto_orbit_{true};
+  bool smoke_test_{};
   std::uint32_t pointer_events_{};
   granit::result shutdown_reason_{granit::result::success};
   const char* last_operation_{"starting"};
@@ -267,6 +280,7 @@ int main(int argument_count, char** arguments) {
   const bool smoke_test = argument_count == 2 && std::string_view{arguments[1]} == "--smoke-test";
   const std::string_view executable_path =
       argument_count > 0 && arguments[0] != nullptr ? arguments[0] : "";
+  application.set_smoke_test(smoke_test);
 
   const auto result =
       application.run({.executable_path = executable_path,

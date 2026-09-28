@@ -3,6 +3,8 @@
 
 #include "application/application.h"
 #include "assets/asset_manager.h"
+#include "camera/orbit_camera.h"
+#include "camera/orbit_camera_input_accumulator.h"
 #include "gltf/scene.h"
 #include "shader_archive.h"
 #include "tutorial/tutorial_runtime.h"
@@ -16,7 +18,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
-#include <numbers>
 #include <span>
 #include <string_view>
 #include <vector>
@@ -31,14 +32,10 @@ namespace {
 
 using granit::math::matrix4;
 
-bool make_model_view_projection(float angle, float aspect, matrix4& output) {
-  matrix4 projection{};
-  if (!granit::math::perspective_rh_zo(std::numbers::pi_v<float> / 3.0F, aspect, 0.1F, 100.0F,
-                                       projection))
-    return false;
+bool make_model_view_projection(float angle, const granit::example::camera::camera_matrices& camera,
+                                matrix4& output) {
   const auto model = granit::math::rotation_y_matrix4(angle);
-  const auto view = granit::math::translation_matrix4({0, 0, -4});
-  output = granit::math::multiply(projection, granit::math::multiply(view, model));
+  output = granit::math::multiply(camera.view_projection, model);
   return true;
 }
 
@@ -53,6 +50,7 @@ int report_failure(std::string_view operation, granit::result result) {
 
 class tutorial_application final : public granit::example::application {
 public:
+  void set_smoke_test(bool enabled) noexcept { smoke_test_ = enabled; }
   [[nodiscard]] std::uint32_t canvas_items() const noexcept { return runtime_.canvas_items(); }
 
 private:
@@ -89,8 +87,12 @@ private:
     if (result.ok())
       result = create_pipeline();
     if (result.ok()) {
-      result = runtime_.register_texture(crate_view_.ref(), crate_sampler_.ref(), crate_texture_id_);
+      result =
+          runtime_.register_texture(crate_view_.ref(), crate_sampler_.ref(), crate_texture_id_);
     }
+    if (result.ok() &&
+        !camera_.focus({.radius = 1.5F}, presentation_info().width, presentation_info().height))
+      result = granit::result::invalid_argument;
     return result;
   }
 
@@ -103,11 +105,13 @@ private:
 
   granit::result on_window_event(const granit::window_event& event) noexcept override {
     runtime_.process(event);
+    camera_input_.process(event);
     return granit::result::success;
   }
 
   granit::result on_input_event(const granit::input_event& event) noexcept override {
     runtime_.process(event);
+    camera_input_.process(event, runtime_.wants_mouse(), runtime_.wants_keyboard());
     return granit::result::success;
   }
 
@@ -299,6 +303,7 @@ private:
   }
 
   granit::result on_render(granit::example::present_frame& frame) noexcept override {
+    camera_input_.begin_frame();
     granit::window_state window_state;
     auto result = app_window().get_state(window_state);
     if (result.ok()) {
@@ -309,6 +314,10 @@ private:
     }
     if (result.ok()) {
       ImGui::Checkbox("Rotate", &rotate_);
+      ImGui::SliderFloat("Rotation speed", &rotation_speed_, 0.0F, 3.0F);
+      ImGui::Checkbox("Auto orbit", &auto_orbit_);
+      if (ImGui::Button("Reset camera"))
+        camera_.reset();
       ImGui::Image(ImTextureRef{crate_texture_id_}, {64, 64});
       result = runtime_.end_frame();
     }
@@ -318,11 +327,18 @@ private:
       result = frame_context_.begin(frame.acquired, recording);
 
     if (rotate_)
-      rotation_ += frame.delta_seconds;
-    const auto aspect =
-        static_cast<float>(frame.swapchain.width) / static_cast<float>(frame.swapchain.height);
+      rotation_ += frame.delta_seconds * rotation_speed_;
+    const auto input = camera_input_.finish(runtime_.wants_mouse(), runtime_.wants_keyboard());
+    if (auto_orbit_ && !smoke_test_ && !camera_.orbit(frame.delta_seconds * 0.25F))
+      result = granit::result::invalid_argument;
+    if (result.ok() && !camera_.update(input, frame.swapchain.width, frame.swapchain.height))
+      result = granit::result::invalid_argument;
+    granit::example::camera::camera_matrices camera_matrices;
+    if (result.ok() &&
+        !camera_.matrices(frame.swapchain.width, frame.swapchain.height, camera_matrices))
+      result = granit::result::invalid_argument;
     matrix4 matrix{};
-    if (result.ok() && !make_model_view_projection(rotation_, aspect, matrix))
+    if (result.ok() && !make_model_view_projection(rotation_, camera_matrices, matrix))
       result = granit::result::invalid_argument;
     const auto uniform_offset = uniform_stride_ * recording.frame_slot();
     if (result.ok())
@@ -363,14 +379,14 @@ private:
     if (result.ok()) {
       const bool encode_srgb = frame.swapchain.format == granit::texture_format::rgba8_unorm ||
                                frame.swapchain.format == granit::texture_format::bgra8_unorm;
-      result = runtime_.canvas().record(
-          recorder, {.color = frame.backbuffer.view,
-                     .color_format = frame.swapchain.format,
-                     .width = frame.swapchain.width,
-                     .height = frame.swapchain.height,
-                     .load_operation = granit::attachment_load_operation::load,
-                     .encode_srgb = encode_srgb,
-                     .frame_slot = recording.frame_slot()});
+      result = runtime_.canvas().record(recorder,
+                                        {.color = frame.backbuffer.view,
+                                         .color_format = frame.swapchain.format,
+                                         .width = frame.swapchain.width,
+                                         .height = frame.swapchain.height,
+                                         .load_operation = granit::attachment_load_operation::load,
+                                         .encode_srgb = encode_srgb,
+                                         .frame_slot = recording.frame_slot()});
     }
     if (result.ok())
       result = recording.submit();
@@ -398,11 +414,16 @@ private:
   granit::bind_group resource_group_;
   granit::graphics_pipeline pipeline_;
   granit::example::tutorial::tutorial_runtime runtime_;
+  granit::example::camera::orbit_camera camera_;
+  granit::example::camera::orbit_camera_input_accumulator camera_input_;
   ImTextureID crate_texture_id_{ImTextureID_Invalid};
   granit::texture_format pipeline_format_{granit::texture_format::undefined};
   std::uint64_t uniform_stride_{};
   float rotation_{};
+  float rotation_speed_{1.0F};
   bool rotate_{true};
+  bool auto_orbit_{};
+  bool smoke_test_{};
 };
 
 tutorial_application application;
@@ -431,6 +452,7 @@ int main(int argument_count, char** arguments) {
   const bool smoke_test = argument_count == 2 && std::string_view{arguments[1]} == "--smoke-test";
   const std::string_view executable_path =
       argument_count > 0 && arguments[0] != nullptr ? arguments[0] : "";
+  application.set_smoke_test(smoke_test);
 
   const auto result =
       application.run({.executable_path = executable_path,

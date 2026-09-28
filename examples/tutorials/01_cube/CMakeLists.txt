@@ -51,6 +51,7 @@ target_link_libraries(
   granit_tutorial_01_cube
   PRIVATE
     granit_example_application
+    granit_example_camera
     granit_example_gltf_support
     granit_example_tutorial
     granit::render_pipeline
