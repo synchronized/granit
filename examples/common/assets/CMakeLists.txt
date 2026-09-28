@@ -5,6 +5,14 @@ add_library(
   granit_example_assets STATIC
   asset_batch.cpp
   asset_batch.h
+  asset_handle.h
+  asset_loader.cpp
+  asset_loader.h
+  asset_location.cpp
+  asset_location.h
+  asset_manager.cpp
+  asset_manager.h
+  asset_manager_source.h
   asset_request.cpp
   asset_request.h
   asset_source.h
@@ -26,6 +34,7 @@ else()
 endif()
 target_compile_features(granit_example_assets PUBLIC cxx_std_20)
 target_include_directories(granit_example_assets PUBLIC "${PROJECT_SOURCE_DIR}/examples/common")
+target_link_libraries(granit_example_assets PUBLIC granit_example_tasks)
 set_target_properties(granit_example_assets PROPERTIES FOLDER "Examples/Common")
 granit_target_compile_warnings(granit_example_assets)
 
@@ -33,6 +42,7 @@ if(GRANIT_TESTING_ENABLED)
   add_executable(
     granit_example_assets_test
     asset_batch_test.cpp
+    asset_manager_test.cpp
     asset_request_test.cpp
     asset_system_test.cpp
     memory_resource_resolver_test.cpp
