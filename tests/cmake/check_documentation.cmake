@@ -261,6 +261,11 @@ foreach(granit_category IN ITEMS reference concepts)
   )
 endforeach()
 granit_check_document_index(
+  "${granit_docs_root}/docs/versions"
+  "${granit_docs_root}/docs/versions/README.md"
+  ""
+)
+granit_check_document_index(
   "${granit_docs_root}/docs/plans"
   "${granit_docs_root}/docs/plans/README.md"
   ""

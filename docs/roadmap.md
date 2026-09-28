@@ -29,6 +29,9 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段通过可运行�
 
 ## 当前计划
 
+当前版本的固定范围、依赖顺序和发布门槛见
+[v0.39.0 版本规划](versions/v0.39.0.md)。实施顺序为 S-72 → S-73 → S-74，三个任务完成后统一发布。
+
 ### S-72：0.39.0 Asset Manager 与任务系统
 
 **状态：已确认，P1。**
@@ -42,7 +45,7 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段通过可运行�
 
 **状态：已确认，P1。**
 
-[S-73](plans/S-73-0.39.0-unified-interactive-tutorials.md) 将统一六个 Tutorial 的 Granit ImGui
+[S-73](plans/S-73-0.39.0-unified-interactive-tutorials.md) 将统一五个现有 Tutorial 的 Granit ImGui
 主题、公共性能面板、Orbit Camera 和章节参数。Cube、PBR Assets、Instancing、Raymarch 与
 Metaballs 将在 Desktop 与 Web 使用相同交互路径，并保留确定性的自动 Smoke；Instancing 同时补齐
 逐次 Draw 的动态实例范围，并提供单次实例化 Draw 与逐对象 Draw 的指标对照。

@@ -9,12 +9,15 @@
 
 ## 当前计划
 
+当前三项计划共同组成 [v0.39.0](../versions/v0.39.0.md)，按 S-72 → S-73 → S-74 实施；S-72 与
+S-73 只做阶段验收，S-74 完成后统一发布。
+
 - [S-72：0.39.0 Asset Manager 与任务系统](S-72-0.39.0-asset-manager-and-task-system.md)——以
   `asset_manager::load<T>()` 作为示例唯一资产入口，通过显式注册组合平台 Source 与格式 Loader，
   提供全异步句柄、单资源/Group 进度，并提取由应用拥有、可注入的 Task System。
-- [S-73：0.39.0 统一交互式 Tutorial](S-73-0.39.0-unified-interactive-tutorials.md)——统一六个
-  Tutorial 的 Granit ImGui 主题、性能面板、公共 Orbit Camera 和章节参数，补齐 Mesh 动态实例
-  Draw 与 Instancing 对照路径，并保持 Desktop/Web 相同交互与确定性 Smoke。
+- [S-73：0.39.0 统一交互式 Tutorial](S-73-0.39.0-unified-interactive-tutorials.md)——统一五个
+  现有 Tutorial 的 Granit ImGui 主题、性能面板、公共 Orbit Camera 和章节参数，补齐 Mesh 动态
+  实例 Draw 与 Instancing 对照路径，并保持 Desktop/Web 相同交互与确定性 Smoke。
 - [S-74：0.39.0 GPU Marching Cubes 与动态几何](S-74-0.39.0-gpu-marching-cubes.md)——补齐
   Indirect 命令与帧级 Transient Buffer，以 Compute 生成显式网格并由 Draw Indirect 跨后端绘制，
   验证完整 GPU 动态几何链。
