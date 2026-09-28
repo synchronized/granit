@@ -44,7 +44,8 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段通过可运行�
 
 [S-73](plans/S-73-0.39.0-unified-interactive-tutorials.md) 将统一六个 Tutorial 的 Granit ImGui
 主题、公共性能面板、Orbit Camera 和章节参数。Cube、PBR Assets、Instancing、Raymarch 与
-Metaballs 将在 Desktop 与 Web 使用相同交互路径，并保留确定性的自动 Smoke。
+Metaballs 将在 Desktop 与 Web 使用相同交互路径，并保留确定性的自动 Smoke；Instancing 同时补齐
+逐次 Draw 的动态实例范围，并提供单次实例化 Draw 与逐对象 Draw 的指标对照。
 
 ### S-74：0.39.0 GPU Marching Cubes 与动态几何
 
