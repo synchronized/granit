@@ -54,11 +54,12 @@ Metaballs 将在 Desktop 与 Web 使用相同交互路径，并保留确定性�
 
 ### S-74：0.39.0 GPU Marching Cubes 与动态几何
 
-**状态：实施中，S-74A～F 已完成，正在执行发布验收，P1。**
+**状态：已完成本地验收，等待 v0.39.0 发布，P1。**
 
 [S-74](plans/S-74-0.39.0-gpu-marching-cubes.md) 将补齐单次 Indirect 命令和帧级 Transient Buffer，
 通过 Compute 生成密度场与显式网格，再以 Draw Indirect 跨后端绘制。该教程直接验证动态几何、
 Atomic 容量保护和 Compute → Graphics 同步，并与 SDF Raymarch Metaballs 形成可运行对照。
+本地验收结果见 [S-74 实施记录](records/2026-09-28-s74-gpu-marching-cubes-acceptance.md)。
 
 ## 最近完成
 
