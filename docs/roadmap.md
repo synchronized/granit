@@ -46,6 +46,14 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段通过可运行�
 主题、公共性能面板、Orbit Camera 和章节参数。Cube、PBR Assets、Instancing、Raymarch 与
 Metaballs 将在 Desktop 与 Web 使用相同交互路径，并保留确定性的自动 Smoke。
 
+### S-74：0.39.0 Marching Cubes 教程
+
+**状态：已确认，P1。**
+
+[S-74](plans/S-74-0.39.0-marching-cubes-tutorial.md) 将新增 CPU 密度场、等值面网格提取、动态
+Vertex Buffer 与普通 Mesh Pipeline 教程，并与 SDF Raymarch Metaballs 形成可运行对照。GPU
+Compute 版本等待 Indirect Draw、动态输出容量和跨后端同步契约成熟后另行规划。
+
 ## 最近完成
 
 ### S-71：0.38.0 跨后端能力契约与 WebGPU 补齐
