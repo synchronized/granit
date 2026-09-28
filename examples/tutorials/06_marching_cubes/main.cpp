@@ -67,11 +67,12 @@ class tutorial_application final : public granit::example::application {
 public:
   void set_smoke_test(bool enabled) noexcept { smoke_test_ = enabled; }
   [[nodiscard]] std::uint32_t canvas_items() const noexcept { return runtime_.canvas_items(); }
-  [[nodiscard]] std::uint32_t generated_vertices() const noexcept {
-    return last_generation_.draw.vertex_count;
+  [[nodiscard]] std::uint32_t feature_value() const noexcept {
+    if (last_generation_.draw.vertex_count != 0)
+      return last_generation_.draw.vertex_count;
+    return readback_available_ ? 0 : generated_frame_count_;
   }
   [[nodiscard]] granit_result shutdown_result() const noexcept { return shutdown_result_; }
-  [[nodiscard]] std::uint32_t failure_stage() const noexcept { return render_stage_; }
 
 private:
   granit::result on_initialize() noexcept override {
@@ -303,29 +304,36 @@ private:
   }
 
   granit::result update_readback(std::uint32_t slot) noexcept {
+    if (!readback_available_)
+      return granit::result::success;
+
     if (readback_operation_.valid()) {
       granit::async_operation_status status;
-      render_stage_ = 30;
       auto result = readback_operation_.get_status(status);
-      if (result.failed())
-        return result;
+      if (result.failed()) {
+        disable_readback();
+        return granit::result::success;
+      }
       if (status.complete()) {
         if (status.state == granit::async_operation_state::succeeded) {
           std::uint64_t size = sizeof(last_generation_);
-          render_stage_ = 31;
           result = granit::copy_readback_result(
               readback_operation_, 0, std::as_writable_bytes(std::span{&last_generation_, 1}),
               size);
-          if (result.failed())
-            return result;
-        } else if (status.operation_result.failed()) {
-          return status.operation_result;
+          if (result.failed()) {
+            disable_readback();
+            return granit::result::success;
+          }
+        } else {
+          disable_readback();
+          return granit::result::success;
         }
         static_cast<void>(readback_operation_.reset());
-        render_stage_ = 32;
         result = readback_batch_.reset();
-        if (result.failed())
-          return result;
+        if (result.failed()) {
+          disable_readback();
+          return granit::result::success;
+        }
         readback_pending_slot_.reset();
       }
     }
@@ -333,18 +341,25 @@ private:
     if (readback_operation_.valid() || slot >= readback_buffers_.size() || !readback_valid_[slot])
       return granit::result::success;
     std::uint32_t result_index{};
-    render_stage_ = 33;
     auto result = readback_batch_.read_buffer(readback_buffers_[slot].ref(), 0,
                                               sizeof(generation_state), result_index);
-    if (result.ok()) {
-      render_stage_ = 34;
+    if (result.ok())
       result = readback_batch_.submit_async(readback_operation_);
-    }
     if (result.ok()) {
       readback_valid_[slot] = false;
       readback_pending_slot_ = slot;
+    } else {
+      disable_readback();
     }
-    return result;
+    return granit::result::success;
+  }
+
+  void disable_readback() noexcept {
+    static_cast<void>(readback_operation_.reset());
+    static_cast<void>(readback_batch_.reset());
+    readback_pending_slot_.reset();
+    readback_valid_.fill(false);
+    readback_available_ = false;
   }
 
   void update_timestamps(std::uint32_t slot) noexcept {
@@ -379,9 +394,13 @@ private:
       ImGui::Checkbox("Auto orbit", &auto_orbit_);
       if (ImGui::Button("Reset camera"))
         camera_.reset();
-      ImGui::Text("Vertices: %u / %u", last_generation_.draw.vertex_count, vertex_capacity());
-      ImGui::Text("Triangles: %u", last_generation_.draw.vertex_count / 3);
-      ImGui::Text("Overflow: %s", last_generation_.overflow != 0 ? "yes" : "no");
+      if (readback_available_) {
+        ImGui::Text("Vertices: %u / %u", last_generation_.draw.vertex_count, vertex_capacity());
+        ImGui::Text("Triangles: %u", last_generation_.draw.vertex_count / 3);
+        ImGui::Text("Overflow: %s", last_generation_.overflow != 0 ? "yes" : "no");
+      } else {
+        ImGui::TextDisabled("Async statistics: unavailable");
+      }
       if (timestamps_enabled_) {
         ImGui::Text("GPU ms: density %.3f, polygonize %.3f", gpu_times_ms_[0], gpu_times_ms_[1]);
         ImGui::Text("GPU ms: finalize %.3f, draw %.3f", gpu_times_ms_[2], gpu_times_ms_[3]);
@@ -403,21 +422,18 @@ private:
 
   granit::result on_render(granit::example::present_frame& frame) noexcept override {
     camera_input_.begin_frame();
-    render_stage_ = 1;
     auto result = draw_panel(frame);
     granit::frame_recording recording;
-    if (result.ok()) {
-      render_stage_ = 2;
+    if (result.ok())
       result = frame_context_.begin(frame.acquired, recording);
-    }
     if (result.failed())
       return result;
-    render_stage_ = 3;
     result = update_readback(recording.frame_slot());
     update_timestamps(recording.frame_slot());
     // WebGPU 映射异步完成；映射期间不能把同一帧槽的 staging buffer 再作为 GPU copy 目标。
     const bool readback_destination_available =
-        !readback_pending_slot_.has_value() || *readback_pending_slot_ != recording.frame_slot();
+        readback_available_ &&
+        (!readback_pending_slot_.has_value() || *readback_pending_slot_ != recording.frame_slot());
 
     if (smoke_test_)
       time_ = 0.75F;
@@ -440,23 +456,19 @@ private:
         .metaball_parameters = {static_cast<float>(ball_count_), radius_, strength_, 0.0F},
     };
     const auto uniform_offset = uniform_stride_ * recording.frame_slot();
-    if (result.ok()) {
-      render_stage_ = 4;
+    if (result.ok())
       result = uniform_buffer_.write(uniform_offset, std::as_bytes(std::span{&uniforms, 1}));
-    }
 
     granit::transient_buffer_slice field;
     granit::transient_buffer_slice vertices;
     granit::transient_buffer_slice state;
     if (result.ok()) {
-      render_stage_ = 5;
       result = recording.allocate_transient_buffer({.size = cube(grid_size_) * sizeof(float) * 4,
                                                     .usage = granit::buffer_usage::storage,
                                                     .location = granit::memory_location::device},
                                                    field);
     }
     if (result.ok()) {
-      render_stage_ = 6;
       result = recording.allocate_transient_buffer(
           {.size = static_cast<std::uint64_t>(capacity) * generated_vertex_size,
            .usage = granit::buffer_usage::storage | granit::buffer_usage::vertex,
@@ -464,7 +476,6 @@ private:
           vertices);
     }
     if (result.ok()) {
-      render_stage_ = 7;
       result = recording.allocate_transient_buffer(
           {.size = sizeof(generation_state),
            .usage = granit::buffer_usage::storage | granit::buffer_usage::indirect |
@@ -491,7 +502,6 @@ private:
             .binding = 4, .resource = state.buffer, .offset = state.offset, .size = state.size},
     };
     if (result.ok()) {
-      render_stage_ = 8;
       result = compute_group.initialize(renderer_owner(), compute_group_layout_, compute_resources);
     }
 
@@ -505,7 +515,6 @@ private:
       result = recorder.write_timestamp(timestamp_queries_, granit::timestamp_stage::top,
                                         first_timestamp);
     if (result.ok()) {
-      render_stage_ = 9;
       result = recorder.fill_buffer(state.buffer, state.offset, state.size, 0);
     }
     if (result.ok())
@@ -516,7 +525,6 @@ private:
     const auto sample_groups = (grid_size_ + workgroup_size - 1) / workgroup_size;
     const auto cell_groups = (grid_size_ - 1 + workgroup_size - 1) / workgroup_size;
     if (result.ok()) {
-      render_stage_ = 10;
       result = recorder.dispatch(sample_groups, sample_groups, sample_groups);
     }
     if (result.ok() && timestamps_enabled_)
@@ -525,7 +533,6 @@ private:
     if (result.ok())
       result = recorder.bind_compute_pipeline(polygonize_pipeline_);
     if (result.ok()) {
-      render_stage_ = 11;
       result = recorder.dispatch(cell_groups, cell_groups, cell_groups);
     }
     if (result.ok() && timestamps_enabled_)
@@ -534,7 +541,6 @@ private:
     if (result.ok())
       result = recorder.bind_compute_pipeline(finalize_pipeline_);
     if (result.ok()) {
-      render_stage_ = 12;
       result = recorder.dispatch(1, 1, 1);
     }
     if (result.ok() && timestamps_enabled_)
@@ -547,7 +553,6 @@ private:
         .size = sizeof(generation_state),
     };
     if (result.ok() && readback_destination_available) {
-      render_stage_ = 13;
       result = recorder.copy_buffer(state.buffer, readback_buffers_[recording.frame_slot()].ref(),
                                     std::span{&state_copy, 1});
     }
@@ -579,7 +584,6 @@ private:
     if (result.ok())
       result = recorder.bind_vertex_buffers(0, std::span{&vertex_binding, 1});
     if (result.ok()) {
-      render_stage_ = 14;
       result = recorder.begin_rendering(rendering);
     }
     if (result.ok())
@@ -590,7 +594,6 @@ private:
       result = recorder.write_timestamp(timestamp_queries_, granit::timestamp_stage::bottom,
                                         first_timestamp + 4);
     if (result.ok()) {
-      render_stage_ = 15;
       const bool encode_srgb = frame.swapchain.format == granit::texture_format::rgba8_unorm ||
                                frame.swapchain.format == granit::texture_format::bgra8_unorm;
       result = runtime_.canvas().record(recorder,
@@ -603,9 +606,9 @@ private:
                                          .frame_slot = recording.frame_slot()});
     }
     if (result.ok()) {
-      render_stage_ = 16;
       result = recording.submit();
       if (result.ok()) {
+        ++generated_frame_count_;
         if (readback_destination_available)
           readback_valid_[recording.frame_slot()] = true;
         timestamp_valid_[recording.frame_slot()] = timestamps_enabled_;
@@ -661,9 +664,10 @@ private:
   bool animate_{true};
   bool auto_orbit_{};
   bool timestamps_enabled_{};
+  bool readback_available_{true};
   bool smoke_test_{};
   granit_result shutdown_result_{GRANIT_SUCCESS};
-  std::uint32_t render_stage_{};
+  std::uint32_t generated_frame_count_{};
 };
 
 tutorial_application application;
@@ -678,7 +682,7 @@ extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_06_recreate_count(
   return application.completed_recreates();
 }
 extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_06_feature_value() noexcept {
-  return application.generated_vertices();
+  return application.feature_value();
 }
 extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_06_canvas_items() noexcept {
   return application.canvas_items();
@@ -688,9 +692,6 @@ extern "C" EMSCRIPTEN_KEEPALIVE int granit_tutorial_06_ready() noexcept {
 }
 extern "C" EMSCRIPTEN_KEEPALIVE granit_result granit_tutorial_06_shutdown_result() noexcept {
   return application.shutdown_result();
-}
-extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_06_failure_stage() noexcept {
-  return application.failure_stage();
 }
 #endif
 

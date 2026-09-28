@@ -24,9 +24,10 @@ Polygonize Pass 使用 Atomic Counter 为每个 Cell 预留输出区间；超出
 `draw_indirect_args`。Recorder 在 Vulkan 上建立 Storage Write 到 Vertex/Indirect Read 的屏障，
 WebGPU 通过命令顺序和 Pass 边界表达相同依赖。
 
-统计数据先复制到按 Frame Slot 保存的设备 Buffer，再通过 Async Readback 获取。读回只更新面板和
-浏览器验收特性值，绘制路径不等待 CPU。支持 Timestamp Query 的后端显示 Density、Polygonize、
-Finalize 和 Draw 时间；浏览器不支持当前 Timestamp 契约时明确显示不可用。
+统计数据先复制到按 Frame Slot 保存的设备 Buffer，再通过 Async Readback 获取。读回只更新面板；
+绘制路径不等待 CPU。运行环境无法完成异步映射时会停用统计并继续渲染。支持 Timestamp Query 的
+后端显示 Density、Polygonize、Finalize 和 Draw 时间；浏览器不支持当前 Timestamp 契约时明确显示
+不可用。
 
 ## 与 SDF Raymarch 的区别
 
