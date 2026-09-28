@@ -135,7 +135,7 @@ Shader Library 结果还包含缓存命中状态与失败 Shader 逻辑名称。
   C++ 查询和构建函数使用 `granit::result` 返回操作状态，可通过 `ok()`、`failed()` 或显式布尔
   上下文判断；底层 C API 继续返回 `granit_result`。
 - 参数字符串均为 UTF-8 的“指针 + 长度”，只需在调用期间有效，无需以零结尾。
-- 参数和输出结构必须初始化 `struct_size`。未来版本只在结构体尾部追加字段。
+- 参数和输出结构必须初始化 `struct_size`。0.x 阶段布局以当前头文件为准，升级后重新编译调用方。
 - 统一编译描述或检查描述可设置 `validate_binding_set=1`，并传入从 WGSL 前端获得的
   `expected_bindings`。SDK 会按 Group/Binding 比较最终 SPIR-V；缺失、多余或重复记录都会失败，
   编译失败时删除输出文件。零值关闭该检查。

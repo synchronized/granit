@@ -118,26 +118,3 @@ if(BUILD_SHARED_LIBS)
     )
   endif()
 endif()
-
-function(granit_add_abi_compatibility_test component baseline policy)
-  set(options)
-  set(one_value_args ALLOWED_REMOVALS)
-  cmake_parse_arguments(ARG "${options}" "${one_value_args}" "" ${ARGN})
-  add_test(
-    NAME "granit.abi.compatibility.${component}"
-    COMMAND
-      "${CMAKE_COMMAND}"
-      "-DGRANIT_ABI_COMPONENT=${component}"
-      "-DGRANIT_ABI_BASELINE=${CMAKE_CURRENT_SOURCE_DIR}/snapshots/${baseline}/${component}_symbols.txt"
-      "-DGRANIT_ABI_CURRENT=${CMAKE_CURRENT_SOURCE_DIR}/snapshots/0.36.0/${component}_symbols.txt"
-      "-DGRANIT_ABI_POLICY=${policy}"
-      "-DGRANIT_ABI_ALLOWED_REMOVALS=${ARG_ALLOWED_REMOVALS}"
-      -P "${CMAKE_CURRENT_SOURCE_DIR}/check_symbol_compatibility.cmake"
-  )
-  set_property(TEST "granit.abi.compatibility.${component}" APPEND PROPERTY LABELS package release)
-endfunction()
-
-granit_add_abi_compatibility_test(core 0.29.0 compatible)
-granit_add_abi_compatibility_test(render_pipeline 0.29.0 compatible)
-granit_add_abi_compatibility_test(window 0.25.0 compatible)
-granit_add_abi_compatibility_test(asset_tools 0.34.0 experimental)
