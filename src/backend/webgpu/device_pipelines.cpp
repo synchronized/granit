@@ -82,6 +82,15 @@ WGPUPrimitiveTopology to_native_primitive_topology(webgpu_primitive_topology top
   }
 }
 
+bool is_color_target_format(webgpu_texture_format format) noexcept {
+  return format == GRANIT_WEBGPU_TEXTURE_FORMAT_R8_UNORM ||
+         format == GRANIT_WEBGPU_TEXTURE_FORMAT_RG8_UNORM ||
+         format == GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA8_UNORM ||
+         format == GRANIT_WEBGPU_TEXTURE_FORMAT_BGRA8_UNORM ||
+         format == GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA8_SRGB ||
+         format == GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA16_FLOAT;
+}
+
 void receive_render_pipeline_warmup(WGPUCreatePipelineAsyncStatus status,
                                     WGPURenderPipeline pipeline, WGPUStringView message, void* data,
                                     void*) noexcept {
@@ -280,21 +289,11 @@ granit_result create_render_pipeline_common(webgpu_instance_handle instance,
       desc->struct_size < sizeof(*desc) || desc->reserved != 0 || desc->layout == 0 ||
       desc->vertex_shader == 0 || desc->fragment_shader == 0 ||
       (desc->vertex_buffer_layout_count != 0 && desc->vertex_buffer_layouts == nullptr) ||
-      (desc->color_format != 0 && desc->color_format != GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA8_UNORM &&
-       desc->color_format != GRANIT_WEBGPU_TEXTURE_FORMAT_BGRA8_UNORM &&
-       desc->color_format != GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA16_FLOAT) ||
-      (desc->color_format == 0 && desc->depth_stencil_format == 0) ||
+      (desc->color_target_count != 0 && desc->color_targets == nullptr) ||
+      (desc->color_target_count == 0 && desc->depth_stencil_format == 0) ||
       (desc->depth_stencil_format != 0 &&
        desc->depth_stencil_format != GRANIT_WEBGPU_TEXTURE_FORMAT_D32_FLOAT) ||
-      desc->depth_test_enabled > 1 || desc->depth_write_enabled > 1 || desc->blend_enabled > 1 ||
-      (desc->color_write_mask & ~GRANIT_WEBGPU_COLOR_WRITE_ALL_BITS) != 0 ||
-      (desc->blend_enabled != 0 &&
-       (to_native_blend_factor(desc->source_color_factor) == WGPUBlendFactor_Undefined ||
-        to_native_blend_factor(desc->destination_color_factor) == WGPUBlendFactor_Undefined ||
-        to_native_blend_operation(desc->color_operation) == WGPUBlendOperation_Undefined ||
-        to_native_blend_factor(desc->source_alpha_factor) == WGPUBlendFactor_Undefined ||
-        to_native_blend_factor(desc->destination_alpha_factor) == WGPUBlendFactor_Undefined ||
-        to_native_blend_operation(desc->alpha_operation) == WGPUBlendOperation_Undefined)) ||
+      desc->depth_test_enabled > 1 || desc->depth_write_enabled > 1 ||
       (desc->depth_stencil_format == 0 &&
        (desc->depth_test_enabled != 0 || desc->depth_write_enabled != 0)) ||
       (desc->depth_test_enabled != 0 &&
@@ -308,6 +307,19 @@ granit_result create_render_pipeline_common(webgpu_instance_handle instance,
       desc->polygon_mode != GRANIT_WEBGPU_POLYGON_MODE_FILL ||
       (desc->sample_count != 1 && desc->sample_count != 4))
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  for (std::uint32_t index = 0; index < desc->color_target_count; ++index) {
+    const auto& target = desc->color_targets[index];
+    if (!is_color_target_format(target.format) || target.blend_enabled > 1 ||
+        (target.color_write_mask & ~GRANIT_WEBGPU_COLOR_WRITE_ALL_BITS) != 0 ||
+        (target.blend_enabled != 0 &&
+         (to_native_blend_factor(target.source_color_factor) == WGPUBlendFactor_Undefined ||
+          to_native_blend_factor(target.destination_color_factor) == WGPUBlendFactor_Undefined ||
+          to_native_blend_operation(target.color_operation) == WGPUBlendOperation_Undefined ||
+          to_native_blend_factor(target.source_alpha_factor) == WGPUBlendFactor_Undefined ||
+          to_native_blend_factor(target.destination_alpha_factor) == WGPUBlendFactor_Undefined ||
+          to_native_blend_operation(target.alpha_operation) == WGPUBlendOperation_Undefined)))
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
   const std::scoped_lock lock{instances_mutex};
   const auto found = instances.find(instance);
   if (found == instances.end())
@@ -315,6 +327,8 @@ granit_result create_render_pipeline_common(webgpu_instance_handle instance,
   if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
     return ready;
   auto& state = *found->second;
+  if (desc->color_target_count > state.capabilities.max_color_attachments)
+    return GRANIT_ERROR_UNSUPPORTED;
   const auto layout = state.pipeline_layouts.find(desc->layout);
   const auto vertex = state.shaders.find(desc->vertex_shader);
   const auto fragment_shader = state.shaders.find(desc->fragment_shader);
@@ -377,25 +391,40 @@ granit_result create_render_pipeline_common(webgpu_instance_handle instance,
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
-  WGPUColorTargetState target = WGPU_COLOR_TARGET_STATE_INIT;
-  target.format = to_native_texture_format(desc->color_format);
-  target.writeMask = static_cast<WGPUColorWriteMask>(desc->color_write_mask);
-  WGPUBlendState blend = WGPU_BLEND_STATE_INIT;
-  if (desc->blend_enabled != 0) {
-    blend.color.srcFactor = to_native_blend_factor(desc->source_color_factor);
-    blend.color.dstFactor = to_native_blend_factor(desc->destination_color_factor);
-    blend.color.operation = to_native_blend_operation(desc->color_operation);
-    blend.alpha.srcFactor = to_native_blend_factor(desc->source_alpha_factor);
-    blend.alpha.dstFactor = to_native_blend_factor(desc->destination_alpha_factor);
-    blend.alpha.operation = to_native_blend_operation(desc->alpha_operation);
-    target.blend = &blend;
+  std::vector<WGPUColorTargetState> targets;
+  std::vector<WGPUBlendState> blends;
+  try {
+    targets.resize(desc->color_target_count);
+    blends.resize(desc->color_target_count);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+  for (std::uint32_t index = 0; index < desc->color_target_count; ++index) {
+    const auto& source = desc->color_targets[index];
+    auto& target = targets[index];
+    target = WGPU_COLOR_TARGET_STATE_INIT;
+    target.format = to_native_texture_format(source.format);
+    target.writeMask = static_cast<WGPUColorWriteMask>(source.color_write_mask);
+    if (source.blend_enabled != 0) {
+      auto& blend = blends[index];
+      blend = WGPU_BLEND_STATE_INIT;
+      blend.color.srcFactor = to_native_blend_factor(source.source_color_factor);
+      blend.color.dstFactor = to_native_blend_factor(source.destination_color_factor);
+      blend.color.operation = to_native_blend_operation(source.color_operation);
+      blend.alpha.srcFactor = to_native_blend_factor(source.source_alpha_factor);
+      blend.alpha.dstFactor = to_native_blend_factor(source.destination_alpha_factor);
+      blend.alpha.operation = to_native_blend_operation(source.alpha_operation);
+      target.blend = &blend;
+    }
   }
   WGPUFragmentState fragment = WGPU_FRAGMENT_STATE_INIT;
   fragment.module = fragment_shader->second.shader;
   fragment.entryPoint = {fragment_shader->second.entry_point.data(),
                          fragment_shader->second.entry_point.size()};
-  fragment.targetCount = desc->color_format == 0 ? 0 : 1;
-  fragment.targets = desc->color_format == 0 ? nullptr : &target;
+  fragment.targetCount = targets.size();
+  fragment.targets = targets.empty() ? nullptr : targets.data();
   WGPURenderPipelineDescriptor descriptor = WGPU_RENDER_PIPELINE_DESCRIPTOR_INIT;
   descriptor.layout = layout->second.pipeline_layout;
   descriptor.vertex.module = vertex->second.shader;

@@ -104,32 +104,26 @@ webgpu_renderer_state::allocate_graphics_pipeline_resource() {
 granit_result webgpu_renderer_state::create_graphics_pipeline(
     const backend_graphics_pipeline_create_info& info,
     backend_graphics_pipeline_resource& pipeline) noexcept {
-  if (!capabilities_initialized_ || info.color_formats.size() > 1)
+  if (!capabilities_initialized_)
     return GRANIT_ERROR_UNSUPPORTED;
-  const auto color_format =
-      info.color_formats.empty() ? GRANIT_TEXTURE_FORMAT_UNDEFINED : info.color_formats.front();
   const granit_color_blend_state default_blend = GRANIT_COLOR_BLEND_STATE_INIT;
-  const auto& color_blend = info.color_blends.empty() ? default_blend : info.color_blends.front();
-  return create_graphics_pipeline(pipeline, info.layout, native_shader(info.vertex_shader),
-                                  native_shader(info.fragment_shader), info.vertex_buffers,
-                                  color_format, info.depth_stencil_format, info.sample_count,
-                                  info.primitive, info.depth, info.depth_bias, color_blend);
+  return create_graphics_pipeline(
+      pipeline, info.layout, native_shader(info.vertex_shader), native_shader(info.fragment_shader),
+      info.vertex_buffers, info.color_formats, info.color_blends, info.depth_stencil_format,
+      info.sample_count, info.primitive, info.depth, info.depth_bias, default_blend);
 }
 
 granit_result webgpu_renderer_state::warmup_graphics_pipeline_async(
     const backend_graphics_pipeline_create_info& info,
     std::unique_ptr<backend_pipeline_warmup_completion>& completion) noexcept {
-  if (!capabilities_initialized_ || info.color_formats.size() > 1)
+  if (!capabilities_initialized_)
     return GRANIT_ERROR_UNSUPPORTED;
-  const auto color_format =
-      info.color_formats.empty() ? GRANIT_TEXTURE_FORMAT_UNDEFINED : info.color_formats.front();
   const granit_color_blend_state default_blend = GRANIT_COLOR_BLEND_STATE_INIT;
-  const auto& color_blend = info.color_blends.empty() ? default_blend : info.color_blends.front();
   webgpu_pipeline_warmup warmup{};
   const auto result = begin_graphics_pipeline_warmup(
       info.layout, native_shader(info.vertex_shader), native_shader(info.fragment_shader),
-      info.vertex_buffers, color_format, info.depth_stencil_format, info.sample_count,
-      info.primitive, info.depth, info.depth_bias, color_blend, warmup);
+      info.vertex_buffers, info.color_formats, info.color_blends, info.depth_stencil_format,
+      info.sample_count, info.primitive, info.depth, info.depth_bias, default_blend, warmup);
   if (result != GRANIT_SUCCESS)
     return result;
   try {

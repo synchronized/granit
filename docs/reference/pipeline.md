@@ -19,6 +19,9 @@ Vulkan Pipeline、Pipeline Layout 或 Dynamic Rendering 结构。
   [Renderer 后端能力矩阵](backend-capabilities.md)。
 - 支持深度测试、深度写入、比较操作和可选固定 depth bias，以及每个颜色附件独立的混合与写入
   掩码。
+- Vulkan 与 WebGPU 都支持多个颜色附件；实际上限通过
+  `granit_renderer_limits::max_color_attachments` 查询。WebGPU 颜色 Pipeline 现支持 R8、RG8、
+  RGBA8、RGBA8 sRGB、BGRA8 和 RGBA16 Float。
 - Viewport 与 Scissor 是动态状态，将由 D-05 的命令接口设置。
 - Pipeline 内部保持 Shader 与 Layout 存活；对应公开句柄可以先销毁。
 - 所有对象支持 Renderer domain、generation、Device Lost、级联诊断和延迟销毁。

@@ -81,19 +81,18 @@ webgpu_renderer_state::command_begin(backend_command_recorder_resource& resource
 }
 
 granit_result webgpu_renderer_state::command_begin_rendering(
-    backend_command_recorder_resource& resource, webgpu_texture_view target,
-    webgpu_texture_view resolve_target, webgpu_load_operation load, webgpu_store_operation store,
-    const float clear[4], webgpu_texture_view depth_target, webgpu_load_operation depth_load,
-    webgpu_store_operation depth_store, float clear_depth) noexcept {
+    backend_command_recorder_resource& resource,
+    std::span<const webgpu_color_attachment> color_attachments, webgpu_texture_view depth_target,
+    webgpu_load_operation depth_load, webgpu_store_operation depth_store,
+    float clear_depth) noexcept {
   auto* recorder = as_recorder(resource);
   if (recorder == nullptr || recorder->recorder_ == 0 || recorder->command_buffer_ != 0 ||
-      (target == 0 && depth_target == 0))
+      (color_attachments.empty() && depth_target == 0))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   if (const auto result = end_compute_if_open(*this, *recorder); result != GRANIT_SUCCESS)
     return result;
-  auto result = device_.recorder_begin_rendering(recorder->recorder_, target, load, store, clear,
-                                                 resolve_target, depth_target, depth_load,
-                                                 depth_store, clear_depth);
+  auto result = device_.recorder_begin_rendering(
+      recorder->recorder_, color_attachments, depth_target, depth_load, depth_store, clear_depth);
   if (result != GRANIT_SUCCESS)
     return result;
   recorder->render_open_ = true;

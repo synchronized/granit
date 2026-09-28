@@ -95,6 +95,14 @@ typedef uint32_t webgpu_store_operation;
 #define GRANIT_WEBGPU_STORE_OPERATION_STORE UINT32_C(1)
 #define GRANIT_WEBGPU_STORE_OPERATION_DISCARD UINT32_C(2)
 
+typedef struct webgpu_color_attachment {
+  webgpu_texture_view view;
+  webgpu_texture_view resolve_view;
+  webgpu_load_operation load_operation;
+  webgpu_store_operation store_operation;
+  float clear[4];
+} webgpu_color_attachment;
+
 typedef uint32_t webgpu_instance_state;
 #define GRANIT_WEBGPU_INSTANCE_STATE_INITIALIZING UINT32_C(1)
 #define GRANIT_WEBGPU_INSTANCE_STATE_READY UINT32_C(2)
@@ -365,13 +373,26 @@ typedef uint32_t webgpu_cull_mode;
 typedef uint32_t webgpu_polygon_mode;
 #define GRANIT_WEBGPU_POLYGON_MODE_FILL UINT32_C(1)
 
+typedef struct webgpu_color_target_desc {
+  webgpu_texture_format format;
+  uint32_t blend_enabled;
+  webgpu_blend_factor source_color_factor;
+  webgpu_blend_factor destination_color_factor;
+  webgpu_blend_operation color_operation;
+  webgpu_blend_factor source_alpha_factor;
+  webgpu_blend_factor destination_alpha_factor;
+  webgpu_blend_operation alpha_operation;
+  uint32_t color_write_mask;
+} webgpu_color_target_desc;
+
 typedef struct webgpu_render_pipeline_desc {
   uint32_t struct_size;
   uint32_t reserved;
   webgpu_pipeline_layout layout;
   webgpu_shader vertex_shader;
   webgpu_shader fragment_shader;
-  uint32_t color_format;
+  uint32_t color_target_count;
+  const webgpu_color_target_desc* color_targets;
   uint32_t vertex_buffer_layout_count;
   const webgpu_vertex_buffer_layout* vertex_buffer_layouts;
   webgpu_texture_format depth_stencil_format;
@@ -381,14 +402,6 @@ typedef struct webgpu_render_pipeline_desc {
   int32_t depth_bias_constant;
   float depth_bias_slope_scale;
   float depth_bias_clamp;
-  uint32_t blend_enabled;
-  webgpu_blend_factor source_color_factor;
-  webgpu_blend_factor destination_color_factor;
-  webgpu_blend_operation color_operation;
-  webgpu_blend_factor source_alpha_factor;
-  webgpu_blend_factor destination_alpha_factor;
-  webgpu_blend_operation alpha_operation;
-  uint32_t color_write_mask;
   webgpu_primitive_topology topology;
   webgpu_front_face front_face;
   webgpu_cull_mode cull_mode;
