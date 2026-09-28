@@ -486,8 +486,23 @@ granit_result create_render_pipeline_common(webgpu_instance_handle instance,
     }
   }
   const auto native = wgpuDeviceCreateRenderPipeline(state.device, &descriptor);
-  if (native == nullptr)
+  if (native == nullptr) {
+    char diagnostic[256]{};
+    const auto first_format =
+        desc->color_target_count == 0 ? 0U : desc->color_targets[0].format;
+    const auto first_blend =
+        desc->color_target_count == 0 ? 0U : desc->color_targets[0].blend_enabled;
+    const auto length = std::snprintf(
+        diagnostic, sizeof(diagnostic),
+        "WebGPU render pipeline creation failed: colors=%u first_format=%u first_blend=%u "
+        "depth_format=%u topology=%u samples=%u",
+        desc->color_target_count, first_format, first_blend, desc->depth_stencil_format,
+        desc->topology, desc->sample_count);
+    if (length > 0)
+      emit(state.host, GRANIT_DIAGNOSTIC_SEVERITY_ERROR, diagnostic,
+           static_cast<std::uint32_t>((std::min)(length, static_cast<int>(sizeof(diagnostic) - 1))));
     return GRANIT_ERROR_INITIALIZATION_FAILED;
+  }
   const auto handle = next_handle<webgpu_render_pipeline>(next_render_pipeline);
   try {
     const auto record = webgpu_device_state::render_pipeline_record{
