@@ -21,6 +21,7 @@
 
 ## 稳定化与跨平台
 
+- [2026-09-28 S-73 统一交互式 Tutorial 验收](2026-09-28-s73-unified-tutorials-acceptance.md)
 - [2026-09-28 S-72 Asset Manager 与任务系统验收](2026-09-28-s72-asset-manager-acceptance.md)
 - [2026-09-28 Granit 0.38.0 发布验收](2026-09-28-v0.38.0-release-acceptance.md)
 - [2026-09-25 Granit 0.37.0 发布验收](2026-09-25-v0.37.0-release-acceptance.md)

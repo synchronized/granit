@@ -48,6 +48,7 @@ int report_failure(std::string_view operation, granit::result result) {
 class tutorial_application final : public granit::example::application {
 public:
   void set_smoke_test(bool enabled) noexcept { smoke_test_ = enabled; }
+  [[nodiscard]] std::uint32_t canvas_items() const noexcept { return runtime_.canvas_items(); }
 
 private:
   granit::result on_initialize() noexcept override {
@@ -293,6 +294,10 @@ extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_04_recreate_count(
 
 extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_04_feature_value() noexcept {
   return 80;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_04_canvas_items() noexcept {
+  return application.canvas_items();
 }
 
 extern "C" EMSCRIPTEN_KEEPALIVE int granit_tutorial_04_ready() noexcept {

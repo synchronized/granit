@@ -44,12 +44,13 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段通过可运行�
 
 ### S-73：0.39.0 统一交互式 Tutorial
 
-**状态：已确认，P1。**
+**状态：已完成，P1。**
 
 [S-73](plans/S-73-0.39.0-unified-interactive-tutorials.md) 将统一五个现有 Tutorial 的 Granit ImGui
 主题、公共性能面板、Orbit Camera 和章节参数。Cube、PBR Assets、Instancing、Raymarch 与
 Metaballs 将在 Desktop 与 Web 使用相同交互路径，并保留确定性的自动 Smoke；Instancing 同时补齐
-逐次 Draw 的动态实例范围，并提供单次实例化 Draw 与逐对象 Draw 的指标对照。
+逐次 Draw 的动态实例范围，并提供单次实例化 Draw 与逐对象 Draw 的指标对照。验收结果见
+[S-73 实施记录](records/2026-09-28-s73-unified-tutorials-acceptance.md)。
 
 ### S-74：0.39.0 GPU Marching Cubes 与动态几何
 

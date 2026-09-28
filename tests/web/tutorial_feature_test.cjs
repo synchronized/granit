@@ -73,16 +73,18 @@ async function main() {
   try {
     await page.goto(`http://127.0.0.1:${address.port}/${target}.html`);
     await page.waitForFunction(
-      ({ ready, frames, feature }) =>
+      ({ ready, frames, feature, canvasItems }) =>
         Module.runtimeReady === true &&
         typeof Module[ready] === "function" &&
         Module[ready]() === 1 &&
         Module[frames]() >= 3 &&
-        Module[feature]() > 0,
+        Module[feature]() > 0 &&
+        Module[canvasItems]() > 0,
       {
         ready: exportName("ready"),
         frames: exportName("rendered_frames"),
         feature: exportName("feature_value"),
+        canvasItems: exportName("canvas_items"),
       },
       { timeout: 30_000 },
     );
