@@ -15,7 +15,8 @@ target_include_directories(
   PUBLIC "${PROJECT_SOURCE_DIR}/examples/common"
 )
 target_link_libraries(
-  granit_example_application PUBLIC granit_example_assets granit::granit granit::window
+  granit_example_application
+  PUBLIC granit_example_assets granit_example_gltf_support granit::granit granit::window
 )
 
 set_target_properties(granit_example_application PROPERTIES FOLDER "Examples/Common")

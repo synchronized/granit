@@ -4,9 +4,9 @@
 #ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_MODEL_LOADING_SESSION_H_
 #define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_MODEL_LOADING_SESSION_H_
 
-#include "assets/asset_system.h"
-#include "gltf/document_loader.h"
+#include "assets/asset_manager.h"
 #include "gltf/importer.h"
+#include "gltf/scene.h"
 #include "model_viewer/gpu_scene.h"
 
 #include <atomic>
@@ -39,7 +39,7 @@ enum class model_loading_error {
 /** 统一模型文档、外部资源、CPU Scene 与 GPU 创建计划的加载状态。 */
 class model_loading_session final {
 public:
-  [[nodiscard]] bool start(assets::asset_system& assets, assets::asset_key model);
+  [[nodiscard]] bool start(assets::asset_manager& assets, assets::asset_location model) noexcept;
   void poll();
   [[nodiscard]] granit::result prepare(gltf::import_progress_callback progress = nullptr,
                                        void* progress_user_data = nullptr);
@@ -53,14 +53,12 @@ public:
   [[nodiscard]] model_loading_error error() const noexcept { return error_; }
   [[nodiscard]] granit::result result() const noexcept { return result_; }
   [[nodiscard]] const std::string& diagnostic() const noexcept { return diagnostic_; }
-  [[nodiscard]] gltf::document_load_progress progress() const noexcept {
-    return document_.progress();
-  }
+  [[nodiscard]] assets::asset_progress progress() const noexcept { return scene_asset_.progress(); }
 
 private:
   void fail(model_loading_error error, granit::result result, std::string diagnostic);
 
-  gltf::document_loader document_;
+  assets::asset_handle<gltf::scene> scene_asset_;
   gltf::scene scene_;
   gpu_scene_plan plan_;
   std::atomic<model_loading_status> status_{model_loading_status::idle};

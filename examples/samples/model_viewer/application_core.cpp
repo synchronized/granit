@@ -12,7 +12,8 @@
 namespace granit::example::model_viewer {
 namespace {
 
-camera_bounds scene_bounds(const gpu_scene_plan& plan, std::uint32_t selected_node) noexcept {
+camera::camera_bounds scene_bounds(const gpu_scene_plan& plan,
+                                   std::uint32_t selected_node) noexcept {
   math::float3 minimum{std::numeric_limits<float>::max(), std::numeric_limits<float>::max(),
                        std::numeric_limits<float>::max()};
   math::float3 maximum{-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(),
@@ -70,23 +71,6 @@ granit::result application_core::renderer_ready() noexcept {
     return granit::result::invalid_argument;
   phase_ = application_phase::asset_loading;
   return granit::result::success;
-}
-
-granit::result application_core::load_asset(std::span<const std::byte> bytes,
-                                            const assets::resource_resolver* resolver,
-                                            gltf::import_progress_callback progress,
-                                            void* progress_user_data) {
-  if (phase_ != application_phase::asset_loading)
-    return granit::result::invalid_argument;
-  gltf::scene candidate;
-  const auto loaded = gltf::import_scene(bytes, resolver, candidate, progress, progress_user_data);
-  if (!loaded) {
-    fail(loaded.error == gltf::import_error::cancelled ? granit::result::cancelled
-                                                       : granit::result::invalid_argument,
-         loaded.diagnostic);
-    return failure_result_;
-  }
-  return accept_scene(std::move(candidate));
 }
 
 granit::result application_core::accept_scene(gltf::scene scene) {
@@ -187,7 +171,7 @@ granit::result application_core::tick(const application_tick_input& input, viewe
   if (!state_.camera().update(input.input, input.width, input.height, &selected_bounds))
     return granit::result::invalid_argument;
 
-  camera_matrices matrices;
+  camera::camera_matrices matrices;
   if (!state_.camera().matrices(input.width, input.height, matrices))
     return granit::result::invalid_argument;
   const granit::scene_view view{.view = matrices.view,

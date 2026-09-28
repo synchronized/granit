@@ -50,6 +50,7 @@
 | 参考 Reference | 接口的准确行为是什么 | 参数、返回值、所有权、限制 | 未确认方案 |
 | 概念 Concept | 为什么这样设计，模块如何协作 | 模型、边界、关系、权衡 | 逐次实施日志 |
 | 路线图 Roadmap | 先做什么，现在到哪里 | 阶段、优先级、状态摘要 | 每个任务的详细步骤 |
+| 版本 Version | 某个版本交付什么，何时可以发布 | 固定范围、任务依赖、阶段出口、发布门槛 | 各任务实现细节、当前 API 参考、逐次执行日志 |
 | 计划 Plan | 某项能力准备如何实现 | 目标、非目标、步骤、验收 | 无限追加的完成日志 |
 | 决策 ADR | 为什么选择某一方案 | 背景、决策、影响、替代方案 | 使用教程 |
 | 记录 Record | 实际执行和验证结果是什么 | 日期、环境、结果、差异 | 当前 API 的权威定义 |
@@ -68,6 +69,7 @@ docs/
 ├─ guides/                   # 面向任务的操作指南
 ├─ reference/                # API、格式与行为参考
 ├─ concepts/                 # 架构与原理说明
+├─ versions/                 # 当前版本范围、依赖和发布门槛
 ├─ plans/                    # 未完成或实施中的计划
 ├─ decisions/                # 架构决策记录 ADR
 └─ records/                  # 实施、测量与迁移记录
@@ -90,7 +92,7 @@ README.md
 
 - 根 README 原则上只链接文档中心、快速开始所需页面和少量关键入口。
 - `docs/README.md` 负责完整分类索引，根 README 不重复全部链接。
-- Roadmap 链接详细 Plan；Plan 不复制 Roadmap 的全局任务清单。
+- Roadmap 链接当前 Version 与详细 Plan；Version 只组合任务范围和出口，Plan 不复制版本清单。
 - Concept 可以链接 ADR 解释决策来源；ADR 保持不可变历史，不承担当前完整架构说明。
 - Record 可以链接提交、测试或基准结果，但其他文档不应依赖 Record 才能理解当前行为。
 - 使用相对链接；移动文件时必须同步检查入链与出链。
@@ -104,6 +106,7 @@ README.md
 | 公共 API 或行为变化 | 对应 Reference；必要时同步 Guide 或示例 |
 | 架构边界变化 | ADR；决策稳定后更新 Concept 摘要 |
 | 实施方案变化 | 对应 Plan |
+| 版本范围、任务依赖或发布门槛变化 | 对应 Version；Roadmap 只更新摘要 |
 | 任务状态变化 | Plan 状态与 Roadmap 摘要 |
 | 构建或操作流程变化 | 对应 Guide |
 | 项目定位或最小入口变化 | 根 README |
@@ -274,6 +277,7 @@ Granit 当前采用渐进整理方式：
 - 根 `README.md` 后续精简为项目入口，并统一指向 `docs/README.md`。
 - `docs/concepts/architecture.md` 是架构 Concept 的当前权威来源。
 - `docs/roadmap.md` 只保留阶段、优先级、状态摘要和近期顺序。
+- `docs/versions/` 保存当前版本的固定范围、任务依赖、阶段出口和发布门槛。
 - `docs/guides/` 保存操作指南，`docs/reference/` 保存当前 API 与行为参考，
   `docs/concepts/` 保存架构和原理说明。
 - `docs/plans/*.md` 保存设计和实施计划；大段实现日志后续迁移到 `docs/records/`。

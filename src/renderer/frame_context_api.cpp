@@ -89,6 +89,29 @@ extern "C" granit_result granit_frame_context_abort(granit_renderer renderer,
   }
 }
 
+extern "C" granit_result granit_frame_context_allocate_transient_buffer(
+    granit_renderer renderer, granit_frame_context context, granit_frame frame,
+    const granit_transient_buffer_desc* desc, granit_transient_buffer_slice* slice) {
+  if (slice != nullptr)
+    *slice = {};
+  if (renderer == GRANIT_NULL_HANDLE || context == GRANIT_NULL_HANDLE ||
+      frame == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (desc == nullptr || slice == nullptr ||
+      desc->struct_size < GRANIT_TRANSIENT_BUFFER_DESC_VERSION_1_SIZE || desc->reserved != 0 ||
+      desc->size == 0 || desc->usage == 0 || desc->alignment == 0 ||
+      (desc->alignment & (desc->alignment - 1)) != 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return granit::detail::renderer_registry::instance().allocate_transient_buffer(
+        renderer, context, frame, *desc, *slice);
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 extern "C" granit_result granit_frame_context_destroy(granit_renderer renderer,
                                                       granit_frame_context context) {
   if (renderer == GRANIT_NULL_HANDLE || context == GRANIT_NULL_HANDLE)

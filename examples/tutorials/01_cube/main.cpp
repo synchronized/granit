@@ -2,15 +2,14 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "application/application.h"
-#include "gltf/image_decoder.h"
-#include "imgui/imgui_font_atlas.h"
-#include "imgui/imgui_input.h"
-#include "imgui/imgui_texture_registry.h"
+#include "assets/asset_manager.h"
+#include "camera/orbit_camera.h"
+#include "camera/orbit_camera_input_accumulator.h"
+#include "gltf/scene.h"
 #include "shader_archive.h"
+#include "tutorial/tutorial_runtime.h"
 
-#include <granit/integrations/imgui/renderer.hpp>
 #include <granit/math/functions.hpp>
-#include <granit/pipeline/canvas_draw_list.hpp>
 #include <granit/pipeline/mesh.hpp>
 #include <imgui.h>
 
@@ -19,7 +18,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
-#include <numbers>
 #include <span>
 #include <string_view>
 #include <vector>
@@ -34,14 +32,10 @@ namespace {
 
 using granit::math::matrix4;
 
-bool make_model_view_projection(float angle, float aspect, matrix4& output) {
-  matrix4 projection{};
-  if (!granit::math::perspective_rh_zo(std::numbers::pi_v<float> / 3.0F, aspect, 0.1F, 100.0F,
-                                       projection))
-    return false;
+bool make_model_view_projection(float angle, const granit::example::camera::camera_matrices& camera,
+                                matrix4& output) {
   const auto model = granit::math::rotation_y_matrix4(angle);
-  const auto view = granit::math::translation_matrix4({0, 0, -4});
-  output = granit::math::multiply(projection, granit::math::multiply(view, model));
+  output = granit::math::multiply(camera.view_projection, model);
   return true;
 }
 
@@ -56,13 +50,26 @@ int report_failure(std::string_view operation, granit::result result) {
 
 class tutorial_application final : public granit::example::application {
 public:
-  [[nodiscard]] std::uint32_t canvas_items() const noexcept { return canvas_items_; }
+  void set_smoke_test(bool enabled) noexcept { smoke_test_ = enabled; }
+  [[nodiscard]] std::uint32_t canvas_items() const noexcept { return runtime_.canvas_items(); }
 
 private:
   granit::result on_initialize() noexcept override {
-    ImGui::CreateContext();
-    ImGui::StyleColorsDark();
-    imgui_initialized_ = true;
+    if (!runtime_.initialized()) {
+      auto result = runtime_.initialize(renderer_owner());
+      if (result.failed())
+        return result;
+      crate_image_ = assets().load<granit::example::gltf::image>(
+          granit::example::assets::asset_location::bundled("tutorials/01_cube/wooden_crate.png"));
+    }
+    if (!crate_image_.ready()) {
+      if (crate_image_.status() == granit::example::assets::asset_status::failed ||
+          crate_image_.status() == granit::example::assets::asset_status::cancelled) {
+        std::cerr << "Failed to load crate texture: " << crate_image_.diagnostic() << '\n';
+        return granit::result::invalid_argument;
+      }
+      return granit::result::not_ready;
+    }
 
     auto result = create_depth_target();
     if (result.ok())
@@ -74,21 +81,18 @@ private:
     if (result.ok())
       result = shader_library_.create_shader("mesh.fragment", fragment_shader_);
     if (result.ok())
-      result = initialize_texture_resources();
+      result = initialize_texture_resources(*crate_image_.value());
     if (result.ok())
       result = initialize_pipeline_layout();
     if (result.ok())
       result = create_pipeline();
-    if (result.ok())
-      result = canvas_.initialize(renderer());
     if (result.ok()) {
-      result = granit::example::imgui::initialize_font_atlas(
-          renderer_owner(), imgui_textures_, font_texture_, font_view_, font_sampler_);
+      result =
+          runtime_.register_texture(crate_view_.ref(), crate_sampler_.ref(), crate_texture_id_);
     }
-    if (result.ok()) {
-      result = imgui_textures_.register_texture(crate_view_.ref(), crate_sampler_.ref(),
-                                                crate_texture_id_);
-    }
+    if (result.ok() &&
+        !camera_.focus({.radius = 1.5F}, presentation_info().width, presentation_info().height))
+      result = granit::result::invalid_argument;
     return result;
   }
 
@@ -100,19 +104,20 @@ private:
   }
 
   granit::result on_window_event(const granit::window_event& event) noexcept override {
-    granit::example::imgui::process_window_event(event);
+    runtime_.process(event);
+    camera_input_.process(event);
     return granit::result::success;
   }
 
   granit::result on_input_event(const granit::input_event& event) noexcept override {
-    granit::example::imgui::process_input_event(event);
+    runtime_.process(event);
+    camera_input_.process(event, runtime_.wants_mouse(), runtime_.wants_keyboard());
     return granit::result::success;
   }
 
   void on_shutdown(granit::result) noexcept override {
-    imgui_textures_.clear();
+    runtime_.shutdown();
     static_cast<void>(pipeline_.reset());
-    static_cast<void>(canvas_.destroy());
     static_cast<void>(resource_group_.reset());
     static_cast<void>(layout_.reset());
     static_cast<void>(resource_layout_.reset());
@@ -123,31 +128,18 @@ private:
     static_cast<void>(crate_sampler_.reset());
     static_cast<void>(crate_view_.reset());
     static_cast<void>(crate_texture_.reset());
-    static_cast<void>(font_sampler_.reset());
-    static_cast<void>(font_view_.reset());
-    static_cast<void>(font_texture_.reset());
     static_cast<void>(depth_view_.reset());
     static_cast<void>(depth_texture_.reset());
     static_cast<void>(fragment_shader_.reset());
     static_cast<void>(vertex_shader_.reset());
     static_cast<void>(shader_library_.reset());
     static_cast<void>(frame_context_.reset());
-    if (imgui_initialized_) {
-      ImGui::DestroyContext();
-      imgui_initialized_ = false;
-    }
   }
 
-  granit::result initialize_texture_resources() noexcept {
-    const auto texture_request =
-        assets().request({assets().bundled(), "tutorials/01_cube/wooden_crate.png"});
-    granit::example::gltf::image decoded_texture;
-    if (!texture_request ||
-        texture_request->status() != granit::example::assets::asset_request_status::ready ||
-        granit::example::gltf::decode_image(texture_request->bytes(), decoded_texture) !=
-            granit::example::gltf::image_decode_error::none ||
-        decoded_texture.mips.size() != 1) {
-      std::cerr << "Failed to decode crate texture\n";
+  granit::result
+  initialize_texture_resources(const granit::example::gltf::image& decoded_texture) noexcept {
+    if (decoded_texture.mips.size() != 1) {
+      std::cerr << "Crate texture has an unsupported mip layout\n";
       return granit::result::invalid_argument;
     }
     const auto& mip = decoded_texture.mips.front();
@@ -311,40 +303,42 @@ private:
   }
 
   granit::result on_render(granit::example::present_frame& frame) noexcept override {
+    camera_input_.begin_frame();
     granit::window_state window_state;
     auto result = app_window().get_state(window_state);
     if (result.ok()) {
-      granit::example::imgui::begin_frame(window_state, frame.delta_seconds);
-      ImGui::Begin("Granit Cube");
-      ImGui::TextUnformatted("Low-level Renderer + Mesh + Canvas");
-      ImGui::Checkbox("Rotate", &rotate_);
-      ImGui::Image(ImTextureRef{crate_texture_id_}, {64, 64});
-      ImGui::Text("Frame: %u", rendered_frames());
-      ImGui::End();
-      ImGui::Render();
-      result = canvas_.clear();
+      result = runtime_.begin_frame(window_state, frame.delta_seconds,
+                                    {.name = "01 Cube",
+                                     .description = "Low-level Renderer + Mesh + Canvas",
+                                     .frame = rendered_frames()});
     }
     if (result.ok()) {
-      result = granit::integration::imgui::append_draw_data(
-          ImGui::GetDrawData(), canvas_, granit::example::imgui::texture_registry::resolver,
-          &imgui_textures_);
+      ImGui::Checkbox("Rotate", &rotate_);
+      ImGui::SliderFloat("Rotation speed", &rotation_speed_, 0.0F, 3.0F);
+      ImGui::Checkbox("Auto orbit", &auto_orbit_);
+      if (ImGui::Button("Reset camera"))
+        camera_.reset();
+      ImGui::Image(ImTextureRef{crate_texture_id_}, {64, 64});
+      result = runtime_.end_frame();
     }
-    granit::canvas_draw_list_stats canvas_stats{};
-    if (result.ok())
-      result = canvas_.get_stats(canvas_stats);
-    if (result.ok())
-      canvas_items_ = canvas_stats.item_count;
 
     granit::frame_recording recording;
     if (result.ok())
       result = frame_context_.begin(frame.acquired, recording);
 
     if (rotate_)
-      rotation_ += frame.delta_seconds;
-    const auto aspect =
-        static_cast<float>(frame.swapchain.width) / static_cast<float>(frame.swapchain.height);
+      rotation_ += frame.delta_seconds * rotation_speed_;
+    const auto input = camera_input_.finish(runtime_.wants_mouse(), runtime_.wants_keyboard());
+    if (auto_orbit_ && !smoke_test_ && !camera_.orbit(frame.delta_seconds * 0.25F))
+      result = granit::result::invalid_argument;
+    if (result.ok() && !camera_.update(input, frame.swapchain.width, frame.swapchain.height))
+      result = granit::result::invalid_argument;
+    granit::example::camera::camera_matrices camera_matrices;
+    if (result.ok() &&
+        !camera_.matrices(frame.swapchain.width, frame.swapchain.height, camera_matrices))
+      result = granit::result::invalid_argument;
     matrix4 matrix{};
-    if (result.ok() && !make_model_view_projection(rotation_, aspect, matrix))
+    if (result.ok() && !make_model_view_projection(rotation_, camera_matrices, matrix))
       result = granit::result::invalid_argument;
     const auto uniform_offset = uniform_stride_ * recording.frame_slot();
     if (result.ok())
@@ -385,7 +379,8 @@ private:
     if (result.ok()) {
       const bool encode_srgb = frame.swapchain.format == granit::texture_format::rgba8_unorm ||
                                frame.swapchain.format == granit::texture_format::bgra8_unorm;
-      result = canvas_.record(recorder, {.color = frame.backbuffer.view,
+      result = runtime_.canvas().record(recorder,
+                                        {.color = frame.backbuffer.view,
                                          .color_format = frame.swapchain.format,
                                          .width = frame.swapchain.width,
                                          .height = frame.swapchain.height,
@@ -401,6 +396,7 @@ private:
   }
 
   granit::frame_context frame_context_;
+  granit::example::assets::asset_handle<granit::example::gltf::image> crate_image_;
   granit::shader_library shader_library_;
   granit::shader vertex_shader_;
   granit::shader fragment_shader_;
@@ -417,18 +413,17 @@ private:
   granit::pipeline_layout layout_;
   granit::bind_group resource_group_;
   granit::graphics_pipeline pipeline_;
-  granit::texture font_texture_;
-  granit::texture_view font_view_;
-  granit::sampler font_sampler_;
-  granit::canvas_draw_list canvas_;
-  granit::example::imgui::texture_registry imgui_textures_;
+  granit::example::tutorial::tutorial_runtime runtime_;
+  granit::example::camera::orbit_camera camera_;
+  granit::example::camera::orbit_camera_input_accumulator camera_input_;
   ImTextureID crate_texture_id_{ImTextureID_Invalid};
   granit::texture_format pipeline_format_{granit::texture_format::undefined};
   std::uint64_t uniform_stride_{};
   float rotation_{};
+  float rotation_speed_{1.0F};
   bool rotate_{true};
-  bool imgui_initialized_{};
-  std::uint32_t canvas_items_{};
+  bool auto_orbit_{};
+  bool smoke_test_{};
 };
 
 tutorial_application application;
@@ -457,6 +452,7 @@ int main(int argument_count, char** arguments) {
   const bool smoke_test = argument_count == 2 && std::string_view{arguments[1]} == "--smoke-test";
   const std::string_view executable_path =
       argument_count > 0 && arguments[0] != nullptr ? arguments[0] : "";
+  application.set_smoke_test(smoke_test);
 
   const auto result =
       application.run({.executable_path = executable_path,

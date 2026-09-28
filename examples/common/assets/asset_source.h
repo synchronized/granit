@@ -4,33 +4,39 @@
 #ifndef GRANIT_EXAMPLES_COMMON_ASSETS_ASSET_SOURCE_H_
 #define GRANIT_EXAMPLES_COMMON_ASSETS_ASSET_SOURCE_H_
 
-#include "assets/asset_request.h"
+#include "assets/asset_handle.h"
+#include "assets/asset_location.h"
 
-#include <memory>
+#include <granit/core/result.hpp>
+
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <optional>
 #include <string>
+#include <vector>
 
 namespace granit::example::assets {
 
-/** Asset System 私有的平台读取源；构建时选择 Desktop 或 Web 实现。 */
+struct asset_source_result {
+  asset_error error{asset_error::none};
+  std::vector<std::byte> bytes;
+  std::optional<std::uint64_t> total_bytes;
+  std::string diagnostic;
+
+  [[nodiscard]] bool succeeded() const noexcept { return error == asset_error::none; }
+};
+
+using asset_source_completion = std::function<void(asset_source_result)>;
+
+/** 只负责把 Asset Location 异步读取为自有字节。 */
 class asset_source {
 public:
-  asset_source();
-  ~asset_source();
-
-  asset_source(const asset_source&) = delete;
-  asset_source& operator=(const asset_source&) = delete;
-
-  /** 启动读取；location 在 Desktop 是文件路径，在 Web 是 URL。 */
-  [[nodiscard]] std::shared_ptr<asset_request> load(std::string location);
-
-  /** 在调用线程发布已经完成的后端结果。 */
-  void poll();
-
-private:
-  struct implementation;
-  std::unique_ptr<implementation> implementation_;
+  virtual ~asset_source() = default;
+  [[nodiscard]] virtual granit::result load(const asset_location& location,
+                                            asset_source_completion completion) noexcept = 0;
 };
 
 } // namespace granit::example::assets
 
-#endif // GRANIT_EXAMPLES_COMMON_ASSETS_ASSET_SOURCE_H_
+#endif

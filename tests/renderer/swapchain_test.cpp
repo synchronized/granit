@@ -147,6 +147,26 @@ TEST_CASE("Swapchain 支持创建、查询、重建和销毁", "[swapchain][win3
   CHECK(borrowed_recorder != GRANIT_NULL_HANDLE);
   CHECK(granit_command_recorder_destroy(renderer.native_handle(), borrowed_recorder) ==
         GRANIT_ERROR_UNSUPPORTED);
+  granit_transient_buffer_desc transient_desc = GRANIT_TRANSIENT_BUFFER_DESC_INIT;
+  transient_desc.usage = GRANIT_BUFFER_USAGE_STORAGE_BIT | GRANIT_BUFFER_USAGE_INDIRECT_BIT;
+  transient_desc.size = 256;
+  transient_desc.alignment = 256;
+  granit_transient_buffer_slice first_slice{};
+  REQUIRE(granit_frame_context_allocate_transient_buffer(renderer.native_handle(), context,
+                                                         frame.native_handle(), &transient_desc,
+                                                         &first_slice) == GRANIT_SUCCESS);
+  CHECK(first_slice.buffer != GRANIT_NULL_HANDLE);
+  CHECK(first_slice.offset == 0);
+  CHECK(first_slice.size == 256);
+  CHECK(granit_buffer_destroy(renderer.native_handle(), first_slice.buffer) ==
+        GRANIT_ERROR_UNSUPPORTED);
+  transient_desc.size = 128;
+  granit_transient_buffer_slice second_slice{};
+  REQUIRE(granit_frame_context_allocate_transient_buffer(renderer.native_handle(), context,
+                                                         frame.native_handle(), &transient_desc,
+                                                         &second_slice) == GRANIT_SUCCESS);
+  CHECK(second_slice.buffer == first_slice.buffer);
+  CHECK(second_slice.offset == 256);
   granit_command_recorder repeated_recorder = GRANIT_NULL_HANDLE;
   std::uint32_t repeated_slot{};
   CHECK(granit_frame_context_begin(renderer.native_handle(), context, frame.native_handle(),
@@ -192,9 +212,8 @@ TEST_CASE("Swapchain 支持创建、查询、重建和销毁", "[swapchain][win3
   {
     granit::acquired_frame automatic;
     REQUIRE(swapchain.acquire(automatic) == granit::result::success);
-    REQUIRE(granit_frame_context_begin(renderer.native_handle(), context,
-                                       automatic.native_handle(), &borrowed_recorder,
-                                       &context_slot) == GRANIT_SUCCESS);
+    REQUIRE(granit_frame_context_begin(renderer.native_handle(), context, automatic.native_handle(),
+                                       &borrowed_recorder, &context_slot) == GRANIT_SUCCESS);
     REQUIRE(granit_frame_context_abort(renderer.native_handle(), context,
                                        automatic.native_handle()) == GRANIT_SUCCESS);
   }
@@ -210,6 +229,15 @@ TEST_CASE("Swapchain 支持创建、查询、重建和销毁", "[swapchain][win3
   granit::frame_recording cpp_recording;
   REQUIRE(cpp_context.begin(cpp_frame, cpp_recording) == granit::result::success);
   CHECK(cpp_recording.valid());
+  granit::transient_buffer_slice cpp_slice;
+  REQUIRE(cpp_recording.allocate_transient_buffer(
+              {.size = 64,
+               .usage = granit::buffer_usage::vertex | granit::buffer_usage::indirect,
+               .location = granit::memory_location::device},
+              cpp_slice, 16) == granit::result::success);
+  CHECK(cpp_slice.buffer.valid());
+  CHECK(cpp_slice.offset % 16 == 0);
+  CHECK(cpp_slice.size == 64);
   granit::frame_info cpp_frame_info;
   REQUIRE(cpp_frame.query_info(cpp_frame_info) == granit::result::success);
   CHECK(cpp_recording.frame_slot() == cpp_frame_info.frame_slot);

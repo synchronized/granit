@@ -10,7 +10,8 @@ target_link_libraries(
   granit_tutorial_02_pbr_assets
   PRIVATE
     granit_example_application
-    granit_example_imgui
+    granit_example_camera
+    granit_example_tutorial
     granit_example_model_scene
     granit::render_pipeline
 )

@@ -15,6 +15,13 @@
 
 namespace granit {
 
+struct transient_buffer_slice {
+  buffer_ref buffer{};
+  std::uint64_t offset{};
+  std::uint64_t size{};
+  buffer_usage usage{};
+};
+
 class frame_recording {
 public:
   frame_recording() = default;
@@ -51,6 +58,30 @@ public:
   [[nodiscard]] command_recorder& recorder() noexcept { return recorder_; }
   [[nodiscard]] const command_recorder& recorder() const noexcept { return recorder_; }
   [[nodiscard]] std::uint32_t frame_slot() const noexcept { return frame_slot_; }
+  [[nodiscard]] result allocate_transient_buffer(const buffer_desc& desc,
+                                                 transient_buffer_slice& slice,
+                                                 std::uint64_t alignment = 1) noexcept {
+    if (!valid())
+      return result::invalid_argument;
+    const granit_transient_buffer_desc native_desc{
+        .struct_size = GRANIT_TRANSIENT_BUFFER_DESC_VERSION_1_SIZE,
+        .usage = static_cast<granit_buffer_usage>(desc.usage),
+        .memory_location = static_cast<granit_memory_location>(desc.location),
+        .reserved = 0,
+        .size = desc.size,
+        .alignment = alignment,
+    };
+    granit_transient_buffer_slice native_slice{};
+    const auto value = granit_frame_context_allocate_transient_buffer(renderer_, context_, frame_,
+                                                                      &native_desc, &native_slice);
+    if (value == GRANIT_SUCCESS) {
+      slice = {.buffer = buffer_ref::from_native(native_slice.buffer),
+               .offset = native_slice.offset,
+               .size = native_slice.size,
+               .usage = static_cast<buffer_usage>(native_slice.usage)};
+    }
+    return from_native(value);
+  }
   [[nodiscard]] bool valid() const noexcept { return frame_ != GRANIT_NULL_HANDLE; }
   [[nodiscard]] explicit operator bool() const noexcept { return valid(); }
 
@@ -102,18 +133,15 @@ public:
     return from_native(value);
   }
 
-  [[nodiscard]] result initialize(renderer& owner) noexcept {
-    return initialize(owner.ref());
-  }
+  [[nodiscard]] result initialize(renderer& owner) noexcept { return initialize(owner.ref()); }
 
   [[nodiscard]] result begin(const acquired_frame& frame, frame_recording& recording) noexcept {
     if (!valid() || !frame.valid() || recording.valid())
       return result::invalid_argument;
     granit_command_recorder recorder{};
     std::uint32_t frame_slot{};
-    const auto value =
-        granit_frame_context_begin(renderer_, handle_, frame.native_handle(), &recorder,
-                                   &frame_slot);
+    const auto value = granit_frame_context_begin(renderer_, handle_, frame.native_handle(),
+                                                  &recorder, &frame_slot);
     if (value == GRANIT_SUCCESS) {
       recording.renderer_ = renderer_;
       recording.context_ = handle_;

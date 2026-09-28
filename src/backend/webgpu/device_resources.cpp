@@ -32,6 +32,7 @@ struct map_request {
 
 struct readback_map_request {
   std::shared_ptr<webgpu_device_state::readback_record> readback;
+  const webgpu_host_api* host{};
 };
 
 void emit_dawn_message(const webgpu_host_api* host, WGPUStringView message) noexcept {
@@ -54,10 +55,12 @@ void receive_map(WGPUMapAsyncStatus status, WGPUStringView message, void* data, 
     emit_dawn_message(request.host, message);
 }
 
-void receive_readback_map(WGPUMapAsyncStatus status, WGPUStringView, void* data, void*) noexcept {
+void receive_readback_map(WGPUMapAsyncStatus status, WGPUStringView message, void* data,
+                          void*) noexcept {
   std::unique_ptr<readback_map_request> request{static_cast<readback_map_request*>(data)};
   auto& readback = *request->readback;
   if (status != WGPUMapAsyncStatus_Success) {
+    emit_dawn_message(request->host, message);
     readback.state.store(3, std::memory_order_release);
     return;
   }
@@ -81,7 +84,7 @@ granit_result create_buffer(webgpu_instance_handle instance, const webgpu_buffer
       GRANIT_WEBGPU_BUFFER_USAGE_MAP_READ_BIT | GRANIT_WEBGPU_BUFFER_USAGE_COPY_SRC_BIT |
       GRANIT_WEBGPU_BUFFER_USAGE_COPY_DST_BIT | GRANIT_WEBGPU_BUFFER_USAGE_VERTEX_BIT |
       GRANIT_WEBGPU_BUFFER_USAGE_INDEX_BIT | GRANIT_WEBGPU_BUFFER_USAGE_UNIFORM_BIT |
-      GRANIT_WEBGPU_BUFFER_USAGE_STORAGE_BIT;
+      GRANIT_WEBGPU_BUFFER_USAGE_STORAGE_BIT | GRANIT_WEBGPU_BUFFER_USAGE_INDIRECT_BIT;
   if (out_buffer != nullptr) {
     *out_buffer = 0;
   }
@@ -120,6 +123,8 @@ granit_result create_buffer(webgpu_instance_handle instance, const webgpu_buffer
     usage |= WGPUBufferUsage_Uniform;
   if ((desc->usage & GRANIT_WEBGPU_BUFFER_USAGE_STORAGE_BIT) != 0)
     usage |= WGPUBufferUsage_Storage;
+  if ((desc->usage & GRANIT_WEBGPU_BUFFER_USAGE_INDIRECT_BIT) != 0)
+    usage |= WGPUBufferUsage_Indirect;
   WGPUBufferDescriptor descriptor = WGPU_BUFFER_DESCRIPTOR_INIT;
   descriptor.usage = usage;
   descriptor.size = desc->size;
@@ -261,6 +266,7 @@ granit_result begin_readback(webgpu_instance_handle instance, webgpu_buffer buff
       size % 4 != 0 || size > static_cast<std::uint64_t>(SIZE_MAX))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   std::shared_ptr<webgpu_device_state::readback_record> record;
+  const webgpu_host_api* host{};
   {
     const std::scoped_lock lock{instances_mutex};
     const auto found = instances.find(instance);
@@ -284,6 +290,7 @@ granit_result begin_readback(webgpu_instance_handle instance, webgpu_buffer buff
       return GRANIT_ERROR_INTERNAL;
     }
     record->buffer = source.buffer;
+    host = &found->second->host;
     wgpuBufferAddRef(record->buffer);
     record->offset = offset;
     record->size = size;
@@ -291,7 +298,7 @@ granit_result begin_readback(webgpu_instance_handle instance, webgpu_buffer buff
     found->second->readbacks.emplace(handle, record);
     *readback = handle;
   }
-  auto* request = new (std::nothrow) readback_map_request{record};
+  auto* request = new (std::nothrow) readback_map_request{record, host};
   if (request == nullptr) {
     static_cast<void>(destroy_readback(instance, *readback));
     *readback = 0;

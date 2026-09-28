@@ -51,6 +51,8 @@ target_link_libraries(
   granit_tutorial_03_instancing
   PRIVATE
     granit_example_application
+    granit_example_camera
+    granit_example_tutorial
     granit::render_pipeline
 )
 granit_target_compile_warnings(granit_tutorial_03_instancing)
@@ -70,7 +72,7 @@ elseif(BUILD_TESTING)
     PROPERTIES
       LABELS "tutorial;smoke;gpu;integration;platform"
       SKIP_RETURN_CODE 77
-      FAIL_REGULAR_EXPRESSION "销毁时仍有"
+      FAIL_REGULAR_EXPRESSION "ImGui Draw Data|销毁时仍有"
       TIMEOUT 30
   )
 endif()

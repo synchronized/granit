@@ -29,6 +29,11 @@ C++20 调用方使用 `mesh_vertex_buffer` 和 `mesh_desc`，其中 Buffer 通�
 的 Vertex/Index Buffer；进入 Rendering 后调用 `mesh::draw()`，按 Mesh 保存的范围录制 Indexed 或
 非 Indexed Draw。两步分开是因为资源状态准备不能隐式发生在 Rendering 内。
 
+`mesh::draw(recorder, mesh_draw_desc)` 可以逐次覆盖 `instance_count` 与 `first_instance`，适合在不重建
+Mesh 的情况下改变实例数量，或用多个单实例 Draw 对照一次 Instanced Draw。C API 对应参数为可选的
+`granit_mesh_draw_desc`；传空指针使用 Mesh 创建时保存的默认实例范围。逐次范围仍会按实例 Vertex
+Buffer 容量校验，数量为零或越界均返回无效参数。
+
 ## 所有权与生命周期
 
 - Mesh 复制创建描述中的布局和绘制范围。

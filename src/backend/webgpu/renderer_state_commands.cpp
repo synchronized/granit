@@ -70,6 +70,14 @@ granit_result webgpu_renderer_state::dispatch(backend_command_recorder_resource&
   return capabilities_initialized_ ? command_dispatch(recorder, x, y, z) : GRANIT_ERROR_UNSUPPORTED;
 }
 
+granit_result webgpu_renderer_state::dispatch_indirect(backend_command_recorder_resource& recorder,
+                                                       backend_buffer_resource& buffer,
+                                                       std::uint64_t offset) noexcept {
+  return capabilities_initialized_
+             ? command_dispatch_indirect(recorder, native_buffer(buffer), offset)
+             : GRANIT_ERROR_UNSUPPORTED;
+}
+
 granit_result
 webgpu_renderer_state::create_command_recorder(backend_command_recorder_resource&) noexcept {
   return capabilities_initialized_ ? GRANIT_SUCCESS : GRANIT_ERROR_UNSUPPORTED;
@@ -369,6 +377,22 @@ granit_result webgpu_renderer_state::draw_indexed(
     return GRANIT_ERROR_UNSUPPORTED;
   return command_draw_indexed(recorder, index_count, instance_count, first_index, vertex_offset,
                               first_instance);
+}
+
+granit_result webgpu_renderer_state::draw_indirect(backend_command_recorder_resource& recorder,
+                                                   backend_buffer_resource& buffer,
+                                                   std::uint64_t offset) noexcept {
+  return capabilities_initialized_ ? command_draw_indirect(recorder, native_buffer(buffer), offset)
+                                   : GRANIT_ERROR_UNSUPPORTED;
+}
+
+granit_result
+webgpu_renderer_state::draw_indexed_indirect(backend_command_recorder_resource& recorder,
+                                             backend_buffer_resource& buffer,
+                                             std::uint64_t offset) noexcept {
+  return capabilities_initialized_
+             ? command_draw_indexed_indirect(recorder, native_buffer(buffer), offset)
+             : GRANIT_ERROR_UNSUPPORTED;
 }
 
 granit_result webgpu_renderer_state::begin_rendering(

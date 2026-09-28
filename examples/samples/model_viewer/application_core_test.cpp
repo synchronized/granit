@@ -26,17 +26,6 @@ TEST_CASE("模型查看器 Core 严格执行启动状态机", "[tutorial][model-
   CHECK(core.phase() == application_phase::platform_ready);
 }
 
-TEST_CASE("模型查看器 Core 保留资产解析诊断", "[tutorial][model-viewer][core]") {
-  using namespace granit::example::model_viewer;
-  application_core core;
-  REQUIRE(core.begin_renderer() == granit::result::success);
-  REQUIRE(core.renderer_ready() == granit::result::success);
-  const std::array invalid{std::byte{0}, std::byte{1}};
-  CHECK(core.load_asset(invalid, nullptr) == granit::result::invalid_argument);
-  CHECK(core.phase() == application_phase::failed);
-  CHECK_FALSE(core.diagnostic().empty());
-}
-
 TEST_CASE("模型查看器 Core 拒绝无效环境包", "[tutorial][model-viewer][core][gpu]") {
   using namespace granit::example::model_viewer;
   granit::renderer renderer;

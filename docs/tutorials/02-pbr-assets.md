@@ -33,7 +33,8 @@ Material 上传到 Granit。Shader Library 与 Material Archive 仍来自 HLSL-f
 
 ImGui 面板实时修改 Base Color、Metallic 和 Roughness，并显示模型实际使用的 Base Color 纹理；
 参数更新直接写入 Material Instance。Canvas 与 3D 场景共享最终输出，因此可以同时验证 UI 方向、
-裁剪、纹理和后处理后的合成结果。
+裁剪、纹理和后处理后的合成结果。教程使用公共轨道相机按模型 Bounds 聚焦，支持鼠标旋转、滚轮
+缩放、重置和可选自动环绕；统一 Tutorial Runtime 显示 FPS、CPU 帧时间、Framebuffer 和帧号。
 
 ## 构建与验证
 

@@ -344,6 +344,17 @@ granit_result vulkan_renderer_state::dispatch(backend_command_recorder_resource&
 }
 
 granit_result
+vulkan_renderer_state::dispatch_indirect(backend_command_recorder_resource& recorder_resource,
+                                         backend_buffer_resource& buffer,
+                                         std::uint64_t offset) noexcept {
+  auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
+  return device_lost()
+             ? GRANIT_ERROR_DEVICE_LOST
+             : recorder.dispatch_indirect(
+                   device_, static_cast<vulkan_buffer_resource&>(buffer).native().buffer, offset);
+}
+
+granit_result
 vulkan_renderer_state::set_viewports(backend_command_recorder_resource& recorder_resource,
                                      std::uint32_t first,
                                      std::span<const granit_viewport> viewports) noexcept {
@@ -441,6 +452,28 @@ granit_result vulkan_renderer_state::draw_indexed(
   return device_lost() ? GRANIT_ERROR_DEVICE_LOST
                        : recorder.draw_indexed(device_, index_count, instance_count, first_index,
                                                vertex_offset, first_instance);
+}
+
+granit_result
+vulkan_renderer_state::draw_indirect(backend_command_recorder_resource& recorder_resource,
+                                     backend_buffer_resource& buffer,
+                                     std::uint64_t offset) noexcept {
+  auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
+  return device_lost()
+             ? GRANIT_ERROR_DEVICE_LOST
+             : recorder.draw_indirect(
+                   device_, static_cast<vulkan_buffer_resource&>(buffer).native().buffer, offset);
+}
+
+granit_result
+vulkan_renderer_state::draw_indexed_indirect(backend_command_recorder_resource& recorder_resource,
+                                             backend_buffer_resource& buffer,
+                                             std::uint64_t offset) noexcept {
+  auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
+  return device_lost()
+             ? GRANIT_ERROR_DEVICE_LOST
+             : recorder.draw_indexed_indirect(
+                   device_, static_cast<vulkan_buffer_resource&>(buffer).native().buffer, offset);
 }
 
 granit_result vulkan_renderer_state::begin_rendering(

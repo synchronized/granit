@@ -91,9 +91,57 @@ TEST_CASE("公共Mesh拒绝跨Renderer Buffer与重复Attribute位置") {
   CHECK(mesh == GRANIT_NULL_HANDLE);
 }
 
+TEST_CASE("公共Mesh逐次Draw实例范围受实例Buffer容量约束") {
+  granit::renderer renderer;
+  const auto initialized = renderer.initialize({.application_name = "granit-mesh-draw-range"});
+  if (environment_unavailable(initialized))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(initialized == granit::result::success);
+
+  granit::buffer vertices;
+  granit::buffer instances;
+  REQUIRE(vertices.initialize(renderer, {.size = 3 * 12,
+                                         .usage = granit::buffer_usage::vertex,
+                                         .location = granit::memory_location::upload}) ==
+          granit::result::success);
+  REQUIRE(instances.initialize(renderer, {.size = 2 * 4,
+                                          .usage = granit::buffer_usage::vertex,
+                                          .location = granit::memory_location::upload}) ==
+          granit::result::success);
+  const granit::vertex_attribute position{.location = 0,
+                                          .format = granit::vertex_format::float32x3};
+  const granit::vertex_attribute instance{.location = 1, .format = granit::vertex_format::float32};
+  const std::array bindings{
+      granit::mesh_vertex_buffer{.buffer = vertices.ref(),
+                                 .layout = {.stride = 12, .attributes = {&position, 1}}},
+      granit::mesh_vertex_buffer{.buffer = instances.ref(),
+                                 .layout = {.stride = 4,
+                                            .step_mode = granit::vertex_step_mode::instance,
+                                            .attributes = {&instance, 1}}},
+  };
+  granit::mesh mesh;
+  granit::mesh_desc mesh_desc;
+  mesh_desc.vertex_buffers = bindings;
+  mesh_desc.vertex_count = 3;
+  mesh_desc.instance_count = 2;
+  REQUIRE(mesh.initialize(renderer, mesh_desc) == granit::result::success);
+
+  granit_mesh_draw_desc draw = GRANIT_MESH_DRAW_DESC_INIT;
+  draw.instance_count = 0;
+  CHECK(granit_mesh_draw(renderer.native_handle(), mesh.native_handle(), UINT64_C(1), &draw) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  draw.instance_count = 1;
+  draw.first_instance = 2;
+  CHECK(granit_mesh_draw(renderer.native_handle(), mesh.native_handle(), UINT64_C(1), &draw) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  draw.first_instance = 1;
+  CHECK(granit_mesh_draw(renderer.native_handle(), mesh.native_handle(), UINT64_C(1), &draw) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+}
+
 TEST_CASE("公共Mesh录制入口拒绝无效对象") {
   CHECK(granit_mesh_bind(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE) ==
         GRANIT_ERROR_INVALID_HANDLE);
-  CHECK(granit_mesh_draw(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE) ==
+  CHECK(granit_mesh_draw(GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE, GRANIT_NULL_HANDLE, nullptr) ==
         GRANIT_ERROR_INVALID_HANDLE);
 }

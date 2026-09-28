@@ -2,7 +2,10 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "application_core.h"
-#include "gltf/importer.h"
+#include "assets/asset_manager.h"
+#include "gltf/asset_loaders.h"
+#include "platform/register_asset_sources.h"
+#include "tasks/task_system.h"
 #include "validation/screenshot_comparison.h"
 
 #include <granit/granit.hpp>
@@ -211,19 +214,6 @@ std::filesystem::path sidecar_path(const std::filesystem::path& output, std::str
   return result;
 }
 
-class file_resolver final : public granit::example::assets::resource_resolver {
-public:
-  explicit file_resolver(std::filesystem::path base) : base_(std::move(base)) {}
-
-  [[nodiscard]] bool resolve(std::string_view resource_uri,
-                             std::vector<std::byte>& bytes) const override {
-    return read_file(base_ / std::filesystem::path(resource_uri), bytes);
-  }
-
-private:
-  std::filesystem::path base_;
-};
-
 bool compare_expected(const options& arguments, const granit::renderer_info& renderer,
                       std::span<const std::uint8_t> actual) {
   if (arguments.expected.empty())
@@ -346,24 +336,50 @@ int main(int argc, char** argv) {
     result = core.renderer_ready();
   }
 
-  std::vector<std::byte> asset_bytes;
-  stage = "读取模型主文件";
-  if (result.ok() && !read_file(arguments.asset, asset_bytes))
-    result = granit::result::invalid_argument;
-  file_resolver resolver(arguments.asset.parent_path());
+  granit::example::tasks::task_system tasks;
+  granit::example::assets::asset_manager assets{tasks};
   if (result.ok()) {
-    stage = "解析模型资产";
-    result = core.load_asset(asset_bytes, &resolver);
+    stage = "初始化资产管理器";
+    result = tasks.initialize({.worker_count = 1});
+  }
+  if (result.ok())
+    result = granit::example::platform::register_asset_sources(assets, "offscreen_acceptance");
+  if (result.ok())
+    result = assets.register_loader(std::make_shared<granit::example::assets::blob_asset_loader>());
+  if (result.ok())
+    result = granit::example::gltf::register_standard_asset_loaders(assets);
+
+  auto group = assets.create_group();
+  granit::example::assets::asset_handle<granit::example::gltf::scene> model;
+  granit::example::assets::asset_handle<granit::example::assets::asset_blob> environment;
+  if (result.ok()) {
+    stage = "异步加载离屏资产";
+    model = group.load<granit::example::gltf::scene>(
+        granit::example::assets::asset_location::external(arguments.asset.string()));
+    if (!arguments.environment.empty()) {
+      environment = group.load<granit::example::assets::asset_blob>(
+          granit::example::assets::asset_location::external(arguments.environment.string()));
+    }
+    while (!group.complete()) {
+      result = tasks.wait_idle();
+      if (result.failed())
+        break;
+      static_cast<void>(tasks.pump_main());
+    }
+    if (result.ok() && (!model.ready() || (environment && !environment.ready())))
+      result = granit::result::invalid_argument;
+  }
+  if (result.ok()) {
+    stage = "接收模型资产";
+    result = core.accept_scene(*model.value());
   }
   if (result.ok()) {
     stage = "上传 GPU Scene";
-    std::vector<std::byte> environment_bytes;
-    if (!arguments.environment.empty() && !read_file(arguments.environment, environment_bytes)) {
-      stage = "读取环境包";
-      result = granit::result::invalid_argument;
-    } else {
-      result = core.upload(renderer, environment_bytes, arguments.sampler_anisotropy);
-    }
+    const auto environment_asset = environment.value();
+    const auto environment_bytes = environment_asset
+                                       ? std::span<const std::byte>{environment_asset->bytes}
+                                       : std::span<const std::byte>{};
+    result = core.upload(renderer, environment_bytes, arguments.sampler_anisotropy);
   }
 
   granit::texture output_texture;

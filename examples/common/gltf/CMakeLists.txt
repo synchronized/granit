@@ -84,9 +84,9 @@ set_target_properties(granit_example_gltf_dependencies PROPERTIES FOLDER "Exampl
 
 add_library(
   granit_example_gltf_support STATIC
+  asset_loaders.cpp
+  asset_loaders.h
   cgltf_implementation.cpp
-  document_loader.cpp
-  document_loader.h
   document_manifest.cpp
   document_manifest.h
   image_decoder.cpp

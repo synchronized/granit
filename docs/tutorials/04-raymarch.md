@@ -11,7 +11,8 @@
 
 顶点 Shader 直接生成三个裁剪空间顶点，所以 Pipeline 不需要 Vertex Buffer 或 Vertex Layout。
 Fragment Shader 根据 `SV_Position` 和 framebuffer 尺寸恢复纵横比正确的屏幕坐标，再对球体、方块
-与地面组成的 SDF 场景最多执行 80 次步进。
+与地面组成的 SDF 场景执行可调次数的步进。公共轨道相机把 Origin、Basis 与 FOV 写入 Uniform，
+Shader 不再依赖固定观察点。
 
 窗口 Resize 后 Application 重建 Swapchain，教程把新的 framebuffer 尺寸写入 Uniform。Shader
 显式遵循 Granit 的屏幕与纹理坐标约定，场景背景上下不对称，便于自动发现 Y 轴翻转错误。
@@ -19,8 +20,9 @@ Fragment Shader 根据 `SV_Position` 和 framebuffer 尺寸恢复纵横比正确
 ## Shader 与资源
 
 [`raymarch.hlsl`](../../examples/tutorials/04_raymarch/raymarch.hlsl) 是唯一作者输入。构建生成同时包含
-Vulkan SPIR-V 和 WebGPU WGSL 的 Shader Library；运行时只按逻辑名称加载两个入口。资源绑定仅含
-每帧更新的尺寸与时间 Uniform，Smoke 模式固定时间。
+Vulkan SPIR-V 和 WebGPU WGSL 的 Shader Library；运行时只按逻辑名称加载两个入口。资源绑定包含
+尺寸、时间、相机、最大步数与命中阈值。统一面板可控制步数、阈值、动画速度、相机自动环绕和重置；
+Smoke 模式固定时间与参数。
 
 ## 构建与验证
 
@@ -31,4 +33,4 @@ ctest --test-dir build/windows-clang-debug -R "^granit\.tutorial\.04_raymarch$" 
   --output-on-failure
 ```
 
-浏览器自动测试还会比较物体区域与背景像素，并确认 Resize 后继续呈现。
+浏览器自动测试还会验证非空 Canvas、比较物体区域与背景像素，并确认 Resize 后继续呈现。

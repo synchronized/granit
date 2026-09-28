@@ -63,6 +63,11 @@ struct mesh_desc {
   std::uint32_t first_instance{};
 };
 
+struct mesh_draw_desc {
+  std::uint32_t instance_count{1};
+  std::uint32_t first_instance{};
+};
+
 /** 公共 Mesh C ABI 的轻量 move-only RAII 包装。 */
 class mesh {
 public:
@@ -152,7 +157,17 @@ public:
   }
   /** 在 Rendering 内按 Mesh 保存的范围录制一次 Draw。 */
   [[nodiscard]] result draw(command_recorder& recorder) const noexcept {
-    return from_native(granit_mesh_draw(renderer_, handle_, recorder.native_handle()));
+    return from_native(granit_mesh_draw(renderer_, handle_, recorder.native_handle(), nullptr));
+  }
+  /** 在 Rendering 内使用逐次实例范围录制一次 Draw。 */
+  [[nodiscard]] result draw(command_recorder& recorder, const mesh_draw_desc& desc) const noexcept {
+    const granit_mesh_draw_desc native{
+        .struct_size = GRANIT_MESH_DRAW_DESC_VERSION_1_SIZE,
+        .instance_count = desc.instance_count,
+        .first_instance = desc.first_instance,
+        .reserved = 0,
+    };
+    return from_native(granit_mesh_draw(renderer_, handle_, recorder.native_handle(), &native));
   }
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
   [[nodiscard]] constexpr mesh_ref ref() const noexcept { return mesh_ref{handle_}; }

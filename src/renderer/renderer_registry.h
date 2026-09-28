@@ -256,6 +256,11 @@ public:
   submit_frame_context(granit_renderer renderer, granit_frame_context context, granit_frame frame);
   [[nodiscard]] granit_result abort_frame_context(granit_renderer renderer,
                                                   granit_frame_context context, granit_frame frame);
+  [[nodiscard]] granit_result allocate_transient_buffer(granit_renderer renderer,
+                                                        granit_frame_context context,
+                                                        granit_frame frame,
+                                                        const granit_transient_buffer_desc& desc,
+                                                        granit_transient_buffer_slice& slice);
   [[nodiscard]] granit_result destroy_frame_context(granit_renderer renderer,
                                                     granit_frame_context context);
   [[nodiscard]] granit_result copy_buffer(granit_renderer renderer,
@@ -307,6 +312,9 @@ public:
   [[nodiscard]] granit_result dispatch(granit_renderer renderer, granit_command_recorder recorder,
                                        std::uint32_t group_count_x, std::uint32_t group_count_y,
                                        std::uint32_t group_count_z);
+  [[nodiscard]] granit_result dispatch_indirect(granit_renderer renderer,
+                                                granit_command_recorder recorder,
+                                                granit_buffer buffer, std::uint64_t offset);
   [[nodiscard]] granit_result set_viewports(granit_renderer renderer,
                                             granit_command_recorder recorder, std::uint32_t first,
                                             std::span<const granit_viewport> viewports);
@@ -328,6 +336,12 @@ public:
                                            std::uint32_t index_count, std::uint32_t instance_count,
                                            std::uint32_t first_index, std::int32_t vertex_offset,
                                            std::uint32_t first_instance);
+  [[nodiscard]] granit_result draw_indirect(granit_renderer renderer,
+                                            granit_command_recorder recorder, granit_buffer buffer,
+                                            std::uint64_t offset);
+  [[nodiscard]] granit_result draw_indexed_indirect(granit_renderer renderer,
+                                                    granit_command_recorder recorder,
+                                                    granit_buffer buffer, std::uint64_t offset);
   [[nodiscard]] granit_result begin_rendering(granit_renderer renderer,
                                               granit_command_recorder recorder,
                                               const granit_rendering_desc& desc);

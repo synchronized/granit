@@ -34,7 +34,8 @@ struct mesh_pipeline_state {
 
 /** 在已开始的渲染区域内录制 Mesh 的一次 Draw。 */
 [[nodiscard]] granit_result draw_mesh(granit_renderer renderer, granit_command_recorder recorder,
-                                      granit_mesh mesh) noexcept;
+                                      granit_mesh mesh,
+                                      const granit_mesh_draw_desc* desc = nullptr) noexcept;
 
 } // namespace granit::pipeline::detail
 

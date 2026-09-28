@@ -8,6 +8,26 @@
 
 ## Unreleased
 
+### 新增
+
+- Command Recorder 新增单次 Draw、Indexed Draw 与 Dispatch Indirect，Vulkan 和 WebGPU 均校验
+  Indirect Usage、对齐、范围、资源所属关系和 Pass 状态。
+- Frame Context 新增按真实在途槽复用的 Transient Buffer Slice，支持一帧内 Compute 生成并由
+  Vertex、Index 或 Indirect 阶段消费临时数据。
+- 新增 GPU Marching Cubes 跨后端教程，以 Compute、Atomic、Transient Buffer 和 Draw Indirect
+  生成并绘制动态 Metaballs 网格；六个教程统一使用交互面板、相机和确定性 Smoke。
+
+### 变更
+
+- Example Asset System 收敛为异步 `asset_manager::load<T>()`，平台 Source 与格式 Loader 通过注册
+  组合，并统一资源及批次进度、取消、依赖与缓存语义。
+- Instancing 教程可以在单次实例 Draw 与逐对象 Draw 之间切换，并通过动态实例范围只改变提交数量。
+
+### 文档
+
+- 增加 GPU Marching Cubes 教程，并记录 Indirect 命令、Transient Buffer 生命周期、跨后端同步及
+  Fragment SDF Raymarch 与显式网格生成的差异。
+
 ## 0.38.0 - 2026-09-28
 
 ### 新增

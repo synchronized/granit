@@ -192,7 +192,7 @@ async function main() {
     const failureResult = await page.evaluate(() => Module._granit_web_renderer_failure_result());
     const assetStatus = await page.evaluate(() => Module._granit_web_asset_status());
     // GRANIT_RENDERER_STATE_READY 的公共 ABI 数值为 2。
-    // asset_request_status::ready 的内部测试契约数值为 2。
+    // Model Viewer 资产就绪状态的浏览器测试契约数值为 2。
     if (rendererState !== 2 || failureResult !== 0 || assetStatus !== 2) {
       throw new Error(
         `WebGPU 生命周期异常，state=${rendererState}, failure=${failureResult}, asset=${assetStatus}`,
@@ -213,9 +213,10 @@ async function main() {
       if (browserMessages.some((message) => message === `error: GRANIT_DIAGNOSTIC:${diagnostic}`))
         throw new Error(`WebGPU 信息诊断被错误输出为 error：${diagnostic}`);
     }
+    // Asset Manager 已在 CPU 资产发布前完成 glTF 文档及其外部依赖解析；这里验证
+    // Model Viewer 接收 CPU 场景，以及后续可观察的 GPU 规划和上传阶段。
     for (const stage of [
-      "document", "buffers", "images", "materials", "meshes", "nodes",
-      "planning", "geometry", "textures", "samplers",
+      "document", "planning", "geometry", "textures", "samplers", "meshes", "materials",
       "pipelines",
     ]) {
       if (!browserMessages.some((message) => message.includes(`GRANIT_PROGRESS:${stage}:`)))

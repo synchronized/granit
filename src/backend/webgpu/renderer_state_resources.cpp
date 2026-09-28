@@ -265,6 +265,8 @@ webgpu_buffer_usage to_usage(granit_buffer_usage usage, granit_memory_location l
     result |= GRANIT_WEBGPU_BUFFER_USAGE_UNIFORM_BIT;
   if ((usage & GRANIT_BUFFER_USAGE_STORAGE_BIT) != 0)
     result |= GRANIT_WEBGPU_BUFFER_USAGE_STORAGE_BIT;
+  if ((usage & GRANIT_BUFFER_USAGE_INDIRECT_BIT) != 0)
+    result |= GRANIT_WEBGPU_BUFFER_USAGE_INDIRECT_BIT;
   if (location == GRANIT_MEMORY_LOCATION_READBACK)
     result |= GRANIT_WEBGPU_BUFFER_USAGE_MAP_READ_BIT | GRANIT_WEBGPU_BUFFER_USAGE_COPY_DST_BIT;
   if (location == GRANIT_MEMORY_LOCATION_UPLOAD)

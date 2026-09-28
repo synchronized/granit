@@ -3,7 +3,8 @@
 
 #include "application/application_host.h"
 
-#include <new>
+#include "gltf/asset_loaders.h"
+#include "platform/register_asset_sources.h"
 
 namespace granit::example {
 
@@ -12,10 +13,22 @@ result application_host::run_host(const application_host_desc& desc) noexcept {
       desc.width == 0 || desc.height == 0) {
     return result::invalid_argument;
   }
-  if (!assets_.initialize(desc.executable_path))
-    return result::invalid_argument;
+#if defined(__EMSCRIPTEN__)
+  constexpr std::uint32_t worker_count = 0;
+#else
+  constexpr std::uint32_t worker_count = 1;
+#endif
+  auto operation = tasks_.initialize({.worker_count = worker_count});
+  if (operation.ok())
+    operation = platform::register_asset_sources(assets_, desc.executable_path);
+  if (operation.ok())
+    operation = assets_.register_loader(std::make_shared<assets::blob_asset_loader>());
+  if (operation.ok())
+    operation = gltf::register_standard_asset_loaders(assets_);
+  if (operation.failed())
+    return operation;
 
-  auto operation = window_system_.initialize(desc.window_system);
+  operation = window_system_.initialize(desc.window_system);
   if (operation.ok()) {
     operation = window_.initialize(window_system_, {.title = desc.title,
                                                     .width = desc.width,
@@ -66,14 +79,8 @@ result application_host::poll_events() noexcept {
 }
 
 result application_host::update_services() noexcept {
-  try {
-    assets_.poll();
-    return result::success;
-  } catch (const std::bad_alloc&) {
-    return result::out_of_memory;
-  } catch (...) {
-    return result::internal;
-  }
+  static_cast<void>(tasks_.pump_main());
+  return result::success;
 }
 
 result application_host::tick(window_loop_action& action) noexcept {
@@ -98,6 +105,7 @@ void application_host::shutdown(result reason) noexcept {
     return;
   phase_ = phase::stopped;
   on_host_shutdown(reason);
+  tasks_.stop();
   static_cast<void>(window_.reset());
   static_cast<void>(window_system_.reset());
 }

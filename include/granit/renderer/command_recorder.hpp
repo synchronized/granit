@@ -25,6 +25,9 @@ using texture_copy_region = granit_texture_copy_region;
 using texture_mipmap_range = granit_texture_mipmap_range;
 using viewport = granit_viewport;
 using scissor = granit_scissor;
+using draw_indirect_args = granit_draw_indirect_args;
+using draw_indexed_indirect_args = granit_draw_indexed_indirect_args;
+using dispatch_indirect_args = granit_dispatch_indirect_args;
 
 struct vertex_buffer_binding {
   buffer_ref buffer{};
@@ -69,9 +72,7 @@ public:
     }
     return from_native(value);
   }
-  [[nodiscard]] result initialize(renderer& owner) noexcept {
-    return initialize(owner.ref());
-  }
+  [[nodiscard]] result initialize(renderer& owner) noexcept { return initialize(owner.ref()); }
   [[nodiscard]] result begin() noexcept {
     return from_native(granit_command_recorder_begin(renderer_, handle_));
   }
@@ -114,18 +115,16 @@ public:
     if (regions.size() > UINT32_MAX) {
       return result::invalid_argument;
     }
-    return from_native(
-        granit_command_recorder_copy_buffer(renderer_, handle_, source.native_handle(),
-                                            destination.native_handle(), regions.data(),
-                                            static_cast<std::uint32_t>(regions.size())));
+    return from_native(granit_command_recorder_copy_buffer(
+        renderer_, handle_, source.native_handle(), destination.native_handle(), regions.data(),
+        static_cast<std::uint32_t>(regions.size())));
   }
   [[nodiscard]] result copy_texture_to_buffer(texture_ref source, buffer_ref destination,
                                               const texture_data_layout& layout,
                                               const texture_write_region& region) noexcept {
-    const granit_texture_data_layout native_layout{
-        .offset = layout.offset,
-        .bytes_per_row = layout.bytes_per_row,
-        .rows_per_image = layout.rows_per_image};
+    const granit_texture_data_layout native_layout{.offset = layout.offset,
+                                                   .bytes_per_row = layout.bytes_per_row,
+                                                   .rows_per_image = layout.rows_per_image};
     const auto native_region = to_native(region);
     return from_native(granit_command_recorder_copy_texture_to_buffer(
         renderer_, handle_, source.native_handle(), destination.native_handle(), &native_layout,
@@ -134,10 +133,9 @@ public:
   [[nodiscard]] result copy_buffer_to_texture(buffer_ref source, texture_ref destination,
                                               const texture_data_layout& layout,
                                               const texture_write_region& region) noexcept {
-    const granit_texture_data_layout native_layout{
-        .offset = layout.offset,
-        .bytes_per_row = layout.bytes_per_row,
-        .rows_per_image = layout.rows_per_image};
+    const granit_texture_data_layout native_layout{.offset = layout.offset,
+                                                   .bytes_per_row = layout.bytes_per_row,
+                                                   .rows_per_image = layout.rows_per_image};
     const auto native_region = to_native(region);
     return from_native(granit_command_recorder_copy_buffer_to_texture(
         renderer_, handle_, source.native_handle(), destination.native_handle(), &native_layout,
@@ -150,9 +148,8 @@ public:
   }
   [[nodiscard]] result generate_mipmaps(texture_ref texture,
                                         const texture_mipmap_range& range) noexcept {
-    return from_native(
-        granit_command_recorder_generate_mipmaps(renderer_, handle_, texture.native_handle(),
-                                                 &range));
+    return from_native(granit_command_recorder_generate_mipmaps(renderer_, handle_,
+                                                                texture.native_handle(), &range));
   }
   [[nodiscard]] result fill_buffer(buffer_ref buffer, std::uint64_t offset, std::uint64_t size,
                                    std::uint32_t value) noexcept {
@@ -160,8 +157,8 @@ public:
         renderer_, handle_, buffer.native_handle(), offset, size, value));
   }
   [[nodiscard]] result bind_graphics_pipeline(graphics_pipeline_ref pipeline) noexcept {
-    return from_native(
-        granit_command_recorder_bind_graphics_pipeline(renderer_, handle_, pipeline.native_handle()));
+    return from_native(granit_command_recorder_bind_graphics_pipeline(renderer_, handle_,
+                                                                      pipeline.native_handle()));
   }
   [[nodiscard]] result bind_graphics_pipeline(const graphics_pipeline& pipeline) noexcept {
     return bind_graphics_pipeline(pipeline.ref());
@@ -190,8 +187,8 @@ public:
     return bind_graphics_groups(layout.ref(), group_index, groups, dynamic_offsets);
   }
   [[nodiscard]] result bind_compute_pipeline(compute_pipeline_ref pipeline) noexcept {
-    return from_native(granit_command_recorder_bind_compute_pipeline(
-        renderer_, handle_, pipeline.native_handle()));
+    return from_native(granit_command_recorder_bind_compute_pipeline(renderer_, handle_,
+                                                                     pipeline.native_handle()));
   }
   [[nodiscard]] result bind_compute_pipeline(const compute_pipeline& pipeline) noexcept {
     return bind_compute_pipeline(pipeline.ref());
@@ -223,6 +220,10 @@ public:
                                 std::uint32_t group_count_z = 1) noexcept {
     return from_native(granit_command_recorder_dispatch(renderer_, handle_, group_count_x,
                                                         group_count_y, group_count_z));
+  }
+  [[nodiscard]] result dispatch_indirect(buffer_ref buffer, std::uint64_t offset = 0) noexcept {
+    return from_native(granit_command_recorder_dispatch_indirect(renderer_, handle_,
+                                                                 buffer.native_handle(), offset));
   }
   [[nodiscard]] result set_viewports(std::uint32_t first,
                                      std::span<const viewport> viewports) noexcept {
@@ -274,6 +275,14 @@ public:
                                                             instance_count, first_index,
                                                             vertex_offset, first_instance));
   }
+  [[nodiscard]] result draw_indirect(buffer_ref buffer, std::uint64_t offset = 0) noexcept {
+    return from_native(
+        granit_command_recorder_draw_indirect(renderer_, handle_, buffer.native_handle(), offset));
+  }
+  [[nodiscard]] result draw_indexed_indirect(buffer_ref buffer, std::uint64_t offset = 0) noexcept {
+    return from_native(granit_command_recorder_draw_indexed_indirect(
+        renderer_, handle_, buffer.native_handle(), offset));
+  }
   [[nodiscard]] result begin_rendering(const rendering_desc& desc) noexcept {
     if (desc.color_attachments.size() > GRANIT_MAX_COLOR_ATTACHMENTS) {
       return result::invalid_argument;
@@ -305,9 +314,8 @@ public:
   }
   [[nodiscard]] result reset_timestamp_queries(timestamp_query_pool_ref pool, std::uint32_t first,
                                                std::uint32_t count) noexcept {
-    return from_native(
-        granit_command_recorder_reset_timestamp_queries(renderer_, handle_, pool.native_handle(),
-                                                        first, count));
+    return from_native(granit_command_recorder_reset_timestamp_queries(
+        renderer_, handle_, pool.native_handle(), first, count));
   }
   [[nodiscard]] result reset_timestamp_queries(timestamp_query_pool& pool, std::uint32_t first,
                                                std::uint32_t count) noexcept {
@@ -315,8 +323,9 @@ public:
   }
   [[nodiscard]] result write_timestamp(timestamp_query_pool_ref pool, timestamp_stage stage,
                                        std::uint32_t index) noexcept {
-    return from_native(granit_command_recorder_write_timestamp(
-        renderer_, handle_, pool.native_handle(), static_cast<granit_timestamp_stage>(stage), index));
+    return from_native(
+        granit_command_recorder_write_timestamp(renderer_, handle_, pool.native_handle(),
+                                                static_cast<granit_timestamp_stage>(stage), index));
   }
   [[nodiscard]] result write_timestamp(timestamp_query_pool& pool, timestamp_stage stage,
                                        std::uint32_t index) noexcept {
@@ -354,10 +363,10 @@ private:
             .depth = region.depth};
   }
 
-  [[nodiscard]] result
-  bind_groups_native(bool graphics, pipeline_layout_ref layout, std::uint32_t first_group,
-                     std::span<const granit_bind_group> bind_groups,
-                     std::span<const std::uint32_t> dynamic_offsets) noexcept {
+  [[nodiscard]] result bind_groups_native(bool graphics, pipeline_layout_ref layout,
+                                          std::uint32_t first_group,
+                                          std::span<const granit_bind_group> bind_groups,
+                                          std::span<const std::uint32_t> dynamic_offsets) noexcept {
     if (bind_groups.empty() || bind_groups.size() > UINT32_MAX ||
         dynamic_offsets.size() > UINT32_MAX)
       return result::invalid_argument;
@@ -369,11 +378,10 @@ private:
         .dynamic_offset_count = static_cast<std::uint32_t>(dynamic_offsets.size()),
         .dynamic_offsets = dynamic_offsets.data(),
     };
-    const auto value = graphics
-                           ? granit_command_recorder_bind_graphics_groups(
-                                 renderer_, handle_, layout.native_handle(), &desc)
-                           : granit_command_recorder_bind_compute_groups(
-                                 renderer_, handle_, layout.native_handle(), &desc);
+    const auto value = graphics ? granit_command_recorder_bind_graphics_groups(
+                                      renderer_, handle_, layout.native_handle(), &desc)
+                                : granit_command_recorder_bind_compute_groups(
+                                      renderer_, handle_, layout.native_handle(), &desc);
     return from_native(value);
   }
 

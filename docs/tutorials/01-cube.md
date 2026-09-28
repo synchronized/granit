@@ -45,9 +45,10 @@ Bind Group 0 包含动态相机 Uniform、采样纹理和 Sampler。每个 Frame
 
 ## ImGui 与 Canvas
 
-Window/Input 事件由 Application 转发给 ImGui。教程把 `ImDrawData` 转换为 Granit
-`canvas_draw_list`，再在 3D Render Pass 后以 `load` 操作记录 Canvas Pass。ImGui 控制面板可暂停旋转，
-并显示自定义 Texture ID，验证字体、纹理解析、裁剪和输入路径。
+Window/Input 事件先进入统一 Tutorial Runtime，再由 Runtime 转发给 ImGui。Runtime 负责 Granit
+主题、字体、性能指标和 `canvas_draw_list`；教程在 3D Render Pass 后以 `load` 操作记录 Canvas Pass。
+控制面板可调整模型旋转、旋转速度和相机自动环绕，并提供轨道相机重置与纹理预览。鼠标被 ImGui
+捕获时相机不会响应拖动或滚轮。
 
 ## 构建与验证
 

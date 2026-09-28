@@ -16,7 +16,8 @@ class viewer_session final {
 public:
   [[nodiscard]] granit::result begin_renderer() noexcept;
   [[nodiscard]] granit::result renderer_ready() noexcept;
-  [[nodiscard]] bool start_loading(assets::asset_system& assets, assets::asset_key model);
+  [[nodiscard]] bool start_loading(assets::asset_manager& assets,
+                                   assets::asset_location model) noexcept;
   void poll_loading();
   /** 完成 CPU 导入并把 Scene 与 GPU 计划交给 Core；调用期间不能并发访问 Core。 */
   [[nodiscard]] granit::result prepare_scene(gltf::import_progress_callback progress = nullptr,
@@ -28,7 +29,7 @@ public:
   [[nodiscard]] model_loading_error loading_error() const noexcept;
   [[nodiscard]] granit::result loading_result() const noexcept;
   [[nodiscard]] const std::string& loading_diagnostic() const noexcept;
-  [[nodiscard]] gltf::document_load_progress loading_progress() const noexcept;
+  [[nodiscard]] assets::asset_progress loading_progress() const noexcept;
 
   [[nodiscard]] granit::result tick(const application_tick_input& input, viewer_frame& output) {
     return core_.tick(input, output);

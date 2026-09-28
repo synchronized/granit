@@ -2,16 +2,13 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "application/application.h"
-#include "assets/asset_system_resolver.h"
-#include "gltf/importer.h"
-#include "imgui/imgui_font_atlas.h"
-#include "imgui/imgui_input.h"
-#include "imgui/imgui_texture_registry.h"
+#include "assets/asset_manager.h"
+#include "camera/orbit_camera.h"
+#include "camera/orbit_camera_input_accumulator.h"
+#include "gltf/scene.h"
 #include "model_viewer/gpu_scene.h"
+#include "tutorial/tutorial_runtime.h"
 
-#include <granit/integrations/imgui/renderer.hpp>
-#include <granit/math/functions.hpp>
-#include <granit/pipeline/canvas_draw_list.hpp>
 #include <granit/pipeline/render_pipeline.hpp>
 #include <granit/pipeline/scene.hpp>
 #include <imgui.h>
@@ -21,7 +18,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
-#include <numbers>
 #include <span>
 #include <string_view>
 #include <vector>
@@ -31,8 +27,6 @@
 #endif
 namespace {
 
-using granit::math::matrix4;
-
 int report_failure(std::string_view operation, granit::result result) {
   std::cerr << operation << " failed: " << result.message() << '\n';
   return 1;
@@ -40,16 +34,28 @@ int report_failure(std::string_view operation, granit::result result) {
 
 class tutorial_application final : public granit::example::application {
 public:
+  void set_smoke_test(bool enabled) noexcept { smoke_test_ = enabled; }
   [[nodiscard]] std::uint32_t pointer_events() const noexcept { return pointer_events_; }
-  [[nodiscard]] std::uint32_t canvas_items() const noexcept { return canvas_items_; }
+  [[nodiscard]] std::uint32_t canvas_items() const noexcept { return runtime_.canvas_items(); }
   [[nodiscard]] granit_result shutdown_reason() const noexcept { return shutdown_reason_.native(); }
 
 private:
   granit::result on_initialize() noexcept override {
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGui::GetIO().IniFilename = nullptr;
-    imgui_initialized_ = true;
+    if (!runtime_.initialized()) {
+      auto result = runtime_.initialize(renderer_owner());
+      if (result.failed())
+        return result;
+      model_asset_ = assets().load<granit::example::gltf::scene>(
+          granit::example::assets::asset_location::bundled("tutorials/02_pbr_assets/Suzanne.gltf"));
+    }
+    if (!model_asset_.ready()) {
+      if (model_asset_.status() == granit::example::assets::asset_status::failed ||
+          model_asset_.status() == granit::example::assets::asset_status::cancelled) {
+        std::cerr << "Failed to load Suzanne model: " << model_asset_.diagnostic() << '\n';
+        return granit::result::invalid_argument;
+      }
+      return granit::result::not_ready;
+    }
 
     last_operation_ = "loading Suzanne glTF";
     auto result = initialize_model();
@@ -58,33 +64,28 @@ private:
       result = pipeline_.initialize(renderer(), {.enable_fxaa = true, .enable_specular_aa = true});
     }
     if (result.ok()) {
-      last_operation_ = "creating canvas";
-      result = canvas_.initialize(renderer());
-    }
-    if (result.ok()) {
-      last_operation_ = "uploading ImGui font";
-      result = granit::example::imgui::initialize_font_atlas(
-          renderer_owner(), imgui_textures_, font_texture_, font_view_, font_sampler_);
-    }
-    if (result.ok()) {
       granit::texture_view_ref preview_view;
       granit::sampler_ref preview_sampler;
       result = model_gpu_.texture_binding(model_scene_.materials.front().base_color_texture, true,
                                           preview_view, preview_sampler);
       if (result.ok())
-        result =
-            imgui_textures_.register_texture(preview_view, preview_sampler, preview_texture_id_);
+        result = runtime_.register_texture(preview_view, preview_sampler, preview_texture_id_);
     }
+    if (result.ok() &&
+        !camera_.focus({.radius = 1.6F}, presentation_info().width, presentation_info().height))
+      result = granit::result::invalid_argument;
     return result;
   }
 
   granit::result on_window_event(const granit::window_event& event) noexcept override {
-    granit::example::imgui::process_window_event(event);
+    runtime_.process(event);
+    camera_input_.process(event);
     return granit::result::success;
   }
 
   granit::result on_input_event(const granit::input_event& event) noexcept override {
-    granit::example::imgui::process_input_event(event);
+    runtime_.process(event);
+    camera_input_.process(event, runtime_.wants_mouse(), runtime_.wants_keyboard());
     if (event.type == granit::input_event_type::pointer_moved ||
         event.type == granit::input_event_type::pointer_button ||
         event.type == granit::input_event_type::pointer_wheel) {
@@ -98,37 +99,19 @@ private:
     if (reason.failed())
       std::cerr << "window loop stopped during " << last_operation_ << ": " << reason.message()
                 << '\n';
-    imgui_textures_.clear();
+    runtime_.shutdown();
     static_cast<void>(scene_.reset());
     static_cast<void>(pipeline_.reset());
-    static_cast<void>(canvas_.destroy());
     model_gpu_.reset();
-    static_cast<void>(font_view_.reset());
-    static_cast<void>(font_texture_.reset());
-    static_cast<void>(font_sampler_.reset());
-    if (imgui_initialized_) {
-      ImGui::DestroyContext();
-      imgui_initialized_ = false;
-    }
   }
 
   granit::result initialize_model() noexcept {
-    const auto model_request =
-        assets().request({assets().bundled(), "tutorials/02_pbr_assets/Suzanne.gltf"});
-    if (!model_request ||
-        model_request->status() != granit::example::assets::asset_request_status::ready) {
-      std::cerr << "Failed to read Suzanne model\n";
+    const auto model_scene = model_asset_.value();
+    if (!model_scene) {
+      std::cerr << "Suzanne model asset is unavailable\n";
       return granit::result::invalid_argument;
     }
-
-    granit::example::assets::asset_system_resolver resolver{assets(), assets().bundled(),
-                                                            "tutorials/02_pbr_assets"};
-    const auto loaded =
-        granit::example::gltf::import_scene(model_request->bytes(), &resolver, model_scene_);
-    if (!loaded) {
-      std::cerr << "Failed to load Suzanne model: " << loaded.diagnostic << '\n';
-      return granit::result::invalid_argument;
-    }
+    model_scene_ = *model_scene;
     if (model_scene_.materials.empty()) {
       std::cerr << "Suzanne model does not contain a PBR material\n";
       return granit::result::invalid_argument;
@@ -145,18 +128,14 @@ private:
     if (result.failed())
       return result;
 
-    const auto aspect = static_cast<float>(presentation_info().width) /
-                        static_cast<float>(presentation_info().height);
-    const auto view = granit::math::translation_matrix4({0, 0, -4});
-    matrix4 projection{};
-    if (!granit::math::perspective_rh_zo(std::numbers::pi_v<float> / 3.0F, aspect, 0.1F, 100.0F,
-                                         projection))
+    granit::example::camera::camera_matrices matrices;
+    if (!camera_.matrices(presentation_info().width, presentation_info().height, matrices))
       return granit::result::invalid_argument;
     const granit::scene_view scene_view{
-        .view = view,
-        .projection = projection,
-        .view_projection = granit::math::multiply(projection, view),
-        .camera_position = {0, 0, 4},
+        .view = matrices.view,
+        .projection = matrices.projection,
+        .view_projection = matrices.view_projection,
+        .camera_position = matrices.position,
         .viewport_x = 0,
         .viewport_y = 0,
         .viewport_width = static_cast<float>(presentation_info().width),
@@ -192,13 +171,12 @@ private:
     auto result = app_window().get_state(window_state);
     if (result.failed())
       return result;
-    granit::example::imgui::begin_frame(window_state, delta_seconds);
-
-    ImGui::SetNextWindowPos({20, 20}, ImGuiCond_FirstUseEver);
-    ImGui::Begin("Granit PBR Assets");
-    ImGui::Text("Framebuffer: %u x %u", presentation_info().width, presentation_info().height);
-    ImGui::TextUnformatted("Render Pipeline -> Tone Mapping -> ImGui Canvas");
-    ImGui::Separator();
+    result = runtime_.begin_frame(window_state, delta_seconds,
+                                  {.name = "02 PBR Assets",
+                                   .description = "Render Pipeline -> Tone Mapping -> ImGui Canvas",
+                                   .frame = rendered_frames()});
+    if (result.failed())
+      return result;
     bool material_changed = ImGui::ColorEdit3("Base color", &model_base_color_.x);
     material_changed =
         ImGui::SliderFloat("Metallic", &model_metallic_, 0.0F, 1.0F) || material_changed;
@@ -206,28 +184,24 @@ private:
         ImGui::SliderFloat("Roughness", &model_roughness_, 0.04F, 1.0F) || material_changed;
     ImGui::TextUnformatted("Suzanne base color texture:");
     ImGui::Image(ImTextureRef{preview_texture_id_}, {64, 64});
-    ImGui::End();
-    ImGui::Render();
-
+    ImGui::Checkbox("Auto orbit", &auto_orbit_);
+    if (ImGui::Button("Reset camera"))
+      camera_.reset();
     result = material_changed ? update_model_material() : granit::result::success;
     if (result.ok())
-      result = canvas_.clear();
-    if (result.ok()) {
-      result = granit::integration::imgui::append_draw_data(
-          ImGui::GetDrawData(), canvas_, granit::example::imgui::texture_registry::resolver,
-          &imgui_textures_);
-    }
-    granit::canvas_draw_list_stats stats{};
-    if (result.ok())
-      result = canvas_.get_stats(stats);
-    if (result.ok())
-      canvas_items_ = stats.item_count;
+      result = runtime_.end_frame();
     return result;
   }
 
   granit::result on_render(granit::example::present_frame& frame) noexcept override {
+    camera_input_.begin_frame();
     last_operation_ = "building ImGui frame";
     auto result = build_imgui_frame(frame.delta_seconds);
+    const auto input = camera_input_.finish(runtime_.wants_mouse(), runtime_.wants_keyboard());
+    if (auto_orbit_ && !smoke_test_ && !camera_.orbit(frame.delta_seconds * 0.25F))
+      result = granit::result::invalid_argument;
+    if (result.ok() && !camera_.update(input, frame.swapchain.width, frame.swapchain.height))
+      result = granit::result::invalid_argument;
     const bool empty_frame = rendered_frames() == 0;
     if (result.ok())
       result = update_scene(!empty_frame);
@@ -246,29 +220,28 @@ private:
                                       ? std::span<const granit::render_pipeline_draw_binding>{}
                                       : std::span{model_gpu_.draw_bindings()};
       render_desc.frame = &frame.acquired;
-      render_desc.canvas = canvas_.ref();
+      render_desc.canvas = runtime_.canvas_ref();
       render_desc.clear_color = {0.025F, 0.03F, 0.045F, 1.0F};
       result = pipeline_.render(render_desc);
     }
     return result;
   }
 
+  granit::example::assets::asset_handle<granit::example::gltf::scene> model_asset_;
   granit::example::gltf::scene model_scene_;
   granit::example::model_viewer::gpu_scene model_gpu_;
   granit::render_pipeline pipeline_;
   granit::scene_snapshot scene_;
-  granit::canvas_draw_list canvas_;
-  granit::texture font_texture_;
-  granit::texture_view font_view_;
-  granit::sampler font_sampler_;
-  granit::example::imgui::texture_registry imgui_textures_;
+  granit::example::tutorial::tutorial_runtime runtime_;
+  granit::example::camera::orbit_camera camera_;
+  granit::example::camera::orbit_camera_input_accumulator camera_input_;
   ImTextureID preview_texture_id_{ImTextureID_Invalid};
   granit::math::float4 model_base_color_{1.0F, 1.0F, 1.0F, 1.0F};
   float model_metallic_{1.0F};
   float model_roughness_{1.0F};
-  bool imgui_initialized_{};
+  bool auto_orbit_{true};
+  bool smoke_test_{};
   std::uint32_t pointer_events_{};
-  std::uint32_t canvas_items_{};
   granit::result shutdown_reason_{granit::result::success};
   const char* last_operation_{"starting"};
 };
@@ -307,6 +280,7 @@ int main(int argument_count, char** arguments) {
   const bool smoke_test = argument_count == 2 && std::string_view{arguments[1]} == "--smoke-test";
   const std::string_view executable_path =
       argument_count > 0 && arguments[0] != nullptr ? arguments[0] : "";
+  application.set_smoke_test(smoke_test);
 
   const auto result =
       application.run({.executable_path = executable_path,

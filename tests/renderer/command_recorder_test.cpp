@@ -329,6 +329,52 @@ TEST_CASE("Buffer 命令拒绝 usage、范围、对齐和重叠错误", "[comman
   REQUIRE(recorder.end() == granit::result::success);
 }
 
+TEST_CASE("Indirect 命令校验 Buffer usage、范围与对齐", "[command][indirect][validation]") {
+  static_assert(sizeof(granit::draw_indirect_args) == 16);
+  static_assert(sizeof(granit::draw_indexed_indirect_args) == 20);
+  static_assert(sizeof(granit::dispatch_indirect_args) == 12);
+
+  granit::renderer renderer;
+  const auto initialized = renderer.initialize({.application_name = "granit-indirect-tests"});
+  if (environment_unavailable(initialized))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(initialized == granit::result::success);
+
+  granit::buffer indirect;
+  REQUIRE(indirect.initialize(renderer, {.size = 64,
+                                         .usage = granit::buffer_usage::indirect,
+                                         .location = granit::memory_location::device}) ==
+          granit::result::success);
+  granit::buffer storage;
+  REQUIRE(storage.initialize(renderer, {.size = 64,
+                                        .usage = granit::buffer_usage::storage,
+                                        .location = granit::memory_location::device}) ==
+          granit::result::success);
+  granit::command_recorder recorder;
+  REQUIRE(recorder.initialize(renderer) == granit::result::success);
+  REQUIRE(recorder.begin() == granit::result::success);
+
+  CHECK(recorder.draw_indirect(storage.ref()) == granit::result::invalid_argument);
+  CHECK(recorder.draw_indexed_indirect(storage.ref()) == granit::result::invalid_argument);
+  CHECK(recorder.dispatch_indirect(storage.ref()) == granit::result::invalid_argument);
+  CHECK(recorder.draw_indirect(indirect.ref(), 2) == granit::result::invalid_argument);
+  CHECK(recorder.draw_indirect(indirect.ref(), 52) == granit::result::invalid_argument);
+  CHECK(recorder.draw_indexed_indirect(indirect.ref(), 48) == granit::result::invalid_argument);
+  CHECK(recorder.dispatch_indirect(indirect.ref(), 56) == granit::result::invalid_argument);
+
+  granit::renderer other;
+  REQUIRE(other.initialize({.application_name = "granit-indirect-other"}) ==
+          granit::result::success);
+  granit::buffer foreign;
+  REQUIRE(foreign.initialize(other, {.size = 64,
+                                     .usage = granit::buffer_usage::indirect,
+                                     .location = granit::memory_location::device}) ==
+          granit::result::success);
+  CHECK(recorder.draw_indirect(foreign.ref()) == granit::result::invalid_handle);
+  CHECK(recorder.dispatch_indirect(foreign.ref()) == granit::result::invalid_handle);
+  REQUIRE(recorder.end() == granit::result::success);
+}
+
 TEST_CASE("Recorder 将 Texture 复制到 Readback Buffer", "[command][copy][texture]") {
   granit::renderer renderer;
   const auto result = renderer.initialize({.application_name = "granit-texture-readback-tests"});
@@ -371,12 +417,11 @@ TEST_CASE("Recorder 将 Texture 复制到 Readback Buffer", "[command][copy][tex
   const granit::texture_data_layout copy_layout{};
   const granit::texture_write_region copy_region{.width = 2, .height = 2};
   CHECK(recorder.copy_texture_to_buffer(granit::texture_ref::from_native(texture), readback.ref(),
-                                        copy_layout, copy_region) ==
-        granit::result::invalid_argument);
+                                        copy_layout,
+                                        copy_region) == granit::result::invalid_argument);
   REQUIRE(recorder.begin() == granit::result::success);
-  REQUIRE(recorder.copy_texture_to_buffer(granit::texture_ref::from_native(texture),
-                                          readback.ref(), copy_layout, copy_region) ==
-          granit::result::success);
+  REQUIRE(recorder.copy_texture_to_buffer(granit::texture_ref::from_native(texture), readback.ref(),
+                                          copy_layout, copy_region) == granit::result::success);
   REQUIRE(recorder.end() == granit::result::success);
   REQUIRE(recorder.submit() == granit::result::success);
   REQUIRE(recorder.reset() == granit::result::success);

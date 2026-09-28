@@ -4,7 +4,12 @@
 struct metaballs_uniforms {
   float2 resolution;
   float time;
-  float padding;
+  float surface_epsilon;
+  float4 camera_origin;
+  float4 camera_forward_max_steps;
+  float4 camera_right;
+  float4 camera_up_tan_half_fov;
+  float4 metaball_parameters;
 };
 
 [[vk::binding(0, 0)]] ConstantBuffer<metaballs_uniforms> scene;
@@ -28,11 +33,13 @@ float scene_distance(float3 sample_position) {
       float3(sin(time * 0.55 + 2.4) * 0.65, -0.35, cos(time * 0.6) * 0.35),
       float3(-0.5, sin(time * 0.75 + 1.7) * 0.55, cos(time * 0.5 + 0.8) * 0.3)};
 
-  float distance = length(sample_position - centers[0]) - 0.62;
-  [unroll]
+  float distance = length(sample_position - centers[0]) - scene.metaball_parameters.x;
+  [loop]
   for (uint index = 1; index < 5; ++index) {
-    const float sphere = length(sample_position - centers[index]) - 0.42;
-    distance = smooth_union(distance, sphere, 0.38);
+    if (index >= (uint)scene.metaball_parameters.z)
+      break;
+    const float sphere = length(sample_position - centers[index]) - scene.metaball_parameters.x;
+    distance = smooth_union(distance, sphere, scene.metaball_parameters.y);
   }
   return distance;
 }
@@ -52,15 +59,18 @@ float3 estimate_normal(float3 sample_position) {
 float4 fragment_main(float4 position : SV_Position) : SV_Target0 {
   float2 uv = (position.xy * 2.0 - scene.resolution) / scene.resolution.y;
   uv.y = -uv.y;
-  const float3 ray_origin = float3(0.0, 0.0, 3.6);
-  const float3 ray_direction = normalize(float3(uv, -1.9));
+  const float3 ray_origin = scene.camera_origin.xyz;
+  const float3 ray_direction =
+      normalize(scene.camera_forward_max_steps.xyz +
+                (scene.camera_right.xyz * uv.x + scene.camera_up_tan_half_fov.xyz * uv.y) *
+                    scene.camera_up_tan_half_fov.w);
 
   float travel = 0.0;
   bool hit = false;
   [loop]
-  for (uint step = 0; step < 96; ++step) {
+  for (uint step = 0; step < (uint)scene.camera_forward_max_steps.w; ++step) {
     const float distance = scene_distance(ray_origin + ray_direction * travel);
-    if (distance < 0.001) {
+    if (distance < scene.surface_epsilon) {
       hit = true;
       break;
     }

@@ -4,7 +4,11 @@
 struct raymarch_uniforms {
   float2 resolution;
   float time;
-  float padding;
+  float surface_epsilon;
+  float4 camera_origin;
+  float4 camera_forward_max_steps;
+  float4 camera_right;
+  float4 camera_up_tan_half_fov;
 };
 
 [[vk::binding(0, 0)]] ConstantBuffer<raymarch_uniforms> scene;
@@ -37,15 +41,18 @@ float3 estimate_normal(float3 sample_position) {
 float4 fragment_main(float4 position : SV_Position) : SV_Target0 {
   float2 uv = (position.xy * 2.0 - scene.resolution) / scene.resolution.y;
   uv.y = -uv.y;
-  const float3 ray_origin = float3(0.0, 0.25, 3.5);
-  const float3 ray_direction = normalize(float3(uv, -1.8));
+  const float3 ray_origin = scene.camera_origin.xyz;
+  const float3 ray_direction =
+      normalize(scene.camera_forward_max_steps.xyz +
+                (scene.camera_right.xyz * uv.x + scene.camera_up_tan_half_fov.xyz * uv.y) *
+                    scene.camera_up_tan_half_fov.w);
 
   float travel = 0.0;
   bool hit = false;
   [loop]
-  for (uint step = 0; step < 80; ++step) {
+  for (uint step = 0; step < (uint)scene.camera_forward_max_steps.w; ++step) {
     const float distance = scene_distance(ray_origin + ray_direction * travel);
-    if (distance < 0.001) {
+    if (distance < scene.surface_epsilon) {
       hit = true;
       break;
     }
