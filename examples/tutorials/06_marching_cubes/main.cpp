@@ -70,6 +70,7 @@ public:
   [[nodiscard]] std::uint32_t generated_vertices() const noexcept {
     return last_generation_.draw.vertex_count;
   }
+  [[nodiscard]] granit_result shutdown_result() const noexcept { return shutdown_result_; }
 
 private:
   granit::result on_initialize() noexcept override {
@@ -115,7 +116,8 @@ private:
     return result;
   }
 
-  void on_shutdown(granit::result) noexcept override {
+  void on_shutdown(granit::result reason) noexcept override {
+    shutdown_result_ = reason.native();
     runtime_.shutdown();
     static_cast<void>(readback_operation_.reset());
     static_cast<void>(readback_batch_.reset_handle());
@@ -619,6 +621,7 @@ private:
   bool auto_orbit_{};
   bool timestamps_enabled_{};
   bool smoke_test_{};
+  granit_result shutdown_result_{GRANIT_SUCCESS};
 };
 
 tutorial_application application;
@@ -640,6 +643,9 @@ extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_06_canvas_items() 
 }
 extern "C" EMSCRIPTEN_KEEPALIVE int granit_tutorial_06_ready() noexcept {
   return application.ready() ? 1 : 0;
+}
+extern "C" EMSCRIPTEN_KEEPALIVE granit_result granit_tutorial_06_shutdown_result() noexcept {
+  return application.shutdown_result();
 }
 #endif
 

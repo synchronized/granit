@@ -96,12 +96,14 @@ async function main() {
     } catch (error) {
       const state = await page.evaluate(({ ready, frames, feature, canvasItems }) => {
         const call = (name) => typeof Module[name] === "function" ? Module[name]() : null;
+        const shutdownResult = ready.replace(/ready$/, "shutdown_result");
         return {
           runtimeReady: Module.runtimeReady === true,
           ready: call(ready),
           frames: call(frames),
           feature: call(feature),
           canvasItems: call(canvasItems),
+          shutdownResult: call(shutdownResult),
         };
       }, readinessExports);
       throw new Error(
