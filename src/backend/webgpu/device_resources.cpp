@@ -363,7 +363,8 @@ granit_result create_texture(webgpu_instance_handle instance, const webgpu_textu
                              webgpu_texture* out_texture) noexcept {
   constexpr auto known_usage =
       GRANIT_WEBGPU_TEXTURE_USAGE_COPY_SRC_BIT | GRANIT_WEBGPU_TEXTURE_USAGE_COPY_DST_BIT |
-      GRANIT_WEBGPU_TEXTURE_USAGE_SAMPLED_BIT | GRANIT_WEBGPU_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT;
+      GRANIT_WEBGPU_TEXTURE_USAGE_SAMPLED_BIT | GRANIT_WEBGPU_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT |
+      GRANIT_WEBGPU_TEXTURE_USAGE_STORAGE_BIT;
   if (out_texture != nullptr) {
     *out_texture = 0;
   }
@@ -385,6 +386,9 @@ granit_result create_texture(webgpu_instance_handle instance, const webgpu_textu
        (desc->mip_level_count != 1 || array_layer_count != 1 ||
         dimension != GRANIT_WEBGPU_TEXTURE_DIMENSION_2D ||
         (desc->usage & GRANIT_WEBGPU_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT) == 0)) ||
+      ((desc->usage & GRANIT_WEBGPU_TEXTURE_USAGE_STORAGE_BIT) != 0 &&
+       desc->format != GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA8_UNORM &&
+       desc->format != GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA16_FLOAT) ||
       to_native_texture_format(desc->format) == WGPUTextureFormat_Undefined ||
       (desc->usage & ~known_usage) != 0) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -410,6 +414,8 @@ granit_result create_texture(webgpu_instance_handle instance, const webgpu_textu
     usage |= WGPUTextureUsage_TextureBinding;
   if ((desc->usage & GRANIT_WEBGPU_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT) != 0)
     usage |= WGPUTextureUsage_RenderAttachment;
+  if ((desc->usage & GRANIT_WEBGPU_TEXTURE_USAGE_STORAGE_BIT) != 0)
+    usage |= WGPUTextureUsage_StorageBinding;
   if (desc->mip_level_count > 1 && sample_count == 1 &&
       (desc->usage & GRANIT_WEBGPU_TEXTURE_USAGE_COPY_SRC_BIT) != 0 &&
       (desc->usage & GRANIT_WEBGPU_TEXTURE_USAGE_COPY_DST_BIT) != 0 &&
@@ -894,6 +900,15 @@ granit_result create_bind_group_layout(webgpu_instance_handle instance,
       case GRANIT_WEBGPU_BINDING_TYPE_STORAGE_BUFFER:
         entry.buffer.type = WGPUBufferBindingType_Storage;
         break;
+      case GRANIT_WEBGPU_BINDING_TYPE_STORAGE_TEXTURE:
+        if (source.storage_texture_access != GRANIT_WEBGPU_STORAGE_TEXTURE_ACCESS_WRITE_ONLY ||
+            (source.storage_texture_format != GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA8_UNORM &&
+             source.storage_texture_format != GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA16_FLOAT))
+          return GRANIT_ERROR_UNSUPPORTED;
+        entry.storageTexture.access = WGPUStorageTextureAccess_WriteOnly;
+        entry.storageTexture.format = to_native_texture_format(source.storage_texture_format);
+        entry.storageTexture.viewDimension = WGPUTextureViewDimension_2D;
+        break;
       case GRANIT_WEBGPU_BINDING_TYPE_SAMPLED_TEXTURE:
         entry.texture.sampleType = WGPUTextureSampleType_Float;
         entry.texture.viewDimension = WGPUTextureViewDimension_2D;
@@ -1032,13 +1047,18 @@ granit_result create_bind_group(webgpu_instance_handle instance, const webgpu_bi
         record.buffers.push_back(source.buffer);
       } else if (source.type == GRANIT_WEBGPU_BINDING_TYPE_SAMPLED_TEXTURE ||
                  source.type == GRANIT_WEBGPU_BINDING_TYPE_SAMPLED_TEXTURE_CUBE ||
-                 source.type == GRANIT_WEBGPU_BINDING_TYPE_SAMPLED_DEPTH_TEXTURE) {
+                 source.type == GRANIT_WEBGPU_BINDING_TYPE_SAMPLED_DEPTH_TEXTURE ||
+                 source.type == GRANIT_WEBGPU_BINDING_TYPE_STORAGE_TEXTURE) {
         const auto view = state.texture_views.find(source.texture_view);
         if (view == state.texture_views.end())
           return GRANIT_ERROR_INVALID_HANDLE;
         const auto texture = state.textures.find(view->second.texture);
-        if (texture == state.textures.end() ||
-            (texture->second.usage & GRANIT_WEBGPU_TEXTURE_USAGE_SAMPLED_BIT) == 0)
+        const auto required_usage = source.type == GRANIT_WEBGPU_BINDING_TYPE_STORAGE_TEXTURE
+                                        ? GRANIT_WEBGPU_TEXTURE_USAGE_STORAGE_BIT
+                                        : GRANIT_WEBGPU_TEXTURE_USAGE_SAMPLED_BIT;
+        if (texture == state.textures.end() || (texture->second.usage & required_usage) == 0 ||
+            (source.type == GRANIT_WEBGPU_BINDING_TYPE_STORAGE_TEXTURE &&
+             texture->second.format != declaration->storage_texture_format))
           return GRANIT_ERROR_INVALID_ARGUMENT;
         entry.textureView = view->second.view;
         record.texture_views.push_back(source.texture_view);

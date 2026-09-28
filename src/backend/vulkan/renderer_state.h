@@ -211,6 +211,7 @@ public:
                                   backend_bind_group_layout_resource& layout) noexcept;
   [[nodiscard]] granit_result
   create_bind_group_layout(std::span<const granit_bind_group_layout_entry> entries,
+                           std::span<const granit_storage_texture_binding_desc>,
                            backend_bind_group_layout_resource& layout) noexcept override {
     return create_native_bind_group_layout(entries, layout);
   }

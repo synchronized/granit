@@ -30,8 +30,8 @@
 namespace {
 
 TEST_CASE("Pipeline资源创建把空Renderer归类为无效句柄", "[pipeline][contract]") {
-  const granit_bind_group_layout_desc bind_layout_desc{GRANIT_BIND_GROUP_LAYOUT_DESC_VERSION_1_SIZE,
-                                                       0, nullptr, 0};
+  granit_bind_group_layout_desc bind_layout_desc = GRANIT_BIND_GROUP_LAYOUT_DESC_INIT;
+  bind_layout_desc.struct_size = GRANIT_BIND_GROUP_LAYOUT_DESC_VERSION_1_SIZE;
   granit_bind_group_layout bind_layout = UINT64_C(1);
   CHECK(granit_bind_group_layout_create(GRANIT_NULL_HANDLE, &bind_layout_desc, &bind_layout) ==
         GRANIT_ERROR_INVALID_HANDLE);
@@ -205,7 +205,12 @@ TEST_CASE("Pipeline Layout 保持 Bind Group Layout 依赖", "[pipeline][bind-gr
                                       .visibility = granit::shader_stage_flags::fragment},
       granit::bind_group_layout_entry{.binding = 2,
                                       .type = granit::binding_type::sampler,
-                                      .visibility = granit::shader_stage_flags::fragment}};
+                                      .visibility = granit::shader_stage_flags::fragment},
+      granit::bind_group_layout_entry{
+          .binding = 3,
+          .type = granit::binding_type::storage_texture,
+          .visibility = granit::shader_stage_flags::compute,
+          .storage_texture_format = granit::texture_format::rgba8_unorm}};
   granit::bind_group_layout group_layout;
   REQUIRE(group_layout.initialize(renderer, entries) == granit::result::success);
   const auto handle = group_layout.ref();
@@ -238,6 +243,32 @@ TEST_CASE("Bind Group Layout 拒绝重复 binding 和非法可见阶段", "[pipe
   desc.entries = &dynamic_array;
   CHECK(granit_bind_group_layout_create(UINT64_C(1), &desc, &layout) ==
         GRANIT_ERROR_INVALID_ARGUMENT);
+}
+
+TEST_CASE("Bind Group Layout 校验 Storage Texture 元数据", "[pipeline][validation]") {
+  const granit_bind_group_layout_entry entry{0, GRANIT_BINDING_TYPE_STORAGE_TEXTURE, 1,
+                                              GRANIT_SHADER_STAGE_COMPUTE_BIT};
+  granit_bind_group_layout_desc desc = GRANIT_BIND_GROUP_LAYOUT_DESC_INIT;
+  desc.entry_count = 1;
+  desc.entries = &entry;
+  granit_bind_group_layout layout = GRANIT_NULL_HANDLE;
+  CHECK(granit_bind_group_layout_create(UINT64_C(1), &desc, &layout) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+
+  granit_storage_texture_binding_desc storage{0, GRANIT_TEXTURE_FORMAT_UNDEFINED,
+                                              GRANIT_STORAGE_TEXTURE_ACCESS_WRITE_ONLY, 0};
+  desc.storage_texture_count = 1;
+  desc.storage_textures = &storage;
+  CHECK(granit_bind_group_layout_create(UINT64_C(1), &desc, &layout) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+
+  storage.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+  CHECK(granit_bind_group_layout_create(UINT64_C(1), &desc, &layout) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+
+  desc.struct_size = GRANIT_BIND_GROUP_LAYOUT_DESC_VERSION_1_SIZE;
+  CHECK(granit_bind_group_layout_create(UINT64_C(1), &desc, &layout) ==
+        GRANIT_ERROR_INVALID_HANDLE);
 }
 
 TEST_CASE("动态 Uniform Offset 贯通 Bind Group 与图形计算命令录制", "[pipeline][bind-group]") {

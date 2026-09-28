@@ -74,6 +74,8 @@ webgpu_renderer_state::texture_format_capabilities(granit_texture_format format)
         GRANIT_TEXTURE_USAGE_SAMPLED_BIT | GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT;
     result.features = GRANIT_TEXTURE_FORMAT_FEATURE_FILTERABLE_BIT;
     result.sample_counts = capabilities_.framebuffer_sample_counts;
+    if (format == GRANIT_TEXTURE_FORMAT_RGBA8_UNORM || format == GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT)
+      result.supported_usage |= GRANIT_TEXTURE_USAGE_STORAGE_BIT;
     break;
   case GRANIT_TEXTURE_FORMAT_D32_FLOAT:
     result.supported_usage =

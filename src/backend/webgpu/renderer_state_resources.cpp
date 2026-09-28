@@ -5,6 +5,7 @@
 
 #include "core/texture_format.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstring>
@@ -237,6 +238,8 @@ webgpu_texture_usage to_usage(granit_texture_usage usage) noexcept {
     result |= GRANIT_WEBGPU_TEXTURE_USAGE_COPY_DST_BIT;
   if ((usage & GRANIT_TEXTURE_USAGE_SAMPLED_BIT) != 0)
     result |= GRANIT_WEBGPU_TEXTURE_USAGE_SAMPLED_BIT;
+  if ((usage & GRANIT_TEXTURE_USAGE_STORAGE_BIT) != 0)
+    result |= GRANIT_WEBGPU_TEXTURE_USAGE_STORAGE_BIT;
   if ((usage & (GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT |
                 GRANIT_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) != 0)
     result |= GRANIT_WEBGPU_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT;
@@ -738,6 +741,7 @@ webgpu_renderer_state::allocate_bind_group_layout_resource() {
 
 granit_result webgpu_renderer_state::create_bind_group_layout(
     std::span<const granit_bind_group_layout_entry> entries,
+    std::span<const granit_storage_texture_binding_desc> storage_textures,
     backend_bind_group_layout_resource& resource) noexcept {
   if (!capabilities_initialized_)
     return GRANIT_ERROR_NOT_READY;
@@ -750,6 +754,8 @@ granit_result webgpu_renderer_state::create_bind_group_layout(
     native_entries.reserve(entries.size());
     for (const auto& entry : entries) {
       webgpu_binding_type type{};
+      webgpu_texture_format storage_format{};
+      webgpu_storage_texture_access storage_access{};
       switch (entry.type) {
       case GRANIT_BINDING_TYPE_UNIFORM_BUFFER:
         type = GRANIT_WEBGPU_BINDING_TYPE_UNIFORM_BUFFER;
@@ -760,6 +766,21 @@ granit_result webgpu_renderer_state::create_bind_group_layout(
       case GRANIT_BINDING_TYPE_STORAGE_BUFFER:
         type = GRANIT_WEBGPU_BINDING_TYPE_STORAGE_BUFFER;
         break;
+      case GRANIT_BINDING_TYPE_STORAGE_TEXTURE: {
+        const auto storage =
+            std::find_if(storage_textures.begin(), storage_textures.end(),
+                         [&](const auto& candidate) { return candidate.binding == entry.binding; });
+        if (storage == storage_textures.end() ||
+            storage->access != GRANIT_STORAGE_TEXTURE_ACCESS_WRITE_ONLY)
+          return GRANIT_ERROR_UNSUPPORTED;
+        storage_format = to_format(storage->format);
+        if (storage_format != GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA8_UNORM &&
+            storage_format != GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA16_FLOAT)
+          return GRANIT_ERROR_UNSUPPORTED;
+        type = GRANIT_WEBGPU_BINDING_TYPE_STORAGE_TEXTURE;
+        storage_access = GRANIT_WEBGPU_STORAGE_TEXTURE_ACCESS_WRITE_ONLY;
+        break;
+      }
       case GRANIT_BINDING_TYPE_SAMPLED_TEXTURE:
         type = GRANIT_WEBGPU_BINDING_TYPE_SAMPLED_TEXTURE;
         break;
@@ -780,7 +801,8 @@ granit_result webgpu_renderer_state::create_bind_group_layout(
       }
       if (entry.array_count != 1)
         return GRANIT_ERROR_UNSUPPORTED;
-      native_entries.push_back({entry.binding, type, entry.visibility, entry.array_count});
+      native_entries.push_back({entry.binding, type, entry.visibility, entry.array_count,
+                                storage_format, storage_access});
     }
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
@@ -834,7 +856,8 @@ webgpu_renderer_state::create_bind_group(backend_bind_group_layout_resource& lay
         break;
       case backend_binding_type::sampled_texture:
       case backend_binding_type::sampled_texture_cube:
-      case backend_binding_type::sampled_depth_texture: {
+      case backend_binding_type::sampled_depth_texture:
+      case backend_binding_type::storage_texture: {
         const auto* view = dynamic_cast<webgpu_texture_view_resource*>(write.texture_view);
         if (view == nullptr)
           return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -842,6 +865,8 @@ webgpu_renderer_state::create_bind_group(backend_bind_group_layout_resource& lay
                          ? GRANIT_WEBGPU_BINDING_TYPE_SAMPLED_TEXTURE_CUBE
                      : write.type == backend_binding_type::sampled_depth_texture
                          ? GRANIT_WEBGPU_BINDING_TYPE_SAMPLED_DEPTH_TEXTURE
+                     : write.type == backend_binding_type::storage_texture
+                         ? GRANIT_WEBGPU_BINDING_TYPE_STORAGE_TEXTURE
                          : GRANIT_WEBGPU_BINDING_TYPE_SAMPLED_TEXTURE;
         entry.texture_view = view->handle_;
         break;

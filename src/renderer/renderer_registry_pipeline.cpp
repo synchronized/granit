@@ -103,10 +103,10 @@ granit_result renderer_registry::destroy_shader(granit_renderer renderer, granit
   return GRANIT_SUCCESS;
 }
 
-granit_result
-renderer_registry::create_bind_group_layout(granit_renderer renderer,
-                                            std::span<const granit_bind_group_layout_entry> entries,
-                                            granit_bind_group_layout& layout) {
+granit_result renderer_registry::create_bind_group_layout(
+    granit_renderer renderer, std::span<const granit_bind_group_layout_entry> entries,
+    std::span<const granit_storage_texture_binding_desc> storage_textures,
+    granit_bind_group_layout& layout) {
   try {
     const auto interfaces = acquire_backend_interfaces(renderer);
     if (!interfaces)
@@ -120,8 +120,10 @@ renderer_registry::create_bind_group_layout(granit_renderer renderer,
     record->resource_api = resource_api;
     record->retirement = interfaces->retirement;
     record->entries.assign(entries.begin(), entries.end());
+    record->storage_textures.assign(storage_textures.begin(), storage_textures.end());
     record->native = record->resource_api->allocate_bind_group_layout_resource();
-    const auto result = record->resource_api->create_bind_group_layout(entries, *record->native);
+    const auto result =
+        record->resource_api->create_bind_group_layout(entries, storage_textures, *record->native);
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};
@@ -291,6 +293,14 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
               sampled ? GRANIT_TEXTURE_USAGE_SAMPLED_BIT : GRANIT_TEXTURE_USAGE_STORAGE_BIT;
           if ((found->second->texture->desc.usage & required_usage) == 0)
             return GRANIT_ERROR_INVALID_ARGUMENT;
+          if (!sampled) {
+            const auto storage = std::find_if(
+                layout->storage_textures.begin(), layout->storage_textures.end(),
+                [&](const auto& value) { return value.binding == declaration->binding; });
+            if (storage != layout->storage_textures.end() &&
+                storage->format != found->second->texture->desc.format)
+              return GRANIT_ERROR_INVALID_ARGUMENT;
+          }
           write.type = declaration->type == GRANIT_BINDING_TYPE_SAMPLED_TEXTURE_CUBE
                            ? backend_binding_type::sampled_texture_cube
                        : declaration->type == GRANIT_BINDING_TYPE_SAMPLED_DEPTH_TEXTURE

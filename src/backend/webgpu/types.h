@@ -140,6 +140,7 @@ typedef uint32_t webgpu_texture_usage;
 #define GRANIT_WEBGPU_TEXTURE_USAGE_COPY_DST_BIT UINT32_C(0x00000002)
 #define GRANIT_WEBGPU_TEXTURE_USAGE_SAMPLED_BIT UINT32_C(0x00000004)
 #define GRANIT_WEBGPU_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT UINT32_C(0x00000008)
+#define GRANIT_WEBGPU_TEXTURE_USAGE_STORAGE_BIT UINT32_C(0x00000010)
 
 typedef uint32_t webgpu_texture_format;
 
@@ -246,12 +247,20 @@ typedef uint32_t webgpu_binding_type;
 #define GRANIT_WEBGPU_BINDING_TYPE_SAMPLER UINT32_C(5)
 #define GRANIT_WEBGPU_BINDING_TYPE_COMPARISON_SAMPLER UINT32_C(7)
 #define GRANIT_WEBGPU_BINDING_TYPE_SAMPLED_DEPTH_TEXTURE UINT32_C(8)
+#define GRANIT_WEBGPU_BINDING_TYPE_STORAGE_TEXTURE UINT32_C(9)
+
+typedef uint32_t webgpu_storage_texture_access;
+#define GRANIT_WEBGPU_STORAGE_TEXTURE_ACCESS_WRITE_ONLY UINT32_C(1)
+#define GRANIT_WEBGPU_STORAGE_TEXTURE_ACCESS_READ_ONLY UINT32_C(2)
+#define GRANIT_WEBGPU_STORAGE_TEXTURE_ACCESS_READ_WRITE UINT32_C(3)
 
 typedef struct webgpu_bind_group_layout_entry {
   uint32_t binding;
   webgpu_binding_type type;
   uint32_t visibility;
   uint32_t array_count;
+  webgpu_texture_format storage_texture_format;
+  webgpu_storage_texture_access storage_texture_access;
 } webgpu_bind_group_layout_entry;
 
 typedef struct webgpu_bind_group_layout_desc {

@@ -12,6 +12,9 @@ Vulkan Pipeline、Pipeline Layout 或 Dynamic Rendering 结构。
 - 使用 Buffer、Texture View 和 Sampler 创建不可变 Bind Group。
 - 支持 Dynamic Uniform Buffer；创建 Bind Group 时固定基础 Offset 与 Range，绑定命令选择动态
   Offset。首版不支持动态 Uniform Buffer 数组。
+- Storage Texture 在 Layout V2 中声明格式与访问模式。WebGPU 基线支持 Write-Only 的 RGBA8
+  UNORM 与 RGBA16 Float；Read-Only 和 Read-Write 目前明确返回不支持。V1 Layout 保持 Vulkan
+  兼容，但缺少元数据时不能用于 WebGPU Storage Texture。
 - 使用 Vertex Shader、Fragment Shader、颜色格式、可选深度模板格式和样本数创建 Pipeline。
 - 公共描述可以表达点、线和三角形拓扑，以及遵循统一[坐标系统约定](coordinates.md)的正面绕序、
   剔除模式和 Fill/Line/Point 多边形模式。浏览器 WebGPU 支持全部公开拓扑，但 Indexed Strip 因
@@ -38,7 +41,7 @@ Viewport、Scissor、Vertex/Index Buffer、Draw 和 Draw Indexed 已经实现。
 支持为每个 Vertex Buffer binding 指定 stride、per-vertex/per-instance 步进，以及 location、
 format 和 offset。未提供 Vertex Buffer Layout 时仍可使用 Shader 内的顶点序号生成位置。
 Vulkan 的非实心 Line/Point 模式依赖设备能力；浏览器 WebGPU 没有同等 Polygon Mode。当前 WebGPU
-还限制单颜色附件、D32 Float 深度、1x/4x 采样和部分颜色格式；不满足后端能力时 Pipeline 创建返回
+还限制 D32 Float 深度、1x/4x 采样和部分颜色格式；不满足后端能力时 Pipeline 创建返回
 `GRANIT_ERROR_UNSUPPORTED`，不会静默替换状态。
 未显式提供深度状态时，有深度格式的 Pipeline 默认启用测试和写入并使用 Less Or Equal；未提供
 颜色混合状态时默认关闭混合并写入 RGBA。

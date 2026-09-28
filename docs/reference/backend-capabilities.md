@@ -36,7 +36,7 @@
 | 直接 Shader 输入 | 仅 SPIR-V | 仅 WGSL | 格式与后端不匹配返回不支持 |
 | Uniform、Storage Buffer | 支持 | 支持 | 受绑定范围和对齐限制 |
 | 采样 Texture、Depth Texture、Sampler | 支持 | 支持 | Layout 与资源类型不匹配返回无效参数 |
-| Storage Texture Binding | 支持 | 不支持 | WebGPU Layout 创建返回不支持 |
+| Storage Texture Binding | 支持 | 支持 Write-Only RGBA8/RGBA16F | Read-Only 与 Read-Write 返回不支持 |
 | Binding 资源数组 | 支持 | 不支持 | WebGPU 要求 `array_count == 1` |
 | Dynamic Uniform Buffer | 支持 | 支持 | Offset 必须满足设备对齐 |
 | Graphics Pipeline | 支持 | 支持当前子集 | 具体差异见下表 |
