@@ -109,6 +109,27 @@ async function main() {
       );
     }
 
+    if (tutorialNumber === "07") {
+      const deferredState = await page.evaluate(() => ({
+        passes: Module._granit_tutorial_07_pass_count?.(),
+        lights: Module._granit_tutorial_07_light_count?.(),
+        outputMode: Module._granit_tutorial_07_output_mode?.(),
+      }));
+      if (deferredState.passes !== 3 || deferredState.lights < 1 ||
+          deferredState.outputMode > 3) {
+        throw new Error(`Deferred 教程状态无效：${JSON.stringify(deferredState)}`);
+      }
+      for (let mode = 0; mode < 4; ++mode) {
+        await page.evaluate((value) => Module._granit_tutorial_07_set_output_mode(value), mode);
+        await page.waitForFunction(
+          (value) => Module._granit_tutorial_07_output_mode() === value,
+          mode,
+          { timeout: 5_000 },
+        );
+      }
+      await page.evaluate(() => Module._granit_tutorial_07_set_output_mode(0));
+    }
+
     const canvas = page.locator("#canvas");
     let center = [];
     let corner = [];

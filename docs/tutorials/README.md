@@ -3,7 +3,7 @@
 
 # Granit 特性教程
 
-教程通过六个可运行程序介绍 Granit 的主要渲染路径和单项图形特性。每个程序都能独立阅读，
+教程通过七个可运行程序介绍 Granit 的主要渲染路径和单项图形特性。每个程序都能独立阅读，
 不要求按多个近似项目逐章复制代码。完整应用和集成展示位于
 [Samples 指南](../guides/examples.md)，接口细节以 [Reference](../README.md#接口参考) 为准。
 
@@ -15,8 +15,9 @@
 | [04：Raymarch](04-raymarch.md) | 全屏三角形、SDF、法线估计、Resize | 程序化球体、方块和地面 | [04_raymarch](../../examples/tutorials/04_raymarch) |
 | [05：Metaballs](05-metaballs.md) | 平滑 SDF 并集、动画参数、隐式曲面光照 | 五个融合的动画球体 | [05_metaballs](../../examples/tutorials/05_metaballs) |
 | [06：GPU Marching Cubes](06-marching-cubes.md) | Compute、Transient Buffer、Atomic、Indirect Draw | GPU 生成的动态 Metaballs 网格 | [06_marching_cubes](../../examples/tutorials/06_marching_cubes) |
+| [07：Deferred Rendering](07-deferred.md) | MRT、G-buffer、中间纹理采样、多 Pass、Resize | 多点光源照亮的实例场景与 G-buffer 调试视图 | [07_deferred](../../examples/tutorials/07_deferred) |
 
-六个教程都复用仓库私有的 `examples/common/application`。它只处理 Window、Renderer 异步初始化、
+七个教程都复用仓库私有的 `examples/common/application`。它只处理 Window、Renderer 异步初始化、
 Surface、Swapchain、事件循环、Resize、Acquire 与 Present；Shader、资源、命令录制和场景仍留在
 教程中，便于直接观察 Granit 公共 C++ 接口。
 

@@ -9,21 +9,18 @@
 
 ## 当前计划
 
-当前三项计划共同组成 [v0.39.0](../versions/v0.39.0.md)，按 S-72 → S-73 → S-74 实施；S-72 与
-S-73 只做阶段验收，S-74 完成后统一发布。
+当前计划组成 [v0.40.0](../versions/v0.40.0.md)。
 
-- [S-72：0.39.0 Asset Manager 与任务系统](S-72-0.39.0-asset-manager-and-task-system.md)——以
-  `asset_manager::load<T>()` 作为示例唯一资产入口，通过显式注册组合平台 Source 与格式 Loader，
-  提供全异步句柄、单资源/Group 进度，并提取由应用拥有、可注入的 Task System；已完成阶段验收。
-- [S-73：0.39.0 统一交互式 Tutorial](S-73-0.39.0-unified-interactive-tutorials.md)——统一五个
-  现有 Tutorial 的 Granit ImGui 主题、性能面板、公共 Orbit Camera 和章节参数，补齐 Mesh 动态
-  实例 Draw 与 Instancing 对照路径，并保持 Desktop/Web 相同交互与确定性 Smoke。
-- [S-74：0.39.0 GPU Marching Cubes 与动态几何](S-74-0.39.0-gpu-marching-cubes.md)——补齐
-  Indirect 命令与帧级 Transient Buffer，以 Compute 生成显式网格并由 Draw Indirect 跨后端绘制，
-  验证完整 GPU 动态几何链。
+- [S-75：0.40.0 Deferred 与多 Pass 渲染](S-75-0.40.0-deferred-rendering.md)——新增
+  `07_deferred`，以 MRT G-buffer、全屏光照、调试视图和 Resize 验证现有跨后端多 Pass 能力；
+  本版本不预设公共 Render Graph 或 Transient Texture。
 
 ## 最近完成
 
+- [S-72：Asset Manager 与任务系统](S-72-0.39.0-asset-manager-and-task-system.md)、
+  [S-73：统一交互式 Tutorial](S-73-0.39.0-unified-interactive-tutorials.md)与
+  [S-74：GPU Marching Cubes](S-74-0.39.0-gpu-marching-cubes.md)——统一示例资产、任务和交互基础，
+  补齐 Indirect 与 Frame Transient Buffer，并发布 `v0.39.0`。
 - [S-71：0.38.0 跨后端能力契约与 WebGPU 补齐](S-71-0.38.0-webgpu-capability-parity.md)——建立
   Vulkan/WebGPU 正式能力矩阵，补齐可可靠表达的 WebGPU 能力，明确固有限制，并发布
   `v0.38.0`。

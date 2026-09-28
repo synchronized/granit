@@ -1,0 +1,32 @@
+{
+  "format_version": 1,
+  "name": "tutorial_deferred",
+  "target_profile": "portable",
+  "target_backends": ["vulkan", "webgpu"],
+  "shaders": [
+    {
+      "name": "deferred.geometry_vertex",
+      "source": "deferred.hlsl",
+      "stage": "vertex",
+      "entry_point": "geometry_vertex_main"
+    },
+    {
+      "name": "deferred.geometry_fragment",
+      "source": "deferred.hlsl",
+      "stage": "fragment",
+      "entry_point": "geometry_fragment_main"
+    },
+    {
+      "name": "deferred.lighting_vertex",
+      "source": "deferred.hlsl",
+      "stage": "vertex",
+      "entry_point": "lighting_vertex_main"
+    },
+    {
+      "name": "deferred.lighting_fragment",
+      "source": "deferred.hlsl",
+      "stage": "fragment",
+      "entry_point": "lighting_fragment_main"
+    }
+  ]
+}

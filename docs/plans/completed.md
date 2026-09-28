@@ -133,3 +133,6 @@
 - [S-69：0.36.0 公共 API 稳定边界与最小数学库](S-69-0.36.0-api-stability-and-math.md)
 - [S-70：0.37.0 特性教程与 API 能力验证](S-70-0.37.0-feature-tutorials.md)
 - [S-71：0.38.0 跨后端能力契约与 WebGPU 补齐](S-71-0.38.0-webgpu-capability-parity.md)
+- [S-72：0.39.0 Asset Manager 与任务系统](S-72-0.39.0-asset-manager-and-task-system.md)
+- [S-73：0.39.0 统一交互式 Tutorial](S-73-0.39.0-unified-interactive-tutorials.md)
+- [S-74：0.39.0 GPU Marching Cubes 与动态几何](S-74-0.39.0-gpu-marching-cubes.md)

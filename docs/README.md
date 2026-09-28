@@ -18,7 +18,8 @@
 5. [Raymarch](tutorials/04-raymarch.md)
 6. [Metaballs](tutorials/05-metaballs.md)
 7. [GPU Marching Cubes](tutorials/06-marching-cubes.md)
-8. [运行跨后端 Model Viewer](guides/model-viewer.md)
+8. [Deferred Rendering](tutorials/07-deferred.md)
+9. [运行跨后端 Model Viewer](guides/model-viewer.md)
 
 ### 使用核心 Renderer
 
@@ -66,7 +67,7 @@
 
 ## 教程
 
-教程以六个完整的可运行目标介绍低层 Renderer、高级 Render Pipeline 与单项图形特性。章节顺序、
+教程以七个完整的可运行目标介绍低层 Renderer、高级 Render Pipeline 与单项图形特性。章节顺序、
 配套源码和平台验证范围统一由教程系列说明维护；完整应用进入 Samples，API 细节以对应 Reference
 为准。
 
@@ -77,6 +78,7 @@
 - [04：Raymarch](tutorials/04-raymarch.md)
 - [05：Metaballs](tutorials/05-metaballs.md)
 - [06：GPU Marching Cubes](tutorials/06-marching-cubes.md)
+- [07：Deferred Rendering](tutorials/07-deferred.md)
 
 ## API 与行为参考
 
