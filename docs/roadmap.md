@@ -29,39 +29,24 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段通过可运行�
 
 ## 当前计划
 
-当前版本的固定范围、依赖顺序和发布门槛见
-[v0.39.0 版本规划](versions/v0.39.0.md)。实施顺序为 S-72 → S-73 → S-74，三个任务完成后统一发布。
+当前版本的固定范围和发布门槛见 [v0.40.0 版本规划](versions/v0.40.0.md)。
 
-### S-72：0.39.0 Asset Manager 与任务系统
+### S-75：0.40.0 Deferred 与多 Pass 渲染
 
-**状态：已完成，P1。**
+**状态：已确认，P1。**
 
-[S-72](plans/S-72-0.39.0-asset-manager-and-task-system.md) 将 Example Asset System 收敛为单一
-`asset_manager::load<T>()` 入口，以显式注册组合平台 Source 与格式 Loader，统一异步句柄、依赖、
-缓存、取消及单资源/Group 进度。同时提取由应用拥有、可注入的示例 Task System，保持 GPU 渲染任务
-的专用顺序和线程语义。本任务未新增公共 Asset Manager 或 Executor ABI，验收结果见
-[S-72 实施记录](records/2026-09-28-s72-asset-manager-acceptance.md)。
-
-### S-73：0.39.0 统一交互式 Tutorial
-
-**状态：已完成，P1。**
-
-[S-73](plans/S-73-0.39.0-unified-interactive-tutorials.md) 将统一五个现有 Tutorial 的 Granit ImGui
-主题、公共性能面板、Orbit Camera 和章节参数。Cube、PBR Assets、Instancing、Raymarch 与
-Metaballs 将在 Desktop 与 Web 使用相同交互路径，并保留确定性的自动 Smoke；Instancing 同时补齐
-逐次 Draw 的动态实例范围，并提供单次实例化 Draw 与逐对象 Draw 的指标对照。验收结果见
-[S-73 实施记录](records/2026-09-28-s73-unified-tutorials-acceptance.md)。
-
-### S-74：0.39.0 GPU Marching Cubes 与动态几何
-
-**状态：已完成本地验收，等待 v0.39.0 发布，P1。**
-
-[S-74](plans/S-74-0.39.0-gpu-marching-cubes.md) 将补齐单次 Indirect 命令和帧级 Transient Buffer，
-通过 Compute 生成密度场与显式网格，再以 Draw Indirect 跨后端绘制。该教程直接验证动态几何、
-Atomic 容量保护和 Compute → Graphics 同步，并与 SDF Raymarch Metaballs 形成可运行对照。
-本地验收结果见 [S-74 实施记录](records/2026-09-28-s74-gpu-marching-cubes-acceptance.md)。
+[S-75](plans/S-75-0.40.0-deferred-rendering.md) 将新增 `07_deferred`，以 MRT G-buffer、全屏光照、
+调试视图和 Resize 验证两个后端的多 Pass 资源工作流。实现优先使用现有 API，并用实际重复问题决定
+后续是否需要 Transient Texture 或 Render Graph；本版本不预设新的公共抽象。
 
 ## 最近完成
+
+### v0.39.0：统一示例基础与动态 GPU 工作流
+
+**状态：已发布。**
+
+[v0.39.0](versions/v0.39.0.md) 完成 S-72～S-74，统一示例资产、任务和交互基础，补齐公共 Indirect、
+Frame Transient Buffer 与 GPU Marching Cubes Tutorial。最终范围和验收证据由版本文档统一索引。
 
 ### S-71：0.38.0 跨后端能力契约与 WebGPU 补齐
 
