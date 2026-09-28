@@ -26,6 +26,7 @@ public:
   [[nodiscard]] asset_scheme scheme() const noexcept { return scheme_; }
   [[nodiscard]] std::string_view path() const noexcept { return path_; }
   [[nodiscard]] std::string key() const;
+  [[nodiscard]] asset_location resolve(std::string_view relative_path) const;
 
 private:
   asset_location(asset_scheme scheme, std::string path, bool valid) noexcept

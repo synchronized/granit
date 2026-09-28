@@ -30,6 +30,19 @@ struct asset_decode_result {
   }
 };
 
+struct asset_dependency_data {
+  std::string uri;
+  std::vector<std::byte> bytes;
+};
+
+struct asset_discovery_result {
+  asset_error error{asset_error::none};
+  std::vector<std::string> dependencies;
+  std::string diagnostic;
+
+  [[nodiscard]] bool succeeded() const noexcept { return error == asset_error::none; }
+};
+
 /** 只负责把已经读取的字节解码为一个目标 CPU 资产。 */
 class asset_loader {
 public:
@@ -37,17 +50,22 @@ public:
   [[nodiscard]] virtual std::type_index target_type() const noexcept = 0;
   [[nodiscard]] virtual bool accepts(const asset_location& location,
                                      std::span<const std::byte> bytes) const noexcept = 0;
-  [[nodiscard]] virtual asset_decode_result decode(const asset_location& location,
-                                                   std::span<const std::byte> bytes) noexcept = 0;
+  [[nodiscard]] virtual asset_discovery_result
+  discover_dependencies(const asset_location& location, std::span<const std::byte> bytes) noexcept;
+  [[nodiscard]] virtual asset_decode_result
+  decode(const asset_location& location, std::span<const std::byte> bytes,
+         std::span<const asset_dependency_data> dependencies) noexcept = 0;
 };
 
 /** Blob Loader 不解释内容，只把读取结果移入稳定 CPU 资产。 */
 class blob_asset_loader final : public asset_loader {
 public:
   [[nodiscard]] std::type_index target_type() const noexcept override;
-  [[nodiscard]] bool accepts(const asset_location&, std::span<const std::byte>) const noexcept override;
-  [[nodiscard]] asset_decode_result decode(const asset_location&,
-                                           std::span<const std::byte> bytes) noexcept override;
+  [[nodiscard]] bool accepts(const asset_location&,
+                             std::span<const std::byte>) const noexcept override;
+  [[nodiscard]] asset_decode_result
+  decode(const asset_location&, std::span<const std::byte> bytes,
+         std::span<const asset_dependency_data>) noexcept override;
 };
 
 } // namespace granit::example::assets

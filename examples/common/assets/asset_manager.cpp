@@ -5,6 +5,7 @@
 
 #include <mutex>
 #include <new>
+#include <span>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -28,6 +29,9 @@ struct request_key_hash {
 void fail(const std::shared_ptr<detail::asset_state>& state, asset_error error,
           std::string diagnostic) {
   std::scoped_lock lock{state->mutex};
+  const auto status = state->status.load(std::memory_order_acquire);
+  if (status == asset_status::ready || status == asset_status::failed)
+    return;
   state->error = error;
   state->diagnostic = std::move(diagnostic);
   state->progress.stage = asset_stage::complete;
@@ -36,8 +40,186 @@ void fail(const std::shared_ptr<detail::asset_state>& state, asset_error error,
 
 } // namespace
 
-struct asset_manager::implementation {
+struct asset_manager::implementation : std::enable_shared_from_this<implementation> {
   explicit implementation(tasks::task_system& task_system) : tasks{task_system} {}
+
+  struct dependency_batch {
+    std::mutex mutex;
+    std::shared_ptr<std::vector<std::byte>> document;
+    std::vector<asset_dependency_data> dependencies;
+    std::size_t completed{};
+    bool failed{};
+  };
+
+  void post_failure(const std::shared_ptr<detail::asset_state>& state, asset_error error,
+                    std::string diagnostic) {
+    static_cast<void>(
+        tasks.main().post([state, error, diagnostic = std::move(diagnostic)]() mutable {
+          fail(state, error, std::move(diagnostic));
+        }));
+  }
+
+  void schedule_decode(const std::shared_ptr<detail::asset_state>& state,
+                       const std::shared_ptr<asset_loader>& loader, asset_location location,
+                       std::shared_ptr<std::vector<std::byte>> document,
+                       std::shared_ptr<dependency_batch> batch) {
+    const std::weak_ptr weak_self{shared_from_this()};
+    const auto posted = tasks.worker().post([weak_self, state, loader,
+                                             location = std::move(location),
+                                             document = std::move(document),
+                                             batch = std::move(batch)]() mutable {
+      const auto dependencies = batch ? std::span<const asset_dependency_data>{batch->dependencies}
+                                      : std::span<const asset_dependency_data>{};
+      auto decoded = loader->accepts(location, *document)
+                         ? loader->decode(location, *document, dependencies)
+                         : asset_decode_result{.error = asset_error::invalid_data,
+                                               .value = {},
+                                               .diagnostic = "Loader 拒绝资产内容"};
+      const auto self = weak_self.lock();
+      if (!self)
+        return;
+      static_cast<void>(self->tasks.main().post([state, decoded = std::move(decoded)]() mutable {
+        if (!decoded.succeeded()) {
+          fail(state, decoded.error, std::move(decoded.diagnostic));
+          return;
+        }
+        std::scoped_lock lock{state->mutex};
+        state->value = std::move(decoded.value);
+        state->error = asset_error::none;
+        state->diagnostic.clear();
+        state->progress.stage = asset_stage::complete;
+        state->progress.fraction = 1.0F;
+        state->status.store(asset_status::ready, std::memory_order_release);
+      }));
+    });
+    if (posted.failed()) {
+      post_failure(state,
+                   posted == granit::result::out_of_memory ? asset_error::out_of_memory
+                                                           : asset_error::cancelled,
+                   "无法提交资产解码任务");
+    }
+  }
+
+  void process_source_result(const std::shared_ptr<detail::asset_state>& state,
+                             const std::shared_ptr<asset_loader>& loader,
+                             const asset_location& location, asset_source_result read) noexcept {
+    if (!read.succeeded()) {
+      post_failure(state, read.error, std::move(read.diagnostic));
+      return;
+    }
+    try {
+      auto document = std::make_shared<std::vector<std::byte>>(std::move(read.bytes));
+      {
+        std::scoped_lock lock{state->mutex};
+        state->progress.completed_bytes = document->size();
+        state->progress.total_bytes = read.total_bytes.value_or(document->size());
+        state->progress.stage = asset_stage::decoding;
+      }
+      state->status.store(asset_status::decoding, std::memory_order_release);
+
+      {
+        std::scoped_lock lock{state->mutex};
+        state->progress.stage = asset_stage::discovering_dependencies;
+      }
+      state->status.store(asset_status::discovering_dependencies, std::memory_order_release);
+      auto discovery = loader->discover_dependencies(location, *document);
+      if (!discovery.succeeded()) {
+        post_failure(state, discovery.error, std::move(discovery.diagnostic));
+        return;
+      }
+      {
+        std::scoped_lock lock{state->mutex};
+        state->progress.total_dependencies =
+            static_cast<std::uint32_t>(discovery.dependencies.size());
+      }
+      if (discovery.dependencies.empty()) {
+        schedule_decode(state, loader, location, std::move(document), {});
+        return;
+      }
+
+      {
+        std::scoped_lock lock{state->mutex};
+        state->progress.stage = asset_stage::loading_dependencies;
+      }
+      state->status.store(asset_status::loading_dependencies, std::memory_order_release);
+
+      auto batch = std::make_shared<dependency_batch>();
+      batch->document = document;
+      batch->dependencies.resize(discovery.dependencies.size());
+      const std::weak_ptr weak_self{shared_from_this()};
+      for (std::size_t index = 0; index < discovery.dependencies.size(); ++index) {
+        const auto& uri = discovery.dependencies[index];
+        auto dependency_location = location.resolve(uri);
+        if (!dependency_location.valid()) {
+          post_failure(state, asset_error::invalid_location, "资产依赖位置无效");
+          return;
+        }
+        std::shared_ptr<asset_manager_source> source;
+        {
+          std::scoped_lock lock{mutex};
+          const auto found = sources.find(dependency_location.scheme());
+          if (found != sources.end())
+            source = found->second;
+        }
+        if (!source) {
+          post_failure(state, asset_error::source_not_registered, "资产依赖 Source 未注册");
+          return;
+        }
+        const auto started =
+            source->load(dependency_location, [weak_self, state, loader, location, batch, index,
+                                               uri](asset_source_result result) mutable {
+              const auto self = weak_self.lock();
+              if (!self)
+                return;
+              bool decode = false;
+              std::size_t completed_count{};
+              asset_error error = asset_error::none;
+              std::string diagnostic;
+              {
+                std::scoped_lock lock{batch->mutex};
+                if (batch->failed)
+                  return;
+                if (!result.succeeded()) {
+                  batch->failed = true;
+                  error = result.error;
+                  diagnostic = std::move(result.diagnostic);
+                } else {
+                  batch->dependencies[index] = {.uri = uri, .bytes = std::move(result.bytes)};
+                  ++batch->completed;
+                  completed_count = batch->completed;
+                  decode = batch->completed == batch->dependencies.size();
+                }
+              }
+              if (error != asset_error::none) {
+                self->post_failure(state, error, std::move(diagnostic));
+                return;
+              }
+              {
+                std::scoped_lock lock{state->mutex};
+                state->progress.completed_dependencies =
+                    static_cast<std::uint32_t>(completed_count);
+              }
+              if (decode)
+                self->schedule_decode(state, loader, location, batch->document, batch);
+            });
+        if (started.failed()) {
+          {
+            std::scoped_lock lock{batch->mutex};
+            batch->failed = true;
+          }
+          post_failure(state,
+                       started == granit::result::out_of_memory ? asset_error::out_of_memory
+                                                                : asset_error::io_error,
+                       "无法启动资产依赖读取");
+          return;
+        }
+      }
+    } catch (const std::bad_alloc&) {
+      post_failure(state, asset_error::out_of_memory, "处理资产依赖时内存不足");
+    } catch (...) {
+      post_failure(state, asset_error::internal, "处理资产依赖时发生内部错误");
+    }
+  }
 
   tasks::task_system& tasks;
   std::mutex mutex;
@@ -52,8 +234,9 @@ asset_manager::asset_manager(tasks::task_system& tasks)
 
 asset_manager::~asset_manager() = default;
 
-granit::result asset_manager::register_source(asset_scheme scheme,
-                                              std::shared_ptr<asset_manager_source> source) noexcept {
+granit::result
+asset_manager::register_source(asset_scheme scheme,
+                               std::shared_ptr<asset_manager_source> source) noexcept {
   if (!source)
     return granit::result::invalid_argument;
   try {
@@ -87,7 +270,7 @@ granit::result asset_manager::register_loader(std::shared_ptr<asset_loader> load
 }
 
 asset_manager::observation asset_manager::load_erased(std::type_index type,
-                                                       asset_location location) noexcept {
+                                                      asset_location location) noexcept {
   try {
     auto observer = std::make_shared<detail::asset_observer>();
     auto state = std::make_shared<detail::asset_state>();
@@ -135,71 +318,23 @@ asset_manager::observation asset_manager::load_erased(std::type_index type,
                 const auto manager = weak_manager.lock();
                 if (!manager)
                   return;
-                if (!read.succeeded()) {
-                  static_cast<void>(manager->tasks.main().post(
-                      [state, error = read.error, diagnostic = std::move(read.diagnostic)]() mutable {
-                        fail(state, error, std::move(diagnostic));
-                      }));
-                  return;
-                }
-                {
-                  std::scoped_lock lock{state->mutex};
-                  state->progress.completed_bytes = read.bytes.size();
-                  state->progress.total_bytes = read.total_bytes.value_or(read.bytes.size());
-                  state->progress.stage = asset_stage::decoding;
-                }
-                state->status.store(asset_status::decoding, std::memory_order_release);
-                const auto posted = manager->tasks.worker().post(
-                    [weak_manager, state, loader, location,
-                     bytes = std::move(read.bytes)]() mutable {
-                      auto decoded = loader->accepts(location, bytes)
-                                         ? loader->decode(location, bytes)
-                                         : asset_decode_result{
-                                               .error = asset_error::invalid_data,
-                                               .value = {},
-                                               .diagnostic = "Loader 拒绝资产内容"};
-                      const auto manager = weak_manager.lock();
-                      if (!manager)
-                        return;
-                      static_cast<void>(manager->tasks.main().post(
-                          [state, decoded = std::move(decoded)]() mutable {
-                            if (!decoded.succeeded()) {
-                              fail(state, decoded.error, std::move(decoded.diagnostic));
-                              return;
-                            }
-                            std::scoped_lock lock{state->mutex};
-                            state->value = std::move(decoded.value);
-                            state->error = asset_error::none;
-                            state->diagnostic.clear();
-                            state->progress.stage = asset_stage::complete;
-                            state->progress.fraction = 1.0F;
-                            state->status.store(asset_status::ready,
-                                                std::memory_order_release);
-                          }));
-                    });
-                if (posted.failed()) {
-                  static_cast<void>(manager->tasks.main().post([state, posted] {
-                    fail(state,
-                         posted == granit::result::out_of_memory ? asset_error::out_of_memory
-                                                                  : asset_error::cancelled,
-                         "无法提交资产解码任务");
-                  }));
-                }
+                manager->process_source_result(state, loader, location, std::move(read));
               });
           if (started.failed()) {
             if (const auto manager = weak_manager.lock()) {
               static_cast<void>(manager->tasks.main().post([state, started] {
                 fail(state,
                      started == granit::result::out_of_memory ? asset_error::out_of_memory
-                                                               : asset_error::io_error,
+                                                              : asset_error::io_error,
                      "无法启动资产读取");
               }));
             }
           }
         });
     if (queued.failed()) {
-      fail(state, queued == granit::result::out_of_memory ? asset_error::out_of_memory
-                                                           : asset_error::cancelled,
+      fail(state,
+           queued == granit::result::out_of_memory ? asset_error::out_of_memory
+                                                   : asset_error::cancelled,
            "无法提交资产读取任务");
     }
     return {std::move(state), std::move(observer)};

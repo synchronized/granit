@@ -16,8 +16,24 @@
 
 namespace granit::example::assets {
 
-enum class asset_status { queued, reading, decoding, ready, failed, cancelled };
-enum class asset_stage { queued, reading, decoding, complete };
+enum class asset_status {
+  queued,
+  reading,
+  discovering_dependencies,
+  loading_dependencies,
+  decoding,
+  ready,
+  failed,
+  cancelled
+};
+enum class asset_stage {
+  queued,
+  reading,
+  discovering_dependencies,
+  loading_dependencies,
+  decoding,
+  complete
+};
 enum class asset_error {
   none,
   invalid_location,

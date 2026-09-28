@@ -3,7 +3,9 @@
 
 #include <catch2/catch_all.hpp>
 
+#include "assets/asset_manager.h"
 #include "assets/resource_resolver.h"
+#include "gltf/asset_loaders.h"
 #include "gltf/document_loader.h"
 #include "gltf/document_manifest.h"
 #include "gltf/fixtures/minimal_scene_glb.h"
@@ -16,12 +18,15 @@
 #include <fstream>
 #include <thread>
 #include <type_traits>
+#include <unordered_map>
 
 namespace {
 
 std::span<const std::byte> bytes(std::string_view text) {
   return {reinterpret_cast<const std::byte*>(text.data()), text.size()};
 }
+
+template <typename Value> void append(std::vector<std::byte>& output, const Value& value);
 
 class memory_resolver final : public granit::example::assets::resource_resolver {
 public:
@@ -39,6 +44,40 @@ private:
   std::vector<std::byte> data_;
   std::string resource_uri_;
 };
+
+class manager_memory_source final : public granit::example::assets::asset_manager_source {
+public:
+  void insert(std::string path, std::span<const std::byte> bytes) {
+    values_.insert_or_assign(std::move(path), std::vector<std::byte>{bytes.begin(), bytes.end()});
+  }
+
+  [[nodiscard]] granit::result
+  load(const granit::example::assets::asset_location& location,
+       granit::example::assets::asset_source_completion completion) noexcept override {
+    const auto found = values_.find(std::string{location.path()});
+    if (found == values_.end()) {
+      completion({.error = granit::example::assets::asset_error::io_error,
+                  .bytes = {},
+                  .total_bytes = std::nullopt,
+                  .diagnostic = "测试资产不存在"});
+    } else {
+      completion({.error = granit::example::assets::asset_error::none,
+                  .bytes = found->second,
+                  .total_bytes = found->second.size(),
+                  .diagnostic = {}});
+    }
+    return granit::result::success;
+  }
+
+private:
+  std::unordered_map<std::string, std::vector<std::byte>> values_;
+};
+
+void finish(granit::example::tasks::task_system& tasks) {
+  REQUIRE(tasks.wait_idle().ok());
+  while (tasks.pump_main() != 0)
+    REQUIRE(tasks.wait_idle().ok());
+}
 
 bool cancel_import(const granit::example::gltf::import_progress& progress, void* user_data) {
   auto& calls = *static_cast<std::uint32_t*>(user_data);
@@ -87,6 +126,40 @@ TEST_CASE("发现外部资源失败时保留原输出") {
   CHECK(result.error == granit::example::gltf::document_manifest_error::invalid_resource_uri);
   REQUIRE(resources.size() == 1);
   CHECK(resources.front() == "keep.bin");
+}
+
+TEST_CASE("Asset Manager 通过 glTF Loader 加载外部依赖") {
+  constexpr std::string_view document = R"({
+    "asset":{"version":"2.0"},
+    "buffers":[{"uri":"scene.bin","byteLength":36}],
+    "bufferViews":[{"buffer":0,"byteLength":36}],
+    "accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3"}],
+    "meshes":[{"primitives":[{"attributes":{"POSITION":0,"NORMAL":0}}]}],
+    "nodes":[{"mesh":0}],"scenes":[{"nodes":[0]}],"scene":0
+  })";
+  std::vector<std::byte> buffer;
+  for (const float value : {0.0F, 0.0F, 0.0F, 1.0F, 0.0F, 0.0F, 0.0F, 1.0F, 0.0F})
+    append(buffer, value);
+
+  granit::example::tasks::task_system tasks;
+  REQUIRE(tasks.initialize({.worker_count = 0}).ok());
+  granit::example::assets::asset_manager manager{tasks};
+  auto source = std::make_shared<manager_memory_source>();
+  source->insert("models/scene.gltf", bytes(document));
+  source->insert("models/scene.bin", buffer);
+  REQUIRE(manager.register_source(granit::example::assets::asset_scheme::memory, source).ok());
+  REQUIRE(granit::example::gltf::register_standard_asset_loaders(manager).ok());
+
+  auto handle = manager.load<granit::example::gltf::scene>(
+      granit::example::assets::asset_location::memory("models/scene.gltf"));
+  REQUIRE_FALSE(handle.ready());
+  REQUIRE(handle.status() != granit::example::assets::asset_status::failed);
+  finish(tasks);
+  INFO(handle.diagnostic());
+  REQUIRE(handle.ready());
+  REQUIRE(handle.value()->meshes.size() == 1);
+  CHECK(handle.progress().completed_dependencies == 1);
+  CHECK(handle.progress().total_dependencies == 1);
 }
 
 template <typename Value> void append(std::vector<std::byte>& output, const Value& value) {
