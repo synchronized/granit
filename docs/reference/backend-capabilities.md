@@ -48,7 +48,7 @@
 
 | 状态 | Vulkan 桌面 | 浏览器 WebGPU |
 |---|---|---|
-| Primitive Topology | Point、Line、Triangle 全部公开拓扑 | 当前仅 Triangle List |
+| Primitive Topology | Point、Line、Triangle 全部公开拓扑 | 全部拓扑；Indexed Strip 暂不支持 |
 | Polygon Mode | Fill；Line/Point 取决于设备 | 仅 Fill |
 | Cull Mode | None、Front、Back、Front And Back | 不支持 Front And Back |
 | 颜色附件数量 | 最多 `GRANIT_MAX_COLOR_ATTACHMENTS`，受设备限制 | 当前最多 1 个 |

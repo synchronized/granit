@@ -87,8 +87,18 @@ granit_result create_command_recorder(webgpu_instance_handle instance,
     return GRANIT_ERROR_OUT_OF_MEMORY;
   const auto handle = next_handle<webgpu_command_recorder>(next_command_recorder);
   try {
-    const auto record = webgpu_device_state::command_recorder_record{
-        native, nullptr, nullptr, false, false, false, 0, 0, {}, {}};
+    const auto record =
+        webgpu_device_state::command_recorder_record{.encoder = native,
+                                                     .pass = nullptr,
+                                                     .compute_pass = nullptr,
+                                                     .finished = false,
+                                                     .pipeline_bound = false,
+                                                     .compute_pipeline_bound = false,
+                                                     .graphics_topology = 0,
+                                                     .index_available = 0,
+                                                     .index_element_size = 0,
+                                                     .temporary_buffers = {},
+                                                     .timestamp_pools = {}};
     if (!found->second->command_recorders.emplace(handle, record).second) {
       wgpuCommandEncoderRelease(native);
       return GRANIT_ERROR_INTERNAL;
@@ -733,6 +743,7 @@ granit_result recorder_begin_rendering(
   if (command->second.pass == nullptr)
     return GRANIT_ERROR_INITIALIZATION_FAILED;
   command->second.pipeline_bound = false;
+  command->second.graphics_topology = 0;
   command->second.index_available = 0;
   command->second.index_element_size = 0;
   return GRANIT_SUCCESS;
@@ -756,6 +767,7 @@ granit_result recorder_bind_pipeline(webgpu_instance_handle instance,
     return GRANIT_ERROR_INVALID_ARGUMENT;
   wgpuRenderPassEncoderSetPipeline(command->second.pass, native->second.render_pipeline);
   command->second.pipeline_bound = true;
+  command->second.graphics_topology = native->second.topology;
   return GRANIT_SUCCESS;
 }
 
@@ -987,6 +999,9 @@ granit_result recorder_draw_indices(webgpu_instance_handle instance,
       first_byte > command->second.index_available ||
       draw_size > command->second.index_available - first_byte)
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (command->second.graphics_topology == GRANIT_WEBGPU_PRIMITIVE_TOPOLOGY_LINE_STRIP ||
+      command->second.graphics_topology == GRANIT_WEBGPU_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP)
+    return GRANIT_ERROR_UNSUPPORTED;
   wgpuRenderPassEncoderDrawIndexed(command->second.pass, index_count, instance_count, first_index,
                                    vertex_offset, first_instance);
   return GRANIT_SUCCESS;
@@ -1009,6 +1024,7 @@ granit_result recorder_end_rendering(webgpu_instance_handle instance,
   wgpuRenderPassEncoderRelease(command->second.pass);
   command->second.pass = nullptr;
   command->second.pipeline_bound = false;
+  command->second.graphics_topology = 0;
   command->second.index_available = 0;
   command->second.index_element_size = 0;
   return GRANIT_SUCCESS;

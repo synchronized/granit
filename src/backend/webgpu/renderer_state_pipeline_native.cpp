@@ -131,6 +131,23 @@ std::uint32_t to_webgpu_color_write_mask(granit_color_write_mask mask) noexcept 
   return result;
 }
 
+webgpu_primitive_topology to_webgpu_topology(granit_primitive_topology topology) noexcept {
+  switch (topology) {
+  case GRANIT_PRIMITIVE_TOPOLOGY_POINT_LIST:
+    return GRANIT_WEBGPU_PRIMITIVE_TOPOLOGY_POINT_LIST;
+  case GRANIT_PRIMITIVE_TOPOLOGY_LINE_LIST:
+    return GRANIT_WEBGPU_PRIMITIVE_TOPOLOGY_LINE_LIST;
+  case GRANIT_PRIMITIVE_TOPOLOGY_LINE_STRIP:
+    return GRANIT_WEBGPU_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+  case GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST:
+    return GRANIT_WEBGPU_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+  case GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP:
+    return GRANIT_WEBGPU_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+  default:
+    return 0;
+  }
+}
+
 } // namespace
 
 std::unique_ptr<backend_pipeline_layout_resource>
@@ -159,7 +176,6 @@ granit_result webgpu_renderer_state::validate_graphics_pipeline(
       (desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_UNDEFINED &&
        desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_D32_FLOAT) ||
       (desc.sample_count != 1 && desc.sample_count != 4) ||
-      desc.primitive.topology != GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST ||
       desc.primitive.cull_mode == GRANIT_CULL_MODE_FRONT_AND_BACK ||
       desc.primitive.polygon_mode != GRANIT_POLYGON_MODE_FILL) {
     return GRANIT_ERROR_UNSUPPORTED;
@@ -304,7 +320,7 @@ granit_result webgpu_renderer_state::create_graphics_pipeline_impl(
         to_webgpu_blend_factor(color_blend.destination_alpha_factor),
         to_webgpu_blend_operation(color_blend.alpha_operation),
         to_webgpu_color_write_mask(color_blend.write_mask),
-        GRANIT_WEBGPU_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        to_webgpu_topology(primitive.topology),
         primitive.front_face == GRANIT_FRONT_FACE_COUNTER_CLOCKWISE
             ? GRANIT_WEBGPU_FRONT_FACE_COUNTER_CLOCKWISE
             : GRANIT_WEBGPU_FRONT_FACE_CLOCKWISE,

@@ -14,8 +14,9 @@ Vulkan Pipeline、Pipeline Layout 或 Dynamic Rendering 结构。
   Offset。首版不支持动态 Uniform Buffer 数组。
 - 使用 Vertex Shader、Fragment Shader、颜色格式、可选深度模板格式和样本数创建 Pipeline。
 - 公共描述可以表达点、线和三角形拓扑，以及遵循统一[坐标系统约定](coordinates.md)的正面绕序、
-  剔除模式和 Fill/Line/Point 多边形模式；当前 WebGPU 实现仍只接通 Triangle List 与 Fill，具体
-  差异见 [Renderer 后端能力矩阵](backend-capabilities.md)。
+  剔除模式和 Fill/Line/Point 多边形模式。浏览器 WebGPU 支持全部公开拓扑，但 Indexed Strip 因
+  Pipeline 需要预先固定 Index Format 暂不支持；Polygon Mode 仍只支持 Fill。具体差异见
+  [Renderer 后端能力矩阵](backend-capabilities.md)。
 - 支持深度测试、深度写入、比较操作和可选固定 depth bias，以及每个颜色附件独立的混合与写入
   掩码。
 - Viewport 与 Scissor 是动态状态，将由 D-05 的命令接口设置。

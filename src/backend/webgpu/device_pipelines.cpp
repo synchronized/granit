@@ -65,6 +65,23 @@ granit_result pipeline_warmup_result(WGPUCreatePipelineAsyncStatus status) noexc
   }
 }
 
+WGPUPrimitiveTopology to_native_primitive_topology(webgpu_primitive_topology topology) noexcept {
+  switch (topology) {
+  case GRANIT_WEBGPU_PRIMITIVE_TOPOLOGY_POINT_LIST:
+    return WGPUPrimitiveTopology_PointList;
+  case GRANIT_WEBGPU_PRIMITIVE_TOPOLOGY_LINE_LIST:
+    return WGPUPrimitiveTopology_LineList;
+  case GRANIT_WEBGPU_PRIMITIVE_TOPOLOGY_LINE_STRIP:
+    return WGPUPrimitiveTopology_LineStrip;
+  case GRANIT_WEBGPU_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST:
+    return WGPUPrimitiveTopology_TriangleList;
+  case GRANIT_WEBGPU_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP:
+    return WGPUPrimitiveTopology_TriangleStrip;
+  default:
+    return WGPUPrimitiveTopology_Undefined;
+  }
+}
+
 void receive_render_pipeline_warmup(WGPUCreatePipelineAsyncStatus status,
                                     WGPURenderPipeline pipeline, WGPUStringView message, void* data,
                                     void*) noexcept {
@@ -282,7 +299,7 @@ granit_result create_render_pipeline_common(webgpu_instance_handle instance,
        (desc->depth_test_enabled != 0 || desc->depth_write_enabled != 0)) ||
       (desc->depth_test_enabled != 0 &&
        to_native_compare_operation(desc->depth_compare) == WGPUCompareFunction_Undefined) ||
-      desc->topology != GRANIT_WEBGPU_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST ||
+      to_native_primitive_topology(desc->topology) == WGPUPrimitiveTopology_Undefined ||
       (desc->front_face != GRANIT_WEBGPU_FRONT_FACE_COUNTER_CLOCKWISE &&
        desc->front_face != GRANIT_WEBGPU_FRONT_FACE_CLOCKWISE) ||
       (desc->cull_mode != GRANIT_WEBGPU_CULL_MODE_NONE &&
@@ -386,7 +403,7 @@ granit_result create_render_pipeline_common(webgpu_instance_handle instance,
                                   vertex->second.entry_point.size()};
   descriptor.vertex.bufferCount = vertex_buffers.size();
   descriptor.vertex.buffers = vertex_buffers.data();
-  descriptor.primitive.topology = WGPUPrimitiveTopology_TriangleList;
+  descriptor.primitive.topology = to_native_primitive_topology(desc->topology);
   descriptor.primitive.frontFace = to_native_front_face(desc->front_face);
   descriptor.primitive.cullMode = to_native_cull_mode(desc->cull_mode);
   descriptor.multisample.count = desc->sample_count;
@@ -443,7 +460,7 @@ granit_result create_render_pipeline_common(webgpu_instance_handle instance,
   const auto handle = next_handle<webgpu_render_pipeline>(next_render_pipeline);
   try {
     const auto record = webgpu_device_state::render_pipeline_record{
-        native, desc->layout, desc->vertex_shader, desc->fragment_shader};
+        native, desc->layout, desc->vertex_shader, desc->fragment_shader, desc->topology};
     if (!state.render_pipelines.emplace(handle, record).second) {
       wgpuRenderPipelineRelease(native);
       return GRANIT_ERROR_INTERNAL;
