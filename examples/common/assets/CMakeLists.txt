@@ -27,10 +27,22 @@ add_library(
   resource_resolver.h
 )
 if(EMSCRIPTEN)
-  target_sources(granit_example_assets PRIVATE asset_source_web.cpp)
+  target_sources(
+    granit_example_assets
+    PRIVATE
+      asset_source_web.cpp
+      ../platform/emscripten/register_asset_sources.cpp
+      ../platform/register_asset_sources.h
+  )
   target_link_options(granit_example_assets PUBLIC "-sFETCH=1")
 else()
-  target_sources(granit_example_assets PRIVATE asset_source_desktop.cpp)
+  target_sources(
+    granit_example_assets
+    PRIVATE
+      asset_source_desktop.cpp
+      ../platform/desktop/register_asset_sources.cpp
+      ../platform/register_asset_sources.h
+  )
 endif()
 target_compile_features(granit_example_assets PUBLIC cxx_std_20)
 target_include_directories(granit_example_assets PUBLIC "${PROJECT_SOURCE_DIR}/examples/common")

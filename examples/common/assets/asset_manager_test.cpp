@@ -2,10 +2,13 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "assets/asset_manager.h"
+#include "platform/register_asset_sources.h"
 
 #include <catch2/catch_all.hpp>
 
 #include <cstring>
+#include <filesystem>
+#include <fstream>
 #include <unordered_map>
 
 namespace assets = granit::example::assets;
@@ -137,3 +140,28 @@ TEST_CASE("asset manager reports missing registrations") {
   REQUIRE(handle.status() == assets::asset_status::failed);
   REQUIRE(handle.error() == assets::asset_error::source_not_registered);
 }
+
+#if !defined(__EMSCRIPTEN__)
+TEST_CASE("desktop platform source reads an external file") {
+  const auto path = std::filesystem::temp_directory_path() / "granit_asset_manager_source.bin";
+  {
+    std::ofstream stream{path, std::ios::binary};
+    REQUIRE(stream.good());
+    stream << "platform";
+  }
+
+  tasks::task_system task_system;
+  REQUIRE(task_system.initialize({.worker_count = 1}).ok());
+  assets::asset_manager manager{task_system};
+  REQUIRE(granit::example::platform::register_asset_sources(manager, "test.exe").ok());
+  REQUIRE(manager.register_loader(std::make_shared<assets::blob_asset_loader>()).ok());
+  auto handle = manager.load<assets::asset_blob>(
+      assets::asset_location::external(path.string()));
+  finish(task_system);
+  REQUIRE(handle.ready());
+  REQUIRE(handle.value()->bytes.size() == 8);
+
+  std::error_code error;
+  std::filesystem::remove(path, error);
+}
+#endif
