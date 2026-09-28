@@ -293,25 +293,43 @@ granit_result pipeline_validation::poll_capability_readback() {
   if (status.state != granit::async_operation_state::succeeded)
     return granit::to_native(status.operation_result);
 
-  const auto validate = [this](std::uint32_t index, const std::array<std::byte, 4>& expected) {
+  const auto validate = [this](const char* label, std::uint32_t index,
+                               const std::array<std::byte, 4>& expected) {
     std::array<std::byte, 16> pixels{};
     std::uint64_t required_size{};
     auto value = granit::copy_readback_result(readback_operation_, index, pixels, required_size);
-    if (value.failed() || required_size != pixels.size())
+    if (value.failed() || required_size != pixels.size()) {
+      std::fprintf(stderr,
+                   "GRANIT_DIAGNOSTIC:%s readback failed: result=%d required=%llu actual=%zu\n",
+                   label, granit::to_native(value), static_cast<unsigned long long>(required_size),
+                   pixels.size());
       return value.failed() ? value : granit::result::internal;
+    }
     for (std::size_t offset = 0; offset < pixels.size(); offset += expected.size()) {
-      if (!std::equal(expected.begin(), expected.end(), pixels.begin() + offset))
+      if (!std::equal(expected.begin(), expected.end(), pixels.begin() + offset)) {
+        std::fprintf(stderr,
+                     "GRANIT_DIAGNOSTIC:%s pixel mismatch at %zu: actual=%u,%u,%u,%u "
+                     "expected=%u,%u,%u,%u\n",
+                     label, offset / expected.size(), std::to_integer<unsigned>(pixels[offset]),
+                     std::to_integer<unsigned>(pixels[offset + 1]),
+                     std::to_integer<unsigned>(pixels[offset + 2]),
+                     std::to_integer<unsigned>(pixels[offset + 3]),
+                     std::to_integer<unsigned>(expected[0]),
+                     std::to_integer<unsigned>(expected[1]),
+                     std::to_integer<unsigned>(expected[2]),
+                     std::to_integer<unsigned>(expected[3]));
         return granit::result::internal;
+      }
     }
     return granit::result::success;
   };
-  result = validate(storage_result_index_,
+  result = validate("storage-texture", storage_result_index_,
                     {std::byte{64}, std::byte{128}, std::byte{191}, std::byte{255}});
   if (result.ok())
-    result = validate(first_color_result_index_,
+    result = validate("mrt-color-0", first_color_result_index_,
                       {std::byte{255}, std::byte{0}, std::byte{0}, std::byte{255}});
   if (result.ok())
-    result = validate(second_color_result_index_,
+    result = validate("mrt-color-1", second_color_result_index_,
                       {std::byte{0}, std::byte{255}, std::byte{0}, std::byte{255}});
   if (result.ok())
     result = readback_operation_.reset();
