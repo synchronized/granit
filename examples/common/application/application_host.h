@@ -4,7 +4,8 @@
 #ifndef GRANIT_EXAMPLE_APPLICATION_APPLICATION_HOST_H_
 #define GRANIT_EXAMPLE_APPLICATION_APPLICATION_HOST_H_
 
-#include "assets/asset_system.h"
+#include "assets/asset_manager.h"
+#include "tasks/task_system.h"
 
 #include <chrono>
 #include <cstdint>
@@ -49,7 +50,7 @@ protected:
   [[nodiscard]] granit::window& app_window() noexcept { return window_; }
   [[nodiscard]] const granit::window& app_window() const noexcept { return window_; }
   [[nodiscard]] window_system& app_window_system() noexcept { return window_system_; }
-  [[nodiscard]] assets::asset_system& assets() noexcept { return assets_; }
+  [[nodiscard]] assets::asset_manager& assets() noexcept { return assets_; }
 
   void request_stop() noexcept { running_ = false; }
 
@@ -59,7 +60,8 @@ private:
   [[nodiscard]] result poll_events() noexcept;
   [[nodiscard]] result update_services() noexcept;
 
-  assets::asset_system assets_;
+  tasks::task_system tasks_;
+  assets::asset_manager assets_{tasks_};
   window_system window_system_;
   granit::window window_;
   std::chrono::steady_clock::time_point previous_tick_time_{};

@@ -49,6 +49,7 @@ public:
   [[nodiscard]] bool ready() const noexcept;
 
 protected:
+  /** 可返回 not_ready；宿主会在后续 Tick 推进任务后重试。实现必须可重复调用。 */
   [[nodiscard]] virtual result on_initialize() noexcept = 0;
   /** 每次事件循环推进一次；即使窗口暂时无法 Acquire 也会调用。 */
   [[nodiscard]] virtual result on_update(float delta_seconds) noexcept;
@@ -65,7 +66,7 @@ protected:
   void request_swapchain_recreate() noexcept { recreate_ = true; }
 
 private:
-  enum class phase { fresh, renderer_initializing, running, stopped };
+  enum class phase { fresh, renderer_initializing, content_initializing, running, stopped };
 
   [[nodiscard]] result on_host_initialize() noexcept override;
   [[nodiscard]] result on_host_update(float delta_seconds,

@@ -2,8 +2,8 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "application/application.h"
-#include "assets/asset_system_resolver.h"
-#include "gltf/importer.h"
+#include "assets/asset_manager.h"
+#include "gltf/scene.h"
 #include "imgui/imgui_font_atlas.h"
 #include "imgui/imgui_input.h"
 #include "imgui/imgui_texture_registry.h"
@@ -46,10 +46,22 @@ public:
 
 private:
   granit::result on_initialize() noexcept override {
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGui::GetIO().IniFilename = nullptr;
-    imgui_initialized_ = true;
+    if (!imgui_initialized_) {
+      IMGUI_CHECKVERSION();
+      ImGui::CreateContext();
+      ImGui::GetIO().IniFilename = nullptr;
+      imgui_initialized_ = true;
+      model_asset_ = assets().load<granit::example::gltf::scene>(
+          granit::example::assets::asset_location::bundled("tutorials/02_pbr_assets/Suzanne.gltf"));
+    }
+    if (!model_asset_.ready()) {
+      if (model_asset_.status() == granit::example::assets::asset_status::failed ||
+          model_asset_.status() == granit::example::assets::asset_status::cancelled) {
+        std::cerr << "Failed to load Suzanne model: " << model_asset_.diagnostic() << '\n';
+        return granit::result::invalid_argument;
+      }
+      return granit::result::not_ready;
+    }
 
     last_operation_ = "loading Suzanne glTF";
     auto result = initialize_model();
@@ -113,22 +125,12 @@ private:
   }
 
   granit::result initialize_model() noexcept {
-    const auto model_request =
-        assets().request({assets().bundled(), "tutorials/02_pbr_assets/Suzanne.gltf"});
-    if (!model_request ||
-        model_request->status() != granit::example::assets::asset_request_status::ready) {
-      std::cerr << "Failed to read Suzanne model\n";
+    const auto model_scene = model_asset_.value();
+    if (!model_scene) {
+      std::cerr << "Suzanne model asset is unavailable\n";
       return granit::result::invalid_argument;
     }
-
-    granit::example::assets::asset_system_resolver resolver{assets(), assets().bundled(),
-                                                            "tutorials/02_pbr_assets"};
-    const auto loaded =
-        granit::example::gltf::import_scene(model_request->bytes(), &resolver, model_scene_);
-    if (!loaded) {
-      std::cerr << "Failed to load Suzanne model: " << loaded.diagnostic << '\n';
-      return granit::result::invalid_argument;
-    }
+    model_scene_ = *model_scene;
     if (model_scene_.materials.empty()) {
       std::cerr << "Suzanne model does not contain a PBR material\n";
       return granit::result::invalid_argument;
@@ -253,6 +255,7 @@ private:
     return result;
   }
 
+  granit::example::assets::asset_handle<granit::example::gltf::scene> model_asset_;
   granit::example::gltf::scene model_scene_;
   granit::example::model_viewer::gpu_scene model_gpu_;
   granit::render_pipeline pipeline_;

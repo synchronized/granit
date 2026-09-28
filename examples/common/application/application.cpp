@@ -45,7 +45,10 @@ result application::initialize_presentation() noexcept {
   if (operation.failed())
     return operation;
 
-  content_started_ = true;
+  if (!content_started_) {
+    content_started_ = true;
+    phase_ = phase::content_initializing;
+  }
   operation = on_initialize();
   if (operation.ok())
     phase_ = phase::running;
@@ -109,17 +112,19 @@ result application::on_host_update(float delta_seconds, window_loop_action& acti
   auto operation = renderer_.process_events();
   if (operation.failed())
     return operation;
-  if (phase_ == phase::renderer_initializing) {
-    renderer_status status;
-    operation = renderer_.get_status(status);
-    if (operation.failed())
-      return operation;
-    if (status.state == renderer_state::initializing) {
-      action = window_loop_action::idle;
-      return result::success;
+  if (phase_ == phase::renderer_initializing || phase_ == phase::content_initializing) {
+    if (phase_ == phase::renderer_initializing) {
+      renderer_status status;
+      operation = renderer_.get_status(status);
+      if (operation.failed())
+        return operation;
+      if (status.state == renderer_state::initializing) {
+        action = window_loop_action::idle;
+        return result::success;
+      }
+      if (status.state != renderer_state::ready)
+        return status.failure_result;
     }
-    if (status.state != renderer_state::ready)
-      return status.failure_result;
     operation = initialize_presentation();
     if (operation == result::not_ready) {
       action = window_loop_action::idle;

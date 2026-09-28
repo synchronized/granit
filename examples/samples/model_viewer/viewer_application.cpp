@@ -3,7 +3,7 @@
 
 #include "model_viewer/viewer_application.h"
 
-#include "assets/asset_request.h"
+#include "assets/asset_manager.h"
 #include "model_viewer/pipeline_prepare.h"
 #include "model_viewer/presentation_recovery.h"
 #include "model_viewer/render_service.h"
@@ -192,9 +192,7 @@ struct viewer_application::implementation {
   viewer_runtime_phase phase{viewer_runtime_phase::starting};
   granit::result terminal_result{granit::result::success};
   std::string failure_stage;
-  assets::asset_mount model_mount;
-  std::string model_path;
-  std::shared_ptr<assets::asset_request> environment_request;
+  assets::asset_handle<assets::asset_blob> environment_request;
   std::vector<std::byte> environment_bytes;
   render_quality_config quality;
   granit::window_state window_state;
@@ -409,20 +407,18 @@ struct viewer_application::implementation {
     session.poll_loading();
     if (session.loading_status() == model_loading_status::failed)
       return session.loading_result();
-    if (environment_request &&
-        environment_request->status() == assets::asset_request_status::failed)
+    if (environment_request && environment_request.status() == assets::asset_status::failed)
       return granit::result::invalid_argument;
-    const bool environment_ready = !environment_request || environment_request->status() ==
-                                                               assets::asset_request_status::ready;
+    const bool environment_ready = !environment_request || environment_request.ready();
     if (session.loading_status() == model_loading_status::assets_ready && environment_ready) {
       if (environment_request)
-        environment_bytes = environment_request->bytes();
+        environment_bytes = environment_request.value()->bytes;
       phase = viewer_runtime_phase::scene_prepare;
       return granit::result::success;
     }
-    const auto progress = session.loading_progress().document;
+    const auto progress = session.loading_progress();
     const auto fraction = progress.total_bytes && *progress.total_bytes > 0
-                              ? static_cast<float>(progress.received_bytes) /
+                              ? static_cast<float>(progress.completed_bytes) /
                                     static_cast<float>(*progress.total_bytes)
                               : 0.0F;
     return render_loading("Loading asset resources...", 0.05F + std::min(fraction, 1.0F) * 0.20F);
@@ -716,19 +712,15 @@ granit::result viewer_application::on_host_initialize() noexcept {
                                              .backend = state.desc.renderer_backend},
                                             state.session);
   }
-  if (result.ok() &&
-      (!assets().mount_location(state.desc.model_location, state.model_mount, state.model_path) ||
-       !state.session.start_loading(assets(), {state.model_mount, state.model_path}))) {
+  if (result.ok() && !state.session.start_loading(
+                         assets(), assets::asset_location::external(state.desc.model_location))) {
     result = granit::result::invalid_argument;
   }
   if (result.ok() && !state.desc.environment_location.empty()) {
-    assets::asset_mount mount;
-    std::string path;
-    if (!assets().mount_location(state.desc.environment_location, mount, path)) {
-      result = granit::result::invalid_argument;
-    } else {
-      state.environment_request = assets().request({mount, path});
-    }
+    state.environment_request = assets().load<assets::asset_blob>(
+        assets::asset_location::external(state.desc.environment_location));
+    if (!state.environment_request.valid())
+      result = granit::result::out_of_memory;
   }
   if (result.failed()) {
     state.fail(*this, "initialize", result);
@@ -818,8 +810,7 @@ granit::result viewer_application::shutdown_resources() noexcept {
     return state.shutdown_result;
   state.cancel_requested.store(true, std::memory_order_release);
   state.session.cancel_loading();
-  if (state.environment_request)
-    state.environment_request->cancel();
+  state.environment_request.cancel();
   state.scene_prepare.reset();
   if (state.desc.observer != nullptr)
     state.desc.observer->on_shutdown();

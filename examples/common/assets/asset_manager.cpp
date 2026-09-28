@@ -181,7 +181,8 @@ struct asset_manager::implementation : std::enable_shared_from_this<implementati
                   return;
                 if (!result.succeeded()) {
                   batch->failed = true;
-                  error = result.error;
+                  error = result.error == asset_error::out_of_memory ? asset_error::out_of_memory
+                                                                     : asset_error::dependency_read;
                   diagnostic = std::move(result.diagnostic);
                 } else {
                   batch->dependencies[index] = {.uri = uri, .bytes = std::move(result.bytes)};

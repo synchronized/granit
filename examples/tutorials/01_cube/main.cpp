@@ -2,7 +2,8 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "application/application.h"
-#include "gltf/image_decoder.h"
+#include "assets/asset_manager.h"
+#include "gltf/scene.h"
 #include "imgui/imgui_font_atlas.h"
 #include "imgui/imgui_input.h"
 #include "imgui/imgui_texture_registry.h"
@@ -60,10 +61,22 @@ public:
 
 private:
   granit::result on_initialize() noexcept override {
-    ImGui::CreateContext();
-    ImGui::GetIO().IniFilename = nullptr;
-    ImGui::StyleColorsDark();
-    imgui_initialized_ = true;
+    if (!imgui_initialized_) {
+      ImGui::CreateContext();
+      ImGui::GetIO().IniFilename = nullptr;
+      ImGui::StyleColorsDark();
+      imgui_initialized_ = true;
+      crate_image_ = assets().load<granit::example::gltf::image>(
+          granit::example::assets::asset_location::bundled("tutorials/01_cube/wooden_crate.png"));
+    }
+    if (!crate_image_.ready()) {
+      if (crate_image_.status() == granit::example::assets::asset_status::failed ||
+          crate_image_.status() == granit::example::assets::asset_status::cancelled) {
+        std::cerr << "Failed to load crate texture: " << crate_image_.diagnostic() << '\n';
+        return granit::result::invalid_argument;
+      }
+      return granit::result::not_ready;
+    }
 
     auto result = create_depth_target();
     if (result.ok())
@@ -75,7 +88,7 @@ private:
     if (result.ok())
       result = shader_library_.create_shader("mesh.fragment", fragment_shader_);
     if (result.ok())
-      result = initialize_texture_resources();
+      result = initialize_texture_resources(*crate_image_.value());
     if (result.ok())
       result = initialize_pipeline_layout();
     if (result.ok())
@@ -139,16 +152,10 @@ private:
     }
   }
 
-  granit::result initialize_texture_resources() noexcept {
-    const auto texture_request =
-        assets().request({assets().bundled(), "tutorials/01_cube/wooden_crate.png"});
-    granit::example::gltf::image decoded_texture;
-    if (!texture_request ||
-        texture_request->status() != granit::example::assets::asset_request_status::ready ||
-        granit::example::gltf::decode_image(texture_request->bytes(), decoded_texture) !=
-            granit::example::gltf::image_decode_error::none ||
-        decoded_texture.mips.size() != 1) {
-      std::cerr << "Failed to decode crate texture\n";
+  granit::result
+  initialize_texture_resources(const granit::example::gltf::image& decoded_texture) noexcept {
+    if (decoded_texture.mips.size() != 1) {
+      std::cerr << "Crate texture has an unsupported mip layout\n";
       return granit::result::invalid_argument;
     }
     const auto& mip = decoded_texture.mips.front();
@@ -402,6 +409,7 @@ private:
   }
 
   granit::frame_context frame_context_;
+  granit::example::assets::asset_handle<granit::example::gltf::image> crate_image_;
   granit::shader_library shader_library_;
   granit::shader vertex_shader_;
   granit::shader fragment_shader_;

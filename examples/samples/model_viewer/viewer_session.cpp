@@ -11,8 +11,9 @@ granit::result viewer_session::begin_renderer() noexcept { return core_.begin_re
 
 granit::result viewer_session::renderer_ready() noexcept { return core_.renderer_ready(); }
 
-bool viewer_session::start_loading(assets::asset_system& assets, assets::asset_key model) {
-  return loading_.start(assets, model);
+bool viewer_session::start_loading(assets::asset_manager& assets,
+                                   assets::asset_location model) noexcept {
+  return loading_.start(assets, std::move(model));
 }
 
 void viewer_session::poll_loading() {
@@ -58,7 +59,7 @@ const std::string& viewer_session::loading_diagnostic() const noexcept {
   return loading_.diagnostic();
 }
 
-gltf::document_load_progress viewer_session::loading_progress() const noexcept {
+assets::asset_progress viewer_session::loading_progress() const noexcept {
   return loading_.progress();
 }
 

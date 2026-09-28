@@ -41,6 +41,7 @@ enum class asset_error {
   loader_not_registered,
   io_error,
   transport_error,
+  dependency_read,
   invalid_data,
   out_of_memory,
   cancelled,
