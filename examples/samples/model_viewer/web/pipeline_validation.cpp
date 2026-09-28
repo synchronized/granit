@@ -389,6 +389,10 @@ granit_result pipeline_validation::poll() {
                  "GRANIT_DIAGNOSTIC:软件 WebGPU 适配器异步编译失败，回退到按需同步创建管线\n");
   }
   if (result != GRANIT_SUCCESS) {
+    std::fprintf(stderr,
+                 "GRANIT_DIAGNOSTIC:Pipeline 预热结果验收失败：result=%d state=%u "
+                 "operation=%d graphics=%d compute=%d\n",
+                 result, status.state, status.result, graphics_info.result, compute_info.result);
     reset();
     return result;
   }
