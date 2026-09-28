@@ -105,7 +105,7 @@ jobs:
       fail-fast: false
       # Ubuntu runner 使用软件 Vulkan 驱动。限制并发，避免多个 Chrome/Xvfb 实例争抢
       # WebGPU 设备后返回透明合成帧或初始化超时。
-      max-parallel: 1
+      max-parallel: 2
       matrix:
         include:
           - name: platform-smoke

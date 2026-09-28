@@ -322,6 +322,7 @@ private:
         result = readback_batch_.reset();
         if (result.failed())
           return result;
+        readback_pending_slot_.reset();
       }
     }
 
@@ -332,6 +333,10 @@ private:
                                               sizeof(generation_state), result_index);
     if (result.ok())
       result = readback_batch_.submit_async(readback_operation_);
+    if (result.ok()) {
+      readback_valid_[slot] = false;
+      readback_pending_slot_ = slot;
+    }
     return result;
   }
 
@@ -399,6 +404,9 @@ private:
       return result;
     result = update_readback(recording.frame_slot());
     update_timestamps(recording.frame_slot());
+    // WebGPU 映射异步完成；映射期间不能把同一帧槽的 staging buffer 再作为 GPU copy 目标。
+    const bool readback_destination_available =
+        !readback_pending_slot_.has_value() || *readback_pending_slot_ != recording.frame_slot();
 
     if (smoke_test_)
       time_ = 0.75F;
@@ -512,7 +520,7 @@ private:
         .destination_offset = 0,
         .size = sizeof(generation_state),
     };
-    if (result.ok()) {
+    if (result.ok() && readback_destination_available) {
       result = recorder.copy_buffer(state.buffer, readback_buffers_[recording.frame_slot()].ref(),
                                     std::span{&state_copy, 1});
     }
@@ -567,7 +575,8 @@ private:
     if (result.ok()) {
       result = recording.submit();
       if (result.ok()) {
-        readback_valid_[recording.frame_slot()] = true;
+        if (readback_destination_available)
+          readback_valid_[recording.frame_slot()] = true;
         timestamp_valid_[recording.frame_slot()] = timestamps_enabled_;
       }
     }
@@ -590,6 +599,7 @@ private:
   granit::buffer table_buffer_;
   std::array<granit::buffer, GRANIT_MAX_FRAMES_IN_FLIGHT> readback_buffers_;
   std::array<bool, GRANIT_MAX_FRAMES_IN_FLIGHT> readback_valid_{};
+  std::optional<std::uint32_t> readback_pending_slot_;
   granit::readback_batch readback_batch_;
   granit::async_operation readback_operation_;
   static constexpr std::uint32_t timestamps_per_frame = 5;
