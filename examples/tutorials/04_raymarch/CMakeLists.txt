@@ -48,6 +48,8 @@ target_link_libraries(
   granit_tutorial_04_raymarch
   PRIVATE
     granit_example_application
+    granit_example_camera
+    granit_example_tutorial
     granit::granit
 )
 granit_target_compile_warnings(granit_tutorial_04_raymarch)

@@ -2,7 +2,13 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "application/application.h"
+#include "camera/orbit_camera.h"
+#include "camera/orbit_camera_input_accumulator.h"
 #include "shader_archive.h"
+#include "tutorial/tutorial_runtime.h"
+
+#include <granit/math/functions.hpp>
+#include <imgui.h>
 
 #include <array>
 #include <cstddef>
@@ -21,10 +27,14 @@ namespace {
 struct raymarch_uniforms {
   std::array<float, 2> resolution;
   float time{};
-  float padding{};
+  float surface_epsilon{};
+  std::array<float, 4> camera_origin;
+  std::array<float, 4> camera_forward_max_steps;
+  std::array<float, 4> camera_right;
+  std::array<float, 4> camera_up_tan_half_fov;
 };
 
-static_assert(sizeof(raymarch_uniforms) == sizeof(float) * 4);
+static_assert(sizeof(raymarch_uniforms) == sizeof(float) * 20);
 
 std::uint64_t align_up(std::uint64_t value, std::uint64_t alignment) {
   return alignment == 0 ? value : (value + alignment - 1) / alignment * alignment;
@@ -41,7 +51,9 @@ public:
 
 private:
   granit::result on_initialize() noexcept override {
-    auto result = frame_context_.initialize(renderer());
+    auto result = runtime_.initialize(renderer_owner());
+    if (result.ok())
+      result = frame_context_.initialize(renderer());
     if (result.ok())
       result = shader_library_.initialize(renderer(), tutorial_raymarch::shader_archive());
     if (result.ok())
@@ -62,6 +74,9 @@ private:
       result = initialize_pipeline_layout();
     if (result.ok())
       result = create_pipeline();
+    if (result.ok() && !camera_.focus({.center = {0.0F, 0.0F, -0.1F}, .radius = 2.0F},
+                                      presentation_info().width, presentation_info().height))
+      result = granit::result::invalid_argument;
     return result;
   }
 
@@ -70,6 +85,7 @@ private:
   }
 
   void on_shutdown(granit::result) noexcept override {
+    runtime_.shutdown();
     static_cast<void>(pipeline_.reset());
     static_cast<void>(resource_group_.reset());
     static_cast<void>(pipeline_layout_.reset());
@@ -79,6 +95,18 @@ private:
     static_cast<void>(vertex_shader_.reset());
     static_cast<void>(shader_library_.reset());
     static_cast<void>(frame_context_.reset());
+  }
+
+  granit::result on_window_event(const granit::window_event& event) noexcept override {
+    runtime_.process(event);
+    camera_input_.process(event);
+    return granit::result::success;
+  }
+
+  granit::result on_input_event(const granit::input_event& event) noexcept override {
+    runtime_.process(event);
+    camera_input_.process(event, runtime_.wants_mouse(), runtime_.wants_keyboard());
+    return granit::result::success;
   }
 
   granit::result initialize_pipeline_layout() noexcept {
@@ -105,36 +133,76 @@ private:
     if (result.failed())
       return result;
     const auto format = presentation_info().format;
-    result = pipeline_.initialize(
-        renderer_owner(),
-        {.layout = pipeline_layout_.ref(),
-         .vertex_shader = vertex_shader_.ref(),
-         .fragment_shader = fragment_shader_.ref(),
-         .color_formats = std::span{&format, 1},
-         .depth_stencil_format = granit::texture_format::undefined,
-         .samples = granit::sample_count::one,
-         .vertex_buffers = {},
-         .primitive = {},
-         .depth = std::nullopt,
-         .color_blends = {},
-         .depth_bias = std::nullopt});
+    result = pipeline_.initialize(renderer_owner(),
+                                  {.layout = pipeline_layout_.ref(),
+                                   .vertex_shader = vertex_shader_.ref(),
+                                   .fragment_shader = fragment_shader_.ref(),
+                                   .color_formats = std::span{&format, 1},
+                                   .depth_stencil_format = granit::texture_format::undefined,
+                                   .samples = granit::sample_count::one,
+                                   .vertex_buffers = {},
+                                   .primitive = {},
+                                   .depth = std::nullopt,
+                                   .color_blends = {},
+                                   .depth_bias = std::nullopt});
     if (result.ok())
       pipeline_format_ = format;
     return result;
   }
 
   granit::result on_render(granit::example::present_frame& frame) noexcept override {
+    camera_input_.begin_frame();
+    granit::window_state window_state;
+    auto result = app_window().get_state(window_state);
+    if (result.ok()) {
+      result = runtime_.begin_frame(window_state, frame.delta_seconds,
+                                    {.name = "04 Raymarch",
+                                     .description = "SDF raymarch with an orbit camera",
+                                     .frame = rendered_frames()});
+    }
+    if (result.ok()) {
+      ImGui::SliderInt("Max steps", &max_steps_, 8, 192);
+      ImGui::SliderFloat("Surface epsilon", &surface_epsilon_, 0.0002F, 0.01F, "%.4f");
+      ImGui::Checkbox("Animate", &animate_);
+      ImGui::SliderFloat("Animation speed", &animation_speed_, 0.0F, 3.0F);
+      ImGui::Checkbox("Auto orbit", &auto_orbit_);
+      if (ImGui::Button("Reset camera"))
+        camera_.reset();
+      result = runtime_.end_frame();
+    }
+    if (result.failed())
+      return result;
+
     granit::frame_recording recording;
-    auto result = frame_context_.begin(frame.acquired, recording);
+    result = frame_context_.begin(frame.acquired, recording);
     if (smoke_test_)
       time_ = 0.75F;
-    else
-      time_ += frame.delta_seconds;
+    else if (animate_)
+      time_ += frame.delta_seconds * animation_speed_;
+
+    const auto input = camera_input_.finish(runtime_.wants_mouse(), runtime_.wants_keyboard());
+    if (auto_orbit_ && !smoke_test_ && !camera_.orbit(frame.delta_seconds * 0.25F))
+      result = granit::result::invalid_argument;
+    if (result.ok() && !camera_.update(input, frame.swapchain.width, frame.swapchain.height))
+      result = granit::result::invalid_argument;
+    granit::example::camera::camera_matrices matrices;
+    if (result.ok() && !camera_.matrices(frame.swapchain.width, frame.swapchain.height, matrices))
+      result = granit::result::invalid_argument;
+    const auto forward =
+        granit::math::normalize(granit::math::subtract(camera_.target(), matrices.position));
+    const auto right = granit::math::normalize(granit::math::cross(forward, {0, 1, 0}));
+    const auto up = granit::math::cross(right, forward);
 
     const raymarch_uniforms uniforms{
         .resolution = {static_cast<float>(frame.swapchain.width),
                        static_cast<float>(frame.swapchain.height)},
         .time = time_,
+        .surface_epsilon = surface_epsilon_,
+        .camera_origin = {matrices.position.x, matrices.position.y, matrices.position.z, 0.0F},
+        .camera_forward_max_steps = {forward.x, forward.y, forward.z,
+                                     static_cast<float>(max_steps_)},
+        .camera_right = {right.x, right.y, right.z, 0.0F},
+        .camera_up_tan_half_fov = {up.x, up.y, up.z, 0.414213562F},
     };
     const auto uniform_offset = uniform_stride_ * recording.frame_slot();
     if (result.ok())
@@ -168,6 +236,18 @@ private:
       result = recorder.draw(3);
     if (result.ok())
       result = recorder.end_rendering();
+    if (result.ok()) {
+      const bool encode_srgb = frame.swapchain.format == granit::texture_format::rgba8_unorm ||
+                               frame.swapchain.format == granit::texture_format::bgra8_unorm;
+      result = runtime_.canvas().record(recorder,
+                                        {.color = frame.backbuffer.view,
+                                         .color_format = frame.swapchain.format,
+                                         .width = frame.swapchain.width,
+                                         .height = frame.swapchain.height,
+                                         .load_operation = granit::attachment_load_operation::load,
+                                         .encode_srgb = encode_srgb,
+                                         .frame_slot = recording.frame_slot()});
+    }
     if (result.ok())
       result = recording.submit();
     if (result.failed() && recording.valid())
@@ -176,6 +256,9 @@ private:
   }
 
   granit::frame_context frame_context_;
+  granit::example::tutorial::tutorial_runtime runtime_;
+  granit::example::camera::orbit_camera camera_;
+  granit::example::camera::orbit_camera_input_accumulator camera_input_;
   granit::shader_library shader_library_;
   granit::shader vertex_shader_;
   granit::shader fragment_shader_;
@@ -187,6 +270,11 @@ private:
   granit::texture_format pipeline_format_{granit::texture_format::undefined};
   std::uint64_t uniform_stride_{};
   float time_{};
+  float surface_epsilon_{0.001F};
+  float animation_speed_{1.0F};
+  int max_steps_{80};
+  bool animate_{true};
+  bool auto_orbit_{};
   bool smoke_test_{};
 };
 
