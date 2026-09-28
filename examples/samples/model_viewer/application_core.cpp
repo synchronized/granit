@@ -72,23 +72,6 @@ granit::result application_core::renderer_ready() noexcept {
   return granit::result::success;
 }
 
-granit::result application_core::load_asset(std::span<const std::byte> bytes,
-                                            const assets::resource_resolver* resolver,
-                                            gltf::import_progress_callback progress,
-                                            void* progress_user_data) {
-  if (phase_ != application_phase::asset_loading)
-    return granit::result::invalid_argument;
-  gltf::scene candidate;
-  const auto loaded = gltf::import_scene(bytes, resolver, candidate, progress, progress_user_data);
-  if (!loaded) {
-    fail(loaded.error == gltf::import_error::cancelled ? granit::result::cancelled
-                                                       : granit::result::invalid_argument,
-         loaded.diagnostic);
-    return failure_result_;
-  }
-  return accept_scene(std::move(candidate));
-}
-
 granit::result application_core::accept_scene(gltf::scene scene) {
   if (phase_ != application_phase::asset_loading)
     return granit::result::invalid_argument;

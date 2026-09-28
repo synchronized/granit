@@ -3,8 +3,6 @@
 
 add_library(
   granit_example_assets STATIC
-  asset_batch.cpp
-  asset_batch.h
   asset_group.cpp
   asset_group.h
   asset_handle.h
@@ -14,16 +12,7 @@ add_library(
   asset_location.h
   asset_manager.cpp
   asset_manager.h
-  asset_manager_source.h
-  asset_request.cpp
-  asset_request.h
   asset_source.h
-  asset_system.cpp
-  asset_system.h
-  asset_system_resolver.cpp
-  asset_system_resolver.h
-  memory_resource_resolver.cpp
-  memory_resource_resolver.h
   resource_path.cpp
   resource_path.h
   resource_resolver.h
@@ -32,7 +21,6 @@ if(EMSCRIPTEN)
   target_sources(
     granit_example_assets
     PRIVATE
-      asset_source_web.cpp
       ../platform/emscripten/register_asset_sources.cpp
       ../platform/register_asset_sources.h
   )
@@ -41,7 +29,6 @@ else()
   target_sources(
     granit_example_assets
     PRIVATE
-      asset_source_desktop.cpp
       ../platform/desktop/register_asset_sources.cpp
       ../platform/register_asset_sources.h
   )
@@ -55,11 +42,7 @@ granit_target_compile_warnings(granit_example_assets)
 if(GRANIT_TESTING_ENABLED)
   add_executable(
     granit_example_assets_test
-    asset_batch_test.cpp
     asset_manager_test.cpp
-    asset_request_test.cpp
-    asset_system_test.cpp
-    memory_resource_resolver_test.cpp
     resource_path_test.cpp
   )
   target_link_libraries(

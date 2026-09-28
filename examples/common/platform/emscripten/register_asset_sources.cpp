@@ -18,7 +18,7 @@
 namespace granit::example::platform {
 namespace {
 
-class memfs_asset_source final : public assets::asset_manager_source {
+class memfs_asset_source final : public assets::asset_source {
 public:
   explicit memfs_asset_source(std::filesystem::path root = {}) : root_(std::move(root)) {}
 
@@ -110,7 +110,7 @@ void fetch_failure(emscripten_fetch_t* fetch) {
   emscripten_fetch_close(fetch);
 }
 
-class fetch_asset_source final : public assets::asset_manager_source {
+class fetch_asset_source final : public assets::asset_source {
 public:
   [[nodiscard]] granit::result
   load(const assets::asset_location& location,

@@ -4,7 +4,7 @@
 #include "gltf/asset_loaders.h"
 
 #include "assets/asset_manager.h"
-#include "assets/memory_resource_resolver.h"
+#include "assets/resource_resolver.h"
 #include "gltf/document_manifest.h"
 #include "gltf/image_decoder.h"
 #include "gltf/importer.h"
@@ -13,9 +13,29 @@
 #include <memory>
 #include <new>
 #include <typeindex>
+#include <utility>
 
 namespace granit::example::gltf {
 namespace {
+
+class dependency_resolver final : public assets::resource_resolver {
+public:
+  explicit dependency_resolver(std::span<const assets::asset_dependency_data> dependencies)
+      : dependencies_(dependencies) {}
+
+  [[nodiscard]] bool resolve(std::string_view uri, std::vector<std::byte>& output) const override {
+    for (const auto& dependency : dependencies_) {
+      if (dependency.uri == uri) {
+        output = dependency.bytes;
+        return true;
+      }
+    }
+    return false;
+  }
+
+private:
+  std::span<const assets::asset_dependency_data> dependencies_;
+};
 
 assets::asset_error map_manifest_error(document_manifest_error error) noexcept {
   switch (error) {
@@ -109,14 +129,7 @@ public:
   decode(const assets::asset_location&, std::span<const std::byte> bytes,
          std::span<const assets::asset_dependency_data> dependencies) noexcept override {
     try {
-      assets::memory_resource_resolver resolver;
-      for (const auto& dependency : dependencies) {
-        if (!resolver.insert(dependency.uri, dependency.bytes)) {
-          return {.error = assets::asset_error::invalid_data,
-                  .value = {},
-                  .diagnostic = "glTF 依赖 URI 重复或无效"};
-        }
-      }
+      dependency_resolver resolver{dependencies};
       auto output = std::make_shared<scene>();
       const auto result = import_scene(bytes, dependencies.empty() ? nullptr : &resolver, *output);
       if (result)

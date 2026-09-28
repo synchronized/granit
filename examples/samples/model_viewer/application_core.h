@@ -57,10 +57,6 @@ class application_core {
 public:
   [[nodiscard]] granit::result begin_renderer() noexcept;
   [[nodiscard]] granit::result renderer_ready() noexcept;
-  [[nodiscard]] granit::result load_asset(std::span<const std::byte> bytes,
-                                          const assets::resource_resolver* resolver,
-                                          gltf::import_progress_callback progress = nullptr,
-                                          void* progress_user_data = nullptr);
   [[nodiscard]] granit::result accept_scene(gltf::scene scene);
   /** 接收已经在资产线程完成打包的 CPU Scene 与 GPU 创建计划。 */
   [[nodiscard]] granit::result accept_scene(gltf::scene scene, gpu_scene_plan plan);

@@ -16,7 +16,7 @@ namespace tasks = granit::example::tasks;
 
 namespace {
 
-class memory_source final : public assets::asset_manager_source {
+class memory_source final : public assets::asset_source {
 public:
   void insert(std::string path, std::string value) {
     std::vector<std::byte> bytes(value.size());
@@ -195,7 +195,7 @@ TEST_CASE("asset manager reports missing registrations") {
 
 #if !defined(__EMSCRIPTEN__)
 TEST_CASE("desktop platform source reads an external file") {
-  const auto path = std::filesystem::temp_directory_path() / "granit_asset_manager_source.bin";
+  const auto path = std::filesystem::temp_directory_path() / "granit_asset_source.bin";
   {
     std::ofstream stream{path, std::ios::binary};
     REQUIRE(stream.good());

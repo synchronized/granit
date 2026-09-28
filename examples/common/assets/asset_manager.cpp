@@ -154,7 +154,11 @@ struct asset_manager::implementation : std::enable_shared_from_this<implementati
           post_failure(state, asset_error::invalid_location, "资产依赖位置无效");
           return;
         }
-        std::shared_ptr<asset_manager_source> source;
+        if (dependency_location.key() == location.key()) {
+          post_failure(state, asset_error::invalid_data, "资产依赖图包含自循环");
+          return;
+        }
+        std::shared_ptr<asset_source> source;
         {
           std::scoped_lock lock{mutex};
           const auto found = sources.find(dependency_location.scheme());
@@ -224,7 +228,7 @@ struct asset_manager::implementation : std::enable_shared_from_this<implementati
 
   tasks::task_system& tasks;
   std::mutex mutex;
-  std::unordered_map<asset_scheme, std::shared_ptr<asset_manager_source>> sources;
+  std::unordered_map<asset_scheme, std::shared_ptr<asset_source>> sources;
   std::unordered_map<std::type_index, std::shared_ptr<asset_loader>> loaders;
   std::unordered_map<request_key, std::shared_ptr<detail::asset_state>, request_key_hash> requests;
   std::uint64_t cache_hits{};
@@ -236,9 +240,8 @@ asset_manager::asset_manager(tasks::task_system& tasks)
 
 asset_manager::~asset_manager() = default;
 
-granit::result
-asset_manager::register_source(asset_scheme scheme,
-                               std::shared_ptr<asset_manager_source> source) noexcept {
+granit::result asset_manager::register_source(asset_scheme scheme,
+                                              std::shared_ptr<asset_source> source) noexcept {
   if (!source)
     return granit::result::invalid_argument;
   try {
@@ -281,7 +284,7 @@ asset_manager::observation asset_manager::load_erased(std::type_index type,
       return {std::move(state), std::move(observer)};
     }
 
-    std::shared_ptr<asset_manager_source> source;
+    std::shared_ptr<asset_source> source;
     std::shared_ptr<asset_loader> loader;
     const request_key key{.type = type, .location = location.key()};
     {

@@ -6,17 +6,12 @@
 #include "assets/asset_manager.h"
 #include "assets/resource_resolver.h"
 #include "gltf/asset_loaders.h"
-#include "gltf/document_loader.h"
 #include "gltf/document_manifest.h"
 #include "gltf/fixtures/minimal_scene_glb.h"
 #include "gltf/importer.h"
 
 #include <array>
-#include <chrono>
 #include <cstring>
-#include <filesystem>
-#include <fstream>
-#include <thread>
 #include <type_traits>
 #include <unordered_map>
 
@@ -45,7 +40,7 @@ private:
   std::string resource_uri_;
 };
 
-class manager_memory_source final : public granit::example::assets::asset_manager_source {
+class manager_memory_source final : public granit::example::assets::asset_source {
 public:
   void insert(std::string path, std::span<const std::byte> bytes) {
     values_.insert_or_assign(std::move(path), std::vector<std::byte>{bytes.begin(), bytes.end()});
@@ -162,6 +157,24 @@ TEST_CASE("Asset Manager 通过 glTF Loader 加载外部依赖") {
   CHECK(handle.progress().total_dependencies == 1);
 }
 
+TEST_CASE("Asset Manager 拒绝 glTF 自循环依赖") {
+  constexpr std::string_view document =
+      R"({"asset":{"version":"2.0"},"buffers":[{"uri":"scene.gltf","byteLength":4}]})";
+  granit::example::tasks::task_system tasks;
+  REQUIRE(tasks.initialize({.worker_count = 0}).ok());
+  granit::example::assets::asset_manager manager{tasks};
+  auto source = std::make_shared<manager_memory_source>();
+  source->insert("models/scene.gltf", bytes(document));
+  REQUIRE(manager.register_source(granit::example::assets::asset_scheme::memory, source).ok());
+  REQUIRE(granit::example::gltf::register_standard_asset_loaders(manager).ok());
+
+  auto handle = manager.load<granit::example::gltf::scene>(
+      granit::example::assets::asset_location::memory("models/scene.gltf"));
+  finish(tasks);
+  CHECK(handle.status() == granit::example::assets::asset_status::failed);
+  CHECK(handle.error() == granit::example::assets::asset_error::invalid_data);
+}
+
 template <typename Value> void append(std::vector<std::byte>& output, const Value& value) {
   const auto offset = output.size();
   output.resize(offset + sizeof(value));
@@ -195,63 +208,6 @@ std::vector<std::byte> make_glb(std::string json, std::vector<std::byte> binary)
 } // namespace
 
 static_assert(!std::is_copy_constructible_v<granit::example::assets::resource_resolver>);
-
-TEST_CASE("glTF 文档 Loader 拒绝无效位置", "[example][gltf][document-loader]") {
-  granit::example::assets::asset_system assets;
-  REQUIRE(assets.initialize("example"));
-  granit::example::gltf::document_loader loader;
-  REQUIRE(loader.start(assets, {assets.bundled(), {}}));
-  loader.cancel();
-  CHECK(loader.status() == granit::example::gltf::document_load_status::cancelled);
-  CHECK(loader.error() == granit::example::gltf::document_load_error::cancelled);
-
-  loader.reset();
-  REQUIRE(loader.start(assets, {assets.bundled(), {}}));
-  loader.poll();
-  CHECK(loader.status() == granit::example::gltf::document_load_status::failed);
-  CHECK(loader.error() == granit::example::gltf::document_load_error::invalid_location);
-}
-
-#if !defined(__EMSCRIPTEN__)
-TEST_CASE("glTF 文档 Loader 读取主文档和外部资源", "[example][gltf][document-loader]") {
-  const auto directory = std::filesystem::temp_directory_path() / "granit_gltf_document_loader";
-  std::error_code filesystem_error;
-  std::filesystem::create_directories(directory, filesystem_error);
-  REQUIRE_FALSE(filesystem_error);
-  const auto document_path = directory / "scene.gltf";
-  const auto resource_path = directory / "scene.bin";
-  {
-    std::ofstream document{document_path, std::ios::binary};
-    document << R"({"asset":{"version":"2.0"},"buffers":[{"uri":"scene.bin","byteLength":4}]})";
-    std::ofstream resource{resource_path, std::ios::binary};
-    const std::array bytes{char{1}, char{2}, char{3}, char{4}};
-    resource.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
-  }
-
-  granit::example::assets::asset_system assets;
-  REQUIRE(assets.initialize("example"));
-  granit::example::assets::asset_mount content;
-  REQUIRE(assets.mount(directory.string(), content));
-  granit::example::gltf::document_loader loader;
-  REQUIRE(loader.start(assets, {content, "scene.gltf"}));
-  const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds{5};
-  while ((loader.status() == granit::example::gltf::document_load_status::loading_document ||
-          loader.status() == granit::example::gltf::document_load_status::loading_resources) &&
-         std::chrono::steady_clock::now() < deadline) {
-    loader.poll();
-    std::this_thread::sleep_for(std::chrono::milliseconds{1});
-  }
-
-  REQUIRE(loader.status() == granit::example::gltf::document_load_status::ready);
-  CHECK_FALSE(loader.document().empty());
-  std::vector<std::byte> resource;
-  REQUIRE(loader.resolver().resolve("scene.bin", resource));
-  CHECK(resource.size() == 4);
-  std::filesystem::remove(document_path, filesystem_error);
-  std::filesystem::remove(resource_path, filesystem_error);
-  std::filesystem::remove(directory, filesystem_error);
-}
-#endif
 
 TEST_CASE("glTF CPU Scene 使用自有存储", "[example][gltf][scene]") {
   granit::example::gltf::scene scene;

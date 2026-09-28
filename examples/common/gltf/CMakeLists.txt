@@ -87,8 +87,6 @@ add_library(
   asset_loaders.cpp
   asset_loaders.h
   cgltf_implementation.cpp
-  document_loader.cpp
-  document_loader.h
   document_manifest.cpp
   document_manifest.h
   image_decoder.cpp

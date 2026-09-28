@@ -15,7 +15,7 @@
 namespace granit::example::platform {
 namespace {
 
-class filesystem_asset_source final : public assets::asset_manager_source {
+class filesystem_asset_source final : public assets::asset_source {
 public:
   explicit filesystem_asset_source(std::filesystem::path root = {}) : root_(std::move(root)) {}
 

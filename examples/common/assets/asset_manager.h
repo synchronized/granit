@@ -8,7 +8,7 @@
 #include "assets/asset_handle.h"
 #include "assets/asset_loader.h"
 #include "assets/asset_location.h"
-#include "assets/asset_manager_source.h"
+#include "assets/asset_source.h"
 #include "tasks/task_system.h"
 
 #include <memory>
@@ -32,7 +32,7 @@ public:
   asset_manager& operator=(const asset_manager&) = delete;
 
   [[nodiscard]] granit::result
-  register_source(asset_scheme scheme, std::shared_ptr<asset_manager_source> source) noexcept;
+  register_source(asset_scheme scheme, std::shared_ptr<asset_source> source) noexcept;
   [[nodiscard]] granit::result register_loader(std::shared_ptr<asset_loader> loader) noexcept;
 
   template <typename T> [[nodiscard]] asset_handle<T> load(asset_location location) noexcept {
