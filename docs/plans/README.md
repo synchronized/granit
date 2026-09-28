@@ -15,9 +15,9 @@
 - [S-73：0.39.0 统一交互式 Tutorial](S-73-0.39.0-unified-interactive-tutorials.md)——统一五个
   Tutorial 的 Granit ImGui 主题、性能面板、公共 Orbit Camera 和章节参数，并保持 Desktop/Web
   相同交互与确定性 Smoke。
-- [S-74：0.39.0 Marching Cubes 教程](S-74-0.39.0-marching-cubes-tutorial.md)——新增 CPU 密度场、
-  等值面网格提取、动态 Vertex Buffer 与普通 Mesh Pipeline 教程，与 SDF Raymarch Metaballs 形成
-  跨后端可运行对照。
+- [S-74：0.39.0 GPU Marching Cubes 与动态几何](S-74-0.39.0-gpu-marching-cubes.md)——补齐
+  Indirect 命令与帧级 Transient Buffer，以 Compute 生成显式网格并由 Draw Indirect 跨后端绘制，
+  验证完整 GPU 动态几何链。
 
 ## 最近完成
 

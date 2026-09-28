@@ -42,17 +42,17 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段通过可运行�
 
 **状态：已确认，P1。**
 
-[S-73](plans/S-73-0.39.0-unified-interactive-tutorials.md) 将统一五个 Tutorial 的 Granit ImGui
+[S-73](plans/S-73-0.39.0-unified-interactive-tutorials.md) 将统一六个 Tutorial 的 Granit ImGui
 主题、公共性能面板、Orbit Camera 和章节参数。Cube、PBR Assets、Instancing、Raymarch 与
 Metaballs 将在 Desktop 与 Web 使用相同交互路径，并保留确定性的自动 Smoke。
 
-### S-74：0.39.0 Marching Cubes 教程
+### S-74：0.39.0 GPU Marching Cubes 与动态几何
 
 **状态：已确认，P1。**
 
-[S-74](plans/S-74-0.39.0-marching-cubes-tutorial.md) 将新增 CPU 密度场、等值面网格提取、动态
-Vertex Buffer 与普通 Mesh Pipeline 教程，并与 SDF Raymarch Metaballs 形成可运行对照。GPU
-Compute 版本等待 Indirect Draw、动态输出容量和跨后端同步契约成熟后另行规划。
+[S-74](plans/S-74-0.39.0-gpu-marching-cubes.md) 将补齐单次 Indirect 命令和帧级 Transient Buffer，
+通过 Compute 生成密度场与显式网格，再以 Draw Indirect 跨后端绘制。该教程直接验证动态几何、
+Atomic 容量保护和 Compute → Graphics 同步，并与 SDF Raymarch Metaballs 形成可运行对照。
 
 ## 最近完成
 
