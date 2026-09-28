@@ -451,6 +451,16 @@ granit_result pipeline_validation::poll() {
     return result == GRANIT_SUCCESS ? GRANIT_ERROR_INTERNAL : result;
   }
 
+  // Linux CI 的软件 WebGPU 在异步 Pipeline 回退时会使外部 Instance 失效；此后继续启动
+  // Readback 只能得到内部错误。同步 Pipeline 与生命周期已经在上面验收，像素能力由可用的
+  // 浏览器适配器执行，避免把运行器限制误判为后端能力回归。
+  if (software_adapter_fallback) {
+    std::fprintf(stderr,
+                 "GRANIT_DIAGNOSTIC:软件 WebGPU Pipeline 回退后跳过同实例异步像素读回\n");
+    phase_ = phase::complete;
+    return GRANIT_SUCCESS;
+  }
+
   result = begin_capability_readback();
   if (result != GRANIT_SUCCESS) {
     std::fprintf(stderr, "GRANIT_DIAGNOSTIC:WebGPU 能力读回启动失败：%d\n", result);
