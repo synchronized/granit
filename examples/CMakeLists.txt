@@ -13,6 +13,7 @@ add_subdirectory(common/application)
 add_subdirectory(common/model_viewer)
 add_subdirectory(common/validation)
 add_subdirectory(common/imgui)
+add_subdirectory(common/tutorial)
 add_subdirectory(common/sdl)
 
 add_subdirectory(samples)

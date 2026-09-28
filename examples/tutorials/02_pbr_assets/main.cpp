@@ -4,14 +4,10 @@
 #include "application/application.h"
 #include "assets/asset_manager.h"
 #include "gltf/scene.h"
-#include "imgui/imgui_font_atlas.h"
-#include "imgui/imgui_input.h"
-#include "imgui/imgui_texture_registry.h"
 #include "model_viewer/gpu_scene.h"
+#include "tutorial/tutorial_runtime.h"
 
-#include <granit/integrations/imgui/renderer.hpp>
 #include <granit/math/functions.hpp>
-#include <granit/pipeline/canvas_draw_list.hpp>
 #include <granit/pipeline/render_pipeline.hpp>
 #include <granit/pipeline/scene.hpp>
 #include <imgui.h>
@@ -41,16 +37,15 @@ int report_failure(std::string_view operation, granit::result result) {
 class tutorial_application final : public granit::example::application {
 public:
   [[nodiscard]] std::uint32_t pointer_events() const noexcept { return pointer_events_; }
-  [[nodiscard]] std::uint32_t canvas_items() const noexcept { return canvas_items_; }
+  [[nodiscard]] std::uint32_t canvas_items() const noexcept { return runtime_.canvas_items(); }
   [[nodiscard]] granit_result shutdown_reason() const noexcept { return shutdown_reason_.native(); }
 
 private:
   granit::result on_initialize() noexcept override {
-    if (!imgui_initialized_) {
-      IMGUI_CHECKVERSION();
-      ImGui::CreateContext();
-      ImGui::GetIO().IniFilename = nullptr;
-      imgui_initialized_ = true;
+    if (!runtime_.initialized()) {
+      auto result = runtime_.initialize(renderer_owner());
+      if (result.failed())
+        return result;
       model_asset_ = assets().load<granit::example::gltf::scene>(
           granit::example::assets::asset_location::bundled("tutorials/02_pbr_assets/Suzanne.gltf"));
     }
@@ -70,33 +65,23 @@ private:
       result = pipeline_.initialize(renderer(), {.enable_fxaa = true, .enable_specular_aa = true});
     }
     if (result.ok()) {
-      last_operation_ = "creating canvas";
-      result = canvas_.initialize(renderer());
-    }
-    if (result.ok()) {
-      last_operation_ = "uploading ImGui font";
-      result = granit::example::imgui::initialize_font_atlas(
-          renderer_owner(), imgui_textures_, font_texture_, font_view_, font_sampler_);
-    }
-    if (result.ok()) {
       granit::texture_view_ref preview_view;
       granit::sampler_ref preview_sampler;
       result = model_gpu_.texture_binding(model_scene_.materials.front().base_color_texture, true,
                                           preview_view, preview_sampler);
       if (result.ok())
-        result =
-            imgui_textures_.register_texture(preview_view, preview_sampler, preview_texture_id_);
+        result = runtime_.register_texture(preview_view, preview_sampler, preview_texture_id_);
     }
     return result;
   }
 
   granit::result on_window_event(const granit::window_event& event) noexcept override {
-    granit::example::imgui::process_window_event(event);
+    runtime_.process(event);
     return granit::result::success;
   }
 
   granit::result on_input_event(const granit::input_event& event) noexcept override {
-    granit::example::imgui::process_input_event(event);
+    runtime_.process(event);
     if (event.type == granit::input_event_type::pointer_moved ||
         event.type == granit::input_event_type::pointer_button ||
         event.type == granit::input_event_type::pointer_wheel) {
@@ -110,18 +95,10 @@ private:
     if (reason.failed())
       std::cerr << "window loop stopped during " << last_operation_ << ": " << reason.message()
                 << '\n';
-    imgui_textures_.clear();
+    runtime_.shutdown();
     static_cast<void>(scene_.reset());
     static_cast<void>(pipeline_.reset());
-    static_cast<void>(canvas_.destroy());
     model_gpu_.reset();
-    static_cast<void>(font_view_.reset());
-    static_cast<void>(font_texture_.reset());
-    static_cast<void>(font_sampler_.reset());
-    if (imgui_initialized_) {
-      ImGui::DestroyContext();
-      imgui_initialized_ = false;
-    }
   }
 
   granit::result initialize_model() noexcept {
@@ -194,13 +171,12 @@ private:
     auto result = app_window().get_state(window_state);
     if (result.failed())
       return result;
-    granit::example::imgui::begin_frame(window_state, delta_seconds);
-
-    ImGui::SetNextWindowPos({20, 20}, ImGuiCond_FirstUseEver);
-    ImGui::Begin("Granit PBR Assets");
-    ImGui::Text("Framebuffer: %u x %u", presentation_info().width, presentation_info().height);
-    ImGui::TextUnformatted("Render Pipeline -> Tone Mapping -> ImGui Canvas");
-    ImGui::Separator();
+    result = runtime_.begin_frame(window_state, delta_seconds,
+                                  {.name = "02 PBR Assets",
+                                   .description = "Render Pipeline -> Tone Mapping -> ImGui Canvas",
+                                   .frame = rendered_frames()});
+    if (result.failed())
+      return result;
     bool material_changed = ImGui::ColorEdit3("Base color", &model_base_color_.x);
     material_changed =
         ImGui::SliderFloat("Metallic", &model_metallic_, 0.0F, 1.0F) || material_changed;
@@ -208,22 +184,9 @@ private:
         ImGui::SliderFloat("Roughness", &model_roughness_, 0.04F, 1.0F) || material_changed;
     ImGui::TextUnformatted("Suzanne base color texture:");
     ImGui::Image(ImTextureRef{preview_texture_id_}, {64, 64});
-    ImGui::End();
-    ImGui::Render();
-
     result = material_changed ? update_model_material() : granit::result::success;
     if (result.ok())
-      result = canvas_.clear();
-    if (result.ok()) {
-      result = granit::integration::imgui::append_draw_data(
-          ImGui::GetDrawData(), canvas_, granit::example::imgui::texture_registry::resolver,
-          &imgui_textures_);
-    }
-    granit::canvas_draw_list_stats stats{};
-    if (result.ok())
-      result = canvas_.get_stats(stats);
-    if (result.ok())
-      canvas_items_ = stats.item_count;
+      result = runtime_.end_frame();
     return result;
   }
 
@@ -248,7 +211,7 @@ private:
                                       ? std::span<const granit::render_pipeline_draw_binding>{}
                                       : std::span{model_gpu_.draw_bindings()};
       render_desc.frame = &frame.acquired;
-      render_desc.canvas = canvas_.ref();
+      render_desc.canvas = runtime_.canvas_ref();
       render_desc.clear_color = {0.025F, 0.03F, 0.045F, 1.0F};
       result = pipeline_.render(render_desc);
     }
@@ -260,18 +223,12 @@ private:
   granit::example::model_viewer::gpu_scene model_gpu_;
   granit::render_pipeline pipeline_;
   granit::scene_snapshot scene_;
-  granit::canvas_draw_list canvas_;
-  granit::texture font_texture_;
-  granit::texture_view font_view_;
-  granit::sampler font_sampler_;
-  granit::example::imgui::texture_registry imgui_textures_;
+  granit::example::tutorial::tutorial_runtime runtime_;
   ImTextureID preview_texture_id_{ImTextureID_Invalid};
   granit::math::float4 model_base_color_{1.0F, 1.0F, 1.0F, 1.0F};
   float model_metallic_{1.0F};
   float model_roughness_{1.0F};
-  bool imgui_initialized_{};
   std::uint32_t pointer_events_{};
-  std::uint32_t canvas_items_{};
   granit::result shutdown_reason_{granit::result::success};
   const char* last_operation_{"starting"};
 };

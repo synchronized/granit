@@ -4,14 +4,10 @@
 #include "application/application.h"
 #include "assets/asset_manager.h"
 #include "gltf/scene.h"
-#include "imgui/imgui_font_atlas.h"
-#include "imgui/imgui_input.h"
-#include "imgui/imgui_texture_registry.h"
 #include "shader_archive.h"
+#include "tutorial/tutorial_runtime.h"
 
-#include <granit/integrations/imgui/renderer.hpp>
 #include <granit/math/functions.hpp>
-#include <granit/pipeline/canvas_draw_list.hpp>
 #include <granit/pipeline/mesh.hpp>
 #include <imgui.h>
 
@@ -57,15 +53,14 @@ int report_failure(std::string_view operation, granit::result result) {
 
 class tutorial_application final : public granit::example::application {
 public:
-  [[nodiscard]] std::uint32_t canvas_items() const noexcept { return canvas_items_; }
+  [[nodiscard]] std::uint32_t canvas_items() const noexcept { return runtime_.canvas_items(); }
 
 private:
   granit::result on_initialize() noexcept override {
-    if (!imgui_initialized_) {
-      ImGui::CreateContext();
-      ImGui::GetIO().IniFilename = nullptr;
-      ImGui::StyleColorsDark();
-      imgui_initialized_ = true;
+    if (!runtime_.initialized()) {
+      auto result = runtime_.initialize(renderer_owner());
+      if (result.failed())
+        return result;
       crate_image_ = assets().load<granit::example::gltf::image>(
           granit::example::assets::asset_location::bundled("tutorials/01_cube/wooden_crate.png"));
     }
@@ -93,15 +88,8 @@ private:
       result = initialize_pipeline_layout();
     if (result.ok())
       result = create_pipeline();
-    if (result.ok())
-      result = canvas_.initialize(renderer());
     if (result.ok()) {
-      result = granit::example::imgui::initialize_font_atlas(
-          renderer_owner(), imgui_textures_, font_texture_, font_view_, font_sampler_);
-    }
-    if (result.ok()) {
-      result = imgui_textures_.register_texture(crate_view_.ref(), crate_sampler_.ref(),
-                                                crate_texture_id_);
+      result = runtime_.register_texture(crate_view_.ref(), crate_sampler_.ref(), crate_texture_id_);
     }
     return result;
   }
@@ -114,19 +102,18 @@ private:
   }
 
   granit::result on_window_event(const granit::window_event& event) noexcept override {
-    granit::example::imgui::process_window_event(event);
+    runtime_.process(event);
     return granit::result::success;
   }
 
   granit::result on_input_event(const granit::input_event& event) noexcept override {
-    granit::example::imgui::process_input_event(event);
+    runtime_.process(event);
     return granit::result::success;
   }
 
   void on_shutdown(granit::result) noexcept override {
-    imgui_textures_.clear();
+    runtime_.shutdown();
     static_cast<void>(pipeline_.reset());
-    static_cast<void>(canvas_.destroy());
     static_cast<void>(resource_group_.reset());
     static_cast<void>(layout_.reset());
     static_cast<void>(resource_layout_.reset());
@@ -137,19 +124,12 @@ private:
     static_cast<void>(crate_sampler_.reset());
     static_cast<void>(crate_view_.reset());
     static_cast<void>(crate_texture_.reset());
-    static_cast<void>(font_sampler_.reset());
-    static_cast<void>(font_view_.reset());
-    static_cast<void>(font_texture_.reset());
     static_cast<void>(depth_view_.reset());
     static_cast<void>(depth_texture_.reset());
     static_cast<void>(fragment_shader_.reset());
     static_cast<void>(vertex_shader_.reset());
     static_cast<void>(shader_library_.reset());
     static_cast<void>(frame_context_.reset());
-    if (imgui_initialized_) {
-      ImGui::DestroyContext();
-      imgui_initialized_ = false;
-    }
   }
 
   granit::result
@@ -322,26 +302,16 @@ private:
     granit::window_state window_state;
     auto result = app_window().get_state(window_state);
     if (result.ok()) {
-      granit::example::imgui::begin_frame(window_state, frame.delta_seconds);
-      ImGui::Begin("Granit Cube");
-      ImGui::TextUnformatted("Low-level Renderer + Mesh + Canvas");
-      ImGui::Checkbox("Rotate", &rotate_);
-      ImGui::Image(ImTextureRef{crate_texture_id_}, {64, 64});
-      ImGui::Text("Frame: %u", rendered_frames());
-      ImGui::End();
-      ImGui::Render();
-      result = canvas_.clear();
+      result = runtime_.begin_frame(window_state, frame.delta_seconds,
+                                    {.name = "01 Cube",
+                                     .description = "Low-level Renderer + Mesh + Canvas",
+                                     .frame = rendered_frames()});
     }
     if (result.ok()) {
-      result = granit::integration::imgui::append_draw_data(
-          ImGui::GetDrawData(), canvas_, granit::example::imgui::texture_registry::resolver,
-          &imgui_textures_);
+      ImGui::Checkbox("Rotate", &rotate_);
+      ImGui::Image(ImTextureRef{crate_texture_id_}, {64, 64});
+      result = runtime_.end_frame();
     }
-    granit::canvas_draw_list_stats canvas_stats{};
-    if (result.ok())
-      result = canvas_.get_stats(canvas_stats);
-    if (result.ok())
-      canvas_items_ = canvas_stats.item_count;
 
     granit::frame_recording recording;
     if (result.ok())
@@ -393,13 +363,14 @@ private:
     if (result.ok()) {
       const bool encode_srgb = frame.swapchain.format == granit::texture_format::rgba8_unorm ||
                                frame.swapchain.format == granit::texture_format::bgra8_unorm;
-      result = canvas_.record(recorder, {.color = frame.backbuffer.view,
-                                         .color_format = frame.swapchain.format,
-                                         .width = frame.swapchain.width,
-                                         .height = frame.swapchain.height,
-                                         .load_operation = granit::attachment_load_operation::load,
-                                         .encode_srgb = encode_srgb,
-                                         .frame_slot = recording.frame_slot()});
+      result = runtime_.canvas().record(
+          recorder, {.color = frame.backbuffer.view,
+                     .color_format = frame.swapchain.format,
+                     .width = frame.swapchain.width,
+                     .height = frame.swapchain.height,
+                     .load_operation = granit::attachment_load_operation::load,
+                     .encode_srgb = encode_srgb,
+                     .frame_slot = recording.frame_slot()});
     }
     if (result.ok())
       result = recording.submit();
@@ -426,18 +397,12 @@ private:
   granit::pipeline_layout layout_;
   granit::bind_group resource_group_;
   granit::graphics_pipeline pipeline_;
-  granit::texture font_texture_;
-  granit::texture_view font_view_;
-  granit::sampler font_sampler_;
-  granit::canvas_draw_list canvas_;
-  granit::example::imgui::texture_registry imgui_textures_;
+  granit::example::tutorial::tutorial_runtime runtime_;
   ImTextureID crate_texture_id_{ImTextureID_Invalid};
   granit::texture_format pipeline_format_{granit::texture_format::undefined};
   std::uint64_t uniform_stride_{};
   float rotation_{};
   bool rotate_{true};
-  bool imgui_initialized_{};
-  std::uint32_t canvas_items_{};
 };
 
 tutorial_application application;

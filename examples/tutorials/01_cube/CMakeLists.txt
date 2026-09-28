@@ -52,7 +52,7 @@ target_link_libraries(
   PRIVATE
     granit_example_application
     granit_example_gltf_support
-    granit_example_imgui
+    granit_example_tutorial
     granit::render_pipeline
 )
 granit_target_compile_warnings(granit_tutorial_01_cube)
