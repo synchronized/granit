@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+## 0.39.0 - 2026-09-28
+
 ### 新增
 
 - Command Recorder 新增单次 Draw、Indexed Draw 与 Dispatch Indirect，Vulkan 和 WebGPU 均校验
