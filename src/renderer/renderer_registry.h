@@ -256,6 +256,11 @@ public:
   submit_frame_context(granit_renderer renderer, granit_frame_context context, granit_frame frame);
   [[nodiscard]] granit_result abort_frame_context(granit_renderer renderer,
                                                   granit_frame_context context, granit_frame frame);
+  [[nodiscard]] granit_result allocate_transient_buffer(granit_renderer renderer,
+                                                        granit_frame_context context,
+                                                        granit_frame frame,
+                                                        const granit_transient_buffer_desc& desc,
+                                                        granit_transient_buffer_slice& slice);
   [[nodiscard]] granit_result destroy_frame_context(granit_renderer renderer,
                                                     granit_frame_context context);
   [[nodiscard]] granit_result copy_buffer(granit_renderer renderer,

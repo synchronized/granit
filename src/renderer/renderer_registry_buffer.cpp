@@ -209,9 +209,10 @@ granit_result renderer_registry::destroy_buffer(granit_renderer renderer, granit
     }
     {
       std::lock_guard record_lock{found->second->mutex};
-      if (found->second->mapped) {
+      if (found->second->owned_by_frame_context)
+        return GRANIT_ERROR_UNSUPPORTED;
+      if (found->second->mapped)
         return GRANIT_ERROR_INVALID_ARGUMENT;
-      }
     }
     record = std::move(found->second);
     buffers_.erase(found);

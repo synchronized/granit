@@ -9,12 +9,41 @@
 #include <granit/core/export.h>
 #include <granit/core/result.h>
 #include <granit/core/types.h>
-#include <granit/renderer/frame.h>
+#include <granit/renderer/buffer.h>
 #include <granit/renderer/command_recorder.h>
+#include <granit/renderer/frame.h>
 #include <granit/renderer/renderer.h>
 
 /** 按 Renderer 真实在途帧槽轮转 Command Recorder 的上下文句柄。 */
 typedef granit_handle granit_frame_context;
+
+/** 帧录制期临时 Buffer 分配描述。 */
+typedef struct granit_transient_buffer_desc {
+  uint32_t struct_size;
+  granit_buffer_usage usage;
+  granit_memory_location memory_location;
+  uint32_t reserved;
+  uint64_t size;
+  uint64_t alignment;
+} granit_transient_buffer_desc;
+
+#define GRANIT_TRANSIENT_BUFFER_DESC_VERSION_1_SIZE UINT32_C(32)
+#define GRANIT_TRANSIENT_BUFFER_DESC_INIT                                                          \
+  {GRANIT_TRANSIENT_BUFFER_DESC_VERSION_1_SIZE,                                                    \
+   UINT32_C(0),                                                                                    \
+   GRANIT_MEMORY_LOCATION_DEVICE,                                                                  \
+   UINT32_C(0),                                                                                    \
+   UINT64_C(0),                                                                                    \
+   UINT64_C(1)}
+
+/** 借用的帧临时 Buffer 区间；只能在产生它的 Frame Recording 内使用。 */
+typedef struct granit_transient_buffer_slice {
+  granit_buffer buffer;
+  uint64_t offset;
+  uint64_t size;
+  granit_buffer_usage usage;
+  uint32_t reserved;
+} granit_transient_buffer_slice;
 
 typedef struct granit_frame_context_desc {
   uint32_t struct_size;
@@ -50,6 +79,9 @@ GRANIT_API granit_result granit_frame_context_submit(granit_renderer renderer,
 GRANIT_API granit_result granit_frame_context_abort(granit_renderer renderer,
                                                     granit_frame_context context,
                                                     granit_frame frame);
+GRANIT_API granit_result granit_frame_context_allocate_transient_buffer(
+    granit_renderer renderer, granit_frame_context context, granit_frame frame,
+    const granit_transient_buffer_desc* desc, granit_transient_buffer_slice* slice);
 /** 先使 Context 句柄失效，再等待并销毁其全部 Recorder。 */
 GRANIT_API granit_result granit_frame_context_destroy(granit_renderer renderer,
                                                       granit_frame_context context);

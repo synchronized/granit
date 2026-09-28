@@ -8,6 +8,27 @@ Frame Context 按 Renderer 的真实在途帧槽轮转一组 Command Recorder，
 Recorder、高层 Render Pipeline 的选择和完整帧生命周期见
 [Frame 与命令录制分层](../concepts/frame-and-command-lifecycle.md)。
 
+## Transient Buffer Slice
+
+活动的 `frame_recording` 可以通过 `allocate_transient_buffer` 分配一段帧级临时 Buffer。返回的 Slice
+只包含借用的 `buffer_ref`、Offset、Size 和 Usage；它不拥有底层 Buffer，不能销毁或跨帧保存。
+Frame Context 按真实 Frame Slot 和兼容 Usage 维护页面，等待槽位完成后统一把页面游标复位，因此
+不会覆盖仍由 GPU 使用的数据。
+
+分配支持 Transfer、Vertex、Index、Uniform、Storage 和 Indirect Usage 的组合。Size 必须非零，
+Alignment 必须是 2 的幂；实现还会提升到对应后端要求的 Uniform/Storage 对齐。首版只接受 Device
+或 Automatic 内存，不公开长期映射指针。提交后的页面随槽位保活，Abort 会立即复位当前槽；销毁
+Context 会先等待并销毁 Recorder，再释放全部页面。
+
+```cpp
+granit::transient_buffer_slice vertices;
+recording.allocate_transient_buffer(
+    {.size = bytes,
+     .usage = granit::buffer_usage::storage | granit::buffer_usage::vertex,
+     .location = granit::memory_location::device},
+    vertices, 16);
+```
+
 ## 创建
 
 ```c

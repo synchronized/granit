@@ -259,6 +259,8 @@ granit_result renderer_registry::begin_frame_context(granit_renderer renderer,
     if (reset_result != GRANIT_SUCCESS)
       return reset_result;
     slot.state = frame_context_slot_state::idle;
+    for (auto& page : slot.transient_pages)
+      page.offset = 0;
   }
   const auto begin_result = begin_command_recorder(renderer, slot.recorder);
   if (begin_result != GRANIT_SUCCESS)
@@ -267,6 +269,109 @@ granit_result renderer_registry::begin_frame_context(granit_renderer renderer,
   slot.state = frame_context_slot_state::recording;
   recorder = slot.recorder;
   frame_slot = static_cast<std::uint32_t>(slot_index);
+  return GRANIT_SUCCESS;
+}
+
+granit_result renderer_registry::allocate_transient_buffer(granit_renderer renderer,
+                                                           granit_frame_context context,
+                                                           granit_frame frame,
+                                                           const granit_transient_buffer_desc& desc,
+                                                           granit_transient_buffer_slice& slice) {
+  constexpr granit_buffer_usage supported_usage =
+      GRANIT_BUFFER_USAGE_TRANSFER_SOURCE_BIT | GRANIT_BUFFER_USAGE_TRANSFER_DESTINATION_BIT |
+      GRANIT_BUFFER_USAGE_VERTEX_BIT | GRANIT_BUFFER_USAGE_INDEX_BIT |
+      GRANIT_BUFFER_USAGE_UNIFORM_BIT | GRANIT_BUFFER_USAGE_STORAGE_BIT |
+      GRANIT_BUFFER_USAGE_INDIRECT_BIT;
+  if ((desc.usage & ~supported_usage) != 0 ||
+      (desc.memory_location != GRANIT_MEMORY_LOCATION_AUTOMATIC &&
+       desc.memory_location != GRANIT_MEMORY_LOCATION_DEVICE))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+
+  std::shared_ptr<frame_context_record> record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto renderer_found = backend_renderers_.find(renderer);
+    const auto context_found = frame_contexts_.find(context);
+    if (renderer_found == backend_renderers_.end() || context_found == frame_contexts_.end() ||
+        context_found->second->owner != renderer_found->second)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    record = context_found->second;
+  }
+
+  std::lock_guard context_lock{record->mutex};
+  auto slot = std::find_if(record->slots.begin(), record->slots.end(), [&](const auto& item) {
+    return item.state == frame_context_slot_state::recording && item.frame == frame;
+  });
+  if (slot == record->slots.end())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+
+  auto alignment = std::max<std::uint64_t>(desc.alignment, 4);
+  const auto& capabilities = record->owner->capabilities();
+  if ((desc.usage & GRANIT_BUFFER_USAGE_UNIFORM_BIT) != 0)
+    alignment = std::max(alignment, capabilities.uniform_buffer_offset_alignment);
+  if ((desc.usage & GRANIT_BUFFER_USAGE_STORAGE_BIT) != 0)
+    alignment = std::max(alignment, capabilities.storage_buffer_offset_alignment);
+  const auto align_up = [alignment](std::uint64_t value, std::uint64_t& aligned) {
+    const auto mask = alignment - 1;
+    if (value > UINT64_MAX - mask)
+      return false;
+    aligned = (value + mask) & ~mask;
+    return true;
+  };
+
+  for (auto& page : slot->transient_pages) {
+    if (page.usage != desc.usage || page.memory_location != desc.memory_location)
+      continue;
+    std::uint64_t offset{};
+    if (!align_up(page.offset, offset) || offset > page.size || desc.size > page.size - offset)
+      continue;
+    page.offset = offset + desc.size;
+    slice = {.buffer = page.buffer,
+             .offset = offset,
+             .size = desc.size,
+             .usage = desc.usage,
+             .reserved = 0};
+    return GRANIT_SUCCESS;
+  }
+
+  std::uint64_t minimum_size{};
+  if (!align_up(desc.size, minimum_size))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  constexpr std::uint64_t default_page_size = UINT64_C(1024) * UINT64_C(1024);
+  const auto page_size = std::max(default_page_size, minimum_size);
+  granit_buffer_desc buffer_desc = GRANIT_BUFFER_DESC_INIT;
+  buffer_desc.usage = desc.usage;
+  buffer_desc.memory_location = desc.memory_location;
+  buffer_desc.size = page_size;
+  granit_buffer buffer{};
+  const auto create_result = create_buffer(renderer, buffer_desc, buffer);
+  if (create_result != GRANIT_SUCCESS)
+    return create_result;
+  {
+    std::lock_guard lock{mutex_};
+    const auto found = buffers_.find(buffer);
+    if (found == buffers_.end()) {
+      return GRANIT_ERROR_INTERNAL;
+    }
+    found->second->owned_by_frame_context = true;
+  }
+  try {
+    slot->transient_pages.push_back({.buffer = buffer,
+                                     .usage = desc.usage,
+                                     .memory_location = desc.memory_location,
+                                     .size = page_size,
+                                     .offset = desc.size});
+  } catch (...) {
+    {
+      std::lock_guard lock{mutex_};
+      const auto found = buffers_.find(buffer);
+      if (found != buffers_.end())
+        found->second->owned_by_frame_context = false;
+    }
+    static_cast<void>(destroy_buffer(renderer, buffer));
+    throw;
+  }
+  slice = {.buffer = buffer, .offset = 0, .size = desc.size, .usage = desc.usage, .reserved = 0};
   return GRANIT_SUCCESS;
 }
 
@@ -334,6 +439,8 @@ granit_result renderer_registry::abort_frame_context(granit_renderer renderer,
   if (result == GRANIT_SUCCESS) {
     slot->frame = GRANIT_NULL_HANDLE;
     slot->state = frame_context_slot_state::idle;
+    for (auto& page : slot->transient_pages)
+      page.offset = 0;
   }
   return result;
 }
@@ -363,6 +470,19 @@ granit_result renderer_registry::destroy_frame_context(granit_renderer renderer,
     const auto destroy_result = destroy_command_recorder(renderer, slot.recorder);
     if (result == GRANIT_SUCCESS && destroy_result != GRANIT_SUCCESS)
       result = destroy_result;
+  }
+  for (const auto& slot : record->slots) {
+    for (const auto& page : slot.transient_pages) {
+      {
+        std::lock_guard lock{mutex_};
+        const auto found = buffers_.find(page.buffer);
+        if (found != buffers_.end())
+          found->second->owned_by_frame_context = false;
+      }
+      const auto destroy_result = destroy_buffer(renderer, page.buffer);
+      if (result == GRANIT_SUCCESS && destroy_result != GRANIT_SUCCESS)
+        result = destroy_result;
+    }
   }
   return result;
 }

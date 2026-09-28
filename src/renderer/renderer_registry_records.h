@@ -45,6 +45,7 @@ struct renderer_registry::buffer_record {
   granit_buffer_desc desc{};
   std::mutex mutex;
   bool mapped{};
+  bool owned_by_frame_context{};
   std::uint64_t mapped_offset{};
   std::uint64_t mapped_size{};
 };
@@ -158,10 +159,18 @@ struct renderer_registry::command_recorder_record {
   bool owned_by_frame_context{};
 };
 enum class renderer_registry::frame_context_slot_state { idle, recording, submitted };
+struct frame_context_transient_page {
+  granit_buffer buffer{GRANIT_NULL_HANDLE};
+  granit_buffer_usage usage{};
+  granit_memory_location memory_location{GRANIT_MEMORY_LOCATION_DEVICE};
+  std::uint64_t size{};
+  std::uint64_t offset{};
+};
 struct renderer_registry::frame_context_slot {
   granit_command_recorder recorder{GRANIT_NULL_HANDLE};
   granit_frame frame{GRANIT_NULL_HANDLE};
   frame_context_slot_state state{frame_context_slot_state::idle};
+  std::vector<frame_context_transient_page> transient_pages;
 };
 struct renderer_registry::frame_context_record {
   resource_metadata metadata;
