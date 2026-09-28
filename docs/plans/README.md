@@ -9,7 +9,9 @@
 
 ## 当前计划
 
-当前没有实施中的编号计划；下一项工作应基于能力矩阵和真实使用需求单独立项。
+- [S-72：0.39.0 Asset Manager 与任务系统](S-72-0.39.0-asset-manager-and-task-system.md)——以
+  `asset_manager::load<T>()` 作为示例唯一资产入口，通过显式注册组合平台 Source 与格式 Loader，
+  提供全异步句柄、单资源/Group 进度，并提取由应用拥有、可注入的 Task System。
 
 ## 最近完成
 

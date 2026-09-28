@@ -29,7 +29,14 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段通过可运行�
 
 ## 当前计划
 
-当前没有实施中的编号计划。下一项工作将依据后端能力矩阵和真实使用需求单独规划。
+### S-72：0.39.0 Asset Manager 与任务系统
+
+**状态：已确认，P1。**
+
+[S-72](plans/S-72-0.39.0-asset-manager-and-task-system.md) 将 Example Asset System 收敛为单一
+`asset_manager::load<T>()` 入口，以显式注册组合平台 Source 与格式 Loader，统一异步句柄、依赖、
+缓存、取消及单资源/Group 进度。同时提取由应用拥有、可注入的示例 Task System，保持 GPU 渲染任务
+的专用顺序和线程语义。本任务不新增公共 Asset Manager 或 Executor ABI。
 
 ## 最近完成
 
