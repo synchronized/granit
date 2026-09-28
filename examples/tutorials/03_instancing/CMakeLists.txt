@@ -51,6 +51,8 @@ target_link_libraries(
   granit_tutorial_03_instancing
   PRIVATE
     granit_example_application
+    granit_example_camera
+    granit_example_tutorial
     granit::render_pipeline
 )
 granit_target_compile_warnings(granit_tutorial_03_instancing)

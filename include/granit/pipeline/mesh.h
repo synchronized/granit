@@ -44,6 +44,18 @@ typedef struct granit_mesh_desc {
   uint32_t reserved;
 } granit_mesh_desc;
 
+/** 覆盖一次 Mesh Draw 的实例范围。 */
+typedef struct granit_mesh_draw_desc {
+  uint32_t struct_size;
+  uint32_t instance_count;
+  uint32_t first_instance;
+  uint32_t reserved;
+} granit_mesh_draw_desc;
+
+#define GRANIT_MESH_DRAW_DESC_VERSION_1_SIZE ((uint32_t)sizeof(granit_mesh_draw_desc))
+#define GRANIT_MESH_DRAW_DESC_INIT                                                                 \
+  {(uint32_t)sizeof(granit_mesh_draw_desc), UINT32_C(1), UINT32_C(0), UINT32_C(0)}
+
 #define GRANIT_MESH_DESC_VERSION_1_SIZE                                                            \
   ((uint32_t)(offsetof(granit_mesh_desc, reserved) + sizeof(uint64_t)))
 
@@ -85,10 +97,11 @@ GRANIT_RENDER_PIPELINE_API granit_result granit_mesh_bind(granit_renderer render
                                                           granit_mesh mesh,
                                                           granit_command_recorder recorder);
 
-/** 在 Rendering 内按 Mesh 保存的范围录制一次 Draw。 */
+/** 在 Rendering 内录制一次 Draw；desc 为空时使用 Mesh 保存的默认实例范围。 */
 GRANIT_RENDER_PIPELINE_API granit_result granit_mesh_draw(granit_renderer renderer,
                                                           granit_mesh mesh,
-                                                          granit_command_recorder recorder);
+                                                          granit_command_recorder recorder,
+                                                          const granit_mesh_draw_desc* desc);
 
 #ifdef __cplusplus
 }

@@ -2,17 +2,21 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "application/application.h"
+#include "camera/orbit_camera.h"
+#include "camera/orbit_camera_input_accumulator.h"
 #include "model_data.hpp"
 #include "shader_archive.h"
+#include "tutorial/tutorial_runtime.h"
 
-#include <granit/math/functions.hpp>
 #include <granit/pipeline/mesh.hpp>
+#include <imgui.h>
 
+#include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
-#include <numbers>
 #include <optional>
 #include <span>
 #include <string_view>
@@ -25,9 +29,9 @@ namespace {
 
 using granit::math::matrix4;
 
-constexpr std::uint32_t instance_columns = 9;
-constexpr std::uint32_t instance_rows = 5;
-constexpr std::uint32_t instance_count = instance_columns * instance_rows;
+constexpr std::uint32_t maximum_instance_dimension = 32;
+constexpr std::uint32_t maximum_instance_count =
+    maximum_instance_dimension * maximum_instance_dimension;
 
 struct instance_data {
   std::array<float, 4> offset_scale;
@@ -51,27 +55,18 @@ int report_failure(std::string_view operation, granit::result result) {
   return 1;
 }
 
-bool make_view_projection(float aspect, matrix4& output) {
-  matrix4 view{};
-  matrix4 projection{};
-  if (!granit::math::look_at_rh({0, 0, 14}, {0, 0, 0}, {0, 1, 0}, view) ||
-      !granit::math::perspective_rh_zo(std::numbers::pi_v<float> / 3.0F, aspect, 0.1F, 100.0F,
-                                       projection)) {
-    return false;
-  }
-  output = granit::math::multiply(projection, view);
-  return true;
-}
-
 class tutorial_application final : public granit::example::application {
 public:
   void set_smoke_test(bool enabled) noexcept { smoke_test_ = enabled; }
-  [[nodiscard]] static constexpr std::uint32_t instances() noexcept { return instance_count; }
+  [[nodiscard]] std::uint32_t instances() const noexcept { return instance_count_; }
 
 private:
   granit::result on_initialize() noexcept override {
+    auto result = runtime_.initialize(renderer_owner());
+    if (result.failed())
+      return result;
     initialize_instances();
-    auto result = create_depth_target();
+    result = create_depth_target();
     if (result.ok())
       result = frame_context_.initialize(renderer());
     if (result.ok())
@@ -86,6 +81,9 @@ private:
       result = initialize_pipeline_layout();
     if (result.ok())
       result = create_pipeline();
+    if (result.ok() &&
+        !camera_.focus(instance_bounds(), presentation_info().width, presentation_info().height))
+      result = granit::result::invalid_argument;
     return result;
   }
 
@@ -97,6 +95,7 @@ private:
   }
 
   void on_shutdown(granit::result) noexcept override {
+    runtime_.shutdown();
     static_cast<void>(pipeline_.reset());
     static_cast<void>(resource_group_.reset());
     static_cast<void>(pipeline_layout_.reset());
@@ -114,25 +113,46 @@ private:
     static_cast<void>(frame_context_.reset());
   }
 
+  granit::result on_window_event(const granit::window_event& event) noexcept override {
+    runtime_.process(event);
+    camera_input_.process(event);
+    return granit::result::success;
+  }
+
+  granit::result on_input_event(const granit::input_event& event) noexcept override {
+    runtime_.process(event);
+    camera_input_.process(event, runtime_.wants_mouse(), runtime_.wants_keyboard());
+    return granit::result::success;
+  }
+
   void initialize_instances() noexcept {
-    for (std::uint32_t row = 0; row < instance_rows; ++row) {
-      for (std::uint32_t column = 0; column < instance_columns; ++column) {
-        const auto index = row * instance_columns + column;
-        const float x = (static_cast<float>(column) - 4.0F) * 1.65F;
-        const float y = (static_cast<float>(row) - 2.0F) * 1.65F;
+    instance_count_ = rows_ * columns_;
+    for (std::uint32_t row = 0; row < rows_; ++row) {
+      for (std::uint32_t column = 0; column < columns_; ++column) {
+        const auto index = row * columns_ + column;
+        const float x =
+            (static_cast<float>(column) - (static_cast<float>(columns_) - 1) * 0.5F) * spacing_;
+        const float y =
+            (static_cast<float>(row) - (static_cast<float>(rows_) - 1) * 0.5F) * spacing_;
         const float z = ((column + row) % 3 == 0) ? -0.8F : 0.0F;
         const float red = 0.25F + 0.7F * static_cast<float>(column) /
-                                      static_cast<float>(instance_columns - 1);
-        const float green = 0.25F + 0.65F * static_cast<float>(row) /
-                                        static_cast<float>(instance_rows - 1);
+                                      static_cast<float>(std::max(columns_ - 1, 1U));
+        const float green =
+            0.25F + 0.65F * static_cast<float>(row) / static_cast<float>(std::max(rows_ - 1, 1U));
         const float blue = 0.95F - 0.5F * static_cast<float>(column + row) /
-                                      static_cast<float>(instance_columns + instance_rows - 2);
+                                       static_cast<float>(std::max(columns_ + rows_ - 2, 1U));
         instances_[index] = {
             .offset_scale = {x, y, z, 0.48F},
             .color = {red, green, blue, 1.0F},
         };
       }
     }
+  }
+
+  [[nodiscard]] granit::example::camera::camera_bounds instance_bounds() const noexcept {
+    const auto width = static_cast<float>(columns_ - 1) * spacing_ + 2.0F;
+    const auto height = static_cast<float>(rows_ - 1) * spacing_ + 2.0F;
+    return {.radius = std::sqrt(width * width + height * height) * 0.5F};
   }
 
   granit::result initialize_buffers() noexcept {
@@ -190,28 +210,24 @@ private:
     };
     const std::array instance_attributes{
         granit::vertex_attribute{.location = 1, .format = granit::vertex_format::float32x4},
-        granit::vertex_attribute{.location = 2,
-                                 .format = granit::vertex_format::float32x4,
-                                 .offset = sizeof(float) * 4},
+        granit::vertex_attribute{
+            .location = 2, .format = granit::vertex_format::float32x4, .offset = sizeof(float) * 4},
     };
     const std::array bindings{
-        granit::mesh_vertex_buffer{
-            .buffer = vertex_buffer_.ref(),
-            .layout = {.stride = sizeof(tutorial_instancing::vertex),
-                       .attributes = vertex_attributes}},
-        granit::mesh_vertex_buffer{
-            .buffer = instance_buffer_.ref(),
-            .layout = {.stride = sizeof(instance_data),
-                       .step_mode = granit::vertex_step_mode::instance,
-                       .attributes = instance_attributes}},
+        granit::mesh_vertex_buffer{.buffer = vertex_buffer_.ref(),
+                                   .layout = {.stride = sizeof(tutorial_instancing::vertex),
+                                              .attributes = vertex_attributes}},
+        granit::mesh_vertex_buffer{.buffer = instance_buffer_.ref(),
+                                   .layout = {.stride = sizeof(instance_data),
+                                              .step_mode = granit::vertex_step_mode::instance,
+                                              .attributes = instance_attributes}},
     };
-    return mesh_.initialize(
-        renderer_owner(),
-        {.vertex_buffers = bindings,
-         .index_buffer = index_buffer_.ref(),
-         .index_format = granit::index_type::uint16,
-         .index_count = static_cast<std::uint32_t>(tutorial_instancing::indices.size()),
-         .instance_count = instance_count});
+    return mesh_.initialize(renderer_owner(), {.vertex_buffers = bindings,
+                                               .index_buffer = index_buffer_.ref(),
+                                               .index_format = granit::index_type::uint16,
+                                               .index_count = static_cast<std::uint32_t>(
+                                                   tutorial_instancing::indices.size()),
+                                               .instance_count = instance_count_});
   }
 
   granit::result initialize_pipeline_layout() noexcept {
@@ -259,9 +275,8 @@ private:
     };
     const std::array instance_attributes{
         granit::vertex_attribute{.location = 1, .format = granit::vertex_format::float32x4},
-        granit::vertex_attribute{.location = 2,
-                                 .format = granit::vertex_format::float32x4,
-                                 .offset = sizeof(float) * 4},
+        granit::vertex_attribute{
+            .location = 2, .format = granit::vertex_format::float32x4, .offset = sizeof(float) * 4},
     };
     const std::array vertex_layouts{
         granit::vertex_buffer_layout{.stride = sizeof(tutorial_instancing::vertex),
@@ -288,20 +303,68 @@ private:
   }
 
   granit::result on_render(granit::example::present_frame& frame) noexcept override {
+    camera_input_.begin_frame();
+    granit::window_state window_state;
+    auto result = app_window().get_state(window_state);
+    if (result.ok()) {
+      result =
+          runtime_.begin_frame(window_state, frame.delta_seconds,
+                               {.name = "03 Instancing",
+                                .description = "Dynamic instance range and draw-call comparison",
+                                .frame = rendered_frames()});
+    }
+    int rows = static_cast<int>(rows_);
+    int columns = static_cast<int>(columns_);
+    bool layout_changed{};
+    if (result.ok()) {
+      layout_changed = ImGui::SliderInt("Rows", &rows, 1, maximum_instance_dimension);
+      layout_changed =
+          ImGui::SliderInt("Columns", &columns, 1, maximum_instance_dimension) || layout_changed;
+      layout_changed = ImGui::SliderFloat("Spacing", &spacing_, 0.8F, 3.0F) || layout_changed;
+      ImGui::Checkbox("Animate", &animate_);
+      ImGui::SliderFloat("Animation speed", &animation_speed_, 0.0F, 3.0F);
+      ImGui::Checkbox("Instanced draw", &use_instancing_);
+      ImGui::Checkbox("Auto orbit", &auto_orbit_);
+      if (ImGui::Button("Reset camera"))
+        camera_.reset();
+      ImGui::Text("Instances: %u / %u", instance_count_, maximum_instance_count);
+      ImGui::Text("Draw calls: %u", use_instancing_ ? 1U : instance_count_);
+      result = runtime_.end_frame();
+    }
+    if (result.failed())
+      return result;
+    if (layout_changed) {
+      rows_ = static_cast<std::uint32_t>(rows);
+      columns_ = static_cast<std::uint32_t>(columns);
+      initialize_instances();
+      if (!camera_.focus(instance_bounds(), frame.swapchain.width, frame.swapchain.height))
+        return granit::result::invalid_argument;
+    }
+
     granit::frame_recording recording;
-    auto result = frame_context_.begin(frame.acquired, recording);
+    result = frame_context_.begin(frame.acquired, recording);
 
     if (smoke_test_)
       time_ = 0.75F;
-    else
-      time_ += frame.delta_seconds;
-    const auto aspect =
-        static_cast<float>(frame.swapchain.width) / static_cast<float>(frame.swapchain.height);
-    scene_uniforms uniforms{};
-    if (result.ok() && !make_view_projection(aspect, uniforms.view_projection))
+    else if (animate_)
+      time_ += frame.delta_seconds * animation_speed_;
+    const auto input = camera_input_.finish(runtime_.wants_mouse(), runtime_.wants_keyboard());
+    if (auto_orbit_ && !smoke_test_ && !camera_.orbit(frame.delta_seconds * 0.25F))
       result = granit::result::invalid_argument;
+    if (result.ok() && !camera_.update(input, frame.swapchain.width, frame.swapchain.height))
+      result = granit::result::invalid_argument;
+    granit::example::camera::camera_matrices matrices;
+    if (result.ok() && !camera_.matrices(frame.swapchain.width, frame.swapchain.height, matrices))
+      result = granit::result::invalid_argument;
+    scene_uniforms uniforms{};
+    uniforms.view_projection = matrices.view_projection;
     uniforms.animation[0] = time_;
     const auto uniform_offset = uniform_stride_ * recording.frame_slot();
+    if (result.ok()) {
+      result = instance_buffer_.write(
+          0,
+          std::as_bytes(std::span{instances_.data(), static_cast<std::size_t>(instance_count_)}));
+    }
     if (result.ok())
       result = uniform_buffer_.write(uniform_offset, std::as_bytes(std::span{&uniforms, 1}));
 
@@ -333,10 +396,26 @@ private:
       result = recorder.bind_graphics_group(pipeline_layout_, 0, resource_group_, dynamic_offsets);
     if (result.ok())
       result = recorder.begin_rendering(rendering);
-    if (result.ok())
-      result = mesh_.draw(recorder);
+    if (result.ok() && use_instancing_)
+      result = mesh_.draw(recorder, {.instance_count = instance_count_});
+    if (result.ok() && !use_instancing_) {
+      for (std::uint32_t index = 0; index < instance_count_ && result.ok(); ++index)
+        result = mesh_.draw(recorder, {.instance_count = 1, .first_instance = index});
+    }
     if (result.ok())
       result = recorder.end_rendering();
+    if (result.ok()) {
+      const bool encode_srgb = frame.swapchain.format == granit::texture_format::rgba8_unorm ||
+                               frame.swapchain.format == granit::texture_format::bgra8_unorm;
+      result = runtime_.canvas().record(recorder,
+                                        {.color = frame.backbuffer.view,
+                                         .color_format = frame.swapchain.format,
+                                         .width = frame.swapchain.width,
+                                         .height = frame.swapchain.height,
+                                         .load_operation = granit::attachment_load_operation::load,
+                                         .encode_srgb = encode_srgb,
+                                         .frame_slot = recording.frame_slot()});
+    }
     if (result.ok())
       result = recording.submit();
     if (result.failed() && recording.valid())
@@ -344,7 +423,10 @@ private:
     return result;
   }
 
-  std::array<instance_data, instance_count> instances_{};
+  std::array<instance_data, maximum_instance_count> instances_{};
+  granit::example::tutorial::tutorial_runtime runtime_;
+  granit::example::camera::orbit_camera camera_;
+  granit::example::camera::orbit_camera_input_accumulator camera_input_;
   granit::frame_context frame_context_;
   granit::shader_library shader_library_;
   granit::shader vertex_shader_;
@@ -363,6 +445,14 @@ private:
   granit::texture_format pipeline_format_{granit::texture_format::undefined};
   std::uint64_t uniform_stride_{};
   float time_{};
+  float spacing_{1.65F};
+  float animation_speed_{1.0F};
+  std::uint32_t rows_{5};
+  std::uint32_t columns_{9};
+  std::uint32_t instance_count_{45};
+  bool animate_{true};
+  bool auto_orbit_{};
+  bool use_instancing_{true};
   bool smoke_test_{};
 };
 

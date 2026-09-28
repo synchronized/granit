@@ -216,7 +216,8 @@ granit_result granit::pipeline::detail::bind_mesh_buffers(granit_renderer render
 
 granit_result granit::pipeline::detail::draw_mesh(granit_renderer renderer,
                                                   granit_command_recorder recorder,
-                                                  granit_mesh mesh) noexcept {
+                                                  granit_mesh mesh,
+                                                  const granit_mesh_draw_desc* desc) noexcept {
   size_t index = 0;
   uint32_t generation = 0;
   if (recorder == GRANIT_NULL_HANDLE || !decode(mesh, index, generation))
@@ -230,14 +231,33 @@ granit_result granit::pipeline::detail::draw_mesh(granit_renderer renderer,
     }
     state = registry[index].state;
   }
+  uint32_t instance_count = state->instance_count;
+  uint32_t first_instance = state->first_instance;
+  if (desc != nullptr) {
+    if (desc->struct_size < GRANIT_MESH_DRAW_DESC_VERSION_1_SIZE || desc->instance_count == 0 ||
+        desc->reserved != 0) {
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    }
+    instance_count = desc->instance_count;
+    first_instance = desc->first_instance;
+  }
+  for (const auto& vertex : state->vertex_buffers) {
+    if (vertex.step_mode != GRANIT_VERTEX_STEP_MODE_INSTANCE)
+      continue;
+    const auto elements = static_cast<uint64_t>(first_instance) + instance_count;
+    const auto required = static_cast<uint64_t>(vertex.stride) * elements;
+    const auto result = validate_buffer(renderer, vertex.buffer, vertex.offset,
+                                        GRANIT_BUFFER_USAGE_VERTEX_BIT, required);
+    if (result != GRANIT_SUCCESS)
+      return result;
+  }
   if (state->index_buffer != GRANIT_NULL_HANDLE) {
     return granit_command_recorder_draw_indexed(renderer, recorder, state->index_count,
-                                                state->instance_count, state->first_index,
-                                                state->vertex_offset, state->first_instance);
+                                                instance_count, state->first_index,
+                                                state->vertex_offset, first_instance);
   }
-  return granit_command_recorder_draw(renderer, recorder, state->vertex_count,
-                                      state->instance_count, state->first_vertex,
-                                      state->first_instance);
+  return granit_command_recorder_draw(renderer, recorder, state->vertex_count, instance_count,
+                                      state->first_vertex, first_instance);
 }
 
 extern "C" granit_result granit_mesh_create(granit_renderer renderer, const granit_mesh_desc* desc,
@@ -357,6 +377,7 @@ extern "C" granit_result granit_mesh_bind(granit_renderer renderer, granit_mesh 
 }
 
 extern "C" granit_result granit_mesh_draw(granit_renderer renderer, granit_mesh mesh,
-                                          granit_command_recorder recorder) {
-  return granit::pipeline::detail::draw_mesh(renderer, recorder, mesh);
+                                          granit_command_recorder recorder,
+                                          const granit_mesh_draw_desc* desc) {
+  return granit::pipeline::detail::draw_mesh(renderer, recorder, mesh, desc);
 }
