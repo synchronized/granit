@@ -22,9 +22,8 @@ class memfs_asset_source final : public assets::asset_source {
 public:
   explicit memfs_asset_source(std::filesystem::path root = {}) : root_(std::move(root)) {}
 
-  [[nodiscard]] granit::result
-  load(const assets::asset_location& location,
-       assets::asset_source_completion completion) noexcept override {
+  [[nodiscard]] granit::result load(const assets::asset_location& location,
+                                    assets::asset_source_completion completion) noexcept override {
     try {
       const auto path = root_.empty() ? std::filesystem::path{location.path()}
                                       : root_ / std::filesystem::path{location.path()};
@@ -112,9 +111,8 @@ void fetch_failure(emscripten_fetch_t* fetch) {
 
 class fetch_asset_source final : public assets::asset_source {
 public:
-  [[nodiscard]] granit::result
-  load(const assets::asset_location& location,
-       assets::asset_source_completion completion) noexcept override {
+  [[nodiscard]] granit::result load(const assets::asset_location& location,
+                                    assets::asset_source_completion completion) noexcept override {
     try {
       auto context = std::make_unique<fetch_context>();
       context->completion = std::move(completion);
@@ -146,14 +144,12 @@ granit::result register_asset_sources(assets::asset_manager& manager,
   try {
     auto result = manager.register_source(assets::asset_scheme::bundled,
                                           std::make_shared<memfs_asset_source>("/assets"));
-    if (result.ok()) {
+    if (result.ok())
       result = manager.register_source(assets::asset_scheme::file,
-                                       std::make_shared<memfs_asset_source>());
-    }
-    if (result.ok()) {
+                                       std::make_shared<fetch_asset_source>());
+    if (result.ok())
       result = manager.register_source(assets::asset_scheme::http,
                                        std::make_shared<fetch_asset_source>());
-    }
     if (result.ok()) {
       result = manager.register_source(assets::asset_scheme::https,
                                        std::make_shared<fetch_asset_source>());

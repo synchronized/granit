@@ -43,7 +43,9 @@ bool report_progress(const gltf::import_progress& progress, void* user_data) {
   const auto& context = *static_cast<const progress_context*>(user_data);
   if (context.cancel_requested->load(std::memory_order_acquire))
     return false;
-  return context.callback == nullptr || context.callback(progress, context.user_data);
+  if (context.callback != nullptr && !context.callback(progress, context.user_data))
+    return false;
+  return !context.cancel_requested->load(std::memory_order_acquire);
 }
 
 } // namespace

@@ -5,8 +5,11 @@
 
 #include <catch2/catch_all.hpp>
 
-#include <stdexcept>
 #include <vector>
+
+#if !defined(__EMSCRIPTEN__)
+#include <stdexcept>
+#endif
 
 TEST_CASE("main executor defers work and preserves FIFO order") {
   granit::example::tasks::main_thread_executor executor;
@@ -42,6 +45,7 @@ TEST_CASE("inline work still publishes completion later") {
   REQUIRE(completion_ran);
 }
 
+#if !defined(__EMSCRIPTEN__)
 TEST_CASE("task exceptions become result values") {
   granit::example::tasks::task_system tasks;
   REQUIRE(tasks.initialize({.worker_count = 0}).ok());
@@ -54,6 +58,7 @@ TEST_CASE("task exceptions become result values") {
   REQUIRE(tasks.pump_main() == 1);
   REQUIRE(completion_result == granit::result::internal);
 }
+#endif
 
 #if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
 TEST_CASE("thread pool executes work before main completion") {

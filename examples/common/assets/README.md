@@ -16,7 +16,8 @@
 - `asset_group` 可汇总一批根请求及其依赖进度。
 
 同一个 bundled 逻辑路径在 Desktop 从可执行文件旁的 `assets` 目录读取，在 Web 从预加载的
-`/assets` 读取。外部位置在 Desktop 走文件 Source，在 Web 可走 MEMFS 或 Fetch。平台组合入口显式
+`/assets` 读取。外部相对位置在 Desktop 走文件 Source，在 Web 相对于页面地址使用 Fetch；显式
+HTTP(S) URL 同样使用 Fetch。平台组合入口显式
 注册 Source，业务代码不选择后端，也不创建 Mount。
 
 Application Host 拥有 Task System 和 Asset Manager，并在每个 Tick 发布 main completion。即使
