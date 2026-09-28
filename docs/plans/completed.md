@@ -136,3 +136,4 @@
 - [S-72：0.39.0 Asset Manager 与任务系统](S-72-0.39.0-asset-manager-and-task-system.md)
 - [S-73：0.39.0 统一交互式 Tutorial](S-73-0.39.0-unified-interactive-tutorials.md)
 - [S-74：0.39.0 GPU Marching Cubes 与动态几何](S-74-0.39.0-gpu-marching-cubes.md)
+- [S-75：0.40.0 Deferred 与多 Pass 渲染](S-75-0.40.0-deferred-rendering.md)

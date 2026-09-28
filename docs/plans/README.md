@@ -9,14 +9,13 @@
 
 ## 当前计划
 
-当前计划组成 [v0.40.0](../versions/v0.40.0.md)。
-
-- [S-75：0.40.0 Deferred 与多 Pass 渲染](S-75-0.40.0-deferred-rendering.md)——新增
-  `07_deferred`，以 MRT G-buffer、全屏光照、调试视图和 Resize 验证现有跨后端多 Pass 能力；
-  本版本不预设公共 Render Graph 或 Transient Texture。
+下一版本范围尚未固定。候选任务应先在路线图中形成明确证据，再进入版本文档。
 
 ## 最近完成
 
+- [S-75：0.40.0 Deferred 与多 Pass 渲染](S-75-0.40.0-deferred-rendering.md)——新增
+  `07_deferred`，以 MRT G-buffer、全屏光照、调试视图和 Resize 验证现有跨后端多 Pass 能力，
+  并发布 `v0.40.0`。
 - [S-72：Asset Manager 与任务系统](S-72-0.39.0-asset-manager-and-task-system.md)、
   [S-73：统一交互式 Tutorial](S-73-0.39.0-unified-interactive-tutorials.md)与
   [S-74：GPU Marching Cubes](S-74-0.39.0-gpu-marching-cubes.md)——统一示例资产、任务和交互基础，
