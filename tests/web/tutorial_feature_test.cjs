@@ -70,6 +70,9 @@ async function main() {
     }
   });
   const exportName = (suffix) => `_granit_tutorial_${tutorialNumber}_${suffix}`;
+  // Marching Cubes 首帧需要在软件 WebGPU 路径编译三个计算管线和一个图形管线。
+  // GitHub 托管 runner 上可能超过通用教程的 30 秒启动预算，但后续帧仍可正常验证。
+  const readyTimeout = tutorialNumber === "06" ? 90_000 : 30_000;
   try {
     await page.goto(`http://127.0.0.1:${address.port}/${target}.html`);
     await page.waitForFunction(
@@ -86,7 +89,7 @@ async function main() {
         feature: exportName("feature_value"),
         canvasItems: exportName("canvas_items"),
       },
-      { timeout: 30_000 },
+      { timeout: readyTimeout },
     );
 
     const canvas = page.locator("#canvas");
