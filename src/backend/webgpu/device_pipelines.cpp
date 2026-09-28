@@ -87,6 +87,7 @@ bool is_color_target_format(webgpu_texture_format format) noexcept {
          format == GRANIT_WEBGPU_TEXTURE_FORMAT_RG8_UNORM ||
          format == GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA8_UNORM ||
          format == GRANIT_WEBGPU_TEXTURE_FORMAT_BGRA8_UNORM ||
+         format == GRANIT_WEBGPU_TEXTURE_FORMAT_BGRA8_SRGB ||
          format == GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA8_SRGB ||
          format == GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA16_FLOAT;
 }
@@ -292,6 +293,7 @@ granit_result create_render_pipeline_common(webgpu_instance_handle instance,
       (desc->color_target_count != 0 && desc->color_targets == nullptr) ||
       (desc->color_target_count == 0 && desc->depth_stencil_format == 0) ||
       (desc->depth_stencil_format != 0 &&
+       desc->depth_stencil_format != GRANIT_WEBGPU_TEXTURE_FORMAT_D16_UNORM &&
        desc->depth_stencil_format != GRANIT_WEBGPU_TEXTURE_FORMAT_D32_FLOAT) ||
       desc->depth_test_enabled > 1 || desc->depth_write_enabled > 1 ||
       (desc->depth_stencil_format == 0 &&
@@ -440,7 +442,7 @@ granit_result create_render_pipeline_common(webgpu_instance_handle instance,
   descriptor.fragment = &fragment;
   WGPUDepthStencilState depth = WGPU_DEPTH_STENCIL_STATE_INIT;
   if (desc->depth_stencil_format != 0) {
-    depth.format = WGPUTextureFormat_Depth32Float;
+    depth.format = to_native_texture_format(desc->depth_stencil_format);
     depth.depthWriteEnabled =
         desc->depth_write_enabled != 0 ? WGPUOptionalBool_True : WGPUOptionalBool_False;
     depth.depthCompare = desc->depth_test_enabled != 0

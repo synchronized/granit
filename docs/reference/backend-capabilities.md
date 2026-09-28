@@ -52,8 +52,8 @@
 | Polygon Mode | Fill；Line/Point 取决于设备 | 仅 Fill |
 | Cull Mode | None、Front、Back、Front And Back | 不支持 Front And Back |
 | 颜色附件数量 | 最多 `GRANIT_MAX_COLOR_ATTACHMENTS`，受设备限制 | 支持 MRT，受 `max_color_attachments` 限制 |
-| 颜色格式 | 使用格式能力查询 | R8、RG8、RGBA8、RGBA8 sRGB、BGRA8、RGBA16F |
-| 深度模板格式 | 使用格式能力查询 | 当前仅 D32 Float，不支持模板操作 |
+| 颜色格式 | 使用格式能力查询 | R8、RG8、RGBA8、RGBA8 sRGB、BGRA8、BGRA8 sRGB、RGBA16F |
+| 深度模板格式 | 使用格式能力查询 | D16 UNORM、D32 Float；不支持模板操作 |
 | 样本数 | 使用 Renderer Limits 与格式能力查询 | 当前 Pipeline 支持 1x/4x |
 | 分层 Rendering | 支持适用配置 | 当前 `layer_count` 必须为 1 |
 | Attachment Load Discard | 支持 | 当前不支持颜色或深度 Load Discard |

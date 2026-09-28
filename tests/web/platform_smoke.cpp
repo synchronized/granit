@@ -130,7 +130,6 @@ granit_result validate_public_timestamp(granit_renderer renderer,
     return result == GRANIT_ERROR_UNSUPPORTED ? GRANIT_SUCCESS : GRANIT_ERROR_INTERNAL;
   if (result != GRANIT_SUCCESS)
     return result;
-
   granit_command_recorder recorder{};
   granit_async_operation operation{};
   const auto cleanup = [&] {
@@ -655,7 +654,26 @@ granit_result validate_presentation(granit_renderer renderer, granit_swapchain s
 }
 
 granit_result validate_renderer(granit_renderer renderer, const granit_renderer_limits& limits) {
-  const auto result = validate_public_timestamp(renderer, limits);
+  if (limits.max_color_attachments < 2)
+    return GRANIT_ERROR_UNSUPPORTED;
+  granit_texture_format_capabilities rgba8 = GRANIT_TEXTURE_FORMAT_CAPABILITIES_INIT;
+  granit_texture_format_capabilities bgra8_srgb = GRANIT_TEXTURE_FORMAT_CAPABILITIES_INIT;
+  granit_texture_format_capabilities d16 = GRANIT_TEXTURE_FORMAT_CAPABILITIES_INIT;
+  auto result = granit_renderer_get_texture_format_capabilities(
+      renderer, GRANIT_TEXTURE_FORMAT_RGBA8_UNORM, &rgba8);
+  if (result == GRANIT_SUCCESS)
+    result = granit_renderer_get_texture_format_capabilities(
+        renderer, GRANIT_TEXTURE_FORMAT_BGRA8_SRGB, &bgra8_srgb);
+  if (result == GRANIT_SUCCESS)
+    result = granit_renderer_get_texture_format_capabilities(renderer,
+                                                             GRANIT_TEXTURE_FORMAT_D16_UNORM, &d16);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  if ((rgba8.supported_usage & GRANIT_TEXTURE_USAGE_STORAGE_BIT) == 0 ||
+      (bgra8_srgb.supported_usage & GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT) == 0 ||
+      (d16.supported_usage & GRANIT_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) == 0)
+    return GRANIT_ERROR_UNSUPPORTED;
+  result = validate_public_timestamp(renderer, limits);
   return result == GRANIT_SUCCESS ? validate_public_transfers(renderer) : result;
 }
 

@@ -24,7 +24,7 @@ Vulkan Pipeline、Pipeline Layout 或 Dynamic Rendering 结构。
   掩码。
 - Vulkan 与 WebGPU 都支持多个颜色附件；实际上限通过
   `granit_renderer_limits::max_color_attachments` 查询。WebGPU 颜色 Pipeline 现支持 R8、RG8、
-  RGBA8、RGBA8 sRGB、BGRA8 和 RGBA16 Float。
+  RGBA8、RGBA8 sRGB、BGRA8、BGRA8 sRGB 和 RGBA16 Float，深度支持 D16 UNORM 与 D32 Float。
 - Viewport 与 Scissor 是动态状态，将由 D-05 的命令接口设置。
 - Pipeline 内部保持 Shader 与 Layout 存活；对应公开句柄可以先销毁。
 - 所有对象支持 Renderer domain、generation、Device Lost、级联诊断和延迟销毁。
@@ -41,7 +41,7 @@ Viewport、Scissor、Vertex/Index Buffer、Draw 和 Draw Indexed 已经实现。
 支持为每个 Vertex Buffer binding 指定 stride、per-vertex/per-instance 步进，以及 location、
 format 和 offset。未提供 Vertex Buffer Layout 时仍可使用 Shader 内的顶点序号生成位置。
 Vulkan 的非实心 Line/Point 模式依赖设备能力；浏览器 WebGPU 没有同等 Polygon Mode。当前 WebGPU
-还限制 D32 Float 深度、1x/4x 采样和部分颜色格式；不满足后端能力时 Pipeline 创建返回
+还限制 1x/4x 采样和部分颜色格式；不满足后端能力时 Pipeline 创建返回
 `GRANIT_ERROR_UNSUPPORTED`，不会静默替换状态。
 未显式提供深度状态时，有深度格式的 Pipeline 默认启用测试和写入并使用 Less Or Equal；未提供
 颜色混合状态时默认关闭混合并写入 RGBA。

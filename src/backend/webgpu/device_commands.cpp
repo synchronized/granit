@@ -488,7 +488,8 @@ granit_result recorder_generate_mipmaps(webgpu_instance_handle instance,
     return GRANIT_ERROR_INVALID_HANDLE;
   const auto& record = texture_found->second;
   if (!valid_transfer_recorder(command->second) || record.borrowed || record.sample_count != 1 ||
-      record.format == GRANIT_WEBGPU_TEXTURE_FORMAT_D32_FLOAT ||
+      (record.format == GRANIT_WEBGPU_TEXTURE_FORMAT_D16_UNORM ||
+       record.format == GRANIT_WEBGPU_TEXTURE_FORMAT_D32_FLOAT) ||
       range->base_mip_level >= record.mip_level_count ||
       range->level_count > record.mip_level_count - range->base_mip_level ||
       range->base_array_layer >= record.array_layer_count ||
@@ -746,7 +747,8 @@ granit_result recorder_begin_rendering(webgpu_instance_handle instance,
       return GRANIT_ERROR_INVALID_HANDLE;
     const auto depth_texture = state.textures.find(depth_view->second.texture);
     if (depth_texture == state.textures.end() ||
-        depth_texture->second.format != GRANIT_WEBGPU_TEXTURE_FORMAT_D32_FLOAT ||
+        (depth_texture->second.format != GRANIT_WEBGPU_TEXTURE_FORMAT_D16_UNORM &&
+         depth_texture->second.format != GRANIT_WEBGPU_TEXTURE_FORMAT_D32_FLOAT) ||
         (depth_texture->second.usage & GRANIT_WEBGPU_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT) == 0 ||
         (render_sample_count != 0 && (depth_texture->second.width != render_width ||
                                       depth_texture->second.height != render_height ||

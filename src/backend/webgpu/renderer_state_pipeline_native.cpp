@@ -65,6 +65,8 @@ std::uint32_t to_webgpu_format(granit_texture_format format) noexcept {
     return GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA8_UNORM;
   case GRANIT_TEXTURE_FORMAT_BGRA8_UNORM:
     return GRANIT_WEBGPU_TEXTURE_FORMAT_BGRA8_UNORM;
+  case GRANIT_TEXTURE_FORMAT_BGRA8_SRGB:
+    return GRANIT_WEBGPU_TEXTURE_FORMAT_BGRA8_SRGB;
   case GRANIT_TEXTURE_FORMAT_R8_UNORM:
     return GRANIT_WEBGPU_TEXTURE_FORMAT_R8_UNORM;
   case GRANIT_TEXTURE_FORMAT_RG8_UNORM:
@@ -73,6 +75,8 @@ std::uint32_t to_webgpu_format(granit_texture_format format) noexcept {
     return GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA8_SRGB;
   case GRANIT_TEXTURE_FORMAT_D32_FLOAT:
     return GRANIT_WEBGPU_TEXTURE_FORMAT_D32_FLOAT;
+  case GRANIT_TEXTURE_FORMAT_D16_UNORM:
+    return GRANIT_WEBGPU_TEXTURE_FORMAT_D16_UNORM;
   case GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT:
     return GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA16_FLOAT;
   default:
@@ -176,6 +180,7 @@ granit_result webgpu_renderer_state::validate_graphics_pipeline(
   if ((desc.color_format_count == 0 &&
        desc.depth_stencil_format == GRANIT_TEXTURE_FORMAT_UNDEFINED) ||
       (desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_UNDEFINED &&
+       desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_D16_UNORM &&
        desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_D32_FLOAT) ||
       (desc.sample_count != 1 && desc.sample_count != 4) ||
       desc.primitive.cull_mode == GRANIT_CULL_MODE_FRONT_AND_BACK ||

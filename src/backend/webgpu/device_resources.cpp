@@ -419,6 +419,7 @@ granit_result create_texture(webgpu_instance_handle instance, const webgpu_textu
   if (desc->mip_level_count > 1 && sample_count == 1 &&
       (desc->usage & GRANIT_WEBGPU_TEXTURE_USAGE_COPY_SRC_BIT) != 0 &&
       (desc->usage & GRANIT_WEBGPU_TEXTURE_USAGE_COPY_DST_BIT) != 0 &&
+      desc->format != GRANIT_WEBGPU_TEXTURE_FORMAT_D16_UNORM &&
       desc->format != GRANIT_WEBGPU_TEXTURE_FORMAT_D32_FLOAT &&
       texture_block(desc->format).width == 1) {
     // 公共契约用 Transfer usage 表达 Mipmap；内部补充渲染采样 usage，避免泄漏 WebGPU 实现路径。

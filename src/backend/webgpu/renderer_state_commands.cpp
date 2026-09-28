@@ -327,7 +327,7 @@ bool webgpu_renderer_state::texture_supports_linear_blit(
          format == GRANIT_TEXTURE_FORMAT_RGBA8_UNORM ||
          format == GRANIT_TEXTURE_FORMAT_RGBA8_SRGB ||
          format == GRANIT_TEXTURE_FORMAT_BGRA8_UNORM ||
-         format == GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT;
+         format == GRANIT_TEXTURE_FORMAT_BGRA8_SRGB || format == GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT;
 }
 
 granit_result webgpu_renderer_state::generate_mipmaps(backend_command_recorder_resource& recorder,
@@ -422,7 +422,8 @@ granit_result webgpu_renderer_state::begin_rendering(
   float clear_depth = 1.0F;
   if (depth_stencil_attachment != nullptr) {
     const auto& depth = *depth_stencil_attachment;
-    if (depth.format != GRANIT_TEXTURE_FORMAT_D32_FLOAT ||
+    if ((depth.format != GRANIT_TEXTURE_FORMAT_D16_UNORM &&
+         depth.format != GRANIT_TEXTURE_FORMAT_D32_FLOAT) ||
         depth.depth_load_operation == GRANIT_ATTACHMENT_LOAD_OPERATION_DISCARD ||
         depth.stencil_load_operation != GRANIT_ATTACHMENT_LOAD_OPERATION_DISCARD ||
         depth.stencil_store_operation != GRANIT_ATTACHMENT_STORE_OPERATION_DISCARD) {

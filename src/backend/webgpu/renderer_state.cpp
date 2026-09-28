@@ -68,6 +68,8 @@ webgpu_renderer_state::texture_format_capabilities(granit_texture_format format)
   case GRANIT_TEXTURE_FORMAT_RG8_UNORM:
   case GRANIT_TEXTURE_FORMAT_RGBA8_UNORM:
   case GRANIT_TEXTURE_FORMAT_RGBA8_SRGB:
+  case GRANIT_TEXTURE_FORMAT_BGRA8_UNORM:
+  case GRANIT_TEXTURE_FORMAT_BGRA8_SRGB:
   case GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT:
     result.supported_usage =
         GRANIT_TEXTURE_USAGE_TRANSFER_SOURCE_BIT | GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT |
@@ -77,6 +79,7 @@ webgpu_renderer_state::texture_format_capabilities(granit_texture_format format)
     if (format == GRANIT_TEXTURE_FORMAT_RGBA8_UNORM || format == GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT)
       result.supported_usage |= GRANIT_TEXTURE_USAGE_STORAGE_BIT;
     break;
+  case GRANIT_TEXTURE_FORMAT_D16_UNORM:
   case GRANIT_TEXTURE_FORMAT_D32_FLOAT:
     result.supported_usage =
         GRANIT_TEXTURE_USAGE_TRANSFER_SOURCE_BIT | GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT |
