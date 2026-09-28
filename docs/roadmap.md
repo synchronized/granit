@@ -38,6 +38,14 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段通过可运行�
 缓存、取消及单资源/Group 进度。同时提取由应用拥有、可注入的示例 Task System，保持 GPU 渲染任务
 的专用顺序和线程语义。本任务不新增公共 Asset Manager 或 Executor ABI。
 
+### S-73：0.39.0 统一交互式 Tutorial
+
+**状态：已确认，P1。**
+
+[S-73](plans/S-73-0.39.0-unified-interactive-tutorials.md) 将统一五个 Tutorial 的 Granit ImGui
+主题、公共性能面板、Orbit Camera 和章节参数。Cube、PBR Assets、Instancing、Raymarch 与
+Metaballs 将在 Desktop 与 Web 使用相同交互路径，并保留确定性的自动 Smoke。
+
 ## 最近完成
 
 ### S-71：0.38.0 跨后端能力契约与 WebGPU 补齐
