@@ -29,16 +29,17 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段通过可运行�
 
 ## 当前计划
 
-### S-71：0.38.0 跨后端能力契约与 WebGPU 补齐
-
-**状态：已确认，P1。**
-
-[S-71](plans/S-71-0.38.0-webgpu-capability-parity.md) 建立 Vulkan 与浏览器 WebGPU 的正式能力矩阵，
-先修复文档和能力报告不一致，再补齐 WebGPU Primitive Topology、MRT、可准确映射的格式与 Storage
-Texture。Pipeline Cache、LOD Bias、非实心 Polygon Mode、浏览器同步 Timestamp、资源数组和平台
-Surface 差异继续明确报告不支持，不建立语义不可靠的模拟层。
+当前没有实施中的编号计划。下一项工作将依据后端能力矩阵和真实使用需求单独规划。
 
 ## 最近完成
+
+### S-71：0.38.0 跨后端能力契约与 WebGPU 补齐
+
+**状态：已完成，P1。**
+
+[S-71](plans/S-71-0.38.0-webgpu-capability-parity.md) 已建立 Vulkan 与浏览器 WebGPU 的正式能力
+矩阵，补齐 Primitive Topology、MRT、可准确映射的格式与 Write-Only Storage Texture，并把无法
+可靠映射的能力固定为明确的不支持结果。版本已发布为 `v0.38.0`。
 
 ### S-70：0.37.0 特性教程与 API 能力验证
 

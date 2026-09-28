@@ -132,3 +132,4 @@
 - [S-68：0.35.0 稳定候选契约审计](S-68-0.35.0-stable-candidate-contracts.md)
 - [S-69：0.36.0 公共 API 稳定边界与最小数学库](S-69-0.36.0-api-stability-and-math.md)
 - [S-70：0.37.0 特性教程与 API 能力验证](S-70-0.37.0-feature-tutorials.md)
+- [S-71：0.38.0 跨后端能力契约与 WebGPU 补齐](S-71-0.38.0-webgpu-capability-parity.md)
