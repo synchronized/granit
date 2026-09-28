@@ -13,7 +13,9 @@ Surface 表示 Renderer 与窗口系统或浏览器 Canvas 之间的输出连接
 
 Renderer 创建前设置 `granit_renderer_desc::presentation_mode = GRANIT_PRESENTATION_ENABLED`。
 默认 `DISABLED` 只用于离屏渲染；未启用呈现或当前后端不支持的来源返回
-`GRANIT_ERROR_UNSUPPORTED`。当前 Vulkan 后端支持平台窗口，浏览器 WebGPU 后端支持 Canvas。
+`GRANIT_ERROR_UNSUPPORTED`。正式运行目标中，Vulkan 桌面后端支持当前构建启用的平台窗口，
+浏览器 WebGPU 后端支持 Canvas。公共描述列出全部来源是为了统一外部窗口入口，不表示任一后端
+支持所有来源；完整对应关系见 [Renderer 后端能力矩阵](backend-capabilities.md)。
 
 ## C API
 

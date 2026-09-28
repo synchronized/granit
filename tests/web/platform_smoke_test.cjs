@@ -392,7 +392,7 @@ async function main() {
       );
     }
     console.log(
-      "浏览器 WebGPU 多帧渲染、质量与光照切换、输入、Resize、资产 Fetch 与资源释放验证通过",
+      "浏览器 WebGPU 多帧渲染、MRT、Storage Texture、Readback、输入与资源释放验证通过",
     );
     const validationErrors = browserMessages.filter((message) =>
       /validation error|webgpu.*error/i.test(message),

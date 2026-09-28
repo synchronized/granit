@@ -6,9 +6,9 @@
 
 #include <future>
 
+#include "asset_formats/shader/shader_library.h"
 #include "core/async_operation_state.h"
 #include "renderer/renderer_registry.h"
-#include "asset_formats/shader/shader_library.h"
 
 namespace granit::detail {
 

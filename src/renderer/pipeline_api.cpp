@@ -61,6 +61,11 @@ extern "C" granit_result granit_bind_group_layout_create(granit_renderer rendere
       return GRANIT_ERROR_INVALID_ARGUMENT;
     if (entry.type == GRANIT_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER && entry.array_count != 1)
       return GRANIT_ERROR_INVALID_ARGUMENT;
+    if (entry.type == GRANIT_BINDING_TYPE_STORAGE_TEXTURE &&
+        (!valid_format(entry.storage_texture_format) ||
+         entry.storage_texture_access < GRANIT_STORAGE_TEXTURE_ACCESS_WRITE_ONLY ||
+         entry.storage_texture_access > GRANIT_STORAGE_TEXTURE_ACCESS_READ_WRITE))
+      return GRANIT_ERROR_INVALID_ARGUMENT;
     for (uint32_t previous = 0; previous < index; ++previous) {
       if (desc->entries[previous].binding == entry.binding)
         return GRANIT_ERROR_INVALID_ARGUMENT;

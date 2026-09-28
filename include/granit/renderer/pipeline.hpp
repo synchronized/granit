@@ -174,6 +174,12 @@ enum class shader_stage_flags : std::uint32_t {
   compute = GRANIT_SHADER_STAGE_COMPUTE_BIT,
 };
 
+enum class storage_texture_access : std::uint32_t {
+  write_only = GRANIT_STORAGE_TEXTURE_ACCESS_WRITE_ONLY,
+  read_only = GRANIT_STORAGE_TEXTURE_ACCESS_READ_ONLY,
+  read_write = GRANIT_STORAGE_TEXTURE_ACCESS_READ_WRITE,
+};
+
 [[nodiscard]] constexpr shader_stage_flags operator|(shader_stage_flags left,
                                                      shader_stage_flags right) noexcept {
   return static_cast<shader_stage_flags>(static_cast<std::uint32_t>(left) |
@@ -185,6 +191,8 @@ struct bind_group_layout_entry {
   binding_type type{binding_type::uniform_buffer};
   std::uint32_t array_count{1};
   shader_stage_flags visibility{shader_stage_flags::vertex};
+  texture_format storage_texture_format{texture_format::undefined};
+  storage_texture_access storage_access{storage_texture_access::write_only};
 };
 
 class bind_group_layout {
@@ -613,11 +621,21 @@ bind_group_layout::initialize(granit::renderer_ref ref,
     return result::invalid_argument;
   if (renderer == GRANIT_NULL_HANDLE)
     return result::invalid_handle;
-  static_assert(sizeof(bind_group_layout_entry) == sizeof(granit_bind_group_layout_entry));
+  if (entries.size() > 64)
+    return result::invalid_argument;
+  std::array<granit_bind_group_layout_entry, 64> native_entries{};
+  for (std::size_t index = 0; index < entries.size(); ++index) {
+    const auto& entry = entries[index];
+    native_entries[index] = {entry.binding, static_cast<granit_binding_type>(entry.type),
+                             entry.array_count,
+                             static_cast<granit_shader_stage_flags>(entry.visibility),
+                             static_cast<granit_texture_format>(entry.storage_texture_format),
+                             static_cast<granit_storage_texture_access>(entry.storage_access)};
+  }
   const granit_bind_group_layout_desc desc{
       .struct_size = GRANIT_BIND_GROUP_LAYOUT_DESC_VERSION_1_SIZE,
       .entry_count = static_cast<std::uint32_t>(entries.size()),
-      .entries = reinterpret_cast<const granit_bind_group_layout_entry*>(entries.data()),
+      .entries = native_entries.data(),
       .reserved = 0};
   const auto value = granit_bind_group_layout_create(renderer, &desc, &handle_);
   if (value == GRANIT_SUCCESS)

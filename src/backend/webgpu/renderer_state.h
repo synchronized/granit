@@ -342,9 +342,8 @@ private:
   [[nodiscard]] std::unique_ptr<backend_command_recorder_resource> command_allocate_recorder();
   [[nodiscard]] granit_result command_begin(backend_command_recorder_resource& resource) noexcept;
   [[nodiscard]] granit_result
-  command_begin_rendering(backend_command_recorder_resource& resource, webgpu_texture_view target,
-                          webgpu_texture_view resolve_target, webgpu_load_operation load,
-                          webgpu_store_operation store, const float clear[4],
+  command_begin_rendering(backend_command_recorder_resource& resource,
+                          std::span<const webgpu_color_attachment> color_attachments,
                           webgpu_texture_view depth_target, webgpu_load_operation depth_load,
                           webgpu_store_operation depth_store, float clear_depth) noexcept;
   [[nodiscard]] granit_result command_bind_pipeline(backend_command_recorder_resource& resource,
@@ -448,25 +447,31 @@ private:
       backend_graphics_pipeline_resource& resource, backend_pipeline_layout_resource& layout,
       webgpu_shader vertex_shader, webgpu_shader fragment_shader,
       std::span<const granit_vertex_buffer_layout> vertex_buffers,
-      granit_texture_format color_format, granit_texture_format depth_stencil_format,
-      granit_sample_count sample_count, const granit_primitive_state& primitive,
-      const granit_depth_state& depth, const granit_depth_bias_state* depth_bias,
-      const granit_color_blend_state& color_blend) noexcept;
+      std::span<const granit_texture_format> color_formats,
+      std::span<const granit_color_blend_state> color_blends,
+      granit_texture_format depth_stencil_format, granit_sample_count sample_count,
+      const granit_primitive_state& primitive, const granit_depth_state& depth,
+      const granit_depth_bias_state* depth_bias,
+      const granit_color_blend_state& default_color_blend) noexcept;
   [[nodiscard]] granit_result begin_graphics_pipeline_warmup(
       backend_pipeline_layout_resource& layout, webgpu_shader vertex_shader,
       webgpu_shader fragment_shader, std::span<const granit_vertex_buffer_layout> vertex_buffers,
-      granit_texture_format color_format, granit_texture_format depth_stencil_format,
-      granit_sample_count sample_count, const granit_primitive_state& primitive,
-      const granit_depth_state& depth, const granit_depth_bias_state* depth_bias,
-      const granit_color_blend_state& color_blend, webgpu_pipeline_warmup& warmup) noexcept;
+      std::span<const granit_texture_format> color_formats,
+      std::span<const granit_color_blend_state> color_blends,
+      granit_texture_format depth_stencil_format, granit_sample_count sample_count,
+      const granit_primitive_state& primitive, const granit_depth_state& depth,
+      const granit_depth_bias_state* depth_bias,
+      const granit_color_blend_state& default_color_blend, webgpu_pipeline_warmup& warmup) noexcept;
   [[nodiscard]] granit_result create_graphics_pipeline_impl(
       backend_graphics_pipeline_resource* resource, backend_pipeline_layout_resource& layout,
       webgpu_shader vertex_shader, webgpu_shader fragment_shader,
       std::span<const granit_vertex_buffer_layout> vertex_buffers,
-      granit_texture_format color_format, granit_texture_format depth_stencil_format,
-      granit_sample_count sample_count, const granit_primitive_state& primitive,
-      const granit_depth_state& depth, const granit_depth_bias_state* depth_bias,
-      const granit_color_blend_state& color_blend, webgpu_pipeline_warmup* warmup) noexcept;
+      std::span<const granit_texture_format> color_formats,
+      std::span<const granit_color_blend_state> color_blends,
+      granit_texture_format depth_stencil_format, granit_sample_count sample_count,
+      const granit_primitive_state& primitive, const granit_depth_state& depth,
+      const granit_depth_bias_state* depth_bias,
+      const granit_color_blend_state& default_color_blend, webgpu_pipeline_warmup* warmup) noexcept;
   [[nodiscard]] webgpu_render_pipeline
   native_graphics_pipeline(backend_graphics_pipeline_resource& resource) const noexcept;
   [[nodiscard]] webgpu_timestamp_query_pool

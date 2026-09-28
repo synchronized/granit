@@ -112,6 +112,7 @@ public:
       native_limits.framebuffer_sample_counts = limits.framebuffer_sample_counts;
       native_limits.max_sampler_anisotropy = limits.max_sampler_anisotropy;
       native_limits.supported_features = limits.supported_features;
+      native_limits.max_color_attachments = limits.max_color_attachments;
       return granit::from_native(
           test_hooks.renderer_ready(rendering.native_renderer(), native_limits));
     }

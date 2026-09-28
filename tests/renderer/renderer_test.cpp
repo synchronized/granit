@@ -99,14 +99,18 @@ TEST_CASE("Renderer 公开查询设备限制", "[renderer][limits][c_api]") {
   CHECK(limits.max_uniform_buffer_binding_size > 0);
   CHECK((limits.framebuffer_sample_counts & GRANIT_SAMPLE_COUNT_1) != 0);
   CHECK(limits.max_sampler_anisotropy >= 1.0F);
+  CHECK(limits.max_color_attachments >= 1);
+  CHECK(limits.reserved_2 == 0);
   CHECK((limits.supported_features & GRANIT_RENDERER_FEATURE_TIMESTAMP_QUERY_BIT) != 0);
 
   limits.struct_size = GRANIT_RENDERER_LIMITS_VERSION_1_SIZE;
   limits.framebuffer_sample_counts = UINT32_MAX;
   limits.max_sampler_anisotropy = -1.0F;
+  limits.max_color_attachments = UINT32_MAX;
   REQUIRE(granit_renderer_get_limits(renderer, &limits) == GRANIT_SUCCESS);
   CHECK((limits.framebuffer_sample_counts & GRANIT_SAMPLE_COUNT_1) != 0);
   CHECK(limits.max_sampler_anisotropy >= 1.0F);
+  CHECK(limits.max_color_attachments == UINT32_MAX);
 
   limits.struct_size = static_cast<std::uint32_t>(sizeof(granit_renderer_limits) + 64);
   REQUIRE(granit_renderer_get_limits(renderer, &limits) == GRANIT_SUCCESS);

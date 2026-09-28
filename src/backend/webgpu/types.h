@@ -95,6 +95,14 @@ typedef uint32_t webgpu_store_operation;
 #define GRANIT_WEBGPU_STORE_OPERATION_STORE UINT32_C(1)
 #define GRANIT_WEBGPU_STORE_OPERATION_DISCARD UINT32_C(2)
 
+typedef struct webgpu_color_attachment {
+  webgpu_texture_view view;
+  webgpu_texture_view resolve_view;
+  webgpu_load_operation load_operation;
+  webgpu_store_operation store_operation;
+  float clear[4];
+} webgpu_color_attachment;
+
 typedef uint32_t webgpu_instance_state;
 #define GRANIT_WEBGPU_INSTANCE_STATE_INITIALIZING UINT32_C(1)
 #define GRANIT_WEBGPU_INSTANCE_STATE_READY UINT32_C(2)
@@ -132,6 +140,7 @@ typedef uint32_t webgpu_texture_usage;
 #define GRANIT_WEBGPU_TEXTURE_USAGE_COPY_DST_BIT UINT32_C(0x00000002)
 #define GRANIT_WEBGPU_TEXTURE_USAGE_SAMPLED_BIT UINT32_C(0x00000004)
 #define GRANIT_WEBGPU_TEXTURE_USAGE_RENDER_ATTACHMENT_BIT UINT32_C(0x00000008)
+#define GRANIT_WEBGPU_TEXTURE_USAGE_STORAGE_BIT UINT32_C(0x00000010)
 
 typedef uint32_t webgpu_texture_format;
 
@@ -238,12 +247,20 @@ typedef uint32_t webgpu_binding_type;
 #define GRANIT_WEBGPU_BINDING_TYPE_SAMPLER UINT32_C(5)
 #define GRANIT_WEBGPU_BINDING_TYPE_COMPARISON_SAMPLER UINT32_C(7)
 #define GRANIT_WEBGPU_BINDING_TYPE_SAMPLED_DEPTH_TEXTURE UINT32_C(8)
+#define GRANIT_WEBGPU_BINDING_TYPE_STORAGE_TEXTURE UINT32_C(9)
+
+typedef uint32_t webgpu_storage_texture_access;
+#define GRANIT_WEBGPU_STORAGE_TEXTURE_ACCESS_WRITE_ONLY UINT32_C(1)
+#define GRANIT_WEBGPU_STORAGE_TEXTURE_ACCESS_READ_ONLY UINT32_C(2)
+#define GRANIT_WEBGPU_STORAGE_TEXTURE_ACCESS_READ_WRITE UINT32_C(3)
 
 typedef struct webgpu_bind_group_layout_entry {
   uint32_t binding;
   webgpu_binding_type type;
   uint32_t visibility;
   uint32_t array_count;
+  webgpu_texture_format storage_texture_format;
+  webgpu_storage_texture_access storage_texture_access;
 } webgpu_bind_group_layout_entry;
 
 typedef struct webgpu_bind_group_layout_desc {
@@ -347,7 +364,11 @@ typedef uint32_t webgpu_blend_operation;
    GRANIT_WEBGPU_COLOR_WRITE_BLUE_BIT | GRANIT_WEBGPU_COLOR_WRITE_ALPHA_BIT)
 
 typedef uint32_t webgpu_primitive_topology;
-#define GRANIT_WEBGPU_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST UINT32_C(1)
+#define GRANIT_WEBGPU_PRIMITIVE_TOPOLOGY_POINT_LIST UINT32_C(1)
+#define GRANIT_WEBGPU_PRIMITIVE_TOPOLOGY_LINE_LIST UINT32_C(2)
+#define GRANIT_WEBGPU_PRIMITIVE_TOPOLOGY_LINE_STRIP UINT32_C(3)
+#define GRANIT_WEBGPU_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST UINT32_C(4)
+#define GRANIT_WEBGPU_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP UINT32_C(5)
 
 typedef uint32_t webgpu_front_face;
 #define GRANIT_WEBGPU_FRONT_FACE_COUNTER_CLOCKWISE UINT32_C(1)
@@ -361,13 +382,26 @@ typedef uint32_t webgpu_cull_mode;
 typedef uint32_t webgpu_polygon_mode;
 #define GRANIT_WEBGPU_POLYGON_MODE_FILL UINT32_C(1)
 
+typedef struct webgpu_color_target_desc {
+  webgpu_texture_format format;
+  uint32_t blend_enabled;
+  webgpu_blend_factor source_color_factor;
+  webgpu_blend_factor destination_color_factor;
+  webgpu_blend_operation color_operation;
+  webgpu_blend_factor source_alpha_factor;
+  webgpu_blend_factor destination_alpha_factor;
+  webgpu_blend_operation alpha_operation;
+  uint32_t color_write_mask;
+} webgpu_color_target_desc;
+
 typedef struct webgpu_render_pipeline_desc {
   uint32_t struct_size;
   uint32_t reserved;
   webgpu_pipeline_layout layout;
   webgpu_shader vertex_shader;
   webgpu_shader fragment_shader;
-  uint32_t color_format;
+  uint32_t color_target_count;
+  const webgpu_color_target_desc* color_targets;
   uint32_t vertex_buffer_layout_count;
   const webgpu_vertex_buffer_layout* vertex_buffer_layouts;
   webgpu_texture_format depth_stencil_format;
@@ -377,14 +411,6 @@ typedef struct webgpu_render_pipeline_desc {
   int32_t depth_bias_constant;
   float depth_bias_slope_scale;
   float depth_bias_clamp;
-  uint32_t blend_enabled;
-  webgpu_blend_factor source_color_factor;
-  webgpu_blend_factor destination_color_factor;
-  webgpu_blend_operation color_operation;
-  webgpu_blend_factor source_alpha_factor;
-  webgpu_blend_factor destination_alpha_factor;
-  webgpu_blend_operation alpha_operation;
-  uint32_t color_write_mask;
   webgpu_primitive_topology topology;
   webgpu_front_face front_face;
   webgpu_cull_mode cull_mode;
@@ -415,6 +441,8 @@ typedef uint32_t webgpu_present_mode;
 #define GRANIT_WEBGPU_TEXTURE_FORMAT_ETC2_RGBA8_SRGB UINT32_C(16)
 #define GRANIT_WEBGPU_TEXTURE_FORMAT_ASTC_4X4_UNORM UINT32_C(17)
 #define GRANIT_WEBGPU_TEXTURE_FORMAT_ASTC_4X4_SRGB UINT32_C(18)
+#define GRANIT_WEBGPU_TEXTURE_FORMAT_BGRA8_SRGB UINT32_C(19)
+#define GRANIT_WEBGPU_TEXTURE_FORMAT_D16_UNORM UINT32_C(20)
 
 #define GRANIT_WEBGPU_TEXTURE_COMPRESSION_BC_BIT (UINT32_C(1) << 0)
 #define GRANIT_WEBGPU_TEXTURE_COMPRESSION_ETC2_BIT (UINT32_C(1) << 1)

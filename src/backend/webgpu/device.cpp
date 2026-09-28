@@ -338,7 +338,15 @@ void receive_adapter_async(WGPURequestAdapterStatus status, WGPUAdapter adapter,
       return;
     }
     state.adapter = adapter;
+    WGPULimits adapter_limits = WGPU_LIMITS_INIT;
+    if (wgpuAdapterGetLimits(adapter, &adapter_limits) != WGPUStatus_Success) {
+      state.lifecycle.mark_failed(GRANIT_ERROR_INITIALIZATION_FAILED);
+      return;
+    }
+    WGPULimits required_limits = WGPU_LIMITS_INIT;
+    required_limits.maxColorAttachments = adapter_limits.maxColorAttachments;
     WGPUDeviceDescriptor descriptor = WGPU_DEVICE_DESCRIPTOR_INIT;
+    descriptor.requiredLimits = &required_limits;
     std::array<WGPUFeatureName, 4> features{};
     descriptor.requiredFeatureCount = collect_optional_features(adapter, features);
     descriptor.requiredFeatures = descriptor.requiredFeatureCount == 0 ? nullptr : features.data();
@@ -493,7 +501,19 @@ granit_result create_backend(const webgpu_host_api* host,
   state->adapter = adapter.adapter;
 
   device_request device{host};
+  WGPULimits adapter_limits = WGPU_LIMITS_INIT;
+  if (wgpuAdapterGetLimits(state->adapter, &adapter_limits) != WGPUStatus_Success) {
+    constexpr char message[] = "Dawn WebGPU adapter limits query failed";
+    emit(*host, GRANIT_DIAGNOSTIC_SEVERITY_ERROR, message, sizeof(message) - 1);
+    release_resources(*state);
+    state->~webgpu_device_state();
+    deallocate(*host, memory);
+    return GRANIT_ERROR_INITIALIZATION_FAILED;
+  }
+  WGPULimits required_limits = WGPU_LIMITS_INIT;
+  required_limits.maxColorAttachments = adapter_limits.maxColorAttachments;
   WGPUDeviceDescriptor device_descriptor = WGPU_DEVICE_DESCRIPTOR_INIT;
+  device_descriptor.requiredLimits = &required_limits;
   std::array<WGPUFeatureName, 4> features{};
   device_descriptor.requiredFeatureCount = collect_optional_features(state->adapter, features);
   device_descriptor.requiredFeatures =

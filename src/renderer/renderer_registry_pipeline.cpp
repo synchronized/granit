@@ -103,10 +103,9 @@ granit_result renderer_registry::destroy_shader(granit_renderer renderer, granit
   return GRANIT_SUCCESS;
 }
 
-granit_result
-renderer_registry::create_bind_group_layout(granit_renderer renderer,
-                                            std::span<const granit_bind_group_layout_entry> entries,
-                                            granit_bind_group_layout& layout) {
+granit_result renderer_registry::create_bind_group_layout(
+    granit_renderer renderer, std::span<const granit_bind_group_layout_entry> entries,
+    granit_bind_group_layout& layout) {
   try {
     const auto interfaces = acquire_backend_interfaces(renderer);
     if (!interfaces)
@@ -290,6 +289,9 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
           const auto required_usage =
               sampled ? GRANIT_TEXTURE_USAGE_SAMPLED_BIT : GRANIT_TEXTURE_USAGE_STORAGE_BIT;
           if ((found->second->texture->desc.usage & required_usage) == 0)
+            return GRANIT_ERROR_INVALID_ARGUMENT;
+          if (!sampled &&
+              declaration->storage_texture_format != found->second->texture->desc.format)
             return GRANIT_ERROR_INVALID_ARGUMENT;
           write.type = declaration->type == GRANIT_BINDING_TYPE_SAMPLED_TEXTURE_CUBE
                            ? backend_binding_type::sampled_texture_cube
@@ -492,7 +494,8 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
       vertex = vertex_found->second;
       fragment = fragment_found->second;
     }
-    if ((state->capabilities().framebuffer_sample_counts & desc.sample_count) == 0)
+    if ((state->capabilities().framebuffer_sample_counts & desc.sample_count) == 0 ||
+        desc.color_format_count > state->capabilities().max_color_attachments)
       return GRANIT_ERROR_UNSUPPORTED;
     auto record = std::make_shared<graphics_pipeline_record>();
     record->owner = state;

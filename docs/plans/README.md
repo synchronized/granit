@@ -9,7 +9,9 @@
 
 ## 当前计划
 
-当前没有实施中的编号计划；下一项工作应基于已记录的能力证据单独立项。
+- [S-71：0.38.0 跨后端能力契约与 WebGPU 补齐](S-71-0.38.0-webgpu-capability-parity.md)——建立
+  Vulkan/WebGPU 正式能力矩阵，补齐 WebGPU Primitive Topology、MRT、格式一致性与 Storage
+  Texture，并明确保留的固有限制。
 
 ## 最近完成
 

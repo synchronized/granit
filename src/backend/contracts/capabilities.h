@@ -27,6 +27,7 @@ struct backend_capabilities {
   std::uint64_t max_storage_buffer_binding_size{};
   std::uint32_t framebuffer_sample_counts{1};
   float max_sampler_anisotropy{1.0F};
+  std::uint32_t max_color_attachments{1};
   std::uint64_t renderer_features{};
   std::uint64_t shader_features{};
   granit_shader_profile shader_profile{GRANIT_SHADER_PROFILE_PORTABLE};

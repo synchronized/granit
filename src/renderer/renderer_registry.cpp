@@ -70,6 +70,10 @@ granit_result renderer_registry::get_limits(granit_renderer renderer,
   limits.framebuffer_sample_counts = capabilities.framebuffer_sample_counts;
   limits.max_sampler_anisotropy = capabilities.max_sampler_anisotropy;
   limits.supported_features = capabilities.renderer_features;
+  if (limits.struct_size >= GRANIT_RENDERER_LIMITS_VERSION_2_SIZE) {
+    limits.max_color_attachments = capabilities.max_color_attachments;
+    limits.reserved_2 = 0;
+  }
   return GRANIT_SUCCESS;
 }
 

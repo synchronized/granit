@@ -65,8 +65,18 @@ std::uint32_t to_webgpu_format(granit_texture_format format) noexcept {
     return GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA8_UNORM;
   case GRANIT_TEXTURE_FORMAT_BGRA8_UNORM:
     return GRANIT_WEBGPU_TEXTURE_FORMAT_BGRA8_UNORM;
+  case GRANIT_TEXTURE_FORMAT_BGRA8_SRGB:
+    return GRANIT_WEBGPU_TEXTURE_FORMAT_BGRA8_SRGB;
+  case GRANIT_TEXTURE_FORMAT_R8_UNORM:
+    return GRANIT_WEBGPU_TEXTURE_FORMAT_R8_UNORM;
+  case GRANIT_TEXTURE_FORMAT_RG8_UNORM:
+    return GRANIT_WEBGPU_TEXTURE_FORMAT_RG8_UNORM;
+  case GRANIT_TEXTURE_FORMAT_RGBA8_SRGB:
+    return GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA8_SRGB;
   case GRANIT_TEXTURE_FORMAT_D32_FLOAT:
     return GRANIT_WEBGPU_TEXTURE_FORMAT_D32_FLOAT;
+  case GRANIT_TEXTURE_FORMAT_D16_UNORM:
+    return GRANIT_WEBGPU_TEXTURE_FORMAT_D16_UNORM;
   case GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT:
     return GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA16_FLOAT;
   default:
@@ -131,6 +141,23 @@ std::uint32_t to_webgpu_color_write_mask(granit_color_write_mask mask) noexcept 
   return result;
 }
 
+webgpu_primitive_topology to_webgpu_topology(granit_primitive_topology topology) noexcept {
+  switch (topology) {
+  case GRANIT_PRIMITIVE_TOPOLOGY_POINT_LIST:
+    return GRANIT_WEBGPU_PRIMITIVE_TOPOLOGY_POINT_LIST;
+  case GRANIT_PRIMITIVE_TOPOLOGY_LINE_LIST:
+    return GRANIT_WEBGPU_PRIMITIVE_TOPOLOGY_LINE_LIST;
+  case GRANIT_PRIMITIVE_TOPOLOGY_LINE_STRIP:
+    return GRANIT_WEBGPU_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+  case GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST:
+    return GRANIT_WEBGPU_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+  case GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP:
+    return GRANIT_WEBGPU_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+  default:
+    return 0;
+  }
+}
+
 } // namespace
 
 std::unique_ptr<backend_pipeline_layout_resource>
@@ -150,16 +177,12 @@ webgpu_renderer_state::allocate_compute_pipeline() {
 
 granit_result webgpu_renderer_state::validate_graphics_pipeline(
     const granit_graphics_pipeline_desc& desc) const noexcept {
-  if (desc.color_format_count > 1 ||
-      (desc.color_format_count == 0 &&
+  if ((desc.color_format_count == 0 &&
        desc.depth_stencil_format == GRANIT_TEXTURE_FORMAT_UNDEFINED) ||
-      (desc.color_format_count == 1 && desc.color_formats[0] != GRANIT_TEXTURE_FORMAT_RGBA8_UNORM &&
-       desc.color_formats[0] != GRANIT_TEXTURE_FORMAT_BGRA8_UNORM &&
-       desc.color_formats[0] != GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT) ||
       (desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_UNDEFINED &&
+       desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_D16_UNORM &&
        desc.depth_stencil_format != GRANIT_TEXTURE_FORMAT_D32_FLOAT) ||
       (desc.sample_count != 1 && desc.sample_count != 4) ||
-      desc.primitive.topology != GRANIT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST ||
       desc.primitive.cull_mode == GRANIT_CULL_MODE_FRONT_AND_BACK ||
       desc.primitive.polygon_mode != GRANIT_POLYGON_MODE_FILL) {
     return GRANIT_ERROR_UNSUPPORTED;
@@ -214,48 +237,56 @@ webgpu_compute_pipeline webgpu_renderer_state::native_compute_pipeline(
 granit_result webgpu_renderer_state::create_graphics_pipeline(
     backend_graphics_pipeline_resource& resource, backend_pipeline_layout_resource& layout_resource,
     webgpu_shader vertex_shader, webgpu_shader fragment_shader,
-    std::span<const granit_vertex_buffer_layout> vertex_buffers, granit_texture_format color_format,
+    std::span<const granit_vertex_buffer_layout> vertex_buffers,
+    std::span<const granit_texture_format> color_formats,
+    std::span<const granit_color_blend_state> color_blends,
     granit_texture_format depth_stencil_format, granit_sample_count sample_count,
     const granit_primitive_state& primitive, const granit_depth_state& depth,
     const granit_depth_bias_state* depth_bias,
-    const granit_color_blend_state& color_blend) noexcept {
-  return create_graphics_pipeline_impl(
-      &resource, layout_resource, vertex_shader, fragment_shader, vertex_buffers, color_format,
-      depth_stencil_format, sample_count, primitive, depth, depth_bias, color_blend, nullptr);
+    const granit_color_blend_state& default_color_blend) noexcept {
+  return create_graphics_pipeline_impl(&resource, layout_resource, vertex_shader, fragment_shader,
+                                       vertex_buffers, color_formats, color_blends,
+                                       depth_stencil_format, sample_count, primitive, depth,
+                                       depth_bias, default_color_blend, nullptr);
 }
 
 granit_result webgpu_renderer_state::begin_graphics_pipeline_warmup(
     backend_pipeline_layout_resource& layout_resource, webgpu_shader vertex_shader,
     webgpu_shader fragment_shader, std::span<const granit_vertex_buffer_layout> vertex_buffers,
-    granit_texture_format color_format, granit_texture_format depth_stencil_format,
-    granit_sample_count sample_count, const granit_primitive_state& primitive,
-    const granit_depth_state& depth, const granit_depth_bias_state* depth_bias,
-    const granit_color_blend_state& color_blend, webgpu_pipeline_warmup& warmup) noexcept {
-  return create_graphics_pipeline_impl(
-      nullptr, layout_resource, vertex_shader, fragment_shader, vertex_buffers, color_format,
-      depth_stencil_format, sample_count, primitive, depth, depth_bias, color_blend, &warmup);
+    std::span<const granit_texture_format> color_formats,
+    std::span<const granit_color_blend_state> color_blends,
+    granit_texture_format depth_stencil_format, granit_sample_count sample_count,
+    const granit_primitive_state& primitive, const granit_depth_state& depth,
+    const granit_depth_bias_state* depth_bias, const granit_color_blend_state& default_color_blend,
+    webgpu_pipeline_warmup& warmup) noexcept {
+  return create_graphics_pipeline_impl(nullptr, layout_resource, vertex_shader, fragment_shader,
+                                       vertex_buffers, color_formats, color_blends,
+                                       depth_stencil_format, sample_count, primitive, depth,
+                                       depth_bias, default_color_blend, &warmup);
 }
 
 granit_result webgpu_renderer_state::create_graphics_pipeline_impl(
     backend_graphics_pipeline_resource* resource, backend_pipeline_layout_resource& layout_resource,
     webgpu_shader vertex_shader, webgpu_shader fragment_shader,
-    std::span<const granit_vertex_buffer_layout> vertex_buffers, granit_texture_format color_format,
+    std::span<const granit_vertex_buffer_layout> vertex_buffers,
+    std::span<const granit_texture_format> color_formats,
+    std::span<const granit_color_blend_state> color_blends,
     granit_texture_format depth_stencil_format, granit_sample_count sample_count,
     const granit_primitive_state& primitive, const granit_depth_state& depth,
-    const granit_depth_bias_state* depth_bias, const granit_color_blend_state& color_blend,
+    const granit_depth_bias_state* depth_bias, const granit_color_blend_state& default_color_blend,
     webgpu_pipeline_warmup* warmup) noexcept {
   auto* pipeline = resource == nullptr ? nullptr : as_pipeline(*resource);
   auto* layout = as_layout(layout_resource);
-  const auto native_format = to_webgpu_format(color_format);
   if ((resource != nullptr && (pipeline == nullptr || pipeline->handle_ != 0)) ||
       (resource == nullptr && warmup == nullptr) || layout == nullptr || layout->handle_ == 0 ||
       vertex_shader == 0 || fragment_shader == 0 ||
-      (color_format != GRANIT_TEXTURE_FORMAT_UNDEFINED && native_format == 0)) {
+      (!color_blends.empty() && color_blends.size() != color_formats.size())) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   try {
     std::vector<webgpu_vertex_buffer_layout> layouts;
     std::vector<webgpu_vertex_attribute> attributes;
+    std::vector<webgpu_color_target_desc> color_targets;
     layouts.reserve(vertex_buffers.size());
     std::size_t attribute_count = 0;
     for (const auto& source : vertex_buffers) {
@@ -275,6 +306,21 @@ granit_result webgpu_renderer_state::create_graphics_pipeline_impl(
       layouts.push_back({source.stride, source.step_mode, source.attribute_count, source.reserved,
                          attributes.data() + first});
     }
+    color_targets.reserve(color_formats.size());
+    for (std::size_t index = 0; index < color_formats.size(); ++index) {
+      const auto native_format = to_webgpu_format(color_formats[index]);
+      if (native_format == 0)
+        return GRANIT_ERROR_UNSUPPORTED;
+      const auto& blend = color_blends.empty() ? default_color_blend : color_blends[index];
+      color_targets.push_back({native_format, blend.enabled,
+                               to_webgpu_blend_factor(blend.source_color_factor),
+                               to_webgpu_blend_factor(blend.destination_color_factor),
+                               to_webgpu_blend_operation(blend.color_operation),
+                               to_webgpu_blend_factor(blend.source_alpha_factor),
+                               to_webgpu_blend_factor(blend.destination_alpha_factor),
+                               to_webgpu_blend_operation(blend.alpha_operation),
+                               to_webgpu_color_write_mask(blend.write_mask)});
+    }
     const auto rounded_bias =
         depth_bias == nullptr ? 0.0 : std::round(static_cast<double>(depth_bias->constant_factor));
     const auto constant_bias = static_cast<std::int32_t>(
@@ -286,7 +332,8 @@ granit_result webgpu_renderer_state::create_graphics_pipeline_impl(
         layout->handle_,
         vertex_shader,
         fragment_shader,
-        native_format,
+        static_cast<std::uint32_t>(color_targets.size()),
+        color_targets.data(),
         static_cast<std::uint32_t>(layouts.size()),
         layouts.data(),
         to_webgpu_format(depth_stencil_format),
@@ -296,15 +343,7 @@ granit_result webgpu_renderer_state::create_graphics_pipeline_impl(
         constant_bias,
         depth_bias == nullptr ? 0.0F : depth_bias->slope_factor,
         depth_bias == nullptr ? 0.0F : depth_bias->clamp,
-        color_blend.enabled,
-        to_webgpu_blend_factor(color_blend.source_color_factor),
-        to_webgpu_blend_factor(color_blend.destination_color_factor),
-        to_webgpu_blend_operation(color_blend.color_operation),
-        to_webgpu_blend_factor(color_blend.source_alpha_factor),
-        to_webgpu_blend_factor(color_blend.destination_alpha_factor),
-        to_webgpu_blend_operation(color_blend.alpha_operation),
-        to_webgpu_color_write_mask(color_blend.write_mask),
-        GRANIT_WEBGPU_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        to_webgpu_topology(primitive.topology),
         primitive.front_face == GRANIT_FRONT_FACE_COUNTER_CLOCKWISE
             ? GRANIT_WEBGPU_FRONT_FACE_COUNTER_CLOCKWISE
             : GRANIT_WEBGPU_FRONT_FACE_CLOCKWISE,

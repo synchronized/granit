@@ -68,13 +68,18 @@ webgpu_renderer_state::texture_format_capabilities(granit_texture_format format)
   case GRANIT_TEXTURE_FORMAT_RG8_UNORM:
   case GRANIT_TEXTURE_FORMAT_RGBA8_UNORM:
   case GRANIT_TEXTURE_FORMAT_RGBA8_SRGB:
+  case GRANIT_TEXTURE_FORMAT_BGRA8_UNORM:
+  case GRANIT_TEXTURE_FORMAT_BGRA8_SRGB:
   case GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT:
     result.supported_usage =
         GRANIT_TEXTURE_USAGE_TRANSFER_SOURCE_BIT | GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT |
         GRANIT_TEXTURE_USAGE_SAMPLED_BIT | GRANIT_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT;
     result.features = GRANIT_TEXTURE_FORMAT_FEATURE_FILTERABLE_BIT;
     result.sample_counts = capabilities_.framebuffer_sample_counts;
+    if (format == GRANIT_TEXTURE_FORMAT_RGBA8_UNORM || format == GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT)
+      result.supported_usage |= GRANIT_TEXTURE_USAGE_STORAGE_BIT;
     break;
+  case GRANIT_TEXTURE_FORMAT_D16_UNORM:
   case GRANIT_TEXTURE_FORMAT_D32_FLOAT:
     result.supported_usage =
         GRANIT_TEXTURE_USAGE_TRANSFER_SOURCE_BIT | GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT |
@@ -207,6 +212,7 @@ granit_result webgpu_renderer_state::refresh_state() noexcept {
         capabilities.max_storage_buffer_binding_size,
         capabilities.framebuffer_sample_counts,
         capabilities.max_sampler_anisotropy,
+        capabilities.max_color_attachments,
         ((capabilities.renderer_features & GRANIT_WEBGPU_FEATURE_TIMESTAMP_QUERY_BIT) != 0
              ? GRANIT_RENDERER_FEATURE_TIMESTAMP_QUERY_BIT
              : UINT64_C(0)) |

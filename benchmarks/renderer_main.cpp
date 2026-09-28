@@ -143,7 +143,8 @@ granit_result create_pipeline_fixture(granit_renderer renderer, pipeline_fixture
     result =
         granit_pipeline_layout_create(renderer, &graphics_layout_desc, &fixture.graphics_layout);
   const granit_bind_group_layout_entry declaration{0, GRANIT_BINDING_TYPE_STORAGE_BUFFER, 1,
-                                                   GRANIT_SHADER_STAGE_COMPUTE_BIT};
+                                                   GRANIT_SHADER_STAGE_COMPUTE_BIT,
+                                                   GRANIT_TEXTURE_FORMAT_UNDEFINED, 0};
   granit_bind_group_layout_desc group_layout_desc = GRANIT_BIND_GROUP_LAYOUT_DESC_INIT;
   group_layout_desc.entry_count = 1;
   group_layout_desc.entries = &declaration;

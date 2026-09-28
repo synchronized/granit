@@ -70,6 +70,7 @@ struct webgpu_device_state {
     webgpu_pipeline_layout pipeline_layout;
     webgpu_shader vertex_shader;
     webgpu_shader fragment_shader;
+    webgpu_primitive_topology topology;
   };
   struct compute_pipeline_record {
     WGPUComputePipeline compute_pipeline;
@@ -83,6 +84,7 @@ struct webgpu_device_state {
     bool finished;
     bool pipeline_bound;
     bool compute_pipeline_bound;
+    webgpu_primitive_topology graphics_topology;
     std::uint64_t index_available;
     std::uint32_t index_element_size;
     std::vector<WGPUBuffer> temporary_buffers;

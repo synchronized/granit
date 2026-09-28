@@ -41,11 +41,18 @@ typedef uint32_t granit_shader_stage_flags;
 #define GRANIT_SHADER_STAGE_FRAGMENT_BIT (UINT32_C(1) << 1)
 #define GRANIT_SHADER_STAGE_COMPUTE_BIT (UINT32_C(1) << 2)
 
+typedef uint32_t granit_storage_texture_access;
+#define GRANIT_STORAGE_TEXTURE_ACCESS_WRITE_ONLY UINT32_C(1)
+#define GRANIT_STORAGE_TEXTURE_ACCESS_READ_ONLY UINT32_C(2)
+#define GRANIT_STORAGE_TEXTURE_ACCESS_READ_WRITE UINT32_C(3)
+
 typedef struct granit_bind_group_layout_entry {
   uint32_t binding;
   granit_binding_type type;
   uint32_t array_count;
   granit_shader_stage_flags visibility;
+  granit_texture_format storage_texture_format;
+  granit_storage_texture_access storage_texture_access;
 } granit_bind_group_layout_entry;
 
 typedef struct granit_bind_group_layout_desc {

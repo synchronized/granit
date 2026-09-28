@@ -122,8 +122,7 @@ public:
                                   webgpu_texture texture, std::uint32_t width, std::uint32_t height,
                                   std::uint32_t bytes_per_row) noexcept;
   [[nodiscard]] granit_result recorder_begin_rendering(
-      webgpu_command_recorder recorder, webgpu_texture_view target, webgpu_load_operation load,
-      webgpu_store_operation store, const float clear[4], webgpu_texture_view resolve_target = 0,
+      webgpu_command_recorder recorder, std::span<const webgpu_color_attachment> color_attachments,
       webgpu_texture_view depth_target = 0,
       webgpu_load_operation depth_load = GRANIT_WEBGPU_LOAD_OPERATION_CLEAR,
       webgpu_store_operation depth_store = GRANIT_WEBGPU_STORE_OPERATION_DISCARD,
