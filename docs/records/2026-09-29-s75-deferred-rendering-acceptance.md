@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: MIT -->
 <!-- Copyright (c) 2026 Granit contributors -->
 
-# 2026-09-29 S-75 Deferred Rendering 本地验收
+# 2026-09-29 S-75 Deferred Rendering 验收
 
 ## 结果
 
@@ -31,4 +31,10 @@ set 0。WebGPU Validation 将 Pipeline 判为无效；修正 HLSL binding 后，
 - 本机 Chrome WebGPU 多帧、三 Pass 状态、四种输出模式、像素差异和 Resize 验证通过；
 - HLSL-first Shader Library 从源码重建并与仓库快照一致。
 
-Linux、MSVC、Release Emscripten、安装 SDK 和共享发布包由 Pull Request 与 Release 工作流继续验证。
+## 远端与发布验证
+
+- PR #114 的 Quick Check、Linux、Windows 与 Emscripten 浏览器矩阵通过；
+- `07_deferred` 浏览器验收确认三 Pass、光源状态、四种输出模式、像素差异和 Resize；
+- Release 工作流完成 Windows/Linux x64 shared SDK 构建、测试、安装审计和打包；
+- `SHA256SUMS` 已生成，工作流从公开 Release 重新下载并校验全部产物；
+- [v0.40.0](https://github.com/synchronized/granit/releases/tag/v0.40.0) 已发布。
