@@ -62,6 +62,9 @@
 Texture 格式能力仍是创建 Texture 的最终依据。格式能够作为 Texture 创建，不表示当前后端已经允许
 它进入 Graphics Pipeline；Pipeline 子集限制按本表处理。
 
+[Deferred Rendering 教程](../tutorials/07-deferred.md)使用三个颜色附件和一个 Depth Attachment，
+端到端验证 Vulkan 与浏览器 WebGPU 的 MRT、中间纹理采样和连续 Pass。
+
 ## 命令、诊断与呈现
 
 | 公共能力 | Vulkan 桌面 | 浏览器 WebGPU | 查询或失败语义 |

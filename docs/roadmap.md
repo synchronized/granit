@@ -33,11 +33,12 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段通过可运行�
 
 ### S-75：0.40.0 Deferred 与多 Pass 渲染
 
-**状态：已确认，P1。**
+**状态：本地验收完成，等待远端门禁与发布，P1。**
 
 [S-75](plans/S-75-0.40.0-deferred-rendering.md) 将新增 `07_deferred`，以 MRT G-buffer、全屏光照、
 调试视图和 Resize 验证两个后端的多 Pass 资源工作流。实现优先使用现有 API，并用实际重复问题决定
 后续是否需要 Transient Texture 或 Render Graph；本版本不预设新的公共抽象。
+本地结果见 [S-75 验收记录](records/2026-09-29-s75-deferred-rendering-acceptance.md)。
 
 ## 最近完成
 
