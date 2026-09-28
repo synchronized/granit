@@ -232,14 +232,8 @@ struct output {
     result = recorder.bind_compute_group(compute_layout, 0, storage_group);
   if (result.ok())
     result = recorder.dispatch(2, 2);
-  if (result.ok())
-    result = recorder.bind_graphics_pipeline(graphics_pipeline);
   constexpr std::array viewports{granit::viewport{0.0F, 0.0F, 2.0F, 2.0F, 0.0F, 1.0F}};
   constexpr std::array scissors{granit::scissor{0, 0, 2, 2}};
-  if (result.ok())
-    result = recorder.set_viewports(0, viewports);
-  if (result.ok())
-    result = recorder.set_scissors(0, scissors);
   const std::array attachments{
       granit::color_attachment_desc{.view = first_color_view.ref(),
                                     .resolve_view = {},
@@ -256,6 +250,12 @@ struct output {
                                        .depth_stencil_attachment = nullptr,
                                        .area = {0, 0, 2, 2},
                                        .layer_count = 1});
+  if (result.ok())
+    result = recorder.bind_graphics_pipeline(graphics_pipeline);
+  if (result.ok())
+    result = recorder.set_viewports(0, viewports);
+  if (result.ok())
+    result = recorder.set_scissors(0, scissors);
   if (result.ok())
     result = recorder.draw(3);
   if (result.ok())
@@ -399,6 +399,7 @@ granit_result pipeline_validation::poll() {
     result = granit_pipeline_warmup_batch_destroy(renderer_, batch_);
   batch_ = GRANIT_NULL_HANDLE;
   if (result != GRANIT_SUCCESS) {
+    std::fprintf(stderr, "GRANIT_DIAGNOSTIC:Pipeline 预热资源清理失败：%d\n", result);
     reset();
     return result;
   }
@@ -413,12 +414,19 @@ granit_result pipeline_validation::poll() {
   pipeline_desc.color_formats = &color_format;
   result = granit_graphics_pipeline_create(renderer_, &pipeline_desc, &pipeline);
   if (result != GRANIT_SUCCESS) {
+    std::fprintf(stderr, "GRANIT_DIAGNOSTIC:同步 Graphics Pipeline 创建失败：%d\n", result);
     reset();
     return result;
   }
-  if (granit_shader_destroy(renderer_, compute_) != GRANIT_SUCCESS ||
-      granit_shader_destroy(renderer_, vertex_) != GRANIT_SUCCESS ||
-      granit_pipeline_layout_destroy(renderer_, layout_) != GRANIT_SUCCESS) {
+  const auto compute_destroy_result = granit_shader_destroy(renderer_, compute_);
+  const auto vertex_destroy_result = granit_shader_destroy(renderer_, vertex_);
+  const auto layout_destroy_result = granit_pipeline_layout_destroy(renderer_, layout_);
+  if (compute_destroy_result != GRANIT_SUCCESS || vertex_destroy_result != GRANIT_SUCCESS ||
+      layout_destroy_result != GRANIT_SUCCESS) {
+    std::fprintf(stderr,
+                 "GRANIT_DIAGNOSTIC:Pipeline 所有权验收清理失败：compute=%d vertex=%d "
+                 "layout=%d\n",
+                 compute_destroy_result, vertex_destroy_result, layout_destroy_result);
     static_cast<void>(granit_graphics_pipeline_destroy(renderer_, pipeline));
     reset();
     return GRANIT_ERROR_INTERNAL;
@@ -434,12 +442,14 @@ granit_result pipeline_validation::poll() {
   }
   if (result != GRANIT_SUCCESS ||
       granit_shader_destroy(renderer_, vertex_) != GRANIT_ERROR_INVALID_HANDLE) {
+    std::fprintf(stderr, "GRANIT_DIAGNOSTIC:Pipeline 生命周期验收失败：%d\n", result);
     reset();
     return result == GRANIT_SUCCESS ? GRANIT_ERROR_INTERNAL : result;
   }
 
   result = begin_capability_readback();
   if (result != GRANIT_SUCCESS) {
+    std::fprintf(stderr, "GRANIT_DIAGNOSTIC:WebGPU 能力读回启动失败：%d\n", result);
     reset();
     return result;
   }
