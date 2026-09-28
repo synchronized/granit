@@ -75,22 +75,39 @@ async function main() {
   const readyTimeout = tutorialNumber === "06" ? 90_000 : 30_000;
   try {
     await page.goto(`http://127.0.0.1:${address.port}/${target}.html`);
-    await page.waitForFunction(
-      ({ ready, frames, feature, canvasItems }) =>
-        Module.runtimeReady === true &&
-        typeof Module[ready] === "function" &&
-        Module[ready]() === 1 &&
-        Module[frames]() >= 3 &&
-        Module[feature]() > 0 &&
-        Module[canvasItems]() > 0,
-      {
-        ready: exportName("ready"),
-        frames: exportName("rendered_frames"),
-        feature: exportName("feature_value"),
-        canvasItems: exportName("canvas_items"),
-      },
-      { timeout: readyTimeout },
-    );
+    const readinessExports = {
+      ready: exportName("ready"),
+      frames: exportName("rendered_frames"),
+      feature: exportName("feature_value"),
+      canvasItems: exportName("canvas_items"),
+    };
+    try {
+      await page.waitForFunction(
+        ({ ready, frames, feature, canvasItems }) =>
+          Module.runtimeReady === true &&
+          typeof Module[ready] === "function" &&
+          Module[ready]() === 1 &&
+          Module[frames]() >= 3 &&
+          Module[feature]() > 0 &&
+          Module[canvasItems]() > 0,
+        readinessExports,
+        { timeout: readyTimeout },
+      );
+    } catch (error) {
+      const state = await page.evaluate(({ ready, frames, feature, canvasItems }) => {
+        const call = (name) => typeof Module[name] === "function" ? Module[name]() : null;
+        return {
+          runtimeReady: Module.runtimeReady === true,
+          ready: call(ready),
+          frames: call(frames),
+          feature: call(feature),
+          canvasItems: call(canvasItems),
+        };
+      }, readinessExports);
+      throw new Error(
+        `${error.message}; state=${JSON.stringify(state)}; page=${errors.join(" | ")}`,
+      );
+    }
 
     const canvas = page.locator("#canvas");
     let center = [];
