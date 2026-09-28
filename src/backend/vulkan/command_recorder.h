@@ -73,6 +73,8 @@ public:
   [[nodiscard]] granit_result dispatch(const vulkan_device& device, std::uint32_t group_count_x,
                                        std::uint32_t group_count_y,
                                        std::uint32_t group_count_z) noexcept;
+  [[nodiscard]] granit_result dispatch_indirect(const vulkan_device& device, VkBuffer buffer,
+                                                VkDeviceSize offset) noexcept;
   [[nodiscard]] granit_result set_viewports(const vulkan_device& device, std::uint32_t first,
                                             std::span<const VkViewport> viewports) noexcept;
   [[nodiscard]] granit_result set_scissors(const vulkan_device& device, std::uint32_t first,
@@ -89,6 +91,10 @@ public:
                                            std::uint32_t instance_count, std::uint32_t first_index,
                                            std::int32_t vertex_offset,
                                            std::uint32_t first_instance) noexcept;
+  [[nodiscard]] granit_result draw_indirect(const vulkan_device& device, VkBuffer buffer,
+                                            VkDeviceSize offset) noexcept;
+  [[nodiscard]] granit_result draw_indexed_indirect(const vulkan_device& device, VkBuffer buffer,
+                                                    VkDeviceSize offset) noexcept;
   [[nodiscard]] granit_result
   begin_rendering(const vulkan_device& device, VkRect2D area,
                   std::span<const VkRenderingAttachmentInfo> color_attachments,

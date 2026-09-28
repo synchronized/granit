@@ -80,6 +80,30 @@ typedef struct granit_vertex_buffer_binding {
   uint64_t offset;
 } granit_vertex_buffer_binding;
 
+/** `draw_indirect` 使用的 GPU 参数布局。 */
+typedef struct granit_draw_indirect_args {
+  uint32_t vertex_count;
+  uint32_t instance_count;
+  uint32_t first_vertex;
+  uint32_t first_instance;
+} granit_draw_indirect_args;
+
+/** `draw_indexed_indirect` 使用的 GPU 参数布局。 */
+typedef struct granit_draw_indexed_indirect_args {
+  uint32_t index_count;
+  uint32_t instance_count;
+  uint32_t first_index;
+  int32_t vertex_offset;
+  uint32_t first_instance;
+} granit_draw_indexed_indirect_args;
+
+/** `dispatch_indirect` 使用的 GPU 参数布局。 */
+typedef struct granit_dispatch_indirect_args {
+  uint32_t group_count_x;
+  uint32_t group_count_y;
+  uint32_t group_count_z;
+} granit_dispatch_indirect_args;
+
 typedef struct granit_command_recorder_desc {
   uint32_t struct_size;
   uint32_t flags;
@@ -103,7 +127,7 @@ typedef struct granit_bind_groups_desc {
   uint32_t dynamic_offset_count;
   const uint32_t* dynamic_offsets;
 } granit_bind_groups_desc;
-#define GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE                                                   \
+#define GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE                                                     \
   ((uint32_t)(offsetof(granit_bind_groups_desc, dynamic_offsets) + sizeof(void*)))
 #define GRANIT_BIND_GROUPS_DESC_INIT                                                               \
   {GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE, UINT32_C(0), 0, UINT32_C(0), UINT32_C(0), 0}
@@ -180,6 +204,10 @@ GRANIT_API granit_result granit_command_recorder_dispatch(granit_renderer render
                                                           uint32_t group_count_x,
                                                           uint32_t group_count_y,
                                                           uint32_t group_count_z);
+GRANIT_API granit_result granit_command_recorder_dispatch_indirect(granit_renderer renderer,
+                                                                   granit_command_recorder recorder,
+                                                                   granit_buffer buffer,
+                                                                   uint64_t offset);
 GRANIT_API granit_result granit_command_recorder_set_viewports(granit_renderer renderer,
                                                                granit_command_recorder recorder,
                                                                uint32_t first_viewport,
@@ -204,6 +232,13 @@ GRANIT_API granit_result granit_command_recorder_draw(
 GRANIT_API granit_result granit_command_recorder_draw_indexed(
     granit_renderer renderer, granit_command_recorder recorder, uint32_t index_count,
     uint32_t instance_count, uint32_t first_index, int32_t vertex_offset, uint32_t first_instance);
+GRANIT_API granit_result granit_command_recorder_draw_indirect(granit_renderer renderer,
+                                                               granit_command_recorder recorder,
+                                                               granit_buffer buffer,
+                                                               uint64_t offset);
+GRANIT_API granit_result granit_command_recorder_draw_indexed_indirect(
+    granit_renderer renderer, granit_command_recorder recorder, granit_buffer buffer,
+    uint64_t offset);
 GRANIT_API granit_result granit_command_recorder_begin_rendering(granit_renderer renderer,
                                                                  granit_command_recorder recorder,
                                                                  const granit_rendering_desc* desc);

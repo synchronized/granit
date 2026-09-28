@@ -222,6 +222,16 @@ granit_result webgpu_renderer_state::command_dispatch(backend_command_recorder_r
 }
 
 granit_result
+webgpu_renderer_state::command_dispatch_indirect(backend_command_recorder_resource& resource,
+                                                 webgpu_buffer buffer,
+                                                 std::uint64_t offset) noexcept {
+  auto* recorder = as_recorder(resource);
+  return recorder == nullptr
+             ? GRANIT_ERROR_INVALID_ARGUMENT
+             : device_.recorder_dispatch_indirect(recorder->recorder_, buffer, offset);
+}
+
+granit_result
 webgpu_renderer_state::command_end_compute(backend_command_recorder_resource& resource) noexcept {
   auto* recorder = as_recorder(resource);
   if (recorder == nullptr || !recorder->compute_open_)
@@ -429,6 +439,25 @@ webgpu_renderer_state::command_draw_indexed(backend_command_recorder_resource& r
     return GRANIT_ERROR_INVALID_ARGUMENT;
   return device_.recorder_draw_indices(recorder->recorder_, index_count, instance_count,
                                        first_index, vertex_offset, first_instance);
+}
+
+granit_result
+webgpu_renderer_state::command_draw_indirect(backend_command_recorder_resource& resource,
+                                             webgpu_buffer buffer, std::uint64_t offset) noexcept {
+  auto* recorder = as_recorder(resource);
+  if (recorder == nullptr || recorder->recorder_ == 0 || recorder->command_buffer_ != 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  return device_.recorder_draw_indirect(recorder->recorder_, buffer, offset);
+}
+
+granit_result
+webgpu_renderer_state::command_draw_indexed_indirect(backend_command_recorder_resource& resource,
+                                                     webgpu_buffer buffer,
+                                                     std::uint64_t offset) noexcept {
+  auto* recorder = as_recorder(resource);
+  if (recorder == nullptr || recorder->recorder_ == 0 || recorder->command_buffer_ != 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  return device_.recorder_draw_indexed_indirect(recorder->recorder_, buffer, offset);
 }
 
 granit_result

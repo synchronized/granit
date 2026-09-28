@@ -317,6 +317,9 @@ public:
   [[nodiscard]] granit_result dispatch(backend_command_recorder_resource& recorder,
                                        std::uint32_t group_count_x, std::uint32_t group_count_y,
                                        std::uint32_t group_count_z) noexcept override;
+  [[nodiscard]] granit_result dispatch_indirect(backend_command_recorder_resource& recorder,
+                                                backend_buffer_resource& buffer,
+                                                std::uint64_t offset) noexcept override;
   [[nodiscard]] granit_result
   set_viewports(backend_command_recorder_resource& recorder, std::uint32_t first,
                 std::span<const granit_viewport> viewports) noexcept override;
@@ -343,6 +346,12 @@ public:
                                            std::uint32_t index_count, std::uint32_t instance_count,
                                            std::uint32_t first_index, std::int32_t vertex_offset,
                                            std::uint32_t first_instance) noexcept override;
+  [[nodiscard]] granit_result draw_indirect(backend_command_recorder_resource& recorder,
+                                            backend_buffer_resource& buffer,
+                                            std::uint64_t offset) noexcept override;
+  [[nodiscard]] granit_result draw_indexed_indirect(backend_command_recorder_resource& recorder,
+                                                    backend_buffer_resource& buffer,
+                                                    std::uint64_t offset) noexcept override;
   [[nodiscard]] granit_result
   begin_rendering(backend_command_recorder_resource& recorder, granit_rendering_area area,
                   std::span<const backend_color_attachment> color_attachments,

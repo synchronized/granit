@@ -36,6 +36,11 @@ public:
                                                std::uint32_t group_count_x,
                                                std::uint32_t group_count_y,
                                                std::uint32_t group_count_z) noexcept = 0;
+  [[nodiscard]] virtual granit_result dispatch_indirect(backend_command_recorder_resource&,
+                                                        backend_buffer_resource&,
+                                                        std::uint64_t) noexcept {
+    return GRANIT_ERROR_UNSUPPORTED;
+  }
 };
 
 } // namespace granit::detail

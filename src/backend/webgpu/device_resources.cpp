@@ -81,7 +81,7 @@ granit_result create_buffer(webgpu_instance_handle instance, const webgpu_buffer
       GRANIT_WEBGPU_BUFFER_USAGE_MAP_READ_BIT | GRANIT_WEBGPU_BUFFER_USAGE_COPY_SRC_BIT |
       GRANIT_WEBGPU_BUFFER_USAGE_COPY_DST_BIT | GRANIT_WEBGPU_BUFFER_USAGE_VERTEX_BIT |
       GRANIT_WEBGPU_BUFFER_USAGE_INDEX_BIT | GRANIT_WEBGPU_BUFFER_USAGE_UNIFORM_BIT |
-      GRANIT_WEBGPU_BUFFER_USAGE_STORAGE_BIT;
+      GRANIT_WEBGPU_BUFFER_USAGE_STORAGE_BIT | GRANIT_WEBGPU_BUFFER_USAGE_INDIRECT_BIT;
   if (out_buffer != nullptr) {
     *out_buffer = 0;
   }
@@ -120,6 +120,8 @@ granit_result create_buffer(webgpu_instance_handle instance, const webgpu_buffer
     usage |= WGPUBufferUsage_Uniform;
   if ((desc->usage & GRANIT_WEBGPU_BUFFER_USAGE_STORAGE_BIT) != 0)
     usage |= WGPUBufferUsage_Storage;
+  if ((desc->usage & GRANIT_WEBGPU_BUFFER_USAGE_INDIRECT_BIT) != 0)
+    usage |= WGPUBufferUsage_Indirect;
   WGPUBufferDescriptor descriptor = WGPU_BUFFER_DESCRIPTOR_INIT;
   descriptor.usage = usage;
   descriptor.size = desc->size;

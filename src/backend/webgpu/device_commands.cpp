@@ -1039,6 +1039,50 @@ granit_result recorder_draw_indices(webgpu_instance_handle instance,
   return GRANIT_SUCCESS;
 }
 
+granit_result recorder_draw_indirect(webgpu_instance_handle instance,
+                                     webgpu_command_recorder recorder, webgpu_buffer buffer,
+                                     std::uint64_t offset) noexcept {
+  if (instance == 0 || recorder == 0 || buffer == 0 || offset % 4 != 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto command = found->second->command_recorders.find(recorder);
+  const auto source = found->second->buffers.find(buffer);
+  if (command == found->second->command_recorders.end() || source == found->second->buffers.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (command->second.pass == nullptr || !command->second.pipeline_bound ||
+      command->second.finished ||
+      (source->second.usage & GRANIT_WEBGPU_BUFFER_USAGE_INDIRECT_BIT) == 0 ||
+      offset > source->second.size || 16 > source->second.size - offset)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  wgpuRenderPassEncoderDrawIndirect(command->second.pass, source->second.buffer, offset);
+  return GRANIT_SUCCESS;
+}
+
+granit_result recorder_draw_indexed_indirect(webgpu_instance_handle instance,
+                                             webgpu_command_recorder recorder, webgpu_buffer buffer,
+                                             std::uint64_t offset) noexcept {
+  if (instance == 0 || recorder == 0 || buffer == 0 || offset % 4 != 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto command = found->second->command_recorders.find(recorder);
+  const auto source = found->second->buffers.find(buffer);
+  if (command == found->second->command_recorders.end() || source == found->second->buffers.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (command->second.pass == nullptr || !command->second.pipeline_bound ||
+      command->second.finished || command->second.index_element_size == 0 ||
+      (source->second.usage & GRANIT_WEBGPU_BUFFER_USAGE_INDIRECT_BIT) == 0 ||
+      offset > source->second.size || 20 > source->second.size - offset)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  wgpuRenderPassEncoderDrawIndexedIndirect(command->second.pass, source->second.buffer, offset);
+  return GRANIT_SUCCESS;
+}
+
 granit_result recorder_end_rendering(webgpu_instance_handle instance,
                                      webgpu_command_recorder recorder) noexcept {
   if (instance == 0 || recorder == 0)
@@ -1181,6 +1225,29 @@ granit_result recorder_dispatch(webgpu_instance_handle instance, webgpu_command_
       !command->second.compute_pipeline_bound)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   wgpuComputePassEncoderDispatchWorkgroups(command->second.compute_pass, x, y, z);
+  return GRANIT_SUCCESS;
+}
+
+granit_result recorder_dispatch_indirect(webgpu_instance_handle instance,
+                                         webgpu_command_recorder recorder, webgpu_buffer buffer,
+                                         std::uint64_t offset) noexcept {
+  if (instance == 0 || recorder == 0 || buffer == 0 || offset % 4 != 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::scoped_lock lock{instances_mutex};
+  const auto found = instances.find(instance);
+  if (found == instances.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  const auto command = found->second->command_recorders.find(recorder);
+  const auto source = found->second->buffers.find(buffer);
+  if (command == found->second->command_recorders.end() || source == found->second->buffers.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (command->second.finished || command->second.compute_pass == nullptr ||
+      !command->second.compute_pipeline_bound ||
+      (source->second.usage & GRANIT_WEBGPU_BUFFER_USAGE_INDIRECT_BIT) == 0 ||
+      offset > source->second.size || 12 > source->second.size - offset)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  wgpuComputePassEncoderDispatchWorkgroupsIndirect(command->second.compute_pass,
+                                                   source->second.buffer, offset);
   return GRANIT_SUCCESS;
 }
 
@@ -1397,6 +1464,18 @@ granit_result webgpu_device::recorder_dispatch(webgpu_command_recorder recorder,
   }
 }
 
+granit_result webgpu_device::recorder_dispatch_indirect(webgpu_command_recorder recorder,
+                                                        webgpu_buffer buffer,
+                                                        std::uint64_t offset) noexcept {
+  if (!open_ || instance_ == 0 || recorder == 0 || buffer == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::recorder_dispatch_indirect(instance_, recorder, buffer, offset);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 granit_result webgpu_device::recorder_end_compute(webgpu_command_recorder recorder) noexcept {
   if (!open_ || instance_ == 0 || recorder == 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -1556,6 +1635,30 @@ granit_result webgpu_device::recorder_draw_indices(
   try {
     return ::recorder_draw_indices(instance_, recorder, index_count, instance_count, first_index,
                                    vertex_offset, first_instance);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_device::recorder_draw_indirect(webgpu_command_recorder recorder,
+                                                    webgpu_buffer buffer,
+                                                    std::uint64_t offset) noexcept {
+  if (!open_ || instance_ == 0 || recorder == 0 || buffer == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::recorder_draw_indirect(instance_, recorder, buffer, offset);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result webgpu_device::recorder_draw_indexed_indirect(webgpu_command_recorder recorder,
+                                                            webgpu_buffer buffer,
+                                                            std::uint64_t offset) noexcept {
+  if (!open_ || instance_ == 0 || recorder == 0 || buffer == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    return ::recorder_draw_indexed_indirect(instance_, recorder, buffer, offset);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }

@@ -41,6 +41,7 @@
 | Dynamic Uniform Buffer | 支持 | 支持 | Offset 必须满足设备对齐 |
 | Graphics Pipeline | 支持 | 支持当前子集 | 具体差异见下表 |
 | Compute Pipeline 与 Dispatch | 支持 | 支持 | Dispatch 必须位于 Rendering 区域外 |
+| 单次 Draw/Indexed Draw/Dispatch Indirect | 支持 | 支持 | Buffer 必须声明 Indirect Usage |
 | Pipeline Warmup | 支持 | 支持 | 检查 Warmup 能力位 |
 | Pipeline Cache 导入与导出 | 支持 | 不支持 | WebGPU 返回不支持 |
 

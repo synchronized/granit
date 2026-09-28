@@ -199,6 +199,34 @@ granit_result renderer_registry::dispatch(granit_renderer renderer,
   return command->compute->dispatch(*command->native, group_count_x, group_count_y, group_count_z);
 }
 
+granit_result renderer_registry::dispatch_indirect(granit_renderer renderer,
+                                                   granit_command_recorder recorder,
+                                                   granit_buffer buffer, std::uint64_t offset) {
+  auto command = acquire_command_recorder(renderer, recorder);
+  if (!command)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (!command->compute)
+    return GRANIT_ERROR_UNSUPPORTED;
+  std::shared_ptr<buffer_record> record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto found = buffers_.find(buffer);
+    if (found == buffers_.end() || found->second->owner != command->owner)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    if ((found->second->desc.usage & GRANIT_BUFFER_USAGE_INDIRECT_BIT) == 0 || offset % 4 != 0 ||
+        offset > found->second->desc.size ||
+        sizeof(granit_dispatch_indirect_args) > found->second->desc.size - offset)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    record = found->second;
+  }
+  std::lock_guard lock{command->mutex};
+  const auto result =
+      command->compute->dispatch_indirect(*command->native, *record->native, offset);
+  if (result == GRANIT_SUCCESS)
+    retain_resource(command->retained_resources, record, record->metadata);
+  return result;
+}
+
 granit_result renderer_registry::set_viewports(granit_renderer renderer,
                                                granit_command_recorder recorder,
                                                std::uint32_t first,
@@ -305,6 +333,57 @@ granit_result renderer_registry::draw_indexed(granit_renderer renderer,
   return command->graphics->draw_indexed(*command->native, nullptr, nullptr, index_count,
                                          instance_count, first_index, vertex_offset,
                                          first_instance);
+}
+
+granit_result renderer_registry::draw_indirect(granit_renderer renderer,
+                                               granit_command_recorder recorder,
+                                               granit_buffer buffer, std::uint64_t offset) {
+  auto command = acquire_command_recorder(renderer, recorder);
+  if (!command)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  std::shared_ptr<buffer_record> record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto found = buffers_.find(buffer);
+    if (found == buffers_.end() || found->second->owner != command->owner)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    if ((found->second->desc.usage & GRANIT_BUFFER_USAGE_INDIRECT_BIT) == 0 || offset % 4 != 0 ||
+        offset > found->second->desc.size ||
+        sizeof(granit_draw_indirect_args) > found->second->desc.size - offset)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    record = found->second;
+  }
+  std::lock_guard lock{command->mutex};
+  const auto result = command->graphics->draw_indirect(*command->native, *record->native, offset);
+  if (result == GRANIT_SUCCESS)
+    retain_resource(command->retained_resources, record, record->metadata);
+  return result;
+}
+
+granit_result renderer_registry::draw_indexed_indirect(granit_renderer renderer,
+                                                       granit_command_recorder recorder,
+                                                       granit_buffer buffer, std::uint64_t offset) {
+  auto command = acquire_command_recorder(renderer, recorder);
+  if (!command)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  std::shared_ptr<buffer_record> record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto found = buffers_.find(buffer);
+    if (found == buffers_.end() || found->second->owner != command->owner)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    if ((found->second->desc.usage & GRANIT_BUFFER_USAGE_INDIRECT_BIT) == 0 || offset % 4 != 0 ||
+        offset > found->second->desc.size ||
+        sizeof(granit_draw_indexed_indirect_args) > found->second->desc.size - offset)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    record = found->second;
+  }
+  std::lock_guard lock{command->mutex};
+  const auto result =
+      command->graphics->draw_indexed_indirect(*command->native, *record->native, offset);
+  if (result == GRANIT_SUCCESS)
+    retain_resource(command->retained_resources, record, record->metadata);
+  return result;
 }
 
 granit_result renderer_registry::begin_rendering(granit_renderer renderer,

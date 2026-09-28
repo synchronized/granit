@@ -97,6 +97,16 @@ public:
                                                    std::int32_t, std::uint32_t) noexcept {
     return GRANIT_ERROR_UNSUPPORTED;
   }
+  [[nodiscard]] virtual granit_result draw_indirect(backend_command_recorder_resource&,
+                                                    backend_buffer_resource&,
+                                                    std::uint64_t) noexcept {
+    return GRANIT_ERROR_UNSUPPORTED;
+  }
+  [[nodiscard]] virtual granit_result draw_indexed_indirect(backend_command_recorder_resource&,
+                                                            backend_buffer_resource&,
+                                                            std::uint64_t) noexcept {
+    return GRANIT_ERROR_UNSUPPORTED;
+  }
   [[nodiscard]] virtual granit_result begin_rendering(backend_command_recorder_resource&,
                                                       granit_rendering_area,
                                                       std::span<const backend_color_attachment>,

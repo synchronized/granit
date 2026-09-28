@@ -393,6 +393,23 @@ granit_result vulkan_command_recorder::dispatch(const vulkan_device& device,
   return GRANIT_SUCCESS;
 }
 
+granit_result vulkan_command_recorder::dispatch_indirect(const vulkan_device& device,
+                                                         VkBuffer buffer,
+                                                         VkDeviceSize offset) noexcept {
+  if (state_ != command_recorder_state::recording || inside_rendering_ ||
+      !compute_pipeline_bound_ || buffer == VK_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::array accesses{
+      std::pair{buffer, VkAccessFlags2{VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT}},
+  };
+  const auto result =
+      prepare_buffer_access(device, accesses, VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  device.functions().vkCmdDispatchIndirect(command_buffer_, buffer, offset);
+  return GRANIT_SUCCESS;
+}
+
 granit_result
 vulkan_command_recorder::set_viewports(const vulkan_device& device, std::uint32_t first,
                                        std::span<const VkViewport> viewports) noexcept {
@@ -473,6 +490,40 @@ granit_result vulkan_command_recorder::draw_indexed(
     return GRANIT_ERROR_INVALID_ARGUMENT;
   device.functions().vkCmdDrawIndexed(command_buffer_, index_count, instance_count, first_index,
                                       vertex_offset, first_instance);
+  return GRANIT_SUCCESS;
+}
+
+granit_result vulkan_command_recorder::draw_indirect(const vulkan_device& device, VkBuffer buffer,
+                                                     VkDeviceSize offset) noexcept {
+  if (state_ != command_recorder_state::recording || !inside_rendering_ ||
+      !graphics_pipeline_bound_ || !viewport_set_ || !scissor_set_ || buffer == VK_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::array accesses{
+      std::pair{buffer, VkAccessFlags2{VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT}},
+  };
+  const auto result =
+      prepare_buffer_access(device, accesses, VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  device.functions().vkCmdDrawIndirect(command_buffer_, buffer, offset, 1, 0);
+  return GRANIT_SUCCESS;
+}
+
+granit_result vulkan_command_recorder::draw_indexed_indirect(const vulkan_device& device,
+                                                             VkBuffer buffer,
+                                                             VkDeviceSize offset) noexcept {
+  if (state_ != command_recorder_state::recording || !inside_rendering_ ||
+      !graphics_pipeline_bound_ || !viewport_set_ || !scissor_set_ || !index_buffer_bound_ ||
+      buffer == VK_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const std::array accesses{
+      std::pair{buffer, VkAccessFlags2{VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT}},
+  };
+  const auto result =
+      prepare_buffer_access(device, accesses, VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  device.functions().vkCmdDrawIndexedIndirect(command_buffer_, buffer, offset, 1, 0);
   return GRANIT_SUCCESS;
 }
 

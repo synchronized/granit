@@ -139,6 +139,9 @@ public:
                                                   std::span<const backend_texture_access>) override;
   [[nodiscard]] granit_result dispatch(backend_command_recorder_resource&, std::uint32_t,
                                        std::uint32_t, std::uint32_t) noexcept override;
+  [[nodiscard]] granit_result dispatch_indirect(backend_command_recorder_resource&,
+                                                backend_buffer_resource&,
+                                                std::uint64_t) noexcept override;
 
   [[nodiscard]] std::unique_ptr<backend_command_recorder_resource>
   allocate_command_recorder_resource() override;
@@ -215,6 +218,12 @@ public:
                                            std::uint32_t index_count, std::uint32_t instance_count,
                                            std::uint32_t first_index, std::int32_t vertex_offset,
                                            std::uint32_t first_instance) noexcept override;
+  [[nodiscard]] granit_result draw_indirect(backend_command_recorder_resource& recorder,
+                                            backend_buffer_resource& buffer,
+                                            std::uint64_t offset) noexcept override;
+  [[nodiscard]] granit_result draw_indexed_indirect(backend_command_recorder_resource& recorder,
+                                                    backend_buffer_resource& buffer,
+                                                    std::uint64_t offset) noexcept override;
   [[nodiscard]] granit_result
   begin_rendering(backend_command_recorder_resource& recorder, granit_rendering_area area,
                   std::span<const backend_color_attachment> color_attachments,
@@ -362,6 +371,8 @@ private:
                                                           std::span<const std::uint32_t>) noexcept;
   [[nodiscard]] granit_result command_dispatch(backend_command_recorder_resource&, std::uint32_t,
                                                std::uint32_t, std::uint32_t) noexcept;
+  [[nodiscard]] granit_result command_dispatch_indirect(backend_command_recorder_resource&,
+                                                        webgpu_buffer, std::uint64_t) noexcept;
   [[nodiscard]] granit_result command_end_compute(backend_command_recorder_resource&) noexcept;
   [[nodiscard]] granit_result
   command_bind_vertex_buffers(backend_command_recorder_resource& resource, std::uint32_t first,
@@ -409,6 +420,12 @@ private:
   command_draw_indexed(backend_command_recorder_resource& resource, std::uint32_t index_count,
                        std::uint32_t instance_count, std::uint32_t first_index,
                        std::int32_t vertex_offset, std::uint32_t first_instance) noexcept;
+  [[nodiscard]] granit_result command_draw_indirect(backend_command_recorder_resource& resource,
+                                                    webgpu_buffer buffer,
+                                                    std::uint64_t offset) noexcept;
+  [[nodiscard]] granit_result
+  command_draw_indexed_indirect(backend_command_recorder_resource& resource, webgpu_buffer buffer,
+                                std::uint64_t offset) noexcept;
   [[nodiscard]] granit_result
   command_end_rendering(backend_command_recorder_resource& resource) noexcept;
   [[nodiscard]] bool command_is_recording(backend_command_recorder_resource& resource) noexcept;

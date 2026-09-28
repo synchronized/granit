@@ -321,6 +321,18 @@ extern "C" granit_result granit_command_recorder_dispatch(granit_renderer render
   }
 }
 
+extern "C" granit_result granit_command_recorder_dispatch_indirect(granit_renderer renderer,
+                                                                   granit_command_recorder recorder,
+                                                                   granit_buffer buffer,
+                                                                   uint64_t offset) {
+  try {
+    return granit::detail::renderer_registry::instance().dispatch_indirect(renderer, recorder,
+                                                                           buffer, offset);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 extern "C" granit_result granit_command_recorder_set_viewports(granit_renderer renderer,
                                                                granit_command_recorder recorder,
                                                                uint32_t first_viewport,
@@ -413,6 +425,30 @@ extern "C" granit_result granit_command_recorder_draw_indexed(
     return granit::detail::renderer_registry::instance().draw_indexed(
         renderer, recorder, index_count, instance_count, first_index, vertex_offset,
         first_instance);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+extern "C" granit_result granit_command_recorder_draw_indirect(granit_renderer renderer,
+                                                               granit_command_recorder recorder,
+                                                               granit_buffer buffer,
+                                                               uint64_t offset) {
+  try {
+    return granit::detail::renderer_registry::instance().draw_indirect(renderer, recorder, buffer,
+                                                                       offset);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+extern "C" granit_result
+granit_command_recorder_draw_indexed_indirect(granit_renderer renderer,
+                                              granit_command_recorder recorder,
+                                              granit_buffer buffer, uint64_t offset) {
+  try {
+    return granit::detail::renderer_registry::instance().draw_indexed_indirect(renderer, recorder,
+                                                                               buffer, offset);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }

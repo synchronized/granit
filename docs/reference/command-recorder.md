@@ -68,6 +68,17 @@ Viewport 与 Scissor 支持批量设置，并遵循统一的[坐标系统约定]
 Buffer 在 Dynamic Rendering 开始前绑定，以便自动屏障在渲染区域外完成；Draw 和 Draw Indexed
 只能在渲染区域内录制。
 
+## Indirect 命令
+
+`draw_indirect`、`draw_indexed_indirect` 与 `dispatch_indirect` 各读取一个参数结构。参数 Buffer 必须
+声明 `INDIRECT` Usage，Offset 必须按 4 字节对齐，且完整结构不能越过 Buffer 范围。Indexed 版本
+还要求已绑定 Index Buffer；Draw 版本只能在 Rendering 区域内使用，Dispatch 版本只能在区域外使用。
+
+参数结构分别是 `granit_draw_indirect_args`、`granit_draw_indexed_indirect_args` 和
+`granit_dispatch_indirect_args`。它们使用固定宽度字段，可由 CPU、Copy 或 Compute 写入。Recorder
+保留参数 Buffer，并在 Vulkan 上自动建立 Storage Write 到 Indirect Read 的依赖；WebGPU 使用同一
+命令顺序与 Pass 边界表达依赖。每次调用只执行一条命令，不提供多 Draw 或 Count Buffer 变体。
+
 ## C++20
 
 ```cpp
@@ -88,6 +99,8 @@ recorder.bind_graphics_group(pipeline_layout, 0, object_group, dynamic_offsets);
 const granit::vertex_buffer_binding vertex_binding{vertex_buffer.ref(), 0};
 recorder.bind_vertex_buffers(0, std::span{&vertex_binding, 1});
 recorder.bind_index_buffer(index_buffer.ref(), 0, granit::index_type::uint16);
+recorder.draw_indirect(draw_args.ref());
+recorder.dispatch_indirect(dispatch_args.ref());
 ```
 
 包装类型无异常、不可复制且可以移动。`reset()` 重置录制状态，`destroy()` 销毁 Recorder 句柄。

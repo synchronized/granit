@@ -125,6 +125,7 @@ typedef uint32_t webgpu_buffer_usage;
 #define GRANIT_WEBGPU_BUFFER_USAGE_INDEX_BIT UINT32_C(0x00000010)
 #define GRANIT_WEBGPU_BUFFER_USAGE_UNIFORM_BIT UINT32_C(0x00000020)
 #define GRANIT_WEBGPU_BUFFER_USAGE_STORAGE_BIT UINT32_C(0x00000040)
+#define GRANIT_WEBGPU_BUFFER_USAGE_INDIRECT_BIT UINT32_C(0x00000080)
 
 /** Buffer 由创建它的 Context 拥有；size 必须非零。 */
 typedef struct webgpu_buffer_desc {

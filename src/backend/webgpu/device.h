@@ -110,6 +110,9 @@ public:
                                std::span<const std::uint32_t> dynamic_offsets) noexcept;
   [[nodiscard]] granit_result recorder_dispatch(webgpu_command_recorder recorder, std::uint32_t x,
                                                 std::uint32_t y, std::uint32_t z) noexcept;
+  [[nodiscard]] granit_result recorder_dispatch_indirect(webgpu_command_recorder recorder,
+                                                         webgpu_buffer buffer,
+                                                         std::uint64_t offset) noexcept;
   [[nodiscard]] granit_result recorder_end_compute(webgpu_command_recorder recorder) noexcept;
   [[nodiscard]] granit_result
   create_render_pipeline(const webgpu_render_pipeline_desc* desc,
@@ -155,6 +158,12 @@ public:
   recorder_draw_indices(webgpu_command_recorder recorder, std::uint32_t index_count,
                         std::uint32_t instance_count, std::uint32_t first_index,
                         std::int32_t vertex_offset, std::uint32_t first_instance) noexcept;
+  [[nodiscard]] granit_result recorder_draw_indirect(webgpu_command_recorder recorder,
+                                                     webgpu_buffer buffer,
+                                                     std::uint64_t offset) noexcept;
+  [[nodiscard]] granit_result recorder_draw_indexed_indirect(webgpu_command_recorder recorder,
+                                                             webgpu_buffer buffer,
+                                                             std::uint64_t offset) noexcept;
   [[nodiscard]] granit_result recorder_end_rendering(webgpu_command_recorder recorder) noexcept;
   [[nodiscard]] granit_result
   finish_command_recorder(webgpu_command_recorder recorder,
