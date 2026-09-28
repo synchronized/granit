@@ -62,15 +62,18 @@ material_template_gpu::initialize(granit_renderer renderer, const material_packa
     material_entries.reserve(package.metadata().parameters().size() + 1U);
     if (package.metadata().constant_buffer_size() != 0) {
       material_entries.push_back(
-          {0, GRANIT_BINDING_TYPE_UNIFORM_BUFFER, 1, GRANIT_SHADER_STAGE_FRAGMENT_BIT});
+          {0, GRANIT_BINDING_TYPE_UNIFORM_BUFFER, 1, GRANIT_SHADER_STAGE_FRAGMENT_BIT,
+           GRANIT_TEXTURE_FORMAT_UNDEFINED, 0});
     }
     for (const auto& parameter : package.metadata().parameters()) {
       if (parameter.type == parameter_type::texture_view) {
         material_entries.push_back({parameter.binding, GRANIT_BINDING_TYPE_SAMPLED_TEXTURE, 1,
-                                    GRANIT_SHADER_STAGE_FRAGMENT_BIT});
+                                    GRANIT_SHADER_STAGE_FRAGMENT_BIT,
+                                    GRANIT_TEXTURE_FORMAT_UNDEFINED, 0});
       } else if (parameter.type == parameter_type::sampler) {
         material_entries.push_back(
-            {parameter.binding, GRANIT_BINDING_TYPE_SAMPLER, 1, GRANIT_SHADER_STAGE_FRAGMENT_BIT});
+            {parameter.binding, GRANIT_BINDING_TYPE_SAMPLER, 1, GRANIT_SHADER_STAGE_FRAGMENT_BIT,
+             GRANIT_TEXTURE_FORMAT_UNDEFINED, 0});
       }
     }
   } catch (const std::bad_alloc&) {
@@ -79,7 +82,8 @@ material_template_gpu::initialize(granit_renderer renderer, const material_packa
 
   const granit_bind_group_layout_entry frame_entry{0, GRANIT_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER, 1,
                                                    GRANIT_SHADER_STAGE_VERTEX_BIT |
-                                                       GRANIT_SHADER_STAGE_FRAGMENT_BIT};
+                                                       GRANIT_SHADER_STAGE_FRAGMENT_BIT,
+                                                   GRANIT_TEXTURE_FORMAT_UNDEFINED, 0};
   granit_bind_group_layout_desc frame_desc = GRANIT_BIND_GROUP_LAYOUT_DESC_INIT;
   frame_desc.entry_count = 1;
   frame_desc.entries = &frame_entry;

@@ -110,7 +110,6 @@ public:
   allocate_bind_group_layout_resource() override;
   [[nodiscard]] granit_result
   create_bind_group_layout(std::span<const granit_bind_group_layout_entry>,
-                           std::span<const granit_storage_texture_binding_desc>,
                            backend_bind_group_layout_resource&) noexcept override;
   [[nodiscard]] std::unique_ptr<backend_bind_group_resource>
   allocate_bind_group_resource() override;

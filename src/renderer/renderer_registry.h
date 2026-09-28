@@ -206,7 +206,6 @@ public:
   [[nodiscard]] granit_result
   create_bind_group_layout(granit_renderer renderer,
                            std::span<const granit_bind_group_layout_entry> entries,
-                           std::span<const granit_storage_texture_binding_desc> storage_textures,
                            granit_bind_group_layout& layout);
   [[nodiscard]] granit_result destroy_bind_group_layout(granit_renderer renderer,
                                                         granit_bind_group_layout layout);

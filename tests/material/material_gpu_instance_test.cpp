@@ -33,11 +33,14 @@ TEST_CASE("材质 GPU 实例批量上传参数并事务式替换 Bind Group") {
 
   const std::array layout_entries{
       granit_bind_group_layout_entry{0, GRANIT_BINDING_TYPE_UNIFORM_BUFFER, 1,
-                                     GRANIT_SHADER_STAGE_FRAGMENT_BIT},
+                                     GRANIT_SHADER_STAGE_FRAGMENT_BIT,
+                                     GRANIT_TEXTURE_FORMAT_UNDEFINED, 0},
       granit_bind_group_layout_entry{1, GRANIT_BINDING_TYPE_SAMPLED_TEXTURE, 1,
-                                     GRANIT_SHADER_STAGE_FRAGMENT_BIT},
+                                     GRANIT_SHADER_STAGE_FRAGMENT_BIT,
+                                     GRANIT_TEXTURE_FORMAT_UNDEFINED, 0},
       granit_bind_group_layout_entry{2, GRANIT_BINDING_TYPE_SAMPLER, 1,
-                                     GRANIT_SHADER_STAGE_FRAGMENT_BIT},
+                                     GRANIT_SHADER_STAGE_FRAGMENT_BIT,
+                                     GRANIT_TEXTURE_FORMAT_UNDEFINED, 0},
   };
   granit_bind_group_layout_desc layout_desc = GRANIT_BIND_GROUP_LAYOUT_DESC_INIT;
   layout_desc.entry_count = static_cast<std::uint32_t>(layout_entries.size());

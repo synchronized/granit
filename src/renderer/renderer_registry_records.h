@@ -100,7 +100,6 @@ struct renderer_registry::bind_group_layout_record {
   std::shared_ptr<backend_retirement_renderer> retirement;
   std::unique_ptr<backend_bind_group_layout_resource> native;
   std::vector<granit_bind_group_layout_entry> entries;
-  std::vector<granit_storage_texture_binding_desc> storage_textures;
 };
 struct renderer_registry::pipeline_layout_record {
   resource_metadata metadata;

@@ -100,17 +100,15 @@ GRANIT_ABI_ASSERT(granit_abi_subresource_range_size, sizeof(granit_subresource_r
 GRANIT_ABI_ASSERT(granit_abi_component_mapping_size, sizeof(granit_component_mapping) == 16);
 
 GRANIT_ABI_ASSERT(granit_abi_bind_group_layout_entry_size,
-                  sizeof(granit_bind_group_layout_entry) == 16);
-GRANIT_ABI_ASSERT(granit_abi_storage_texture_binding_desc_size,
-                  sizeof(granit_storage_texture_binding_desc) == 16);
+                  sizeof(granit_bind_group_layout_entry) == 24);
+GRANIT_ABI_ASSERT(granit_abi_bind_group_layout_entry_storage_format,
+                  offsetof(granit_bind_group_layout_entry, storage_texture_format) == 16);
 GRANIT_ABI_ASSERT(granit_abi_bind_group_layout_desc_size,
-                  sizeof(granit_bind_group_layout_desc) == 40);
+                  sizeof(granit_bind_group_layout_desc) == 24);
 GRANIT_ABI_ASSERT(granit_abi_bind_group_layout_desc_entries,
                   offsetof(granit_bind_group_layout_desc, entries) == 8);
 GRANIT_ABI_ASSERT(granit_abi_bind_group_layout_desc_v1_size,
                   GRANIT_BIND_GROUP_LAYOUT_DESC_VERSION_1_SIZE == 24);
-GRANIT_ABI_ASSERT(granit_abi_bind_group_layout_desc_storage_textures,
-                  offsetof(granit_bind_group_layout_desc, storage_textures) == 32);
 GRANIT_ABI_ASSERT(granit_abi_bind_group_entry_size, sizeof(granit_bind_group_entry) == 32);
 GRANIT_ABI_ASSERT(granit_abi_bind_group_entry_resource,
                   offsetof(granit_bind_group_entry, resource) == 8);

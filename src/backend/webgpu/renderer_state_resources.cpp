@@ -5,7 +5,6 @@
 
 #include "core/texture_format.h"
 
-#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstring>
@@ -747,7 +746,6 @@ webgpu_renderer_state::allocate_bind_group_layout_resource() {
 
 granit_result webgpu_renderer_state::create_bind_group_layout(
     std::span<const granit_bind_group_layout_entry> entries,
-    std::span<const granit_storage_texture_binding_desc> storage_textures,
     backend_bind_group_layout_resource& resource) noexcept {
   if (!capabilities_initialized_)
     return GRANIT_ERROR_NOT_READY;
@@ -773,13 +771,9 @@ granit_result webgpu_renderer_state::create_bind_group_layout(
         type = GRANIT_WEBGPU_BINDING_TYPE_STORAGE_BUFFER;
         break;
       case GRANIT_BINDING_TYPE_STORAGE_TEXTURE: {
-        const auto storage =
-            std::find_if(storage_textures.begin(), storage_textures.end(),
-                         [&](const auto& candidate) { return candidate.binding == entry.binding; });
-        if (storage == storage_textures.end() ||
-            storage->access != GRANIT_STORAGE_TEXTURE_ACCESS_WRITE_ONLY)
+        if (entry.storage_texture_access != GRANIT_STORAGE_TEXTURE_ACCESS_WRITE_ONLY)
           return GRANIT_ERROR_UNSUPPORTED;
-        storage_format = to_format(storage->format);
+        storage_format = to_format(entry.storage_texture_format);
         if (storage_format != GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA8_UNORM &&
             storage_format != GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA16_FLOAT)
           return GRANIT_ERROR_UNSUPPORTED;

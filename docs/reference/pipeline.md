@@ -12,9 +12,8 @@ Vulkan Pipeline、Pipeline Layout 或 Dynamic Rendering 结构。
 - 使用 Buffer、Texture View 和 Sampler 创建不可变 Bind Group。
 - 支持 Dynamic Uniform Buffer；创建 Bind Group 时固定基础 Offset 与 Range，绑定命令选择动态
   Offset。首版不支持动态 Uniform Buffer 数组。
-- Storage Texture 在 Layout V2 中声明格式与访问模式。WebGPU 基线支持 Write-Only 的 RGBA8
-  UNORM 与 RGBA16 Float；Read-Only 和 Read-Write 目前明确返回不支持。V1 Layout 保持 Vulkan
-  兼容，但缺少元数据时不能用于 WebGPU Storage Texture。
+- Storage Texture 在对应 `granit_bind_group_layout_entry` 中直接声明格式与访问模式。WebGPU 基线
+  支持 Write-Only 的 RGBA8 UNORM 与 RGBA16 Float；Read-Only 和 Read-Write 目前明确返回不支持。
 - 使用 Vertex Shader、Fragment Shader、颜色格式、可选深度模板格式和样本数创建 Pipeline。
 - 公共描述可以表达点、线和三角形拓扑，以及遵循统一[坐标系统约定](coordinates.md)的正面绕序、
   剔除模式和 Fill/Line/Point 多边形模式。浏览器 WebGPU 支持全部公开拓扑，但 Indexed Strip 因

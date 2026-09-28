@@ -41,45 +41,29 @@ typedef uint32_t granit_shader_stage_flags;
 #define GRANIT_SHADER_STAGE_FRAGMENT_BIT (UINT32_C(1) << 1)
 #define GRANIT_SHADER_STAGE_COMPUTE_BIT (UINT32_C(1) << 2)
 
-typedef struct granit_bind_group_layout_entry {
-  uint32_t binding;
-  granit_binding_type type;
-  uint32_t array_count;
-  granit_shader_stage_flags visibility;
-} granit_bind_group_layout_entry;
-
 typedef uint32_t granit_storage_texture_access;
 #define GRANIT_STORAGE_TEXTURE_ACCESS_WRITE_ONLY UINT32_C(1)
 #define GRANIT_STORAGE_TEXTURE_ACCESS_READ_ONLY UINT32_C(2)
 #define GRANIT_STORAGE_TEXTURE_ACCESS_READ_WRITE UINT32_C(3)
 
-/** Storage Texture 布局信息；binding 对应同一 Layout 中的声明。 */
-typedef struct granit_storage_texture_binding_desc {
+typedef struct granit_bind_group_layout_entry {
   uint32_t binding;
-  granit_texture_format format;
-  granit_storage_texture_access access;
-  uint32_t reserved;
-} granit_storage_texture_binding_desc;
+  granit_binding_type type;
+  uint32_t array_count;
+  granit_shader_stage_flags visibility;
+  granit_texture_format storage_texture_format;
+  granit_storage_texture_access storage_texture_access;
+} granit_bind_group_layout_entry;
 
 typedef struct granit_bind_group_layout_desc {
   uint32_t struct_size;
   uint32_t entry_count;
   const granit_bind_group_layout_entry* entries;
   uint64_t reserved;
-  uint32_t storage_texture_count;
-  uint32_t reserved_2;
-  const granit_storage_texture_binding_desc* storage_textures;
 } granit_bind_group_layout_desc;
 #define GRANIT_BIND_GROUP_LAYOUT_DESC_VERSION_1_SIZE UINT32_C(24)
-#define GRANIT_BIND_GROUP_LAYOUT_DESC_VERSION_2_SIZE UINT32_C(40)
 #define GRANIT_BIND_GROUP_LAYOUT_DESC_INIT                                                         \
-  {GRANIT_BIND_GROUP_LAYOUT_DESC_VERSION_2_SIZE,                                                   \
-   UINT32_C(0),                                                                                    \
-   0,                                                                                              \
-   UINT64_C(0),                                                                                    \
-   UINT32_C(0),                                                                                    \
-   UINT32_C(0),                                                                                    \
-   0}
+  {GRANIT_BIND_GROUP_LAYOUT_DESC_VERSION_1_SIZE, UINT32_C(0), 0, UINT64_C(0)}
 
 /** 单个数组元素的资源绑定；资源类型由 Layout 中同 binding 的声明决定。 */
 typedef struct granit_bind_group_entry {

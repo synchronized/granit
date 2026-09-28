@@ -6,7 +6,6 @@
 #include "core/texture_format.h"
 #include "renderer/renderer_registry.h"
 
-#include <algorithm>
 #include <array>
 #include <cmath>
 
@@ -52,16 +51,8 @@ extern "C" granit_result granit_bind_group_layout_create(granit_renderer rendere
   if (!desc || desc->struct_size < GRANIT_BIND_GROUP_LAYOUT_DESC_VERSION_1_SIZE ||
       desc->reserved != 0 || desc->entry_count > 64 || (desc->entry_count != 0 && !desc->entries))
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto has_storage_metadata =
-      desc->struct_size >= GRANIT_BIND_GROUP_LAYOUT_DESC_VERSION_2_SIZE;
-  const auto storage_texture_count = has_storage_metadata ? desc->storage_texture_count : 0;
-  const auto* storage_textures = has_storage_metadata ? desc->storage_textures : nullptr;
-  if (has_storage_metadata && (desc->reserved_2 != 0 || storage_texture_count > desc->entry_count ||
-                               (storage_texture_count != 0 && storage_textures == nullptr)))
-    return GRANIT_ERROR_INVALID_ARGUMENT;
   constexpr auto valid_stages = GRANIT_SHADER_STAGE_VERTEX_BIT | GRANIT_SHADER_STAGE_FRAGMENT_BIT |
                                 GRANIT_SHADER_STAGE_COMPUTE_BIT;
-  uint32_t declared_storage_texture_count{};
   for (uint32_t index = 0; index < desc->entry_count; ++index) {
     const auto& entry = desc->entries[index];
     if (entry.type < GRANIT_BINDING_TYPE_UNIFORM_BUFFER ||
@@ -70,32 +61,18 @@ extern "C" granit_result granit_bind_group_layout_create(granit_renderer rendere
       return GRANIT_ERROR_INVALID_ARGUMENT;
     if (entry.type == GRANIT_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER && entry.array_count != 1)
       return GRANIT_ERROR_INVALID_ARGUMENT;
-    if (entry.type == GRANIT_BINDING_TYPE_STORAGE_TEXTURE)
-      ++declared_storage_texture_count;
+    if (entry.type == GRANIT_BINDING_TYPE_STORAGE_TEXTURE &&
+        (!valid_format(entry.storage_texture_format) ||
+         entry.storage_texture_access < GRANIT_STORAGE_TEXTURE_ACCESS_WRITE_ONLY ||
+         entry.storage_texture_access > GRANIT_STORAGE_TEXTURE_ACCESS_READ_WRITE))
+      return GRANIT_ERROR_INVALID_ARGUMENT;
     for (uint32_t previous = 0; previous < index; ++previous) {
       if (desc->entries[previous].binding == entry.binding)
         return GRANIT_ERROR_INVALID_ARGUMENT;
     }
   }
-  if (has_storage_metadata && declared_storage_texture_count != storage_texture_count)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  for (uint32_t index = 0; index < storage_texture_count; ++index) {
-    const auto& storage = storage_textures[index];
-    if (storage.reserved != 0 || !valid_format(storage.format) ||
-        storage.access < GRANIT_STORAGE_TEXTURE_ACCESS_WRITE_ONLY ||
-        storage.access > GRANIT_STORAGE_TEXTURE_ACCESS_READ_WRITE ||
-        std::none_of(desc->entries, desc->entries + desc->entry_count,
-                     [&](const auto& entry) {
-                       return entry.binding == storage.binding &&
-                              entry.type == GRANIT_BINDING_TYPE_STORAGE_TEXTURE;
-                     }) ||
-        std::any_of(storage_textures, storage_textures + index,
-                    [&](const auto& previous) { return previous.binding == storage.binding; }))
-      return GRANIT_ERROR_INVALID_ARGUMENT;
-  }
   return granit::detail::renderer_registry::instance().create_bind_group_layout(
-      renderer, {desc->entries, desc->entry_count}, {storage_textures, storage_texture_count},
-      *layout);
+      renderer, {desc->entries, desc->entry_count}, *layout);
 }
 
 extern "C" granit_result granit_bind_group_layout_destroy(granit_renderer renderer,

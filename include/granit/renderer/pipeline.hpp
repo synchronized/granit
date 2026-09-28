@@ -624,27 +624,19 @@ bind_group_layout::initialize(granit::renderer_ref ref,
   if (entries.size() > 64)
     return result::invalid_argument;
   std::array<granit_bind_group_layout_entry, 64> native_entries{};
-  std::array<granit_storage_texture_binding_desc, 64> storage_textures{};
-  std::uint32_t storage_texture_count{};
   for (std::size_t index = 0; index < entries.size(); ++index) {
     const auto& entry = entries[index];
     native_entries[index] = {entry.binding, static_cast<granit_binding_type>(entry.type),
                              entry.array_count,
-                             static_cast<granit_shader_stage_flags>(entry.visibility)};
-    if (entry.type == binding_type::storage_texture) {
-      storage_textures[storage_texture_count++] = {
-          entry.binding, static_cast<granit_texture_format>(entry.storage_texture_format),
-          static_cast<granit_storage_texture_access>(entry.storage_access), 0};
-    }
+                             static_cast<granit_shader_stage_flags>(entry.visibility),
+                             static_cast<granit_texture_format>(entry.storage_texture_format),
+                             static_cast<granit_storage_texture_access>(entry.storage_access)};
   }
   const granit_bind_group_layout_desc desc{
-      .struct_size = GRANIT_BIND_GROUP_LAYOUT_DESC_VERSION_2_SIZE,
+      .struct_size = GRANIT_BIND_GROUP_LAYOUT_DESC_VERSION_1_SIZE,
       .entry_count = static_cast<std::uint32_t>(entries.size()),
       .entries = native_entries.data(),
-      .reserved = 0,
-      .storage_texture_count = storage_texture_count,
-      .reserved_2 = 0,
-      .storage_textures = storage_textures.data()};
+      .reserved = 0};
   const auto value = granit_bind_group_layout_create(renderer, &desc, &handle_);
   if (value == GRANIT_SUCCESS)
     renderer_ = renderer;
