@@ -13,8 +13,9 @@ Vulkan Pipeline、Pipeline Layout 或 Dynamic Rendering 结构。
 - 支持 Dynamic Uniform Buffer；创建 Bind Group 时固定基础 Offset 与 Range，绑定命令选择动态
   Offset。首版不支持动态 Uniform Buffer 数组。
 - 使用 Vertex Shader、Fragment Shader、颜色格式、可选深度模板格式和样本数创建 Pipeline。
-- 支持点、线和三角形拓扑，以及遵循统一[坐标系统约定](coordinates.md)的正面绕序、剔除模式和
-  Fill/Line/Point 多边形模式。
+- 公共描述可以表达点、线和三角形拓扑，以及遵循统一[坐标系统约定](coordinates.md)的正面绕序、
+  剔除模式和 Fill/Line/Point 多边形模式；当前 WebGPU 实现仍只接通 Triangle List 与 Fill，具体
+  差异见 [Renderer 后端能力矩阵](backend-capabilities.md)。
 - 支持深度测试、深度写入、比较操作和可选固定 depth bias，以及每个颜色附件独立的混合与写入
   掩码。
 - Viewport 与 Scissor 是动态状态，将由 D-05 的命令接口设置。
@@ -32,7 +33,9 @@ Bind Group 的 Layout 与 Pipeline Layout 对应组使用同一个布局对象�
 Viewport、Scissor、Vertex/Index Buffer、Draw 和 Draw Indexed 已经实现。Graphics Pipeline
 支持为每个 Vertex Buffer binding 指定 stride、per-vertex/per-instance 步进，以及 location、
 format 和 offset。未提供 Vertex Buffer Layout 时仍可使用 Shader 内的顶点序号生成位置。
-非实心 Line/Point 模式依赖设备能力；设备不支持时，Pipeline 创建返回“不支持”。
+Vulkan 的非实心 Line/Point 模式依赖设备能力；浏览器 WebGPU 没有同等 Polygon Mode。当前 WebGPU
+还限制单颜色附件、D32 Float 深度、1x/4x 采样和部分颜色格式；不满足后端能力时 Pipeline 创建返回
+`GRANIT_ERROR_UNSUPPORTED`，不会静默替换状态。
 未显式提供深度状态时，有深度格式的 Pipeline 默认启用测试和写入并使用 Less Or Equal；未提供
 颜色混合状态时默认关闭混合并写入 RGBA。
 
@@ -108,10 +111,12 @@ check(recorder.bind_graphics_pipeline(pipeline));
 
 ## Pipeline Cache
 
-Graphics 与 Compute Pipeline 共用 Renderer 内部的 Pipeline Cache。调用
+Vulkan Graphics 与 Compute Pipeline 共用 Renderer 内部的 Pipeline Cache。调用
 `granit_renderer_pipeline_cache_export` 时先传入空数据查询大小，再由调用者分配缓冲区并导出；
 `granit_renderer_pipeline_cache_import` 会在调用期间读取并合并兼容数据。缓存与设备及驱动相关，
-不应作为稳定资产格式；头信息不兼容时返回无效参数，Renderer 原有缓存和 Pipeline 创建能力不受影响。
+不应作为稳定资产格式；头信息不兼容时返回无效参数，Renderer 原有缓存和 Pipeline 创建能力不受
+影响。浏览器 WebGPU 没有同等的可导入、导出缓存契约，这两个入口返回
+`GRANIT_ERROR_UNSUPPORTED`。
 
 Graphics 与 Compute Pipeline 的同步创建函数可以从多个用户线程并发调用。Registry 全局锁仅保护
 句柄查找和登记，不覆盖驱动 Pipeline 编译；共享 Pipeline Cache 使用独立互斥锁串行化 Vulkan

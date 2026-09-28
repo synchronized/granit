@@ -7,7 +7,9 @@
 
 Shader 是离线生成的阶段入口。跨后端资产同时保存 SPIR-V 与 WGSL：Vulkan 使用 SPIR-V，WebGPU
 使用 WGSL。Granit 核心库不在运行时编译或转换 Shader，也不向普通用户暴露原生 Shader 对象。
-目前公共 Vulkan 路径支持 Vertex、Fragment 和 Compute；WebGPU MVP 支持 Vertex 和 Fragment。
+Vulkan 与浏览器 WebGPU 公共路径均支持 Vertex、Fragment 和 Compute。两者的直接代码格式不同，
+但 Shader Library 会按 Renderer 自动选择 SPIR-V 或 WGSL 载荷；完整差异见
+[Renderer 后端能力矩阵](backend-capabilities.md)。
 
 ## C API
 

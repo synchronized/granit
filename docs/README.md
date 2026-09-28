@@ -85,6 +85,7 @@
 - [稳定候选契约证据](reference/stable-candidate-evidence.md)
 - [核心 C API 所有权、错误与扩展契约](reference/c-api-contract.md)
 - [Renderer 生命周期与诊断](reference/renderer.md)
+- [Renderer 后端能力矩阵](reference/backend-capabilities.md)
 - [公共数学值类型与最小运算](reference/math-types.md)
 - [坐标系统约定](reference/coordinates.md)
 - [公开对象线程安全矩阵](reference/thread-safety.md)
