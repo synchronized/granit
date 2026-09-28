@@ -73,11 +73,17 @@ typedef struct granit_renderer_limits {
   float max_sampler_anisotropy;
   /** 当前设备可用的可选 Renderer 能力位。 */
   granit_renderer_feature_flags supported_features;
+  /** 单个 Rendering 区域和 Graphics Pipeline 支持的最大颜色附件数。 */
+  uint32_t max_color_attachments;
+  uint32_t reserved_2;
 } granit_renderer_limits;
 
 #define GRANIT_RENDERER_LIMITS_VERSION_1_SIZE                                                      \
   ((uint32_t)(offsetof(granit_renderer_limits, supported_features) +                               \
               sizeof(granit_renderer_feature_flags)))
+#define GRANIT_RENDERER_LIMITS_VERSION_2_SIZE                                                      \
+  ((uint32_t)(offsetof(granit_renderer_limits, reserved_2) + sizeof(uint32_t)))
+#define GRANIT_RENDERER_LIMITS_SIZE GRANIT_RENDERER_LIMITS_VERSION_2_SIZE
 
 #define GRANIT_RENDERER_LIMITS_INIT                                                                \
   {(uint32_t)sizeof(granit_renderer_limits),                                                       \
@@ -86,7 +92,9 @@ typedef struct granit_renderer_limits {
    UINT64_C(0),                                                                                    \
    UINT32_C(0),                                                                                    \
    1.0F,                                                                                           \
-   UINT64_C(0)}
+   UINT64_C(0),                                                                                    \
+   UINT32_C(1),                                                                                    \
+   UINT32_C(0)}
 
 /** Renderer 对应设备可用于 Shader 变体选择的后端无关能力快照。 */
 typedef struct granit_renderer_shader_capabilities {

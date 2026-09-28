@@ -313,6 +313,8 @@ granit_result renderer_registry::begin_rendering(granit_renderer renderer,
   auto command = acquire_command_recorder(renderer, recorder);
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (desc.color_attachment_count > command->owner->capabilities().max_color_attachments)
+    return GRANIT_ERROR_UNSUPPORTED;
   std::vector<std::shared_ptr<texture_view_record>> views;
   views.reserve(desc.color_attachment_count + (desc.depth_stencil_attachment ? 1U : 0U));
   std::vector<std::shared_ptr<texture_view_record>> resolve_views(desc.color_attachment_count);

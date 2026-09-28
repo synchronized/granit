@@ -492,7 +492,8 @@ granit_result renderer_registry::create_graphics_pipeline(granit_renderer render
       vertex = vertex_found->second;
       fragment = fragment_found->second;
     }
-    if ((state->capabilities().framebuffer_sample_counts & desc.sample_count) == 0)
+    if ((state->capabilities().framebuffer_sample_counts & desc.sample_count) == 0 ||
+        desc.color_format_count > state->capabilities().max_color_attachments)
       return GRANIT_ERROR_UNSUPPORTED;
     auto record = std::make_shared<graphics_pipeline_record>();
     record->owner = state;

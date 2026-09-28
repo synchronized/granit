@@ -56,6 +56,7 @@ struct renderer_limits {
   std::uint32_t framebuffer_sample_counts{};
   float max_sampler_anisotropy{1.0F};
   std::uint64_t supported_features{};
+  std::uint32_t max_color_attachments{1};
 
   [[nodiscard]] constexpr bool supports_sample_count(sample_count samples) const noexcept {
     const auto value = static_cast<std::uint32_t>(samples);
@@ -229,14 +230,12 @@ public:
     requires requires(const Object& object) {
       { object.native_handle() } -> std::convertible_to<granit_handle>;
     }
-  [[nodiscard]] result set_object_name(const Object& object,
-                                       std::string_view name) const noexcept {
+  [[nodiscard]] result set_object_name(const Object& object, std::string_view name) const noexcept {
     if (name.size() > std::numeric_limits<std::uint32_t>::max()) {
       return result::invalid_argument;
     }
-    return from_native(
-        granit_renderer_set_object_name(handle_, object.native_handle(), name.data(),
-                                        static_cast<std::uint32_t>(name.size())));
+    return from_native(granit_renderer_set_object_name(handle_, object.native_handle(), name.data(),
+                                                       static_cast<std::uint32_t>(name.size())));
   }
 
   [[nodiscard]] result get_limits(renderer_limits& limits) const noexcept {
@@ -251,6 +250,7 @@ public:
         .framebuffer_sample_counts = native.framebuffer_sample_counts,
         .max_sampler_anisotropy = native.max_sampler_anisotropy,
         .supported_features = native.supported_features,
+        .max_color_attachments = native.max_color_attachments,
     };
     return result::success;
   }

@@ -207,6 +207,7 @@ granit_result webgpu_renderer_state::refresh_state() noexcept {
         capabilities.max_storage_buffer_binding_size,
         capabilities.framebuffer_sample_counts,
         capabilities.max_sampler_anisotropy,
+        capabilities.max_color_attachments,
         ((capabilities.renderer_features & GRANIT_WEBGPU_FEATURE_TIMESTAMP_QUERY_BIT) != 0
              ? GRANIT_RENDERER_FEATURE_TIMESTAMP_QUERY_BIT
              : UINT64_C(0)) |

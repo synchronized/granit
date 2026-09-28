@@ -49,7 +49,8 @@ granit_result result = granit_renderer_get_limits(renderer, &limits);
 `framebuffer_sample_counts` 是通用颜色与深度附件共同支持的样本数位集合，可用
 `GRANIT_SAMPLE_COUNT_1/2/4/8` 按位检查；具体格式仍可能施加更严格限制，资源或 Pipeline 创建失败
 时不会静默降低样本数。`max_sampler_anisotropy` 至少为 1；值为 1 表示不能启用各向异性过滤。
-C++ `renderer_limits::supports_sample_count` 提供对应的便捷检查。
+C++ `renderer_limits::supports_sample_count` 提供对应的便捷检查。`max_color_attachments` 是单个
+Rendering 区域与对应 Graphics Pipeline 能同时使用的颜色附件上限。
 
 `supported_features` 是可选 Renderer 能力位。Vulkan 支持
 `GRANIT_RENDERER_FEATURE_TIMESTAMP_QUERY_BIT`。当前浏览器 WebGPU 不提供与 Granit 任意命令位置
