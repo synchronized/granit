@@ -4,9 +4,9 @@
 #ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_VIEWER_STATE_H_
 #define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_VIEWER_STATE_H_
 
+#include "camera/orbit_camera.h"
 #include "gltf/scene.h"
 #include "model_viewer/material_edit.h"
-#include "model_viewer/orbit_camera.h"
 
 #include <cstdint>
 #include <optional>
@@ -63,8 +63,8 @@ public:
   [[nodiscard]] const std::vector<bool>& node_visibility() const noexcept {
     return node_visibility_;
   }
-  [[nodiscard]] orbit_camera& camera() noexcept { return camera_; }
-  [[nodiscard]] const orbit_camera& camera() const noexcept { return camera_; }
+  [[nodiscard]] camera::orbit_camera& camera() noexcept { return camera_; }
+  [[nodiscard]] const camera::orbit_camera& camera() const noexcept { return camera_; }
   [[nodiscard]] const directional_light_state& directional_light() const noexcept {
     return directional_light_;
   }
@@ -81,7 +81,7 @@ private:
   std::uint32_t selected_node_{gltf::invalid_index};
   std::uint32_t selected_material_{gltf::invalid_index};
   std::vector<bool> node_visibility_;
-  orbit_camera camera_;
+  camera::orbit_camera camera_;
   directional_light_state directional_light_;
   float exposure_ev_{-0.5F};
   float environment_intensity_{0.12F};

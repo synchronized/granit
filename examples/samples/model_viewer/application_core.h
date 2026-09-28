@@ -29,7 +29,7 @@ enum class application_phase {
 
 /** 平台壳在一帧开始时提交的后端无关输入。 */
 struct application_tick_input {
-  viewer_input input;
+  camera::orbit_camera_input input;
   viewer_change change;
   std::uint32_t width{};
   std::uint32_t height{};

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_VIEWER_INPUT_H_
-#define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_VIEWER_INPUT_H_
+#ifndef GRANIT_EXAMPLES_COMMON_CAMERA_ORBIT_CAMERA_INPUT_H_
+#define GRANIT_EXAMPLES_COMMON_CAMERA_ORBIT_CAMERA_INPUT_H_
 
-namespace granit::example::model_viewer {
+namespace granit::example::camera {
 
-/** 平台壳提交给查看器 Core 的单帧输入。 */
-struct viewer_input {
+/** 一帧轨道相机输入；捕获标志用于与 UI 安全共享输入。 */
+struct orbit_camera_input {
   float pointer_delta_x{};
   float pointer_delta_y{};
   float wheel_delta{};
@@ -21,6 +21,6 @@ struct viewer_input {
   bool pointer_inside{true};
 };
 
-} // namespace granit::example::model_viewer
+} // namespace granit::example::camera
 
 #endif

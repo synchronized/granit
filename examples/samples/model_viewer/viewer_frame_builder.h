@@ -4,6 +4,7 @@
 #ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_VIEWER_FRAME_BUILDER_H_
 #define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_VIEWER_FRAME_BUILDER_H_
 
+#include "camera/orbit_camera_input_accumulator.h"
 #include "model_viewer/render_task_executor.h"
 #include "model_viewer/viewer_panels.h"
 
@@ -14,7 +15,6 @@
 
 namespace granit::example::model_viewer {
 
-class viewer_input_accumulator;
 class viewer_session;
 class viewer_ui;
 
@@ -37,7 +37,7 @@ struct viewer_frame_build_result {
 
 /** 统一消费输入、构建 Viewer/ImGui 帧，并返回尚未执行的 GPU 配置变更。 */
 [[nodiscard]] granit::result build_viewer_frame(viewer_session& session, viewer_ui& ui,
-                                                viewer_input_accumulator& input,
+                                                camera::orbit_camera_input_accumulator& input,
                                                 const viewer_frame_build_desc& desc,
                                                 viewer_frame_build_result& output);
 

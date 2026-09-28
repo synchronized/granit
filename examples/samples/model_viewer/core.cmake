@@ -21,8 +21,6 @@ add_library(
   model_loading_session.h
   viewer_session.cpp
   viewer_session.h
-  orbit_camera.cpp
-  orbit_camera.h
   performance_history.cpp
   performance_history.h
   pipeline_prepare.cpp
@@ -30,9 +28,6 @@ add_library(
   presentation_recovery.h
   viewer_state.cpp
   viewer_state.h
-  viewer_input.h
-  viewer_input_accumulator.cpp
-  viewer_input_accumulator.h
 )
 add_library(granit_sample_model_viewer_support ALIAS granit_sample_model_viewer_core)
 target_compile_features(granit_sample_model_viewer_core PUBLIC cxx_std_20)
@@ -44,7 +39,7 @@ target_include_directories(
 )
 target_link_libraries(
   granit_sample_model_viewer_core
-  PUBLIC granit::window granit_example_model_scene granit_example_imgui_canvas
+  PUBLIC granit::window granit_example_camera granit_example_model_scene granit_example_imgui_canvas
 )
 set_target_properties(granit_sample_model_viewer_core PROPERTIES FOLDER "Examples/Samples")
 granit_target_compile_warnings(granit_sample_model_viewer_core)
@@ -75,11 +70,9 @@ if(GRANIT_HAS_NATIVE_WINDOW AND GRANIT_TESTING_ENABLED)
     gpu_scene_test.cpp
     model_loading_session_test.cpp
     viewer_session_test.cpp
-    orbit_camera_test.cpp
     performance_history_test.cpp
     presentation_recovery_test.cpp
     viewer_state_test.cpp
-    viewer_input_accumulator_test.cpp
   )
   target_link_libraries(
     granit_sample_model_viewer_support_test

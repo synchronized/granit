@@ -4,13 +4,13 @@
 #include "model_viewer/viewer_application.h"
 
 #include "assets/asset_manager.h"
+#include "camera/orbit_camera_input_accumulator.h"
 #include "model_viewer/pipeline_prepare.h"
 #include "model_viewer/presentation_recovery.h"
 #include "model_viewer/render_service.h"
 #include "model_viewer/render_task_executor.h"
 #include "model_viewer/scene_prepare_task.h"
 #include "model_viewer/viewer_frame_builder.h"
-#include "model_viewer/viewer_input_accumulator.h"
 #include "model_viewer/viewer_session.h"
 #include "model_viewer/viewer_texture_previews.h"
 #include "model_viewer/viewer_ui.h"
@@ -187,7 +187,7 @@ struct viewer_application::implementation {
   pipeline_prepare pipelines;
   scene_prepare_task scene_prepare;
   viewer_ui ui;
-  viewer_input_accumulator input;
+  camera::orbit_camera_input_accumulator input;
   viewer_texture_previews previews;
   viewer_runtime_phase phase{viewer_runtime_phase::starting};
   granit::result terminal_result{granit::result::success};

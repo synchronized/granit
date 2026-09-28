@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "model_viewer/viewer_input_accumulator.h"
+#include "camera/orbit_camera_input_accumulator.h"
 
 #include <algorithm>
 
-namespace granit::example::model_viewer {
+namespace granit::example::camera {
 namespace {
 
 constexpr float maximum_pointer_delta = 32768.0F;
@@ -17,9 +17,9 @@ float add_clamped(float value, float delta, float limit) noexcept {
 
 } // namespace
 
-void viewer_input_accumulator::begin_frame() noexcept { ++begin_frame_count_; }
+void orbit_camera_input_accumulator::begin_frame() noexcept { ++begin_frame_count_; }
 
-void viewer_input_accumulator::clear_transient() noexcept {
+void orbit_camera_input_accumulator::clear_transient() noexcept {
   input_.pointer_delta_x = 0.0F;
   input_.pointer_delta_y = 0.0F;
   input_.wheel_delta = 0.0F;
@@ -29,13 +29,13 @@ void viewer_input_accumulator::clear_transient() noexcept {
   pan_motion_pending_ = false;
 }
 
-void viewer_input_accumulator::clear_interaction() noexcept {
+void orbit_camera_input_accumulator::clear_interaction() noexcept {
   input_.orbiting = false;
   input_.panning = false;
   clear_transient();
 }
 
-void viewer_input_accumulator::process(const granit::window_event& event) noexcept {
+void orbit_camera_input_accumulator::process(const granit::window_event& event) noexcept {
   if (event.type != granit::window_event_type::focus_changed)
     return;
   input_.window_focused = event.data.focus.focused;
@@ -43,8 +43,9 @@ void viewer_input_accumulator::process(const granit::window_event& event) noexce
     clear_interaction();
 }
 
-void viewer_input_accumulator::process(const granit::input_event& event, bool pointer_captured,
-                                       bool keyboard_captured) noexcept {
+void orbit_camera_input_accumulator::process(const granit::input_event& event,
+                                             bool pointer_captured,
+                                             bool keyboard_captured) noexcept {
   switch (event.type) {
   case granit::input_event_type::key:
     if (event.data.key.action == granit::key_action::released ||
@@ -93,8 +94,8 @@ void viewer_input_accumulator::process(const granit::input_event& event, bool po
   }
 }
 
-viewer_input viewer_input_accumulator::finish(bool pointer_captured,
-                                              bool keyboard_captured) noexcept {
+orbit_camera_input orbit_camera_input_accumulator::finish(bool pointer_captured,
+                                                          bool keyboard_captured) noexcept {
   auto result = input_;
   result.orbiting = result.orbiting || orbit_motion_pending_;
   result.panning = result.panning || pan_motion_pending_;
@@ -107,4 +108,4 @@ viewer_input viewer_input_accumulator::finish(bool pointer_captured,
   return result;
 }
 
-} // namespace granit::example::model_viewer
+} // namespace granit::example::camera

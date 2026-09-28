@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "orbit_camera.h"
+#include "camera/orbit_camera.h"
 
 #include <algorithm>
 #include <cmath>
 #include <numbers>
 
-namespace granit::example::model_viewer {
+namespace granit::example::camera {
 namespace {
 
 constexpr float minimum_pitch_margin = 0.01F;
@@ -35,13 +35,20 @@ void orbit_camera::save_home() noexcept {
   home_far_ = far_plane_;
 }
 
-void orbit_camera::restore_home() noexcept {
+void orbit_camera::reset() noexcept {
   target_ = home_target_;
   distance_ = home_distance_;
   yaw_ = home_yaw_;
   pitch_ = home_pitch_;
   near_plane_ = home_near_;
   far_plane_ = home_far_;
+}
+
+bool orbit_camera::orbit(float radians) noexcept {
+  if (!std::isfinite(radians))
+    return false;
+  yaw_ = std::remainder(yaw_ + radians, std::numbers::pi_v<float> * 2.0F);
+  return true;
 }
 
 bool orbit_camera::focus(camera_bounds bounds, std::uint32_t width, std::uint32_t height) noexcept {
@@ -65,12 +72,12 @@ bool orbit_camera::focus(camera_bounds bounds, std::uint32_t width, std::uint32_
   return true;
 }
 
-bool orbit_camera::update(const viewer_input& input, std::uint32_t width, std::uint32_t height,
-                          const camera_bounds* focus_bounds) noexcept {
+bool orbit_camera::update(const orbit_camera_input& input, std::uint32_t width,
+                          std::uint32_t height, const camera_bounds* focus_bounds) noexcept {
   if (!valid_extent(width, height))
     return false;
   if (input.home_requested && !input.keyboard_captured)
-    restore_home();
+    reset();
   if (input.focus_requested && !input.keyboard_captured && focus_bounds != nullptr &&
       !focus(*focus_bounds, width, height)) {
     return false;
@@ -121,4 +128,4 @@ bool orbit_camera::matrices(std::uint32_t width, std::uint32_t height,
   return true;
 }
 
-} // namespace granit::example::model_viewer
+} // namespace granit::example::camera

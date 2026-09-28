@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "model_viewer/viewer_input_accumulator.h"
+#include "camera/orbit_camera_input_accumulator.h"
 
 #include <catch2/catch_all.hpp>
 
@@ -25,10 +25,10 @@ granit::input_event pointer_motion(float delta_x, float delta_y) {
 
 } // namespace
 
-using granit::example::model_viewer::viewer_input_accumulator;
+using granit::example::camera::orbit_camera_input_accumulator;
 
 TEST_CASE("Model Viewer 输入累积拖动、滚轮和快捷键", "[model-viewer][input]") {
-  viewer_input_accumulator input;
+  orbit_camera_input_accumulator input;
   input.begin_frame();
   input.process(pointer_button(GRANIT_POINTER_SECONDARY_BIT, true));
   input.process(pointer_motion(12.0F, -4.0F));
@@ -60,7 +60,7 @@ TEST_CASE("Model Viewer 输入累积拖动、滚轮和快捷键", "[model-viewer
 }
 
 TEST_CASE("Model Viewer 输入按按下时的 UI 捕获状态确定拖动所有权", "[model-viewer][input]") {
-  viewer_input_accumulator input;
+  orbit_camera_input_accumulator input;
   input.process(pointer_button(GRANIT_POINTER_SECONDARY_BIT, true), true);
   input.process(pointer_motion(10.0F, 0.0F));
   auto frame = input.finish();
@@ -76,7 +76,7 @@ TEST_CASE("Model Viewer 输入按按下时的 UI 捕获状态确定拖动所有�
 }
 
 TEST_CASE("Model Viewer 输入遵守 UI 捕获", "[model-viewer][input]") {
-  viewer_input_accumulator input;
+  orbit_camera_input_accumulator input;
   granit::input_event wheel{};
   wheel.type = granit::input_event_type::pointer_wheel;
   wheel.data.pointer_wheel.delta_y = 3.0F;
@@ -94,7 +94,7 @@ TEST_CASE("Model Viewer 输入遵守 UI 捕获", "[model-viewer][input]") {
 }
 
 TEST_CASE("Model Viewer 输入跨过背压帧并在失焦时清理", "[model-viewer][input]") {
-  viewer_input_accumulator input;
+  orbit_camera_input_accumulator input;
   input.begin_frame();
   input.process(pointer_button(GRANIT_POINTER_MIDDLE_BIT, true));
   input.process(pointer_motion(7.0F, -3.0F));

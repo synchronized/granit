@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_ORBIT_CAMERA_H_
-#define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_ORBIT_CAMERA_H_
+#ifndef GRANIT_EXAMPLES_COMMON_CAMERA_ORBIT_CAMERA_H_
+#define GRANIT_EXAMPLES_COMMON_CAMERA_ORBIT_CAMERA_H_
 
-#include "model_viewer/viewer_input.h"
+#include "camera/orbit_camera_input.h"
 
 #include <granit/math/functions.hpp>
 
 #include <cstdint>
 
-namespace granit::example::model_viewer {
+namespace granit::example::camera {
 
 struct camera_bounds {
   math::float3 center{};
@@ -30,8 +30,13 @@ public:
 
   [[nodiscard]] bool focus(camera_bounds bounds, std::uint32_t width,
                            std::uint32_t height) noexcept;
-  [[nodiscard]] bool update(const viewer_input& input, std::uint32_t width, std::uint32_t height,
+  [[nodiscard]] bool update(const orbit_camera_input& input, std::uint32_t width,
+                            std::uint32_t height,
                             const camera_bounds* focus_bounds = nullptr) noexcept;
+  /** 恢复最近一次 focus 保存的 Home 视角。 */
+  void reset() noexcept;
+  /** 绕目标水平旋转，用于教程的确定性自动环绕。 */
+  [[nodiscard]] bool orbit(float radians) noexcept;
   [[nodiscard]] bool matrices(std::uint32_t width, std::uint32_t height,
                               camera_matrices& output) const noexcept;
 
@@ -44,8 +49,6 @@ public:
 
 private:
   void save_home() noexcept;
-  void restore_home() noexcept;
-
   math::float3 target_{};
   float distance_{3.0F};
   float yaw_{};
@@ -61,6 +64,6 @@ private:
   float home_far_{100.0F};
 };
 
-} // namespace granit::example::model_viewer
+} // namespace granit::example::camera
 
 #endif

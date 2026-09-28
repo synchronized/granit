@@ -12,7 +12,8 @@
 namespace granit::example::model_viewer {
 namespace {
 
-camera_bounds scene_bounds(const gpu_scene_plan& plan, std::uint32_t selected_node) noexcept {
+camera::camera_bounds scene_bounds(const gpu_scene_plan& plan,
+                                   std::uint32_t selected_node) noexcept {
   math::float3 minimum{std::numeric_limits<float>::max(), std::numeric_limits<float>::max(),
                        std::numeric_limits<float>::max()};
   math::float3 maximum{-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(),
@@ -170,7 +171,7 @@ granit::result application_core::tick(const application_tick_input& input, viewe
   if (!state_.camera().update(input.input, input.width, input.height, &selected_bounds))
     return granit::result::invalid_argument;
 
-  camera_matrices matrices;
+  camera::camera_matrices matrices;
   if (!state_.camera().matrices(input.width, input.height, matrices))
     return granit::result::invalid_argument;
   const granit::scene_view view{.view = matrices.view,

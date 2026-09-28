@@ -3,7 +3,7 @@
 
 #include "model_viewer/viewer_frame_builder.h"
 
-#include "model_viewer/viewer_input_accumulator.h"
+#include "camera/orbit_camera_input_accumulator.h"
 #include "model_viewer/viewer_session.h"
 #include "model_viewer/viewer_ui.h"
 
@@ -12,7 +12,7 @@
 namespace granit::example::model_viewer {
 
 granit::result build_viewer_frame(viewer_session& session, viewer_ui& ui,
-                                  viewer_input_accumulator& input,
+                                  camera::orbit_camera_input_accumulator& input,
                                   const viewer_frame_build_desc& desc,
                                   viewer_frame_build_result& output) {
   viewer_frame_build_result candidate;
