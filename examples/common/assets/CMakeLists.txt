@@ -5,6 +5,8 @@ add_library(
   granit_example_assets STATIC
   asset_batch.cpp
   asset_batch.h
+  asset_group.cpp
+  asset_group.h
   asset_handle.h
   asset_loader.cpp
   asset_loader.h

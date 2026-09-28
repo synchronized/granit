@@ -226,6 +226,7 @@ struct asset_manager::implementation : std::enable_shared_from_this<implementati
   std::unordered_map<asset_scheme, std::shared_ptr<asset_manager_source>> sources;
   std::unordered_map<std::type_index, std::shared_ptr<asset_loader>> loaders;
   std::unordered_map<request_key, std::shared_ptr<detail::asset_state>, request_key_hash> requests;
+  std::uint64_t cache_hits{};
   bool registrations_locked{};
 };
 
@@ -287,6 +288,7 @@ asset_manager::observation asset_manager::load_erased(std::type_index type,
       implementation_->registrations_locked = true;
       if (const auto found = implementation_->requests.find(key);
           found != implementation_->requests.end()) {
+        ++implementation_->cache_hits;
         return {found->second, std::move(observer)};
       }
       const auto source_it = implementation_->sources.find(location.scheme());
@@ -343,6 +345,34 @@ asset_manager::observation asset_manager::load_erased(std::type_index type,
   } catch (...) {
     return {};
   }
+}
+
+asset_group asset_manager::create_group() noexcept { return asset_group{*this}; }
+
+asset_manager_stats asset_manager::stats() const noexcept {
+  asset_manager_stats output;
+  std::scoped_lock lock{implementation_->mutex};
+  output.cache_hits = implementation_->cache_hits;
+  for (const auto& [key, state] : implementation_->requests) {
+    static_cast<void>(key);
+    switch (state->status.load(std::memory_order_acquire)) {
+    case asset_status::ready:
+      ++output.cached_requests;
+      break;
+    case asset_status::failed:
+    case asset_status::cancelled:
+      ++output.failed_requests;
+      break;
+    case asset_status::queued:
+    case asset_status::reading:
+    case asset_status::discovering_dependencies:
+    case asset_status::loading_dependencies:
+    case asset_status::decoding:
+      ++output.active_requests;
+      break;
+    }
+  }
+  return output;
 }
 
 void asset_manager::clear_cache() noexcept {

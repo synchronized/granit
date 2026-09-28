@@ -99,6 +99,58 @@ TEST_CASE("asset manager merges matching requests and caches the result") {
   REQUIRE(cached.ready());
   REQUIRE(cached.value() == cached_value);
   REQUIRE(source->loads() == 1);
+  const auto stats = manager.stats();
+  CHECK(stats.cached_requests == 1);
+  CHECK(stats.cache_hits == 2);
+}
+
+TEST_CASE("asset group aggregates root request progress") {
+  tasks::task_system task_system;
+  REQUIRE(task_system.initialize({.worker_count = 0}).ok());
+  assets::asset_manager manager{task_system};
+  auto source = std::make_shared<memory_source>();
+  source->insert("first.bin", "first");
+  source->insert("second.bin", "second");
+  REQUIRE(manager.register_source(assets::asset_scheme::memory, source).ok());
+  REQUIRE(manager.register_loader(std::make_shared<assets::blob_asset_loader>()).ok());
+
+  auto group = manager.create_group();
+  auto first = group.load<assets::asset_blob>(assets::asset_location::memory("first.bin"));
+  auto second = group.load<assets::asset_blob>(assets::asset_location::memory("second.bin"));
+  REQUIRE(first.valid());
+  REQUIRE(second.valid());
+  CHECK_FALSE(group.complete());
+
+  finish(task_system);
+  const auto progress = group.progress();
+  CHECK(group.complete());
+  CHECK(progress.total_assets == 2);
+  CHECK(progress.completed_assets == 2);
+  CHECK(progress.failed_assets == 0);
+  CHECK(progress.completed_bytes == 11);
+  REQUIRE(progress.total_bytes);
+  CHECK(*progress.total_bytes == 11);
+  REQUIRE(progress.fraction);
+  CHECK(*progress.fraction == 1.0F);
+}
+
+TEST_CASE("asset group cancellation only cancels its observations") {
+  tasks::task_system task_system;
+  REQUIRE(task_system.initialize({.worker_count = 0}).ok());
+  assets::asset_manager manager{task_system};
+  auto source = std::make_shared<memory_source>();
+  source->insert("shared.bin", "shared");
+  REQUIRE(manager.register_source(assets::asset_scheme::memory, source).ok());
+  REQUIRE(manager.register_loader(std::make_shared<assets::blob_asset_loader>()).ok());
+
+  auto group = manager.create_group();
+  auto grouped = group.load<assets::asset_blob>(assets::asset_location::memory("shared.bin"));
+  auto independent = manager.load<assets::asset_blob>(assets::asset_location::memory("shared.bin"));
+  group.cancel();
+  finish(task_system);
+  CHECK(grouped.status() == assets::asset_status::cancelled);
+  CHECK(independent.ready());
+  CHECK(group.progress().cancelled_assets == 1);
 }
 
 TEST_CASE("asset manager isolates observer cancellation") {
@@ -155,8 +207,7 @@ TEST_CASE("desktop platform source reads an external file") {
   assets::asset_manager manager{task_system};
   REQUIRE(granit::example::platform::register_asset_sources(manager, "test.exe").ok());
   REQUIRE(manager.register_loader(std::make_shared<assets::blob_asset_loader>()).ok());
-  auto handle = manager.load<assets::asset_blob>(
-      assets::asset_location::external(path.string()));
+  auto handle = manager.load<assets::asset_blob>(assets::asset_location::external(path.string()));
   finish(task_system);
   REQUIRE(handle.ready());
   REQUIRE(handle.value()->bytes.size() == 8);

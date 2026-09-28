@@ -116,6 +116,7 @@ public:
   }
 
 private:
+  friend class asset_group;
   friend class asset_manager;
   asset_handle(std::shared_ptr<detail::asset_state> state,
                std::shared_ptr<detail::asset_observer> observer) noexcept
