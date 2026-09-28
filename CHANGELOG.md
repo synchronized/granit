@@ -8,6 +8,34 @@
 
 ## Unreleased
 
+## 0.38.0 - 2026-09-28
+
+### 新增
+
+- 新增正式的 Vulkan/WebGPU Backend Capability Matrix，并公开 `max_color_attachments`，调用方可在
+  创建多颜色附件管线前查询设备限制。
+- WebGPU 补齐 Point/Line/Triangle 非索引拓扑、多个颜色附件、独立 Blend/Write Mask、R8/RG8、
+  sRGB、D16 格式，以及 Write-Only RGBA8/RGBA16F Storage Texture。
+
+### 变更
+
+- Storage Texture Layout Entry 直接携带格式和访问方式；当前 0.x 开发阶段只维护最新公共 API，
+  不再保留尚未稳定的历史结构与导出符号兼容测试。
+- WebGPU Pipeline 与 Render Pass 的内部描述统一为附件数组，无法准确映射的能力继续明确返回
+  `GRANIT_ERROR_UNSUPPORTED`。
+
+### 修复
+
+- 修正 WebGPU 多颜色附件、格式映射、Storage Texture 绑定和命令录制路径，并补充浏览器 MRT、
+  Storage Texture 与异步 Readback 像素验收。
+- 软件 WebGPU 异步 Pipeline 创建失败时继续回退到同步创建；Linux CI 的外部 Instance 限制不再
+  导致后续验收误报。
+
+### 文档
+
+- 更新 Shader、Surface、Pipeline、Renderer 与兼容策略文档，明确两个后端已支持和明确不支持的
+  能力边界。
+
 ## 0.37.0 - 2026-09-25
 
 ### 新增
