@@ -305,12 +305,14 @@ private:
   granit::result update_readback(std::uint32_t slot) noexcept {
     if (readback_operation_.valid()) {
       granit::async_operation_status status;
+      render_stage_ = 30;
       auto result = readback_operation_.get_status(status);
       if (result.failed())
         return result;
       if (status.complete()) {
         if (status.state == granit::async_operation_state::succeeded) {
           std::uint64_t size = sizeof(last_generation_);
+          render_stage_ = 31;
           result = granit::copy_readback_result(
               readback_operation_, 0, std::as_writable_bytes(std::span{&last_generation_, 1}),
               size);
@@ -320,6 +322,7 @@ private:
           return status.operation_result;
         }
         static_cast<void>(readback_operation_.reset());
+        render_stage_ = 32;
         result = readback_batch_.reset();
         if (result.failed())
           return result;
@@ -330,10 +333,13 @@ private:
     if (readback_operation_.valid() || slot >= readback_buffers_.size() || !readback_valid_[slot])
       return granit::result::success;
     std::uint32_t result_index{};
+    render_stage_ = 33;
     auto result = readback_batch_.read_buffer(readback_buffers_[slot].ref(), 0,
                                               sizeof(generation_state), result_index);
-    if (result.ok())
+    if (result.ok()) {
+      render_stage_ = 34;
       result = readback_batch_.submit_async(readback_operation_);
+    }
     if (result.ok()) {
       readback_valid_[slot] = false;
       readback_pending_slot_ = slot;
