@@ -204,6 +204,18 @@ bool read_float_accessor(const cgltf_accessor& accessor, std::vector<Value>& val
   return true;
 }
 
+bool read_color_accessor(const cgltf_accessor& accessor, std::vector<math::float4>& values) {
+  const auto components = accessor.type == cgltf_type_vec3 ? cgltf_size{3} : cgltf_size{4};
+  values.resize(accessor.count);
+  for (cgltf_size index = 0; index < accessor.count; ++index) {
+    float decoded[4]{1.0F, 1.0F, 1.0F, 1.0F};
+    if (!cgltf_accessor_read_float(&accessor, index, decoded, components))
+      return false;
+    values[index] = {decoded[0], decoded[1], decoded[2], decoded[3]};
+  }
+  return true;
+}
+
 import_result convert_primitive(const cgltf_data& data, const cgltf_primitive& source,
                                 primitive& target) {
   if (source.type != cgltf_primitive_type_triangles || source.targets_count != 0 ||
@@ -215,7 +227,8 @@ import_result convert_primitive(const cgltf_data& data, const cgltf_primitive& s
         attribute.type == cgltf_attribute_type_position ||
         attribute.type == cgltf_attribute_type_normal ||
         attribute.type == cgltf_attribute_type_tangent ||
-        (attribute.type == cgltf_attribute_type_texcoord && attribute.index <= 1);
+        (attribute.type == cgltf_attribute_type_texcoord && attribute.index <= 1) ||
+        (attribute.type == cgltf_attribute_type_color && attribute.index == 0);
     if (!supported)
       return failure(import_error::unsupported_feature, "Primitive 包含首版不支持的顶点语义");
   }
@@ -249,6 +262,13 @@ import_result convert_primitive(const cgltf_data& data, const cgltf_primitive& s
         !supported_float_accessor(*coordinates, cgltf_type_vec2, cgltf_attribute_type_texcoord) ||
         !read_float_accessor<math::float2, 2>(*coordinates, target.texture_coordinates_1))
       return failure(import_error::unsupported_feature, "UV1 Accessor 格式不受支持");
+  }
+  if (const auto* colors = find_attribute(source, cgltf_attribute_type_color)) {
+    if (colors->count != positions->count ||
+        (colors->type != cgltf_type_vec3 && colors->type != cgltf_type_vec4) ||
+        !supported_float_accessor(*colors, colors->type, cgltf_attribute_type_color) ||
+        !read_color_accessor(*colors, target.colors))
+      return failure(import_error::unsupported_feature, "COLOR_0 Accessor 格式不受支持");
   }
 
   if (positions->count > std::numeric_limits<std::uint32_t>::max())
@@ -353,6 +373,11 @@ import_result convert_materials(const cgltf_data& data, scene& output) {
     material target;
     if (source.name != nullptr)
       target.name = source.name;
+    target.alpha_mode = source.alpha_mode == cgltf_alpha_mode_mask    ? material_alpha_mode::mask
+                        : source.alpha_mode == cgltf_alpha_mode_blend ? material_alpha_mode::blend
+                                                                      : material_alpha_mode::opaque;
+    target.alpha_cutoff = source.alpha_cutoff;
+    target.double_sided = source.double_sided != 0;
     if (source.has_pbr_metallic_roughness) {
       const auto& pbr = source.pbr_metallic_roughness;
       target.base_color = {pbr.base_color_factor[0], pbr.base_color_factor[1],

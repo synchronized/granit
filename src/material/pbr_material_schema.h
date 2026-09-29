@@ -23,6 +23,8 @@ inline constexpr std::string_view pbr_alpha_mode_feature_name = GRANIT_PBR_ALPHA
 inline constexpr std::string_view pbr_double_sided_feature_name =
     GRANIT_PBR_DOUBLE_SIDED_FEATURE_NAME;
 inline constexpr std::string_view pbr_uv1_feature_name = GRANIT_PBR_UV1_FEATURE_NAME;
+inline constexpr std::string_view pbr_vertex_color_feature_name =
+    GRANIT_PBR_VERTEX_COLOR_FEATURE_NAME;
 inline constexpr pbr_texture_flags pbr_texture_base_color = GRANIT_PBR_TEXTURE_BASE_COLOR;
 inline constexpr pbr_texture_flags pbr_texture_metallic_roughness =
     GRANIT_PBR_TEXTURE_METALLIC_ROUGHNESS;
@@ -56,6 +58,7 @@ inline constexpr std::uint32_t pbr_vertex_location_normal = GRANIT_PBR_VERTEX_LO
 inline constexpr std::uint32_t pbr_vertex_location_tangent = GRANIT_PBR_VERTEX_LOCATION_TANGENT;
 inline constexpr std::uint32_t pbr_vertex_location_uv0 = GRANIT_PBR_VERTEX_LOCATION_UV0;
 inline constexpr std::uint32_t pbr_vertex_location_uv1 = GRANIT_PBR_VERTEX_LOCATION_UV1;
+inline constexpr std::uint32_t pbr_vertex_location_color = GRANIT_PBR_VERTEX_LOCATION_COLOR;
 
 enum class pbr_vertex_layout_error : std::uint8_t {
   none,
@@ -66,6 +69,7 @@ enum class pbr_vertex_layout_error : std::uint8_t {
   missing_tangent,
   invalid_uv1_mask,
   missing_uv1,
+  missing_color,
 };
 
 /** 控制 Shader 资源布局的 PBR 纹理类别；同类的精确纹理掩码共享二进制。 */
@@ -83,12 +87,14 @@ classify_pbr_shader_textures(pbr_texture_flags textures) noexcept;
 /** 返回标准 PBR 精确纹理掩码和实例反射状态对应的 Material Variant Key。 */
 [[nodiscard]] std::uint64_t standard_pbr_variant_key(pbr_texture_flags textures,
                                                      std::uint32_t alpha_mode, bool double_sided,
-                                                     bool reflected, bool has_uv1 = false) noexcept;
+                                                     bool reflected, bool has_uv1 = false,
+                                                     bool has_vertex_color = false) noexcept;
 
 /** 按 H-03 标准 location 检查网格是否满足指定 PBR 纹理变体。 */
 [[nodiscard]] pbr_vertex_layout_error
 validate_pbr_vertex_layout(std::span<const material_vertex_buffer_layout> vertex_buffers,
-                           pbr_texture_flags textures, pbr_texture_flags uv1_mask = 0) noexcept;
+                           pbr_texture_flags textures, pbr_texture_flags uv1_mask = 0,
+                           bool has_vertex_color = false) noexcept;
 
 } // namespace granit::material
 

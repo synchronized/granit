@@ -29,6 +29,7 @@ struct primitive {
   std::vector<math::float4> tangents;
   std::vector<math::float2> texture_coordinates;
   std::vector<math::float2> texture_coordinates_1;
+  std::vector<math::float4> colors;
   std::uint32_t material{invalid_index};
   bounds local_bounds{};
 };
@@ -44,6 +45,8 @@ struct texture_reference {
   std::uint32_t texture_coordinate{};
 };
 
+enum class material_alpha_mode : std::uint8_t { opaque, mask, blend };
+
 struct material {
   std::string name;
   math::float4 base_color{1.0F, 1.0F, 1.0F, 1.0F};
@@ -52,6 +55,9 @@ struct material {
   float normal_scale{1.0F};
   float occlusion_strength{1.0F};
   math::float3 emissive{};
+  material_alpha_mode alpha_mode{material_alpha_mode::opaque};
+  float alpha_cutoff{0.5F};
+  bool double_sided{};
   texture_reference base_color_texture{};
   texture_reference metallic_roughness_texture{};
   texture_reference normal_texture{};

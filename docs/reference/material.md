@@ -22,7 +22,7 @@ Render Pipeline component，不取代核心 Renderer 的 Shader、Pipeline 或 B
 
 - 基础颜色、金属度、感知粗糙度、法线、遮蔽、发光和调试显示的参数名与常量偏移；
 - 五类纹理及其各自 Sampler 的固定 Binding，以及 `pbr_texture_mask` 特性位；
-- Position、Normal、Tangent、UV0 和 UV1 的标准 Vertex Location；
+- Position、Normal、Tangent、UV0、UV1 和可选线性 RGBA 顶点色的标准 Vertex Location；
 - `granit_pbr_validate_vertex_layout`，用于在创建资产前按纹理掩码和 UV1 选择检查布局；
 - `granit_pbr_material_variant_key`，用于从纹理掩码、Alpha 模式、双面语义和 UV1 布局取得稳定
   Variant Key。
@@ -69,6 +69,8 @@ C++20 描述通过 `std::span` 借用归档和初始更新。数值参数使用
 - `pbr_texture_mask` 决定无纹理、普通纹理或法线贴图 Shader 结构，并决定是否要求 UV0 和 Tangent；
 - `pbr_uses_uv1` 只表示顶点布局包含 UV1；五个纹理槽实际选择 UV0/UV1 的位掩码存放在
   `uv1_mask` 材质常量中，不扩展为 32 个 Shader 变体；
+- `pbr_vertex_color` 表示布局包含 `COLOR_0`；Shader 将其与基础色因子和基础色纹理相乘，缺少
+  顶点色的布局使用独立变体并等价于白色；
 - Alpha 模式决定深度写入、混合和 Alpha Cutoff Shader；
 - 双面语义决定剔除状态；背面片元使用面朝向修正法线和切线基；
 - Shadow 与 Unlit 是独立 Pass，分别选择对应 Shader 和 Pipeline 状态；

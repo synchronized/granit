@@ -211,6 +211,9 @@ granit::result create_material(granit::renderer_ref renderer, const gltf::materi
       granit::material_parameter_update::value(granit::material_parameter_id("emissive"),
                                                granit::material_parameter_type::float3,
                                                std::as_bytes(std::span{&source.emissive, 1})),
+      granit::material_parameter_update::value(granit::material_parameter_id("alpha_cutoff"),
+                                               granit::material_parameter_type::float32,
+                                               std::as_bytes(std::span{&source.alpha_cutoff, 1})),
       granit::material_parameter_update::value(granit::material_parameter_id("uv1_mask"),
                                                granit::material_parameter_type::uint32,
                                                std::as_bytes(std::span{&uv1_mask, 1})),
@@ -337,7 +340,8 @@ gpu_scene_plan_error append_primitive(const gltf::primitive& source, gpu_scene_p
       (!source.tangents.empty() && source.tangents.size() != vertex_count) ||
       (!source.texture_coordinates.empty() && source.texture_coordinates.size() != vertex_count) ||
       (!source.texture_coordinates_1.empty() &&
-       source.texture_coordinates_1.size() != vertex_count))
+       source.texture_coordinates_1.size() != vertex_count) ||
+      (!source.colors.empty() && source.colors.size() != vertex_count))
     return gpu_scene_plan_error::invalid_scene;
   if (vertex_count > std::numeric_limits<std::uint32_t>::max() ||
       source.indices.size() > std::numeric_limits<std::uint32_t>::max())
@@ -369,6 +373,7 @@ gpu_scene_plan_error append_primitive(const gltf::primitive& source, gpu_scene_p
         .texture_coordinate_1 = source.texture_coordinates_1.empty()
                                     ? math::float2{}
                                     : source.texture_coordinates_1[index],
+        .color = source.colors.empty() ? math::float4{1, 1, 1, 1} : source.colors[index],
     });
   }
   output.indices.insert(output.indices.end(), source.indices.begin(), source.indices.end());
@@ -873,6 +878,8 @@ granit::result gpu_scene::create(granit::renderer_ref renderer, const gltf::scen
       granit::vertex_attribute{
           4, granit::vertex_format::float32x2,
           static_cast<std::uint32_t>(offsetof(packed_vertex, texture_coordinate_1)), 0},
+      granit::vertex_attribute{5, granit::vertex_format::float32x4,
+                               static_cast<std::uint32_t>(offsetof(packed_vertex, color)), 0},
   };
   const granit::vertex_buffer_layout layout{.stride = sizeof(packed_vertex),
                                             .attributes = attributes};
@@ -927,12 +934,22 @@ granit::result gpu_scene::create(granit::renderer_ref renderer, const gltf::scen
   for (const auto& draw : plan_.draws) {
     const auto material_index =
         draw.material == gltf::invalid_index ? source.materials.size() : draw.material;
+    const auto* source_material =
+        material_index < source.materials.size() ? &source.materials[material_index] : nullptr;
+    const auto alpha_mode =
+        source_material != nullptr && source_material->alpha_mode == gltf::material_alpha_mode::mask
+            ? granit::pbr_alpha_mode::mask
+        : source_material != nullptr &&
+                source_material->alpha_mode == gltf::material_alpha_mode::blend
+            ? granit::pbr_alpha_mode::blend
+            : granit::pbr_alpha_mode::opaque;
     draw_bindings_.push_back(
         {.payload = draw.payload,
          .mesh = meshes_[draw.primitive].ref(),
          .material = materials_[material_index].ref(),
-         .variant = granit::pbr_material_variant_key(granit::pbr_texture::all,
-                                                     granit::pbr_alpha_mode::opaque, false, true)});
+         .variant = granit::pbr_material_variant_key(
+             granit::pbr_texture::all, alpha_mode,
+             source_material != nullptr && source_material->double_sided, true, true)});
   }
   renderer_ = renderer;
   return granit::result::success;

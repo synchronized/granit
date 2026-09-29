@@ -3,6 +3,7 @@
 
 #include "material/pbr_material_schema.h"
 
+#include <algorithm>
 #include <catch2/catch_all.hpp>
 
 namespace {
@@ -15,7 +16,8 @@ granit::material::material_vertex_buffer_layout standard_layout() {
                          {pbr_vertex_location_normal, GRANIT_VERTEX_FORMAT_FLOAT32X3, 12},
                          {pbr_vertex_location_tangent, GRANIT_VERTEX_FORMAT_FLOAT32X4, 24},
                          {pbr_vertex_location_uv0, GRANIT_VERTEX_FORMAT_FLOAT32X2, 40},
-                         {pbr_vertex_location_uv1, GRANIT_VERTEX_FORMAT_FLOAT32X2, 48}}};
+                         {pbr_vertex_location_uv1, GRANIT_VERTEX_FORMAT_FLOAT32X2, 48},
+                         {pbr_vertex_location_color, GRANIT_VERTEX_FORMAT_FLOAT32X4, 56}}};
 }
 
 } // namespace
@@ -39,11 +41,22 @@ TEST_CASE("PBR 纹理布局要求 UV 且法线贴图额外要求切线") {
   CHECK(granit::material::validate_pbr_vertex_layout(std::span{&layout, 1},
                                                      granit::material::pbr_texture_normal) ==
         granit::material::pbr_vertex_layout_error::missing_tangent);
-  layout.attributes.pop_back();
-  layout.attributes.pop_back();
+  std::erase_if(layout.attributes, [](const auto& attribute) {
+    return attribute.location == granit::material::pbr_vertex_location_uv0;
+  });
   CHECK(granit::material::validate_pbr_vertex_layout(std::span{&layout, 1},
                                                      granit::material::pbr_texture_emissive) ==
         granit::material::pbr_vertex_layout_error::missing_uv0);
+}
+
+TEST_CASE("PBR 顶点布局按需要求颜色") {
+  using namespace granit::material;
+  auto layout = standard_layout();
+  std::erase_if(layout.attributes, [](const auto& attribute) {
+    return attribute.location == pbr_vertex_location_color;
+  });
+  CHECK(validate_pbr_vertex_layout(std::span{&layout, 1}, pbr_texture_all, 0, true) ==
+        pbr_vertex_layout_error::missing_color);
 }
 
 TEST_CASE("PBR 顶点布局拒绝未知纹理 feature 位") {
@@ -55,7 +68,9 @@ TEST_CASE("PBR 顶点布局拒绝未知纹理 feature 位") {
 TEST_CASE("PBR 顶点布局按逐槽选择要求 UV1") {
   using namespace granit::material;
   auto layout = standard_layout();
-  layout.attributes.pop_back();
+  std::erase_if(layout.attributes, [](const auto& attribute) {
+    return attribute.location == pbr_vertex_location_uv1;
+  });
   CHECK(validate_pbr_vertex_layout(std::span{&layout, 1}, pbr_texture_all,
                                    pbr_texture_base_color) == pbr_vertex_layout_error::missing_uv1);
   CHECK(validate_pbr_vertex_layout(std::span{&layout, 1}, pbr_texture_base_color,

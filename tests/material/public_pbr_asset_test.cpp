@@ -93,7 +93,7 @@ TEST_CASE("公共 PBR 材质模板具有稳定 Schema 和内容身份") {
   granit::material::material_archive_layout layout;
   REQUIRE(granit::material::parse_material_archive_layout(bytes, layout) ==
           granit::material::archive_error::none);
-  CHECK(GRANIT_PBR_MATERIAL_TEMPLATE_VERSION == 7);
+  CHECK(GRANIT_PBR_MATERIAL_TEMPLATE_VERSION == 8);
 
   constexpr std::string_view hex = GRANIT_PBR_MATERIAL_CONTENT_HASH_HEX;
   REQUIRE(hex.size() == layout.header.content_hash.size() * 2);
@@ -112,7 +112,7 @@ TEST_CASE("公共 PBR 材质模板为反射实例提供相反正面变体") {
   granit::material::material_package package;
   REQUIRE(granit::material::decode_material_package_archive(bytes, package) ==
           granit::material::archive_error::none);
-  REQUIRE(package.variants().size() == 16);
+  REQUIRE(package.variants().size() == 32);
   const auto clockwise = std::ranges::find_if(package.variants(), [](const auto& variant) {
     return variant.features.size() == 1 &&
            variant.pipeline.primitive.front_face == GRANIT_FRONT_FACE_CLOCKWISE;

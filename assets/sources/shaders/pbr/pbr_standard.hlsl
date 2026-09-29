@@ -4,12 +4,15 @@
 static const float PI = 3.14159265358979323846;
 
 struct vertex_input {
-  float3 position : POSITION;
-  float3 normal : NORMAL;
-  float4 tangent : TANGENT;
-  float2 texture_coordinate : TEXCOORD0;
+  [[vk::location(0)]] float3 position : POSITION;
+  [[vk::location(1)]] float3 normal : NORMAL;
+  [[vk::location(2)]] float4 tangent : TANGENT;
+  [[vk::location(3)]] float2 texture_coordinate : TEXCOORD0;
 #if GRANIT_PBR_HAS_UV1
-  float2 texture_coordinate_1 : TEXCOORD1;
+  [[vk::location(4)]] float2 texture_coordinate_1 : TEXCOORD1;
+#endif
+#if GRANIT_PBR_HAS_VERTEX_COLOR
+  [[vk::location(5)]] float4 color : COLOR0;
 #endif
 };
 
@@ -23,6 +26,9 @@ struct vertex_output {
   float3 vertex_tangent : TEXCOORD5;
 #if GRANIT_PBR_HAS_UV1
   float2 texture_coordinate_1 : TEXCOORD6;
+#endif
+#if GRANIT_PBR_HAS_VERTEX_COLOR
+  float4 color : TEXCOORD7;
 #endif
 };
 
@@ -93,6 +99,9 @@ vertex_output vertex_main(vertex_input input) {
 #if GRANIT_PBR_HAS_UV1
   output.texture_coordinate_1 = input.texture_coordinate_1;
 #endif
+#if GRANIT_PBR_HAS_VERTEX_COLOR
+  output.color = input.color;
+#endif
   output.vertex_normal = input.normal;
   output.vertex_tangent = input.tangent.xyz;
   return output;
@@ -141,7 +150,10 @@ float4 fragment_main(vertex_output input, bool is_front_face : SV_IsFrontFace) :
 #endif
   const float4 sampled_base_color =
       base_color_texture.Sample(base_color_sampler, base_color_uv);
-  const float4 resolved_base_color = base_color * sampled_base_color;
+  float4 resolved_base_color = base_color * sampled_base_color;
+#if GRANIT_PBR_HAS_VERTEX_COLOR
+  resolved_base_color *= input.color;
+#endif
   const float4 sampled_metallic_roughness =
       metallic_roughness_texture.Sample(metallic_roughness_sampler, metallic_roughness_uv);
   const float resolved_metallic = saturate(metallic * sampled_metallic_roughness.b);

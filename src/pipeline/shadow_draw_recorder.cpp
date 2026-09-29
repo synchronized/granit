@@ -15,11 +15,12 @@ namespace granit::pipeline::detail {
 granit_result acquire_shadow_pipeline(render_pipeline_state& state,
                                       const granit::pipeline::detail::material_draw_state& material,
                                       granit_mesh mesh, bool reflected, bool alpha_mask,
-                                      bool uses_uv1, granit_graphics_pipeline& pipeline) {
+                                      bool uses_uv1, bool vertex_color,
+                                      granit_graphics_pipeline& pipeline) {
   const auto cached = std::ranges::find_if(state.shadow_pipelines, [&](const auto& entry) {
     return entry.layout == material.pipeline_layout && entry.mesh == mesh &&
            entry.reflected == reflected && entry.alpha_mask == alpha_mask &&
-           entry.uses_uv1 == uses_uv1;
+           entry.uses_uv1 == uses_uv1 && entry.vertex_color == vertex_color;
   });
   if (cached != state.shadow_pipelines.end()) {
     pipeline = cached->pipeline;
@@ -41,11 +42,13 @@ granit_result acquire_shadow_pipeline(render_pipeline_state& state,
   const granit_depth_bias_state depth_bias{1.25F, 1.75F, 0.0F, 0};
   granit_graphics_pipeline_desc desc = GRANIT_GRAPHICS_PIPELINE_DESC_INIT;
   desc.layout = material.pipeline_layout;
-  desc.vertex_shader = alpha_mask ? (uses_uv1 ? state.shadow_mask_uv1_vertex_shader.native_handle()
-                                              : state.shadow_mask_vertex_shader.native_handle())
-                                  : state.shadow_vertex_shader.native_handle();
-  desc.fragment_shader = alpha_mask ? state.shadow_mask_fragment_shader.native_handle()
-                                    : state.shadow_fragment_shader.native_handle();
+  const auto mask_vertex_index = (vertex_color ? 2U : 0U) + (uses_uv1 ? 1U : 0U);
+  desc.vertex_shader = alpha_mask
+                           ? state.shadow_mask_vertex_shaders[mask_vertex_index].native_handle()
+                           : state.shadow_vertex_shader.native_handle();
+  desc.fragment_shader =
+      alpha_mask ? state.shadow_mask_fragment_shaders[vertex_color ? 1U : 0U].native_handle()
+                 : state.shadow_fragment_shader.native_handle();
   desc.depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT;
   desc.vertex_buffer_layout_count = static_cast<uint32_t>(layouts.size());
   desc.vertex_buffer_layouts = layouts.data();
@@ -61,7 +64,7 @@ granit_result acquire_shadow_pipeline(render_pipeline_state& state,
     return result;
   try {
     state.shadow_pipelines.push_back(
-        {material.pipeline_layout, mesh, reflected, alpha_mask, uses_uv1, created});
+        {material.pipeline_layout, mesh, reflected, alpha_mask, uses_uv1, vertex_color, created});
   } catch (const std::bad_alloc&) {
     static_cast<void>(granit_graphics_pipeline_destroy(state.renderer, created));
     return GRANIT_ERROR_OUT_OF_MEMORY;
@@ -152,6 +155,13 @@ granit_result record_shadow_draws(render_pipeline_state& state, granit_command_r
     }
     if (result != GRANIT_SUCCESS)
       break;
+    bool vertex_color = false;
+    result = material_variant_has_feature(
+        state.renderer, draws[index].material, granit::material::make_feature_id("opaque"),
+        draws[index].variant,
+        granit::material::make_feature_id(GRANIT_PBR_VERTEX_COLOR_FEATURE_NAME), 1, vertex_color);
+    if (result != GRANIT_SUCCESS)
+      break;
     bool uses_uv1 = false;
     result = material_variant_has_feature(
         state.renderer, draws[index].material, granit::material::make_feature_id("opaque"),
@@ -213,7 +223,7 @@ granit_result record_shadow_draws(render_pipeline_state& state, granit_command_r
     if (result == GRANIT_SUCCESS)
       result = acquire_shadow_pipeline(state, material, draws[index].mesh,
                                        object.transform_handedness < 0.0F, alpha_mask, uses_uv1,
-                                       pipeline);
+                                       vertex_color, pipeline);
     if (result != GRANIT_SUCCESS)
       break;
     if (result == GRANIT_SUCCESS)

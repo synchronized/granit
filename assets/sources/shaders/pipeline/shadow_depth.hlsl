@@ -26,11 +26,17 @@ struct mask_vertex_input {
 #if GRANIT_PBR_HAS_UV1
   [[vk::location(4)]] float2 texture_coordinate_1 : TEXCOORD1;
 #endif
+#if GRANIT_PBR_HAS_VERTEX_COLOR
+  [[vk::location(5)]] float4 color : COLOR0;
+#endif
 };
 
 struct mask_vertex_output {
   float4 position : SV_Position;
   float2 texture_coordinate : TEXCOORD0;
+#if GRANIT_PBR_HAS_VERTEX_COLOR
+  float4 color : TEXCOORD1;
+#endif
 };
 
 [[vk::binding(0, 1)]] cbuffer MaterialConstants {
@@ -58,11 +64,17 @@ mask_vertex_output mask_vertex_main(mask_vertex_input input) {
 #else
   output.texture_coordinate = input.texture_coordinate;
 #endif
+#if GRANIT_PBR_HAS_VERTEX_COLOR
+  output.color = input.color;
+#endif
   return output;
 }
 
 void mask_fragment_main(mask_vertex_output input) {
-  const float alpha =
+  float alpha =
       base_color.a * base_color_texture.Sample(base_color_sampler, input.texture_coordinate).a;
+#if GRANIT_PBR_HAS_VERTEX_COLOR
+  alpha *= input.color.a;
+#endif
   clip(alpha - alpha_cutoff);
 }

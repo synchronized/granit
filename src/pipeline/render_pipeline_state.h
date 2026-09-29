@@ -38,6 +38,7 @@ struct render_pipeline_state {
     bool reflected = false;
     bool alpha_mask = false;
     bool uses_uv1 = false;
+    bool vertex_color = false;
     granit_graphics_pipeline pipeline = GRANIT_NULL_HANDLE;
   };
   struct draw_binding_entry {
@@ -58,9 +59,8 @@ struct render_pipeline_state {
   granit::texture_view shadow_view;
   granit::shader shadow_vertex_shader;
   granit::shader shadow_fragment_shader;
-  granit::shader shadow_mask_vertex_shader;
-  granit::shader shadow_mask_uv1_vertex_shader;
-  granit::shader shadow_mask_fragment_shader;
+  std::array<granit::shader, 4> shadow_mask_vertex_shaders;
+  std::array<granit::shader, 2> shadow_mask_fragment_shaders;
   granit::texture shadow_placeholder_texture;
   granit::texture_view shadow_placeholder_view;
   std::vector<shadow_pipeline_entry> shadow_pipelines;

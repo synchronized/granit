@@ -31,6 +31,7 @@ struct packed_vertex {
   math::float4 tangent{1, 0, 0, 1};
   math::float2 texture_coordinate{};
   math::float2 texture_coordinate_1{};
+  math::float4 color{1, 1, 1, 1};
 };
 
 struct packed_primitive {

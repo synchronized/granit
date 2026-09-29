@@ -536,21 +536,20 @@ extern "C" granit_result granit_render_pipeline_create(granit_renderer renderer,
         state->shadow_fragment_shader);
     if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
-    resource_result = state->shader_library.create_shader(
-        granit::pipeline::detail::shadow_depth_mask_vertex_shader_name(false),
-        state->shadow_mask_vertex_shader);
-    if (resource_result.failed())
-      return static_cast<granit_result>(resource_result);
-    resource_result = state->shader_library.create_shader(
-        granit::pipeline::detail::shadow_depth_mask_vertex_shader_name(true),
-        state->shadow_mask_uv1_vertex_shader);
-    if (resource_result.failed())
-      return static_cast<granit_result>(resource_result);
-    resource_result = state->shader_library.create_shader(
-        granit::pipeline::detail::shadow_depth_mask_fragment_shader_name(),
-        state->shadow_mask_fragment_shader);
-    if (resource_result.failed())
-      return static_cast<granit_result>(resource_result);
+    for (std::uint32_t color = 0; color < 2; ++color) {
+      for (std::uint32_t uv1 = 0; uv1 < 2; ++uv1) {
+        resource_result = state->shader_library.create_shader(
+            granit::pipeline::detail::shadow_depth_mask_vertex_shader_name(uv1 != 0, color != 0),
+            state->shadow_mask_vertex_shaders[color * 2 + uv1]);
+        if (resource_result.failed())
+          return static_cast<granit_result>(resource_result);
+      }
+      resource_result = state->shader_library.create_shader(
+          granit::pipeline::detail::shadow_depth_mask_fragment_shader_name(color != 0),
+          state->shadow_mask_fragment_shaders[color]);
+      if (resource_result.failed())
+        return static_cast<granit_result>(resource_result);
+    }
     resource_result = state->shadow_placeholder_texture.initialize(
         renderer_view, {.format = granit::texture_format::d32_float,
                         .usage = granit::texture_usage::sampled |
@@ -737,15 +736,16 @@ extern "C" granit_result granit_render_pipeline_destroy(granit_renderer renderer
   const auto placeholder_texture_result = removed->shadow_placeholder_texture.reset();
   if (result == GRANIT_SUCCESS)
     result = static_cast<granit_result>(placeholder_texture_result);
-  const auto mask_fragment_result = removed->shadow_mask_fragment_shader.reset();
-  if (result == GRANIT_SUCCESS)
-    result = static_cast<granit_result>(mask_fragment_result);
-  const auto mask_vertex_result = removed->shadow_mask_vertex_shader.reset();
-  if (result == GRANIT_SUCCESS)
-    result = static_cast<granit_result>(mask_vertex_result);
-  const auto mask_uv1_vertex_result = removed->shadow_mask_uv1_vertex_shader.reset();
-  if (result == GRANIT_SUCCESS)
-    result = static_cast<granit_result>(mask_uv1_vertex_result);
+  for (auto& shader : removed->shadow_mask_fragment_shaders) {
+    const auto reset_result = shader.reset();
+    if (result == GRANIT_SUCCESS)
+      result = static_cast<granit_result>(reset_result);
+  }
+  for (auto& shader : removed->shadow_mask_vertex_shaders) {
+    const auto reset_result = shader.reset();
+    if (result == GRANIT_SUCCESS)
+      result = static_cast<granit_result>(reset_result);
+  }
   const auto fragment_result = removed->shadow_fragment_shader.reset();
   if (result == GRANIT_SUCCESS)
     result = static_cast<granit_result>(fragment_result);
