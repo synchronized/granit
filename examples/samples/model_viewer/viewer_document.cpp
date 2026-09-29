@@ -107,4 +107,19 @@ granit::result viewer_document::update(const viewer_document_update& input,
   return granit::result::success;
 }
 
+granit::result
+viewer_document::update_material(std::uint32_t material_index,
+                                 const gltf_rendering::material_factor_update& edit) noexcept {
+  if (material_index >= scene_.materials.size())
+    return granit::result::invalid_argument;
+  auto& material = scene_.materials[material_index];
+  material.base_color = edit.base_color;
+  material.metallic = edit.metallic;
+  material.roughness = edit.roughness;
+  material.normal_scale = edit.normal_scale;
+  material.occlusion_strength = edit.occlusion_strength;
+  material.emissive = edit.emissive;
+  return granit::result::success;
+}
+
 } // namespace granit::example::model_viewer

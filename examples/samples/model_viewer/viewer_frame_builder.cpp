@@ -4,21 +4,21 @@
 #include "model_viewer/viewer_frame_builder.h"
 
 #include "camera/orbit_camera_input_accumulator.h"
-#include "model_viewer/viewer_session.h"
 #include "model_viewer/viewer_ui.h"
 
 #include <utility>
 
 namespace granit::example::model_viewer {
 
-granit::result build_viewer_frame(viewer_session& session, viewer_ui& ui,
+granit::result build_viewer_frame(viewer_document& document,
+                                  const gltf_rendering::scene_plan& scene_plan, viewer_ui& ui,
                                   camera::orbit_camera_input_accumulator& input,
                                   const viewer_frame_build_desc& desc,
                                   viewer_frame_build_result& output) {
   viewer_frame_build_result candidate;
   if (desc.show_ui) {
     ui.begin_frame(desc.window, desc.delta_seconds);
-    candidate.changes = draw_viewer_panels(session.cpu_scene(), session.state(), desc.renderer,
+    candidate.changes = draw_viewer_panels(document.scene(), document.state(), desc.renderer,
                                            desc.performance, desc.quality, desc.previews);
     const auto capture_result = ui.capture(candidate.packet.canvas);
     if (capture_result.failed())
@@ -34,9 +34,19 @@ granit::result build_viewer_frame(viewer_session& session, viewer_ui& ui,
   tick.width = desc.renderer.width;
   tick.height = desc.renderer.height;
   tick.performance = desc.sample;
-  const auto operation = session.tick(tick, candidate.packet.viewer);
+  viewer_document_frame document_frame;
+  const auto operation = document.update(tick, scene_plan, document_frame);
   if (operation.failed())
     return operation;
+  candidate.packet.viewer = {.view = document_frame.view,
+                             .directional_light = document_frame.directional_light,
+                             .width = tick.width,
+                             .height = tick.height,
+                             .exposure_ev = document_frame.exposure_ev,
+                             .environment_intensity = document_frame.environment_intensity,
+                             .environment_rotation_radians =
+                                 document_frame.environment_rotation_radians,
+                             .clear_color = document_frame.clear_color};
   output = std::move(candidate);
   return granit::result::success;
 }

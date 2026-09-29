@@ -47,6 +47,9 @@ public:
   [[nodiscard]] granit::result update(const viewer_document_update& input,
                                       const gltf_rendering::scene_plan& plan,
                                       viewer_document_frame& output);
+  [[nodiscard]] granit::result
+  update_material(std::uint32_t material_index,
+                  const gltf_rendering::material_factor_update& edit) noexcept;
 
   [[nodiscard]] gltf::scene& scene() noexcept { return scene_; }
   [[nodiscard]] const gltf::scene& scene() const noexcept { return scene_; }

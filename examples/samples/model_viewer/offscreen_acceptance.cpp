@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "application_core.h"
 #include "assets/asset_manager.h"
 #include "gltf/asset_loaders.h"
 #include "gltf_rendering/scene_resources.h"
 #include "platform/register_asset_sources.h"
 #include "tasks/task_system.h"
 #include "validation/screenshot_comparison.h"
+#include "viewer_document.h"
 
 #include <granit/granit.hpp>
 #include <granit/pipeline/environment_map.hpp>
@@ -328,15 +328,8 @@ int main(int argc, char** argv) {
     stage = "校验质量配置";
     result = granit::result::unsupported;
   }
-  granit::example::model_viewer::application_core core;
-  if (result.ok()) {
-    stage = "启动应用 Core";
-    result = core.begin_renderer();
-  }
-  if (result.ok()) {
-    stage = "确认 Renderer 就绪";
-    result = core.renderer_ready();
-  }
+  granit::example::model_viewer::viewer_document document;
+  granit::example::gltf_rendering::scene_plan scene_plan;
 
   granit::example::tasks::task_system tasks;
   granit::example::assets::asset_manager assets{tasks};
@@ -373,7 +366,15 @@ int main(int argc, char** argv) {
   }
   if (result.ok()) {
     stage = "接收模型资产";
-    result = core.accept_scene(*model.value());
+    const auto source = *model.value();
+    const auto plan_result = granit::example::gltf_rendering::build_scene_plan(source, scene_plan);
+    if (plan_result == granit::example::gltf_rendering::scene_plan_error::none) {
+      document.assign(source);
+    } else {
+      result = plan_result == granit::example::gltf_rendering::scene_plan_error::out_of_memory
+                   ? granit::result::out_of_memory
+                   : granit::result::invalid_argument;
+    }
   }
   granit::example::gltf::scene render_scene;
   granit::example::gltf_rendering::scene_plan render_plan;
@@ -386,7 +387,8 @@ int main(int argc, char** argv) {
     const auto environment_bytes = environment_asset
                                        ? std::span<const std::byte>{environment_asset->bytes}
                                        : std::span<const std::byte>{};
-    result = core.prepare_upload(render_scene, render_plan);
+    render_scene = document.scene();
+    render_plan = scene_plan;
     if (result.ok()) {
       result = scene_resources.initialize(renderer, render_scene, std::move(render_plan),
                                           arguments.sampler_anisotropy);
@@ -402,7 +404,11 @@ int main(int argc, char** argv) {
           environment_bytes.empty() ? -0.5F : environment_info.recommended_exposure_ev;
       const auto intensity =
           environment_bytes.empty() ? 0.12F : environment_info.environment.intensity;
-      result = core.complete_upload(exposure, intensity);
+      granit::example::model_viewer::viewer_change lighting;
+      lighting.exposure_ev = exposure;
+      lighting.environment_intensity = intensity;
+      if (document.apply(lighting) != granit::example::model_viewer::viewer_state_error::none)
+        result = granit::result::invalid_argument;
     }
   }
 
@@ -436,14 +442,14 @@ int main(int argc, char** argv) {
   granit::example::model_viewer::viewer_change diagnostic_change{};
   diagnostic_change.debug_display = arguments.debug_display;
   for (std::uint32_t frame = 0; frame < 3 && result.ok(); ++frame) {
-    granit::example::model_viewer::viewer_frame tick;
+    granit::example::model_viewer::viewer_document_frame tick;
     stage = "更新固定相机场景";
-    result = core.tick({.input = {},
-                        .change = diagnostic_change,
-                        .width = render_size,
-                        .height = render_size,
-                        .performance = {}},
-                       tick);
+    result = document.update({.input = {},
+                              .change = diagnostic_change,
+                              .width = render_size,
+                              .height = render_size,
+                              .performance = {}},
+                             scene_plan, tick);
     if (result.ok()) {
       stage = "渲染离屏帧";
       tick.clear_color = {0.0F, 0.0F, 0.0F, 1.0F};
@@ -466,8 +472,8 @@ int main(int argc, char** argv) {
         result = pipeline.render({.scene = snapshot.ref(),
                                   .output = output_view.ref(),
                                   .output_format = granit::texture_format::rgba8_unorm,
-                                  .width = tick.width,
-                                  .height = tick.height,
+                                  .width = render_size,
+                                  .height = render_size,
                                   .first_view = 0,
                                   .view_count = 1,
                                   .exposure_ev = tick.exposure_ev,
@@ -483,8 +489,6 @@ int main(int argc, char** argv) {
   }
   if (result.failed()) {
     std::cerr << stage << "失败：" << granit::result_message(result);
-    if (!core.diagnostic().empty())
-      std::cerr << "（" << core.diagnostic() << "）";
     std::cerr << '\n';
     return 1;
   }

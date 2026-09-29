@@ -5,11 +5,12 @@
 
 #include "assets/asset_manager.h"
 #include "camera/orbit_camera_input_accumulator.h"
+#include "model_viewer/model_load_operation.h"
 #include "model_viewer/presentation_recovery.h"
 #include "model_viewer/render_dispatcher.h"
 #include "model_viewer/render_execution.h"
+#include "model_viewer/viewer_document.h"
 #include "model_viewer/viewer_frame_builder.h"
-#include "model_viewer/viewer_session.h"
 #include "model_viewer/viewer_texture_previews.h"
 #include "model_viewer/viewer_ui.h"
 
@@ -179,7 +180,9 @@ granit::result capture_loading_frame(const granit::window_state& window_state,
 
 struct viewer_application::implementation {
   viewer_application_desc desc;
-  viewer_session session;
+  viewer_document document;
+  model_load_operation model_load;
+  gltf_rendering::scene_plan scene_plan;
   std::unique_ptr<render_execution_policy> executor;
   render_dispatcher rendering;
   viewer_ui ui;
@@ -241,8 +244,8 @@ struct viewer_application::implementation {
     case viewer_runtime_phase::renderer_wait:
       return "provider-events";
     case viewer_runtime_phase::asset_wait:
-      return session.loading_error() == model_load_error::resource_read ? "asset-resource-fetch"
-                                                                        : "asset-fetch";
+      return model_load.error() == model_load_error::resource_read ? "asset-resource-fetch"
+                                                                   : "asset-fetch";
     case viewer_runtime_phase::scene_prepare:
       return "asset-load";
     case viewer_runtime_phase::gpu_upload:
@@ -322,8 +325,6 @@ struct viewer_application::implementation {
 
   granit::result initialize_ready_renderer(viewer_application& owner) {
     auto result = rendering.complete_renderer_initialization();
-    if (result.ok())
-      result = session.renderer_ready();
     if (result.failed())
       return result;
 
@@ -402,19 +403,19 @@ struct viewer_application::implementation {
   }
 
   granit::result update_asset_wait() {
-    session.poll_loading();
-    if (session.loading_status() == model_load_status::failed)
-      return session.loading_result();
+    model_load.poll_assets();
+    if (model_load.status() == model_load_status::failed)
+      return model_load.result();
     if (environment_request && environment_request.status() == assets::asset_status::failed)
       return granit::result::invalid_argument;
     const bool environment_ready = !environment_request || environment_request.ready();
-    if (session.loading_status() == model_load_status::assets_ready && environment_ready) {
+    if (model_load.status() == model_load_status::assets_ready && environment_ready) {
       if (environment_request)
         environment_bytes = environment_request.value()->bytes;
       phase = viewer_runtime_phase::scene_prepare;
       return granit::result::success;
     }
-    const auto progress = session.loading_progress();
+    const auto progress = model_load.progress();
     const auto fraction = progress.total_bytes && *progress.total_bytes > 0
                               ? static_cast<float>(progress.completed_bytes) /
                                     static_cast<float>(*progress.total_bytes)
@@ -423,19 +424,30 @@ struct viewer_application::implementation {
   }
 
   granit::result update_scene_prepare() {
-    if (session.loading_status() == model_load_status::assets_ready) {
+    if (model_load.status() == model_load_status::assets_ready) {
       cancel_requested.store(false, std::memory_order_release);
-      const auto begin_result = session.begin_scene_prepare(scene_progress, this);
+      const auto begin_result = model_load.begin_prepare(scene_progress, this);
       if (begin_result.failed())
         return begin_result;
     }
-    auto result = session.poll_scene_prepare();
+    auto result = model_load.poll_prepare();
     if (result == granit::result::not_ready) {
       const auto loading_result = render_loading("Parsing glTF and decoding textures...", 0.30F);
       return loading_result.failed() ? loading_result : granit::result::success;
     }
-    if (result.ok())
+    if (result.ok()) {
+      gltf::scene scene;
+      gltf_rendering::scene_plan plan;
+      if (!model_load.take(scene, plan))
+        return granit::result::internal;
+      try {
+        document.assign(std::move(scene));
+        scene_plan = std::move(plan);
+      } catch (const std::bad_alloc&) {
+        return granit::result::out_of_memory;
+      }
       phase = viewer_runtime_phase::gpu_upload;
+    }
     return result;
   }
 
@@ -444,7 +456,14 @@ struct viewer_application::implementation {
       cancel_requested.store(false, std::memory_order_release);
       gltf::scene scene;
       gltf_rendering::scene_plan plan;
-      auto result = session.prepare_upload(scene, plan);
+      granit::result result;
+      try {
+        scene = document.scene();
+        plan = scene_plan;
+        result = granit::result::success;
+      } catch (const std::bad_alloc&) {
+        result = granit::result::out_of_memory;
+      }
       if (result.ok()) {
         result = rendering.begin_upload_scene(std::move(scene), std::move(plan), environment_bytes,
                                               quality.sampler_anisotropy, upload_progress_callback,
@@ -462,11 +481,16 @@ struct viewer_application::implementation {
     if (completion.status.failed())
       return completion.status;
     const auto& environment = rendering.environment_info();
-    const auto exposure = environment_bytes.empty() ? session.state().exposure_ev()
+    const auto exposure = environment_bytes.empty() ? document.state().exposure_ev()
                                                     : environment.recommended_exposure_ev;
-    const auto intensity = environment_bytes.empty() ? session.state().environment_intensity()
+    const auto intensity = environment_bytes.empty() ? document.state().environment_intensity()
                                                      : environment.environment.intensity;
-    const auto complete_result = session.complete_upload(exposure, intensity);
+    viewer_change recommended_lighting;
+    recommended_lighting.exposure_ev = exposure;
+    recommended_lighting.environment_intensity = intensity;
+    const auto complete_result = document.apply(recommended_lighting) == viewer_state_error::none
+                                     ? granit::result::success
+                                     : granit::result::invalid_argument;
     if (complete_result.failed())
       return complete_result;
     asset_ready = true;
@@ -510,7 +534,7 @@ struct viewer_application::implementation {
     };
     auto result = rendering.initialize_pipeline(pipeline_desc);
     if (result.ok() && desc.show_ui)
-      result = previews.rebuild(session.cpu_scene(), rendering, ui);
+      result = previews.rebuild(document.scene(), rendering, ui);
     if (result.ok() && desc.show_ui)
       result = render_loading("Loading complete", 1.0F);
     if (result.ok() && desc.show_ui)
@@ -589,7 +613,7 @@ struct viewer_application::implementation {
     const auto queue = rendering.query_queue_stats();
     viewer_frame_build_result frame;
     result = build_viewer_frame(
-        session, ui, input,
+        document, scene_plan, ui, input,
         {.window = window_state,
          .delta_seconds = delta_seconds,
          .renderer = {.backend = backend_name(info.backend),
@@ -613,7 +637,7 @@ struct viewer_application::implementation {
                          .skipped_frame_builds = queue.skipped_frame_builds,
                          .merged_input_frames = input.merged_input_frames(),
                          .render_lag_ms = queue.render_lag_ms,
-                         .history = session.performance().summarize()},
+                         .history = document.performance().summarize()},
          .quality = quality,
          .previews = previews.items(),
          .sample =
@@ -633,17 +657,17 @@ struct viewer_application::implementation {
       const bool reupload = frame.changes.quality->sampler_anisotropy != quality.sampler_anisotropy;
       result = configure_quality(*frame.changes.quality);
       if (result.ok() && reupload && desc.show_ui) {
-        result = previews.rebuild(session.cpu_scene(), rendering, ui);
+        result = previews.rebuild(document.scene(), rendering, ui);
         frame.packet.canvas.clear();
       }
     }
     if (result.ok() && frame.changes.material &&
-        session.state().selected_material() != gltf::invalid_index) {
+        document.state().selected_material() != gltf::invalid_index) {
       result =
-          rendering.update_material(session.state().selected_material(), *frame.changes.material);
+          rendering.update_material(document.state().selected_material(), *frame.changes.material);
       if (result.ok()) {
         result =
-            session.update_material(session.state().selected_material(), *frame.changes.material);
+            document.update_material(document.state().selected_material(), *frame.changes.material);
       }
     }
     if (result.failed())
@@ -721,8 +745,6 @@ granit::result viewer_application::on_host_initialize() noexcept {
   } catch (const std::bad_alloc&) {
     result = granit::result::out_of_memory;
   }
-  if (result.ok())
-    result = state.session.begin_renderer();
   if (result.ok()) {
     result = state.rendering.initialize_renderer(
         *state.executor, {.application_name = "Granit Model Viewer",
@@ -732,7 +754,7 @@ granit::result viewer_application::on_host_initialize() noexcept {
                           .diagnostic_user_data = &state,
                           .backend = state.desc.renderer_backend});
   }
-  if (result.ok() && !state.session.start_loading(
+  if (result.ok() && !state.model_load.start(
                          assets(), assets::asset_location::external(state.desc.model_location))) {
     result = granit::result::invalid_argument;
   }
@@ -829,13 +851,15 @@ granit::result viewer_application::shutdown_resources() noexcept {
   if (state.shutdown_complete)
     return state.shutdown_result;
   state.cancel_requested.store(true, std::memory_order_release);
-  state.session.cancel_loading();
+  state.model_load.cancel();
   state.environment_request.cancel();
   if (state.desc.observer != nullptr)
     state.desc.observer->on_shutdown();
   state.previews.clear(state.ui);
   state.ui.clear_textures();
-  state.session.reset();
+  state.model_load.reset();
+  state.document.clear();
+  state.scene_plan = {};
   std::optional<granit::renderer_info> renderer_info;
   std::optional<granit::swapchain_info> swapchain_info;
   if (state.rendering.valid()) {
@@ -929,10 +953,10 @@ granit::result viewer_application::configure_lighting(float exposure_ev,
   viewer_change change;
   change.exposure_ev = exposure_ev;
   change.environment_intensity = environment_intensity;
-  auto light = state_->session.state().directional_light();
+  auto light = state_->document.state().directional_light();
   light.radiance = {key_light_intensity, key_light_intensity, key_light_intensity};
   change.directional_light = light;
-  if (state_->session.state().apply(state_->session.cpu_scene(), change) !=
+  if (state_->document.state().apply(state_->document.scene(), change) !=
       viewer_state_error::none) {
     return granit::result::invalid_argument;
   }
@@ -946,7 +970,7 @@ granit::result viewer_application::cancel_loading() noexcept {
     return granit::result::not_ready;
   }
   state_->cancel_requested.store(true, std::memory_order_release);
-  state_->session.cancel_loading();
+  state_->model_load.cancel();
   return granit::result::success;
 }
 granit::result
@@ -954,13 +978,13 @@ viewer_application::query_renderer_status(granit::renderer_status& output) const
   return state_->rendering.query_renderer_status(output);
 }
 float viewer_application::exposure_ev() const noexcept {
-  return state_->session.state().exposure_ev();
+  return state_->document.state().exposure_ev();
 }
 float viewer_application::environment_intensity() const noexcept {
-  return state_->session.state().environment_intensity();
+  return state_->document.state().environment_intensity();
 }
 float viewer_application::key_light_intensity() const noexcept {
-  return state_->session.state().directional_light().radiance.x;
+  return state_->document.state().directional_light().radiance.x;
 }
 float viewer_application::max_sampler_anisotropy() const noexcept {
   return state_->rendering.valid() ? state_->rendering.renderer_limits().max_sampler_anisotropy

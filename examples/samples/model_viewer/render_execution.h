@@ -5,7 +5,8 @@
 #define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_RENDER_EXECUTION_H_
 
 #include "imgui/frame_canvas_data.h"
-#include "model_viewer/application_core.h"
+#include <granit/pipeline/scene.hpp>
+#include <granit/renderer/render_target.hpp>
 
 #include <cstddef>
 #include <cstdint>
@@ -16,6 +17,18 @@
 #include <utility>
 
 namespace granit::example::model_viewer {
+
+/** 主线程提交给渲染执行策略的单帧不可变业务数据。 */
+struct viewer_frame {
+  granit::scene_view view;
+  granit::scene_directional_light directional_light;
+  std::uint32_t width{};
+  std::uint32_t height{};
+  float exposure_ev{};
+  float environment_intensity{};
+  float environment_rotation_radians{};
+  granit::clear_color_value clear_color{0.0F, 0.0F, 0.0F, 1.0F};
+};
 
 /** 执行层拥有的完整帧包；在 Core 渲染数据之外携带可选 UI Canvas。 */
 struct frame_packet {

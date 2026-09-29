@@ -5,8 +5,6 @@
 
 add_library(
   granit_sample_model_viewer_core STATIC
-  application_core.cpp
-  application_core.h
   environment_ktx2.cpp
   environment_ktx2.h
   render_execution.cpp
@@ -17,8 +15,6 @@ add_library(
   viewer_renderer.h
   model_load_operation.cpp
   model_load_operation.h
-  viewer_session.cpp
-  viewer_session.h
   viewer_document.cpp
   viewer_document.h
   performance_history.cpp
@@ -64,13 +60,12 @@ endif()
 if(GRANIT_HAS_NATIVE_WINDOW AND GRANIT_TESTING_ENABLED)
   add_executable(
     granit_sample_model_viewer_support_test
-    application_core_test.cpp
     environment_ktx2_test.cpp
     render_execution_test.cpp
     model_load_operation_test.cpp
-    viewer_session_test.cpp
     performance_history_test.cpp
     presentation_recovery_test.cpp
+    viewer_document_test.cpp
     viewer_state_test.cpp
   )
   target_link_libraries(
