@@ -21,6 +21,7 @@
 
 ## 稳定化与跨平台
 
+- [2026-09-29 S-79 ImGui Integration 教程归位验收](2026-09-29-s79-imgui-integration-layout-acceptance.md)
 - [2026-09-29 S-76 标准 PBR 材质正确性验收](2026-09-29-s76-pbr-material-correctness-acceptance.md)
 - [2026-09-29 S-75 Deferred Rendering 本地验收](2026-09-29-s75-deferred-rendering-acceptance.md)
 - [2026-09-28 S-74 GPU Marching Cubes 验收](2026-09-28-s74-gpu-marching-cubes-acceptance.md)

@@ -12,7 +12,7 @@ target_link_libraries(
     granit_example_application
     granit_example_camera
     granit_example_tutorial
-    granit_example_model_scene
+    granit_example_gltf_rendering
     granit::render_pipeline
 )
 granit_target_compile_warnings(granit_tutorial_02_pbr_assets)

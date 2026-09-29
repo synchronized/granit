@@ -3,8 +3,8 @@
 
 # Granit 特性教程
 
-教程通过七个可运行程序介绍 Granit 的主要渲染路径和单项图形特性。每个程序都能独立阅读，
-不要求按多个近似项目逐章复制代码。完整应用和集成展示位于
+教程通过八个可运行程序介绍 Granit 的主要渲染路径、单项图形特性和第三方宿主集成。每个程序都能
+独立阅读，不要求按多个近似项目逐章复制代码。完整应用和集成展示位于
 [Samples 指南](../guides/examples.md)，接口细节以 [Reference](../README.md#接口参考) 为准。
 
 | 教程 | 主要内容 | 运行结果 | 源码 |
@@ -16,10 +16,12 @@
 | [05：Metaballs](05-metaballs.md) | 平滑 SDF 并集、动画参数、隐式曲面光照 | 五个融合的动画球体 | [05_metaballs](../../examples/tutorials/05_metaballs) |
 | [06：GPU Marching Cubes](06-marching-cubes.md) | Compute、Transient Buffer、Atomic、Indirect Draw | GPU 生成的动态 Metaballs 网格 | [06_marching_cubes](../../examples/tutorials/06_marching_cubes) |
 | [07：Deferred Rendering](07-deferred.md) | MRT、G-buffer、中间纹理采样、多 Pass、Resize | 多点光源照亮的实例场景与 G-buffer 调试视图 | [07_deferred](../../examples/tutorials/07_deferred) |
+| [08：SDL3 + ImGui](08-sdl-imgui.md) | 外部 SDL Window、ImGui Platform Backend、Surface、Canvas | SDL3 宿主中的跨后端 ImGui 面板 | [08_sdl_imgui](../../examples/tutorials/08_sdl_imgui) |
 
-七个教程都复用仓库私有的 `examples/common/application`。它只处理 Window、Renderer 异步初始化、
+前七个渲染教程复用仓库私有的 `examples/common/application`。它只处理 Window、Renderer 异步初始化、
 Surface、Swapchain、事件循环、Resize、Acquire 与 Present；Shader、资源、命令录制和场景仍留在
-教程中，便于直接观察 Granit 公共 C++ 接口。
+教程中，便于直接观察 Granit 公共 C++ 接口。`08_sdl_imgui` 刻意不使用该 Application：它演示
+调用方拥有 SDL Window 和事件循环时，如何只把 Surface 与 ImGui Draw Data 交给 Granit。
 
 桌面使用 Vulkan，浏览器使用 Emscripten WebGPU。两端编译同一教程主体，平台差异由 Window Loop
 与 Renderer Backend 处理。构建环境和 Shader Toolchain 配置见[构建指南](../guides/build.md)。

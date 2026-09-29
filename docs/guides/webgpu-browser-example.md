@@ -26,8 +26,8 @@ Windows 已安装但尚未导入 emsdk 环境时，先执行：
 ## 构建与运行
 
 核心库由 `src/CMakeLists.txt` 统一定义，浏览器后端由 `src/backend/webgpu/CMakeLists.txt` 配置。
-模型查看器入口与共享运行层位于 `examples/samples/model_viewer/web/`，平台验证和浏览器测试驱动
-位于 `tests/web/`。
+模型查看器 Web 入口位于 `examples/samples/model_viewer/platform/web/`，共享运行层位于同级
+`app/`、`model/`、`rendering/` 和 `ui/`，平台验证和浏览器测试驱动位于 `tests/web/`。
 正式示例和测试使用独立入口，测试通过启动回调复用模型加载、输入和渲染循环。
 
 Emscripten preset 默认开启测试和示例。关闭 `GRANIT_BUILD_TESTING` 可排除平台验证目标；

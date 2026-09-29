@@ -6,7 +6,7 @@
 #include "camera/orbit_camera.h"
 #include "camera/orbit_camera_input_accumulator.h"
 #include "gltf/scene.h"
-#include "model_viewer/gpu_scene.h"
+#include "gltf_rendering/scene_resources.h"
 #include "tutorial/tutorial_runtime.h"
 
 #include <granit/pipeline/render_pipeline.hpp>
@@ -156,7 +156,7 @@ private:
 
   granit::result update_model_material() noexcept {
     const auto& material = model_scene_.materials.front();
-    const granit::example::model_viewer::material_factor_edit edit{
+    const granit::example::gltf_rendering::material_factor_update edit{
         .base_color = model_base_color_,
         .metallic = model_metallic_,
         .roughness = model_roughness_,
@@ -229,7 +229,7 @@ private:
 
   granit::example::assets::asset_handle<granit::example::gltf::scene> model_asset_;
   granit::example::gltf::scene model_scene_;
-  granit::example::model_viewer::gpu_scene model_gpu_;
+  granit::example::gltf_rendering::scene_resources model_gpu_;
   granit::render_pipeline pipeline_;
   granit::scene_snapshot scene_;
   granit::example::tutorial::tutorial_runtime runtime_;

@@ -10,16 +10,16 @@ Emscripten WebGPU 上显示 glTF 2.0 模型。两个目标叠加同一套 ImGui 
 
 ## 运行时边界
 
-桌面与浏览器入口使用同一个 `viewer_application` 状态机。它在 `application_host` 提供的 Window、
+桌面与浏览器入口使用同一个 `model_viewer_app` 状态机。它在 `application_host` 提供的 Window、
 Input、循环和 Asset System 上依次推进 Renderer、Surface/Swapchain、资产读取、CPU Scene 准备、
-GPU 上传、Pipeline 准备、运行帧和释放。`viewer_session` 拥有 Application Core 与模型加载状态；
-`render_runtime` 统一 Renderer、Surface、Swapchain、Pipeline、Scene 上传、质量切换、帧执行和释放；
-`render_service` 将这些操作与 `render_task_executor` 组合，统一帧与不可丢弃控制任务的执行语义。
-`viewer_frame_builder` 统一面板构造、输入消费、Viewer Tick、Canvas 捕获和帧包生成：
+GPU 上传、Pipeline 准备、运行帧和释放。`viewer_document` 保存 CPU Scene、相机、选择和查看设置，
+`model_load_operation` 保存加载生命周期；`viewer_renderer` 独占 GPU 与呈现资源，
+`render_dispatcher` 统一帧与不可丢弃控制任务的执行语义。`frame_builder` 负责输入消费、Viewer
+Document 更新、面板构造、Canvas 捕获和帧包生成：
 
 - Desktop 入口只设置 SDL3/Vulkan、文件位置和专用线程策略；threaded Executor 为共用
-  Render Service 提供专用线程、异步上传和帧完成回执；普通帧允许替换，控制任务有序执行。
-- Web 入口只设置 Emscripten/WebGPU、URL 和主线程策略；inline Executor 调用同一个 Render Service，
+  Render Dispatcher 提供专用线程、异步上传和帧完成回执；普通帧允许替换，控制任务有序执行。
+- Web 入口只设置 Emscripten/WebGPU、URL 和主线程策略；inline Executor 调用同一个 Render Dispatcher，
   Fetch 和资源上传在明确边界通过 Asyncify 让出事件循环。
   正式 `pipeline_warmup` 只预热场景材质；临时 Shader、Compute 和资源生命周期探针仅编入浏览器
   测试目标。
@@ -194,14 +194,14 @@ Adapter、资产路径及量化统计，供 Actions 一并上传。`.rgba` 文�
 ## 浏览器运行与验证
 
 Emscripten 构建生成面向使用者的 `granit_sample_model_viewer_web.html`，默认通过网络加载 Khronos
-Flight Helmet；`?model=<URL>` 可以覆盖模型地址。它与桌面目标复用同一个 Application Core、
+Flight Helmet；`?model=<URL>` 可以覆盖模型地址。它与桌面目标复用同一个 Application、
 CPU/GPU Scene、PBR 和 Environment Map。详细构建及 URL 用法见
 [浏览器 WebGPU 示例](webgpu-browser-example.md)。该指南负责浏览器构建和通用验证；本页只保留
 模型查看器特有的页面行为说明。
 
 页面使用与桌面相同的 ImGui Scene、Inspector、Lighting、Renderer 和 Performance 面板；字体、
-材质预览纹理、输入捕获和 Draw Data 转换也走同一套实现。HTML 只保留 Canvas 以及 Renderer 和
-资产尚未就绪时的启动、进度、取消和错误状态，不再维护另一套 DOM 质量与光照控件。
+材质预览纹理、输入捕获和 Draw Data 转换也走同一套实现。HTML 只显示 Canvas；Renderer 可呈现后，
+加载、进度、取消和错误均由共享 ImGui 面板显示。隐藏 DOM 只保存浏览器自动化使用的结构化状态。
 
 `granit_sample_model_viewer_web_test.html` 复用正式应用代码并额外编入测试控制接口与 Pipeline
 生命周期探针；`granit_web_platform_smoke.html` 继续覆盖更底层的平台能力。它们验证模型 Fetch、PBR 绘制、60 帧循环、

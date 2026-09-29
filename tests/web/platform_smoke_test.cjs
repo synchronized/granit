@@ -10,7 +10,7 @@ const { chromium } = require("playwright-core");
 const outputDirectory = path.resolve(process.argv[2] ?? "build/emscripten-release/web");
 const chromePath = process.env.CHROME_PATH ?? "/usr/bin/google-chrome";
 const entryName = process.argv[3] ?? "granit_web_platform_smoke.html";
-const statusTextSelector = entryName === "granit_web_platform_smoke.html" ? "#granit-status" : "#status-text";
+const statusTextSelector = "#granit-status";
 const modelQuery = process.argv[4] ? `?model=${encodeURIComponent(process.argv[4])}` : "";
 const usesLocalFixture = entryName === "granit_web_platform_smoke.html" || Boolean(process.argv[4]);
 const startupTimeout = usesLocalFixture ? 30_000 : 120_000;
@@ -133,6 +133,15 @@ async function main() {
     if (status !== "ready") {
       throw new Error(`WebGPU 平台启动失败，页面状态为 ${status}`);
     }
+    if (entryName.startsWith("granit_sample_model_viewer_web")) {
+      const shellState = await page.evaluate(() => ({
+        statusHidden: document.querySelector("#granit-status")?.hidden === true,
+        visibleLoadingControls: document.querySelectorAll("progress, #cancel-loading, #status-text")
+          .length,
+      }));
+      if (!shellState.statusHidden || shellState.visibleLoadingControls !== 0)
+        throw new Error(`Model Viewer Shell 仍包含可见加载界面：${JSON.stringify(shellState)}`);
+    }
     if (entryName === "granit_sample_model_viewer_web.html") {
       validateModelViewerPixels(await page.locator("#canvas").screenshot({ type: "png" }));
       const exposesTestApi = await page.evaluate(
@@ -198,6 +207,11 @@ async function main() {
         `WebGPU 生命周期异常，state=${rendererState}, failure=${failureResult}, asset=${assetStatus}`,
       );
     }
+    const loadingFrameCount = await page.evaluate(() =>
+      Module._granit_web_loading_frame_count(),
+    );
+    if (loadingFrameCount < 1)
+      throw new Error("浏览器 Model Viewer 未提交共享 ImGui 加载帧");
     if (
       entryName === "granit_web_platform_smoke.html" &&
       !browserMessages.some((message) => message === "log: GRANIT_EMPTY_FRAME:ready")
@@ -215,12 +229,17 @@ async function main() {
     }
     // Asset Manager 已在 CPU 资产发布前完成 glTF 文档及其外部依赖解析；这里验证
     // Model Viewer 接收 CPU 场景，以及后续可观察的 GPU 规划和上传阶段。
-    for (const stage of [
+    const expectedProgressStages = [
       "document", "planning", "geometry", "textures", "samplers", "meshes", "materials",
       "pipelines",
-    ]) {
-      if (!browserMessages.some((message) => message.includes(`GRANIT_PROGRESS:${stage}:`)))
-        throw new Error(`浏览器分阶段上传未报告 ${stage} 进度`);
+    ];
+    const progressStages = new Set(
+      (await page.locator("#granit-status").getAttribute("data-progress-stages"))
+        ?.split(",")
+        .filter(Boolean),
+    );
+    for (const stage of expectedProgressStages) {
+      if (!progressStages.has(stage)) throw new Error(`浏览器分阶段上传未报告 ${stage} 进度`);
     }
     const uploadProgress = await page.evaluate(() => ({
       stage: Module._granit_web_upload_stage(),
@@ -392,6 +411,14 @@ async function main() {
           `frames=${framesBeforeShutdown}->${framesAfterShutdown}->${stableFramesAfterShutdown}`,
       );
     }
+    const destroyedDiagnostic = "Dawn WebGPU device, adapter and instance destroyed";
+    if (
+      !browserMessages.some(
+        (message) => message === `log: GRANIT_DIAGNOSTIC:${destroyedDiagnostic}`,
+      )
+    ) {
+      throw new Error(`WebGPU 关闭未报告完整销毁诊断：${destroyedDiagnostic}`);
+    }
     console.log(
       "浏览器 WebGPU 多帧渲染、MRT、Storage Texture、Readback、输入与资源释放验证通过",
     );
@@ -422,10 +449,8 @@ async function main() {
     const cancelPage = await browser.newPage();
     // 在确定的加载进度点取消，避免轮询错过小型 Fixture 的上传阶段。
     await cancelPage.addInitScript(() => {
-      const originalLog = console.log;
-      console.log = (...args) => {
-        originalLog.apply(console, args);
-        if (typeof args[0] === "string" && args[0].startsWith("GRANIT_PROGRESS:document:") &&
+      globalThis.granitProgressHook = (stage) => {
+        if (stage === "document" &&
             typeof globalThis.Module?._granit_web_cancel_loading === "function") {
           globalThis.granitCancelResult = Module._granit_web_cancel_loading();
         }

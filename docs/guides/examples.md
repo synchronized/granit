@@ -3,8 +3,8 @@
 
 # 示例程序
 
-本文是综合示例目录和运行入口，不重复维护具体示例的完整构建参数。Granit 保留独立 ImGui 示例、
-Model Viewer；完整学习路径见[教程系列](../tutorials/README.md)。版本
+本文是综合示例目录和运行入口，不重复维护具体示例的完整构建参数。Granit 保留 Model Viewer
+完整应用；SDL3 + ImGui 集成和图形特性位于[教程系列](../tutorials/README.md)。版本
 查询、离屏清屏、纹理回读和平台窗口等单能力验证位于 `tests/smoke`，由构建与 CTest 覆盖，不再
 作为示例发布。
 
@@ -19,43 +19,31 @@ Model Viewer；完整学习路径见[教程系列](../tutorials/README.md)。版
 
 两者也用于验证 shared SDK 的动态库定位和运行时消费路径。具体命令见各目录的 README。
 
-## SDL3 + ImGui
+## SDL3 + ImGui 教程
 
-`granit_sdl3_imgui_example` 展示 SDL3 窗口、输入、ImGui Platform Backend、Canvas 转换、
-纹理、裁剪、Resize 与 Present 的完整集成。目标仅在启用 SDL3、ImGui Integration 和锁定依赖时
-生成。
+`granit_tutorial_08_sdl_imgui` 展示 SDL3 拥有窗口和输入循环时，如何接入 Granit Surface、
+ImGui Draw Data 转换、Canvas、Resize 与 Present。目标仅在启用 SDL3 和 ImGui Integration 时生成。
 
 ```powershell
 cmake --preset windows-clang-release
-cmake --build --preset windows-clang-release --target granit_sdl3_imgui_example
-build/windows-clang-release/bin/granit_sdl3_imgui_example.exe
+cmake --build --preset windows-clang-release --target granit_tutorial_08_sdl_imgui
+build/windows-clang-release/bin/granit_tutorial_08_sdl_imgui.exe
 ```
 
-可使用 `--frames-in-flight 1..4` 选择帧槽数，使用
-`--present-mode immediate|fifo` 选择呈现模式。性能采样示例：
-
-```powershell
-build/windows-clang-release/bin/granit_sdl3_imgui_example.exe `
-  --no-validation --present-mode immediate --frames-in-flight 3 `
-  --profile-warmup 120 --profile-frames 600 --profile-output imgui-profile.csv
-```
-
-CSV 记录窗口尺寸、帧槽、Validation、Present Mode、CPU 阶段和 GPU Timestamp；退出前尚未回收
-的样本保持空值，不按零处理。
-
-同一份 ImGui 内容也可通过 SDL3 和浏览器 WebGPU 运行。浏览器构建、HTTP 服务和自动化测试的
-完整步骤见[浏览器 WebGPU 指南](webgpu-browser-example.md)；这里仅保留最小运行入口：
+详细所有权边界和逐帧流程见[08 教程](../tutorials/08-sdl-imgui.md)。同一份界面也可通过 SDL3 和
+浏览器 WebGPU 运行。浏览器构建、HTTP 服务和自动化测试的完整步骤见
+[浏览器 WebGPU 指南](webgpu-browser-example.md)；这里仅保留最小运行入口：
 
 ```powershell
 emsdk_env
 cmake --preset emscripten-release
-cmake --build --preset emscripten-release --target granit_imgui_web
+cmake --build --preset emscripten-release --target granit_tutorial_08_sdl_imgui
 python -m http.server 8000 --directory build/emscripten-release/web
 ```
 
 随后使用支持 WebGPU 的浏览器打开
-`http://localhost:8000/granit_imgui_web.html`。页面使用 SDL3 处理浏览器事件，ImGui 仍通过 Granit
-Canvas 绘制，不是 DOM/CSS 仿制界面，因此可用于核对桌面与 Web 的字体、纹理、裁剪和输入一致性。
+`http://localhost:8000/granit_tutorial_08_sdl_imgui.html`。页面使用 SDL3 处理浏览器事件，ImGui
+仍通过 Granit Canvas 绘制，因此可用于核对桌面与 Web 的字体、纹理、裁剪和输入一致性。
 
 ## Model Viewer
 
@@ -70,25 +58,24 @@ Canvas 绘制，不是 DOM/CSS 仿制界面，因此可用于核对桌面与 Web
 启用示例、SDL3/ImGui 集成和测试后，可运行 Vulkan 离屏视觉验收：
 
 ```powershell
-cmake --build --preset windows-clang-debug --target granit_imgui_visual_test
-ctest --preset windows-clang-debug -R "^granit\.example\.imgui_visual$" --output-on-failure
+cmake --build --preset windows-clang-debug --target granit_integration_imgui_visual_test
+ctest --preset windows-clang-debug -R "^granit\.integration\.imgui\.visual$" --output-on-failure
 ```
 
 该测试在 1×、2× 帧缓冲比例下渲染固定文字、四分区纹理、裁剪矩形和点击状态，复用截图比较器
-检查颜色区域，并将 PPM 产物写入构建目录的 `examples/samples/imgui`。它验证 Vulkan 渲染与
-ImGui 输入队列，不替代 SDL3 窗口的真实显示缩放和焦点验收。
+检查颜色区域。它验证 Vulkan 渲染与 ImGui 输入队列，不替代 SDL3 窗口的真实显示缩放和焦点验收。
 
 浏览器测试使用同一画面，通过真实鼠标点击验证内容状态及像素变化：
 
 ```powershell
-node tests/web/imgui_test.cjs build/emscripten-release/web
+node tests/web/imgui/browser_test.cjs build/emscripten-release/web
 ```
 
 先按[浏览器指南](webgpu-browser-example.md)安装测试驱动并设置 `CHROME_PATH`。测试分别创建
 1×、2× DPI 浏览器上下文，PNG 保存到 `build/emscripten-release/web/validation`。手动查看固定画面
-可打开 `granit_imgui_web.html?validation=1`。稳定基准采用固定区域的颜色容差、字体覆盖、裁剪和
-纹理差异断言，整幅截图仅作为诊断产物。整图会受字体栅格和驱动差异影响，因此不作为跨平台的
-逐像素通过条件。
+可打开 `granit_tutorial_08_sdl_imgui.html?validation=1`。稳定基准采用固定区域的颜色容差、字体
+覆盖、裁剪和纹理差异断言，整幅截图仅作为诊断产物。整图会受字体栅格和驱动差异影响，因此不
+作为跨平台的逐像素通过条件。
 
 ## 内部 Smoke 程序
 

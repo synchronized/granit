@@ -14,6 +14,10 @@ if(GRANIT_HAS_NATIVE_TOOLS AND GRANIT_SHADER_TOOLCHAIN_ROOT AND GRANIT_DXC_EXECU
   endif()
 endif()
 
+if(TARGET granit::integration_sdl3 AND TARGET granit::integration_imgui)
+  add_subdirectory(08_sdl_imgui)
+endif()
+
 if(EMSCRIPTEN)
   if(TARGET granit_example_tutorial)
     add_subdirectory(01_cube)

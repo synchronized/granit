@@ -6,35 +6,35 @@
     <title>Granit S-10D WebGPU 平台验证</title>
     <style>
       body { margin: 0; background: #111827; color: #e5e7eb; font-family: sans-serif; }
-      main { display: grid; place-items: center; min-height: 100vh; gap: 1rem; }
+      main { display: grid; place-items: center; min-height: 100vh; }
       canvas { width: 640px; height: 360px; border: 1px solid #374151; }
     </style>
   </head>
   <body>
     <main>
       <canvas id="canvas" width="640" height="360" tabindex="0"></canvas>
-      <output id="granit-status" data-status="starting">正在初始化 WebGPU…</output>
+      <output id="granit-status" hidden data-status="starting" data-stage="bootstrap"
+              data-result="0" data-progress-stages=""></output>
     </main>
     <script>
       const statusElement = document.getElementById("granit-status");
-      function updateStatus(text) {
-        if (text.startsWith("GRANIT_STATUS:")) {
-          const status = text.slice("GRANIT_STATUS:".length);
-          statusElement.dataset.status = status.startsWith("failed:") ? "failed" : status;
-          statusElement.textContent = status;
-        }
-      }
       var Module = {
         canvas: document.getElementById("canvas"),
         onRuntimeInitialized() { Module.runtimeReady = true; },
-        print(text) {
-          console.log(text);
-          updateStatus(text);
+        onGranitStatus(status, stage, result) {
+          statusElement.dataset.status = status;
+          statusElement.dataset.stage = stage;
+          statusElement.dataset.result = String(result);
+          statusElement.textContent = status === "failed" ? `${status}:${stage}:${result}` : status;
         },
-        printErr(text) {
-          console.error(text);
-          updateStatus(text);
+        onGranitProgress(stage, completed, total) {
+          const stages = new Set(statusElement.dataset.progressStages.split(",").filter(Boolean));
+          stages.add(stage);
+          statusElement.dataset.progressStages = [...stages].join(",");
+          globalThis.granitProgressHook?.(stage, completed, total);
         },
+        print(text) { console.log(text); },
+        printErr(text) { console.error(text); },
       };
     </script>
     {{{ SCRIPT }}}

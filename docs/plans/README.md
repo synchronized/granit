@@ -9,7 +9,12 @@
 
 ## 当前计划
 
-当前没有实施中的已确认计划。
+- [S-77：0.42.0 Model Viewer 架构收敛](S-77-0.42.0-model-viewer-convergence.md)——拆分共享 glTF
+  渲染支持，收敛加载操作、Viewer Document、Renderer 与调度边界，删除重叠状态和转发层。
+- [S-78：0.42.0 Model Viewer Linux 与 Emscripten 可靠性](S-78-0.42.0-model-viewer-platform-reliability.md)
+  ——统一 ImGui 加载体验，修复 Linux 托管浏览器 WebGPU 生命周期波动，并补齐原生 Linux 验收。
+- [S-79：0.42.0 ImGui Integration 教程与验收归位](S-79-0.42.0-imgui-integration-layout.md)——删除
+  重叠的 ImGui 综合 Sample，以 `08_sdl_imgui` 讲解外部 SDL Window 集成，并归位自动验收。
 
 ## 最近完成
 

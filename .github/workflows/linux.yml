@@ -202,7 +202,7 @@ jobs:
         shell: bash
         run: |
           ctest --test-dir "build/${{ steps.preset.outputs.name }}" \
-            --output-on-failure -R '^granit\.(integration\.imgui|example\.imgui_visual)$'
+            --output-on-failure -R '^granit\.integration\.imgui(\.visual)?$'
       - name: 运行 X11 SDL3 Surface 与 ImGui 集成测试
         shell: bash
         run: |
@@ -210,7 +210,11 @@ jobs:
             "build/${{ steps.preset.outputs.name }}/bin/granit_integration_sdl3_surface_test" \
             --smoke-test
           xvfb-run -a env SDL_VIDEODRIVER=x11 \
-            "build/${{ steps.preset.outputs.name }}/bin/granit_sdl3_imgui_example" --smoke-test
+            "build/${{ steps.preset.outputs.name }}/bin/granit_tutorial_08_sdl_imgui" --smoke-test
+          xvfb-run -a env SDL_VIDEODRIVER=x11 \
+            "build/${{ steps.preset.outputs.name }}/bin/granit_sample_model_viewer" \
+            --asset "$PWD/tests/web/assets/model_viewer_fixture.gltf" \
+            --backend=vulkan --validation --smoke-test --present-mode=fifo
       - name: 运行 Wayland SDL3 Surface 与 ImGui 集成测试
         shell: bash
         run: |
@@ -233,7 +237,11 @@ jobs:
             "build/${{ steps.preset.outputs.name }}/bin/granit_integration_sdl3_surface_test" \
             --smoke-test
           SDL_VIDEODRIVER=wayland \
-            "build/${{ steps.preset.outputs.name }}/bin/granit_sdl3_imgui_example" --smoke-test
+            "build/${{ steps.preset.outputs.name }}/bin/granit_tutorial_08_sdl_imgui" --smoke-test
+          SDL_VIDEODRIVER=wayland \
+            "build/${{ steps.preset.outputs.name }}/bin/granit_sample_model_viewer" \
+            --asset "$PWD/tests/web/assets/model_viewer_fixture.gltf" \
+            --backend=vulkan --validation --smoke-test --present-mode=fifo
       - name: 输出编译缓存统计
         if: always()
         shell: bash
