@@ -108,7 +108,8 @@ bool device_extension_available(const volk::VolkInstanceTable& functions, VkPhys
 bool is_suitable(const physical_device_candidate& candidate) noexcept {
   return candidate.api_version >= VK_API_VERSION_1_3 && candidate.has_graphics_queue &&
          candidate.dynamic_rendering && candidate.synchronization2 && candidate.maintenance4 &&
-         candidate.supports_requested_surfaces && candidate.supports_swapchain;
+         candidate.shader_demote_to_helper_invocation && candidate.supports_requested_surfaces &&
+         candidate.supports_swapchain;
 }
 
 bool is_better_candidate(const physical_device_candidate& candidate,
@@ -193,6 +194,8 @@ granit_result select_physical_device(const volk::VolkInstanceTable& functions, V
           .dynamic_rendering = features.dynamicRendering == VK_TRUE,
           .synchronization2 = features.synchronization2 == VK_TRUE,
           .maintenance4 = features.maintenance4 == VK_TRUE,
+          .shader_demote_to_helper_invocation =
+              features.shaderDemoteToHelperInvocation == VK_TRUE,
           .supports_requested_surfaces = supports_requested_surfaces,
           .supports_swapchain = supports_swapchain,
       };
@@ -209,6 +212,8 @@ granit_result select_physical_device(const volk::VolkInstanceTable& functions, V
         selected.device_local_memory = local_memory;
         selected.sampler_anisotropy = features2.features.samplerAnisotropy == VK_TRUE;
         selected.fill_mode_non_solid = features2.features.fillModeNonSolid == VK_TRUE;
+        selected.shader_demote_to_helper_invocation =
+            features.shaderDemoteToHelperInvocation == VK_TRUE;
       }
     }
     return found ? GRANIT_SUCCESS : GRANIT_ERROR_NO_SUITABLE_DEVICE;
