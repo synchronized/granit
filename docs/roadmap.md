@@ -29,7 +29,14 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段通过可运行�
 
 ## 当前计划
 
-当前没有实施中的已确认版本计划。
+### v0.42.0：Model Viewer 加载体验与浏览器稳定性
+
+**状态：规划中，P1。**
+
+[v0.42.0](versions/v0.42.0.md) 通过
+[S-77](plans/S-77-0.42.0-model-viewer-convergence.md) 收回浏览器 DOM 加载界面的职责，让 Desktop
+与 Web 共用 ImGui 加载状态、协作式执行和完成态 Viewer，并定位浏览器 WebGPU 生命周期波动。
+其余 Model Viewer 问题须取得复现和验收条件后再加入固定范围。
 
 ## 最近完成
 
