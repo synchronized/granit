@@ -4,6 +4,8 @@
 #ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_PIPELINE_PREPARE_H_
 #define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_PIPELINE_PREPARE_H_
 
+#include "gltf_rendering/gpu_scene.h"
+
 #include <granit/renderer/pipeline_warmup.hpp>
 
 #include <cstdint>
@@ -11,12 +13,11 @@
 
 namespace granit::example::model_viewer {
 
-class gpu_scene;
-
 /** 跨后端异步准备当前场景材质所需的 Pipeline。 */
 class pipeline_prepare final {
 public:
-  [[nodiscard]] granit::result begin(granit::renderer_ref renderer, gpu_scene& scene,
+  [[nodiscard]] granit::result begin(granit::renderer_ref renderer,
+                                     gltf_rendering::gpu_scene& scene,
                                      granit::texture_format color_format,
                                      granit::sample_count samples);
   [[nodiscard]] granit::result poll();

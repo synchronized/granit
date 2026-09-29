@@ -39,7 +39,7 @@ target_include_directories(
 )
 target_link_libraries(
   granit_sample_model_viewer_core
-  PUBLIC granit::window granit_example_camera granit_example_model_scene granit_example_imgui_canvas
+  PUBLIC granit::window granit_example_camera granit_example_gltf_rendering granit_example_imgui_canvas
 )
 set_target_properties(granit_sample_model_viewer_core PROPERTIES FOLDER "Examples/Samples")
 granit_target_compile_warnings(granit_sample_model_viewer_core)
@@ -67,7 +67,6 @@ if(GRANIT_HAS_NATIVE_WINDOW AND GRANIT_TESTING_ENABLED)
     application_core_test.cpp
     environment_ktx2_test.cpp
     render_task_executor_test.cpp
-    gpu_scene_test.cpp
     model_loading_session_test.cpp
     viewer_session_test.cpp
     performance_history_test.cpp

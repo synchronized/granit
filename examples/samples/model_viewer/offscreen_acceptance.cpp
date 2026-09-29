@@ -37,8 +37,8 @@ struct options {
   std::filesystem::path environment;
   std::filesystem::path output;
   std::filesystem::path expected;
-  granit::example::model_viewer::debug_display_mode debug_display{
-      granit::example::model_viewer::debug_display_mode::shaded};
+  granit::example::gltf_rendering::debug_display_mode debug_display{
+      granit::example::gltf_rendering::debug_display_mode::shaded};
   granit::sample_count sample_count{granit::sample_count::four};
   float sampler_anisotropy{8.0F};
   bool enable_fxaa{true};
@@ -77,8 +77,8 @@ bool parse_anisotropy(std::string_view value, float& output) {
 }
 
 bool parse_debug_display(std::string_view value,
-                         granit::example::model_viewer::debug_display_mode& mode) {
-  using enum granit::example::model_viewer::debug_display_mode;
+                         granit::example::gltf_rendering::debug_display_mode& mode) {
+  using enum granit::example::gltf_rendering::debug_display_mode;
   if (value == "shaded")
     mode = shaded;
   else if (value == "base-color")

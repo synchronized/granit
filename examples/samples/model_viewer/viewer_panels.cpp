@@ -120,12 +120,12 @@ void draw_inspector_panel(const gltf::scene& scene, const viewer_state& state,
 
   if (state.selected_material() < scene.materials.size()) {
     const auto& material = scene.materials[state.selected_material()];
-    material_factor_edit edit{.base_color = material.base_color,
-                              .metallic = material.metallic,
-                              .roughness = material.roughness,
-                              .normal_scale = material.normal_scale,
-                              .occlusion_strength = material.occlusion_strength,
-                              .emissive = material.emissive};
+    gltf_rendering::material_factor_update edit{.base_color = material.base_color,
+                                                .metallic = material.metallic,
+                                                .roughness = material.roughness,
+                                                .normal_scale = material.normal_scale,
+                                                .occlusion_strength = material.occlusion_strength,
+                                                .emissive = material.emissive};
     bool edited = ImGui::ColorEdit4("Base Color", &edit.base_color.x);
     edited |= ImGui::SliderFloat("Metallic", &edit.metallic, 0.0F, 1.0F);
     edited |= ImGui::SliderFloat("Roughness", &edit.roughness, 0.0F, 1.0F);
@@ -173,7 +173,7 @@ void draw_lighting_panel(const viewer_state& state, viewer_change& change) {
                                     "Sampled Normals", "Vertex Normals", "Vertex Tangents"};
   auto mode = static_cast<int>(state.debug_display());
   if (ImGui::Combo("Debug Display", &mode, modes.data(), static_cast<int>(modes.size())))
-    change.debug_display = static_cast<debug_display_mode>(mode);
+    change.debug_display = static_cast<gltf_rendering::debug_display_mode>(mode);
   ImGui::PopItemWidth();
 }
 

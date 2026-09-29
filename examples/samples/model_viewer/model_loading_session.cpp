@@ -115,12 +115,13 @@ granit::result model_loading_session::prepare(gltf::import_progress_callback pro
   }
   gltf::scene scene = *loaded_scene;
 
-  gpu_scene_plan plan;
-  const auto planned = build_gpu_scene_plan(scene, plan);
-  if (planned != gpu_scene_plan_error::none) {
+  gltf_rendering::gpu_scene_plan plan;
+  const auto planned = gltf_rendering::build_gpu_scene_plan(scene, plan);
+  if (planned != gltf_rendering::gpu_scene_plan_error::none) {
     fail(model_loading_error::gpu_plan,
-         planned == gpu_scene_plan_error::out_of_memory ? granit::result::out_of_memory
-                                                        : granit::result::invalid_argument,
+         planned == gltf_rendering::gpu_scene_plan_error::out_of_memory
+             ? granit::result::out_of_memory
+             : granit::result::invalid_argument,
          "生成 GPU Scene 计划失败");
     return result_;
   }
@@ -132,7 +133,7 @@ granit::result model_loading_session::prepare(gltf::import_progress_callback pro
   return result_;
 }
 
-bool model_loading_session::take(gltf::scene& scene, gpu_scene_plan& plan) {
+bool model_loading_session::take(gltf::scene& scene, gltf_rendering::gpu_scene_plan& plan) {
   if (status() != model_loading_status::ready)
     return false;
   scene = std::move(scene_);

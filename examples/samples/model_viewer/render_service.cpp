@@ -65,7 +65,7 @@ render_service::query_renderer_status(granit::renderer_status& status) const noe
 
 granit::result render_service::upload_scene(std::span<const std::byte> environment_bytes,
                                             float sampler_anisotropy,
-                                            gpu_scene_upload_callback progress,
+                                            gltf_rendering::gpu_scene_upload_callback progress,
                                             void* progress_user_data) {
   if (!state_)
     return granit::result::not_ready;
@@ -82,20 +82,19 @@ granit::result render_service::upload_scene(std::span<const std::byte> environme
   }
 }
 
-granit::result render_service::execute_upload_scene(std::span<const std::byte> environment_bytes,
-                                                    float sampler_anisotropy,
-                                                    gpu_scene_upload_callback progress,
-                                                    void* progress_user_data) {
+granit::result render_service::execute_upload_scene(
+    std::span<const std::byte> environment_bytes, float sampler_anisotropy,
+    gltf_rendering::gpu_scene_upload_callback progress, void* progress_user_data) {
   return state_ ? state_->runtime.upload_scene(environment_bytes, sampler_anisotropy, progress,
                                                progress_user_data)
                 : granit::result::not_ready;
 }
 
-granit::result render_service::begin_upload_scene(std::span<const std::byte> environment_bytes,
-                                                  float sampler_anisotropy,
-                                                  gpu_scene_upload_callback progress,
-                                                  void* progress_user_data,
-                                                  std::uint64_t& sequence) noexcept {
+granit::result
+render_service::begin_upload_scene(std::span<const std::byte> environment_bytes,
+                                   float sampler_anisotropy,
+                                   gltf_rendering::gpu_scene_upload_callback progress,
+                                   void* progress_user_data, std::uint64_t& sequence) noexcept {
   if (!state_)
     return granit::result::not_ready;
   try {
@@ -195,8 +194,9 @@ granit::result render_service::change_quality(const granit::render_pipeline_desc
       });
 }
 
-granit::result render_service::update_material(std::uint32_t material_index,
-                                               const material_factor_edit& edit) noexcept {
+granit::result
+render_service::update_material(std::uint32_t material_index,
+                                const gltf_rendering::material_factor_update& edit) noexcept {
   return state_ ? state_->executor->run_task([context = state_.get(), material_index, edit] {
     return context->runtime.update_material(material_index, edit);
   })

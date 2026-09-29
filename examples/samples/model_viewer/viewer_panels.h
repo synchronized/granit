@@ -4,7 +4,7 @@
 #ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_VIEWER_PANELS_H_
 #define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_VIEWER_PANELS_H_
 
-#include "model_viewer/material_edit.h"
+#include "gltf_rendering/material_update.h"
 #include "model_viewer/performance_history.h"
 #include "model_viewer/viewer_state.h"
 
@@ -56,7 +56,7 @@ struct performance_panel_info {
 
 struct viewer_panel_changes {
   viewer_change state;
-  std::optional<material_factor_edit> material;
+  std::optional<gltf_rendering::material_factor_update> material;
   std::optional<render_quality_config> quality;
 };
 

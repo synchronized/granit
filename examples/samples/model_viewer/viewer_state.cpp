@@ -25,8 +25,9 @@ bool valid_light(const directional_light_state& light) noexcept {
          light.radiance.z >= 0.0F;
 }
 
-bool valid_debug_display(debug_display_mode mode) noexcept {
-  return mode >= debug_display_mode::shaded && mode <= debug_display_mode::vertex_tangents;
+bool valid_debug_display(gltf_rendering::debug_display_mode mode) noexcept {
+  return mode >= gltf_rendering::debug_display_mode::shaded &&
+         mode <= gltf_rendering::debug_display_mode::vertex_tangents;
 }
 
 } // namespace
@@ -41,7 +42,7 @@ void viewer_state::reset(const gltf::scene& scene) {
   environment_intensity_ = 0.12F;
   environment_rotation_radians_ = 0.0F;
   background_color_ = {0.025F, 0.04F, 0.065F};
-  debug_display_ = debug_display_mode::shaded;
+  debug_display_ = gltf_rendering::debug_display_mode::shaded;
   panels_ = {};
 }
 

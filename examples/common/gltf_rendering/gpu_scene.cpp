@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "gpu_scene.h"
-#include "model_viewer/material_archive.h"
+#include "gltf_rendering/standard_pbr_assets.h"
 
 #include <granit/pipeline/pbr_material.hpp>
 #include <granit/renderer/upload_batch.hpp>
@@ -18,7 +18,7 @@
 #include <stdexcept>
 #include <utility>
 
-namespace granit::example::model_viewer {
+namespace granit::example::gltf_rendering {
 namespace {
 
 constexpr std::array<std::byte, 4> white_pixel{std::byte{255}, std::byte{255}, std::byte{255},
@@ -238,7 +238,7 @@ granit::result create_material(granit::renderer_ref renderer, const gltf::materi
       granit::material_parameter_update::sampler_binding(
           granit::material_parameter_id("emissive_sampler"), resolved_samplers[4]),
   };
-  const auto archive = model_viewer_material_archive();
+  const auto archive = standard_pbr_material_archive();
   const granit::material_desc desc{
       .archive = archive,
       .initial_updates = updates,
@@ -617,7 +617,7 @@ gpu_scene::create_snapshot(std::span<const granit_scene_view> views,
 }
 
 granit::result gpu_scene::update_material_factors(gltf::scene& source, std::uint32_t material_index,
-                                                  const material_factor_edit& edit) noexcept {
+                                                  const material_factor_update& edit) noexcept {
   const auto finite = [](float value) { return std::isfinite(value); };
   const auto unit = [&](float value) { return finite(value) && value >= 0.0F && value <= 1.0F; };
   if (!valid() || material_index >= source.materials.size() || material_index >= materials_.size())
@@ -911,7 +911,7 @@ granit::result gpu_scene::create(granit::renderer_ref renderer, const gltf::scen
     return granit::result::cancelled;
   if (const auto result = submit_uploads(); result.failed())
     return result;
-  if (const auto result = shader_library_.initialize(renderer, model_viewer_shader_library());
+  if (const auto result = shader_library_.initialize(renderer, standard_pbr_shader_library());
       result.failed())
     return result;
   materials_.reserve(source.materials.size() + 1);
@@ -964,4 +964,4 @@ granit::result gpu_scene::create(granit::renderer_ref renderer, const gltf::scen
   return granit::result::success;
 }
 
-} // namespace granit::example::model_viewer
+} // namespace granit::example::gltf_rendering

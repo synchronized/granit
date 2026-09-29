@@ -3,13 +3,13 @@
 
 #include "model_viewer/viewer_texture_previews.h"
 
-#include "model_viewer/gpu_scene.h"
+#include "gltf_rendering/gpu_scene.h"
 #include "model_viewer/viewer_ui.h"
 
 namespace granit::example::model_viewer {
 
-granit::result viewer_texture_previews::rebuild(const gltf::scene& scene, gpu_scene& gpu,
-                                                viewer_ui& ui) {
+granit::result viewer_texture_previews::rebuild(const gltf::scene& scene,
+                                                gltf_rendering::gpu_scene& gpu, viewer_ui& ui) {
   clear(ui);
   const auto register_preview = [&](const gltf::texture_reference& reference, bool srgb) {
     if (reference.image == gltf::invalid_index)

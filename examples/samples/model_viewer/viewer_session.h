@@ -37,7 +37,7 @@ public:
   [[nodiscard]] granit::result upload(granit::renderer_ref renderer,
                                       std::span<const std::byte> environment_bytes,
                                       float sampler_anisotropy,
-                                      gpu_scene_upload_callback progress = nullptr,
+                                      gltf_rendering::gpu_scene_upload_callback progress = nullptr,
                                       void* progress_user_data = nullptr) {
     return core_.upload(renderer, environment_bytes, sampler_anisotropy, progress,
                         progress_user_data);
@@ -46,8 +46,9 @@ public:
                                               float sampler_anisotropy) {
     return core_.reupload_scene(renderer, sampler_anisotropy);
   }
-  [[nodiscard]] granit::result update_material(std::uint32_t material_index,
-                                               const material_factor_edit& edit) noexcept {
+  [[nodiscard]] granit::result
+  update_material(std::uint32_t material_index,
+                  const gltf_rendering::material_factor_update& edit) noexcept {
     return core_.scene_gpu().update_material_factors(core_.cpu_scene(), material_index, edit);
   }
   void fail(granit::result result, std::string diagnostic) {
@@ -58,7 +59,7 @@ public:
   [[nodiscard]] const std::string& diagnostic() const noexcept { return core_.diagnostic(); }
   [[nodiscard]] gltf::scene& cpu_scene() noexcept { return core_.cpu_scene(); }
   [[nodiscard]] const gltf::scene& cpu_scene() const noexcept { return core_.cpu_scene(); }
-  [[nodiscard]] gpu_scene& scene_gpu() noexcept { return core_.scene_gpu(); }
+  [[nodiscard]] gltf_rendering::gpu_scene& scene_gpu() noexcept { return core_.scene_gpu(); }
   [[nodiscard]] viewer_state& state() noexcept { return core_.state(); }
   [[nodiscard]] performance_history& performance() noexcept { return core_.performance(); }
 

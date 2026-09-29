@@ -205,7 +205,7 @@ struct viewer_application::implementation {
   bool shutdown_complete{};
   std::atomic<bool> cancel_requested{};
   std::uint64_t upload_sequence{};
-  gpu_scene_upload_progress upload_progress{};
+  gltf_rendering::gpu_scene_upload_progress upload_progress{};
   performance_sample latest_performance{};
   bool has_performance{};
   std::unordered_map<std::uint64_t, float> submitted_frames;
@@ -277,7 +277,8 @@ struct viewer_application::implementation {
             self.desc.observer->on_scene_prepare_progress(progress));
   }
 
-  static bool upload_progress_callback(const gpu_scene_upload_progress& progress, void* user_data) {
+  static bool upload_progress_callback(const gltf_rendering::gpu_scene_upload_progress& progress,
+                                       void* user_data) {
     auto& self = *static_cast<implementation*>(user_data);
     self.upload_progress = progress;
     return !self.cancel_requested.load(std::memory_order_acquire) &&
@@ -888,7 +889,7 @@ unsigned viewer_application::lighting_generation() const noexcept {
 unsigned viewer_application::asset_status() const noexcept {
   return state_->phase == viewer_runtime_phase::failed ? 3U : (state_->asset_ready ? 2U : 1U);
 }
-gpu_scene_upload_progress viewer_application::upload_progress() const noexcept {
+gltf_rendering::gpu_scene_upload_progress viewer_application::upload_progress() const noexcept {
   return state_->upload_progress;
 }
 std::uint64_t viewer_application::shutdown_live_resource_count() const noexcept {

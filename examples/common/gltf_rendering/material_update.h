@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_EXAMPLES_COMMON_MODEL_VIEWER_MATERIAL_EDIT_H_
-#define GRANIT_EXAMPLES_COMMON_MODEL_VIEWER_MATERIAL_EDIT_H_
+#ifndef GRANIT_EXAMPLES_COMMON_GLTF_RENDERING_MATERIAL_UPDATE_H_
+#define GRANIT_EXAMPLES_COMMON_GLTF_RENDERING_MATERIAL_UPDATE_H_
 
 #include <granit/math/types.hpp>
 
 #include <cstdint>
 
-namespace granit::example::model_viewer {
+namespace granit::example::gltf_rendering {
 
 /** 标准 PBR 材质支持的调试输出。 */
 enum class debug_display_mode : std::uint32_t {
@@ -23,7 +23,7 @@ enum class debug_display_mode : std::uint32_t {
   vertex_tangents,
 };
 
-struct material_factor_edit {
+struct material_factor_update {
   math::float4 base_color{1.0F, 1.0F, 1.0F, 1.0F};
   float metallic{1.0F};
   float roughness{1.0F};
@@ -32,6 +32,6 @@ struct material_factor_edit {
   math::float3 emissive{};
 };
 
-} // namespace granit::example::model_viewer
+} // namespace granit::example::gltf_rendering
 
 #endif

@@ -29,8 +29,8 @@ granit::example::model_viewer::web::browser_test::hooks test_hooks;
 #endif
 
 const char*
-upload_stage_name(granit::example::model_viewer::gpu_scene_upload_stage stage) noexcept {
-  using enum granit::example::model_viewer::gpu_scene_upload_stage;
+upload_stage_name(granit::example::gltf_rendering::gpu_scene_upload_stage stage) noexcept {
+  using enum granit::example::gltf_rendering::gpu_scene_upload_stage;
   switch (stage) {
   case planning:
     return "planning";
@@ -94,8 +94,8 @@ public:
     return true;
   }
 
-  bool on_gpu_upload_progress(
-      const granit::example::model_viewer::gpu_scene_upload_progress& progress) noexcept override {
+  bool on_gpu_upload_progress(const granit::example::gltf_rendering::gpu_scene_upload_progress&
+                                  progress) noexcept override {
     std::printf("GRANIT_PROGRESS:%s:%u:%u\n", upload_stage_name(progress.stage), progress.completed,
                 progress.total);
     emscripten_sleep(0);

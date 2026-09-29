@@ -30,7 +30,7 @@ granit::result viewer_session::prepare_scene(gltf::import_progress_callback prog
     return result;
   }
   gltf::scene scene;
-  gpu_scene_plan plan;
+  gltf_rendering::gpu_scene_plan plan;
   if (!loading_.take(scene, plan)) {
     result = granit::result::internal;
     core_.fail(result, "无法取得已准备的模型资源");

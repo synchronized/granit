@@ -7,7 +7,7 @@
 #include "assets/asset_manager.h"
 #include "gltf/importer.h"
 #include "gltf/scene.h"
-#include "model_viewer/gpu_scene.h"
+#include "gltf_rendering/gpu_scene.h"
 
 #include <atomic>
 #include <string>
@@ -43,7 +43,7 @@ public:
   void poll();
   [[nodiscard]] granit::result prepare(gltf::import_progress_callback progress = nullptr,
                                        void* progress_user_data = nullptr);
-  [[nodiscard]] bool take(gltf::scene& scene, gpu_scene_plan& plan);
+  [[nodiscard]] bool take(gltf::scene& scene, gltf_rendering::gpu_scene_plan& plan);
   void cancel() noexcept;
   void reset() noexcept;
 
@@ -60,7 +60,7 @@ private:
 
   assets::asset_handle<gltf::scene> scene_asset_;
   gltf::scene scene_;
-  gpu_scene_plan plan_;
+  gltf_rendering::gpu_scene_plan plan_;
   std::atomic<model_loading_status> status_{model_loading_status::idle};
   std::atomic_bool cancel_requested_{};
   model_loading_error error_{model_loading_error::none};

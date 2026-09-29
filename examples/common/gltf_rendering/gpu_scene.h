@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_EXAMPLES_COMMON_MODEL_VIEWER_GPU_SCENE_H_
-#define GRANIT_EXAMPLES_COMMON_MODEL_VIEWER_GPU_SCENE_H_
+#ifndef GRANIT_EXAMPLES_COMMON_GLTF_RENDERING_GPU_SCENE_H_
+#define GRANIT_EXAMPLES_COMMON_GLTF_RENDERING_GPU_SCENE_H_
 
 #include "gltf/scene.h"
-#include "model_viewer/material_edit.h"
+#include "gltf_rendering/material_update.h"
 
 #include <granit/core/result.hpp>
 #include <granit/pipeline/material.hpp>
@@ -23,7 +23,7 @@
 #include <utility>
 #include <vector>
 
-namespace granit::example::model_viewer {
+namespace granit::example::gltf_rendering {
 
 struct packed_vertex {
   math::float3 position{};
@@ -192,7 +192,7 @@ public:
   /** 事务式更新 GPU 参数；成功后才同步修改 CPU Scene。 */
   [[nodiscard]] granit::result update_material_factors(gltf::scene& source,
                                                        std::uint32_t material_index,
-                                                       const material_factor_edit& edit) noexcept;
+                                                       const material_factor_update& edit) noexcept;
 
   /** 更新所有材质的调试显示模式。 */
   [[nodiscard]] granit::result update_debug_display(std::uint32_t mode) noexcept;
@@ -217,6 +217,6 @@ private:
   std::vector<granit::render_pipeline_draw_binding> draw_bindings_;
 };
 
-} // namespace granit::example::model_viewer
+} // namespace granit::example::gltf_rendering
 
 #endif

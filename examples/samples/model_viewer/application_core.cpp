@@ -12,7 +12,7 @@
 namespace granit::example::model_viewer {
 namespace {
 
-camera::camera_bounds scene_bounds(const gpu_scene_plan& plan,
+camera::camera_bounds scene_bounds(const gltf_rendering::gpu_scene_plan& plan,
                                    std::uint32_t selected_node) noexcept {
   math::float3 minimum{std::numeric_limits<float>::max(), std::numeric_limits<float>::max(),
                        std::numeric_limits<float>::max()};
@@ -76,10 +76,10 @@ granit::result application_core::renderer_ready() noexcept {
 granit::result application_core::accept_scene(gltf::scene scene) {
   if (phase_ != application_phase::asset_loading)
     return granit::result::invalid_argument;
-  gpu_scene_plan plan;
-  const auto plan_result = build_gpu_scene_plan(scene, plan);
-  if (plan_result != gpu_scene_plan_error::none) {
-    const auto result = plan_result == gpu_scene_plan_error::out_of_memory
+  gltf_rendering::gpu_scene_plan plan;
+  const auto plan_result = gltf_rendering::build_gpu_scene_plan(scene, plan);
+  if (plan_result != gltf_rendering::gpu_scene_plan_error::none) {
+    const auto result = plan_result == gltf_rendering::gpu_scene_plan_error::out_of_memory
                             ? granit::result::out_of_memory
                             : granit::result::invalid_argument;
     fail(result, "模型查看器 GPU Scene 计划生成失败");
@@ -88,7 +88,8 @@ granit::result application_core::accept_scene(gltf::scene scene) {
   return accept_scene(std::move(scene), std::move(plan));
 }
 
-granit::result application_core::accept_scene(gltf::scene scene, gpu_scene_plan plan) {
+granit::result application_core::accept_scene(gltf::scene scene,
+                                              gltf_rendering::gpu_scene_plan plan) {
   if (phase_ != application_phase::asset_loading)
     return granit::result::invalid_argument;
   try {
@@ -106,7 +107,7 @@ granit::result application_core::accept_scene(gltf::scene scene, gpu_scene_plan 
 granit::result application_core::upload(granit::renderer_ref renderer,
                                         std::span<const std::byte> environment_bytes,
                                         float sampler_anisotropy,
-                                        gpu_scene_upload_callback progress,
+                                        gltf_rendering::gpu_scene_upload_callback progress,
                                         void* progress_user_data) {
   if (phase_ != application_phase::gpu_upload)
     return granit::result::invalid_argument;

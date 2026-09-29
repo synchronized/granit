@@ -5,7 +5,7 @@
 #define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_APPLICATION_CORE_H_
 
 #include "gltf/importer.h"
-#include "model_viewer/gpu_scene.h"
+#include "gltf_rendering/gpu_scene.h"
 #include "model_viewer/performance_history.h"
 #include "model_viewer/viewer_state.h"
 
@@ -59,17 +59,17 @@ public:
   [[nodiscard]] granit::result renderer_ready() noexcept;
   [[nodiscard]] granit::result accept_scene(gltf::scene scene);
   /** 接收已经在资产线程完成打包的 CPU Scene 与 GPU 创建计划。 */
-  [[nodiscard]] granit::result accept_scene(gltf::scene scene, gpu_scene_plan plan);
+  [[nodiscard]] granit::result accept_scene(gltf::scene scene, gltf_rendering::gpu_scene_plan plan);
   /** 上传场景；environment_bytes 为空时使用内置摄影棚环境，否则加载 GRENV 资产。 */
   [[nodiscard]] granit::result upload(granit::renderer_ref renderer,
                                       std::span<const std::byte> environment_bytes = {},
                                       float sampler_anisotropy = 8.0F,
-                                      gpu_scene_upload_callback progress = nullptr,
+                                      gltf_rendering::gpu_scene_upload_callback progress = nullptr,
                                       void* progress_user_data = nullptr);
   [[nodiscard]] granit::result upload(granit::renderer& renderer,
                                       std::span<const std::byte> environment_bytes = {},
                                       float sampler_anisotropy = 8.0F,
-                                      gpu_scene_upload_callback progress = nullptr,
+                                      gltf_rendering::gpu_scene_upload_callback progress = nullptr,
                                       void* progress_user_data = nullptr) {
     return upload(renderer.ref(), environment_bytes, sampler_anisotropy, progress,
                   progress_user_data);
@@ -90,7 +90,7 @@ public:
   [[nodiscard]] const std::string& diagnostic() const noexcept { return diagnostic_; }
   [[nodiscard]] gltf::scene& cpu_scene() noexcept { return cpu_scene_; }
   [[nodiscard]] const gltf::scene& cpu_scene() const noexcept { return cpu_scene_; }
-  [[nodiscard]] gpu_scene& scene_gpu() noexcept { return gpu_scene_; }
+  [[nodiscard]] gltf_rendering::gpu_scene& scene_gpu() noexcept { return gpu_scene_; }
   [[nodiscard]] viewer_state& state() noexcept { return state_; }
   [[nodiscard]] performance_history& performance() noexcept { return performance_; }
 
@@ -99,8 +99,8 @@ private:
   granit::result failure_result_{granit::result::success};
   std::string diagnostic_;
   gltf::scene cpu_scene_;
-  gpu_scene_plan gpu_plan_;
-  gpu_scene gpu_scene_;
+  gltf_rendering::gpu_scene_plan gpu_plan_;
+  gltf_rendering::gpu_scene gpu_scene_;
   granit::environment_map environment_;
   granit::environment_map_info environment_info_;
   viewer_state state_;

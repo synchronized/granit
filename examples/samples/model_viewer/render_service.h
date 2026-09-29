@@ -32,20 +32,19 @@ public:
   [[nodiscard]] granit::result
   query_renderer_status(granit::renderer_status& status) const noexcept;
 
-  [[nodiscard]] granit::result upload_scene(std::span<const std::byte> environment_bytes,
-                                            float sampler_anisotropy,
-                                            gpu_scene_upload_callback progress = nullptr,
-                                            void* progress_user_data = nullptr);
-  [[nodiscard]] granit::result begin_upload_scene(std::span<const std::byte> environment_bytes,
-                                                  float sampler_anisotropy,
-                                                  gpu_scene_upload_callback progress,
-                                                  void* progress_user_data,
-                                                  std::uint64_t& sequence) noexcept;
+  [[nodiscard]] granit::result
+  upload_scene(std::span<const std::byte> environment_bytes, float sampler_anisotropy,
+               gltf_rendering::gpu_scene_upload_callback progress = nullptr,
+               void* progress_user_data = nullptr);
+  [[nodiscard]] granit::result
+  begin_upload_scene(std::span<const std::byte> environment_bytes, float sampler_anisotropy,
+                     gltf_rendering::gpu_scene_upload_callback progress, void* progress_user_data,
+                     std::uint64_t& sequence) noexcept;
   /** 仅供已经在 executor 回调内运行的任务使用，避免递归同步排队。 */
-  [[nodiscard]] granit::result execute_upload_scene(std::span<const std::byte> environment_bytes,
-                                                    float sampler_anisotropy,
-                                                    gpu_scene_upload_callback progress = nullptr,
-                                                    void* progress_user_data = nullptr);
+  [[nodiscard]] granit::result
+  execute_upload_scene(std::span<const std::byte> environment_bytes, float sampler_anisotropy,
+                       gltf_rendering::gpu_scene_upload_callback progress = nullptr,
+                       void* progress_user_data = nullptr);
   [[nodiscard]] granit::result submit(frame_packet packet, frame_execution_result& output);
   [[nodiscard]] granit::result submit_frame(frame_packet packet, std::uint64_t& sequence) noexcept;
   [[nodiscard]] bool try_take_frame_completion(frame_completion& completion) noexcept;
@@ -64,8 +63,9 @@ public:
   [[nodiscard]] granit::result change_quality(const granit::render_pipeline_desc& desc,
                                               float sampler_anisotropy, bool reupload_scene,
                                               render_quality_change_result& output) noexcept;
-  [[nodiscard]] granit::result update_material(std::uint32_t material_index,
-                                               const material_factor_edit& edit) noexcept;
+  [[nodiscard]] granit::result
+  update_material(std::uint32_t material_index,
+                  const gltf_rendering::material_factor_update& edit) noexcept;
   [[nodiscard]] granit::result recreate_swapchain(const granit::swapchain_desc& desc) noexcept;
   [[nodiscard]] granit::result recreate_surface(granit::window& window,
                                                 const granit::swapchain_desc& desc) noexcept;

@@ -6,7 +6,7 @@
 
 #include "camera/orbit_camera.h"
 #include "gltf/scene.h"
-#include "model_viewer/material_edit.h"
+#include "gltf_rendering/material_update.h"
 
 #include <cstdint>
 #include <optional>
@@ -37,7 +37,7 @@ struct viewer_change {
   std::optional<float> environment_intensity;
   std::optional<float> environment_rotation_radians;
   std::optional<math::float3> background_color;
-  std::optional<debug_display_mode> debug_display;
+  std::optional<gltf_rendering::debug_display_mode> debug_display;
   std::optional<viewer_panels> panels;
 };
 
@@ -74,7 +74,9 @@ public:
     return environment_rotation_radians_;
   }
   [[nodiscard]] math::float3 background_color() const noexcept { return background_color_; }
-  [[nodiscard]] debug_display_mode debug_display() const noexcept { return debug_display_; }
+  [[nodiscard]] gltf_rendering::debug_display_mode debug_display() const noexcept {
+    return debug_display_;
+  }
   [[nodiscard]] const viewer_panels& panels() const noexcept { return panels_; }
 
 private:
@@ -87,7 +89,7 @@ private:
   float environment_intensity_{0.12F};
   float environment_rotation_radians_{};
   math::float3 background_color_{0.025F, 0.04F, 0.065F};
-  debug_display_mode debug_display_{debug_display_mode::shaded};
+  gltf_rendering::debug_display_mode debug_display_{gltf_rendering::debug_display_mode::shaded};
   viewer_panels panels_;
 };
 

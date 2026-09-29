@@ -97,7 +97,7 @@ render_runtime::query_renderer_status(granit::renderer_status& status) const noe
 
 granit::result render_runtime::upload_scene(std::span<const std::byte> environment_bytes,
                                             float sampler_anisotropy,
-                                            gpu_scene_upload_callback progress,
+                                            gltf_rendering::gpu_scene_upload_callback progress,
                                             void* progress_user_data) {
   return state_ ? state_->session->upload(state_->renderer_owner.ref(), environment_bytes,
                                           sampler_anisotropy, progress, progress_user_data)
@@ -268,8 +268,9 @@ granit::result render_runtime::change_quality(const granit::render_pipeline_desc
   return result;
 }
 
-granit::result render_runtime::update_material(std::uint32_t material_index,
-                                               const material_factor_edit& edit) noexcept {
+granit::result
+render_runtime::update_material(std::uint32_t material_index,
+                                const gltf_rendering::material_factor_update& edit) noexcept {
   return state_ ? state_->session->update_material(material_index, edit)
                 : granit::result::not_ready;
 }
