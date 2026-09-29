@@ -37,7 +37,9 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段通过可运行�
 [S-77](plans/S-77-0.42.0-model-viewer-convergence.md) 重新划分 glTF Rendering、Asset Manager、
 任务执行、Viewer 状态和渲染职责，再由
 [S-78](plans/S-78-0.42.0-model-viewer-platform-reliability.md) 统一 Desktop/Web 的 ImGui 加载流程，
-修复 v0.41.0 遗留的 Linux 托管 Emscripten 浏览器 WebGPU 生命周期波动，并完成原生 Linux 验收。
+修复 v0.41.0 遗留的 Linux 托管 Emscripten 浏览器 WebGPU 生命周期波动，并完成原生 Linux 验收；
+[S-79](plans/S-79-0.42.0-imgui-integration-layout.md) 将已重叠的 ImGui 综合 Sample 收敛为
+`08_sdl_imgui` 第三方宿主集成教程、Integration 测试、Web 验收和 Benchmark。
 
 ## 最近完成
 
