@@ -8,25 +8,6 @@
 
 namespace granit::example::model_viewer {
 
-granit::render_pipeline_render_desc
-viewer_frame::render_desc(granit::texture_view_ref output, granit::texture_format output_format,
-                          const granit::acquired_frame* frame,
-                          granit::canvas_draw_list_ref canvas_list) const noexcept {
-  granit::render_pipeline_render_desc desc;
-  desc.scene = snapshot.ref();
-  desc.output = output;
-  desc.output_format = output_format;
-  desc.width = width;
-  desc.height = height;
-  desc.exposure_ev = exposure_ev;
-  desc.draw_bindings = draw_bindings;
-  desc.frame = frame;
-  desc.canvas = canvas_list;
-  desc.clear_color = clear_color;
-  desc.environment = &environment;
-  return desc;
-}
-
 granit::result application_core::begin_renderer() noexcept {
   if (phase_ != application_phase::platform_ready)
     return granit::result::invalid_argument;
@@ -70,104 +51,74 @@ granit::result application_core::accept_scene(gltf::scene scene, gltf_rendering:
   }
 }
 
-granit::result application_core::upload(granit::renderer_ref renderer,
-                                        std::span<const std::byte> environment_bytes,
-                                        float sampler_anisotropy,
-                                        gltf_rendering::scene_upload_callback progress,
-                                        void* progress_user_data) {
+granit::result application_core::prepare_upload(gltf::scene& scene,
+                                                gltf_rendering::scene_plan& plan) const {
   if (phase_ != application_phase::gpu_upload)
     return granit::result::invalid_argument;
-  const auto result = scene_resources_.initialize(renderer, document_.scene(), std::move(gpu_plan_),
-                                                  sampler_anisotropy, progress, progress_user_data);
-  if (result.failed()) {
-    fail(result, "模型查看器 glTF Scene GPU 资源 上传失败");
-    return result;
+  try {
+    scene = document_.scene();
+    plan = gpu_plan_;
+    return granit::result::success;
+  } catch (const std::bad_alloc&) {
+    return granit::result::out_of_memory;
   }
-  granit::result environment_result;
-  if (environment_bytes.empty()) {
-    environment_result = environment_.initialize_builtin(renderer);
-  } else {
-    environment_result = environment_.initialize(renderer, environment_bytes);
-  }
-  if (environment_result.ok())
-    environment_result = environment_.get_info(environment_info_);
-  if (environment_result.ok() && !environment_bytes.empty()) {
-    viewer_change recommended_lighting;
-    recommended_lighting.environment_intensity = environment_info_.environment.intensity;
-    recommended_lighting.exposure_ev = environment_info_.recommended_exposure_ev;
-    if (document_.apply(recommended_lighting) != viewer_state_error::none)
-      environment_result = granit::result::invalid_argument;
-  }
-  if (environment_result.failed()) {
-    scene_resources_.reset();
-    fail(environment_result, "模型查看器内建环境上传失败");
-    return environment_result;
-  }
-  phase_ = application_phase::ready;
-  return granit::result::success;
 }
 
-granit::result application_core::reupload_scene(granit::renderer_ref renderer,
-                                                float sampler_anisotropy) {
-  if (phase_ != application_phase::ready)
+granit::result application_core::complete_upload(float recommended_exposure_ev,
+                                                 float environment_intensity) noexcept {
+  if (phase_ != application_phase::gpu_upload)
     return granit::result::invalid_argument;
-  return scene_resources_.initialize(renderer, document_.scene(), sampler_anisotropy);
+  viewer_change recommended_lighting;
+  recommended_lighting.environment_intensity = environment_intensity;
+  recommended_lighting.exposure_ev = recommended_exposure_ev;
+  if (document_.apply(recommended_lighting) != viewer_state_error::none)
+    return granit::result::invalid_argument;
+  phase_ = application_phase::ready;
+  return granit::result::success;
 }
 
 granit::result application_core::tick(const viewer_document_update& input, viewer_frame& output) {
   if (phase_ != application_phase::ready)
     return granit::result::invalid_argument;
   viewer_document_frame document_frame;
-  const auto document_result = document_.update(input, scene_resources_.plan(), document_frame);
+  const auto document_result = document_.update(input, gpu_plan_, document_frame);
   if (document_result.failed())
     return document_result;
-  if (input.change.debug_display) {
-    const auto debug_result = scene_resources_.update_debug_display(
-        static_cast<std::uint32_t>(*input.change.debug_display));
-    if (debug_result.failed())
-      return debug_result;
-  }
-
   viewer_frame candidate;
-  const auto snapshot_result = scene_resources_.create_snapshot(
-      std::span{&document_frame.view, 1}, std::span{&document_frame.directional_light, 1}, {}, {},
-      candidate.snapshot);
-  if (snapshot_result.failed())
-    return snapshot_result;
+  candidate.view = document_frame.view;
+  candidate.directional_light = document_frame.directional_light;
   candidate.width = input.width;
   candidate.height = input.height;
   candidate.exposure_ev = document_frame.exposure_ev;
   candidate.clear_color = document_frame.clear_color;
-  candidate.environment = {
-      .irradiance = environment_info_.environment.irradiance,
-      .prefiltered_environment = environment_info_.environment.prefiltered_environment,
-      .brdf_lut = environment_info_.environment.brdf_lut,
-      .rotation_radians = environment_info_.environment.rotation_radians,
-      .intensity = environment_info_.environment.intensity,
-      .prefiltered_max_mip = environment_info_.environment.prefiltered_max_mip,
-  };
-  candidate.environment.intensity = document_frame.environment_intensity;
-  candidate.environment.rotation_radians = document_frame.environment_rotation_radians;
-  try {
-    candidate.draw_bindings = scene_resources_.draw_bindings();
-  } catch (const std::bad_alloc&) {
-    return granit::result::out_of_memory;
-  }
+  candidate.environment_intensity = document_frame.environment_intensity;
+  candidate.environment_rotation_radians = document_frame.environment_rotation_radians;
   output = std::move(candidate);
   return granit::result::success;
 }
 
+granit::result
+application_core::update_material(std::uint32_t material_index,
+                                  const gltf_rendering::material_factor_update& edit) noexcept {
+  if (phase_ != application_phase::ready || material_index >= document_.scene().materials.size())
+    return granit::result::invalid_argument;
+  auto& material = document_.scene().materials[material_index];
+  material.base_color = edit.base_color;
+  material.metallic = edit.metallic;
+  material.roughness = edit.roughness;
+  material.normal_scale = edit.normal_scale;
+  material.occlusion_strength = edit.occlusion_strength;
+  material.emissive = edit.emissive;
+  return granit::result::success;
+}
+
 void application_core::fail(granit::result result, std::string diagnostic) {
-  scene_resources_.reset();
   failure_result_ = result;
   diagnostic_ = std::move(diagnostic);
   phase_ = application_phase::failed;
 }
 
 void application_core::reset() noexcept {
-  scene_resources_.reset();
-  static_cast<void>(environment_.reset());
-  environment_info_ = {};
   document_.clear();
   gpu_plan_ = {};
   diagnostic_.clear();

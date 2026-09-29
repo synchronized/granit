@@ -4,11 +4,13 @@
 #include "application_core.h"
 #include "assets/asset_manager.h"
 #include "gltf/asset_loaders.h"
+#include "gltf_rendering/scene_resources.h"
 #include "platform/register_asset_sources.h"
 #include "tasks/task_system.h"
 #include "validation/screenshot_comparison.h"
 
 #include <granit/granit.hpp>
+#include <granit/pipeline/environment_map.hpp>
 #include <granit/pipeline/render_pipeline.hpp>
 
 #include <algorithm>
@@ -373,13 +375,35 @@ int main(int argc, char** argv) {
     stage = "接收模型资产";
     result = core.accept_scene(*model.value());
   }
+  granit::example::gltf::scene render_scene;
+  granit::example::gltf_rendering::scene_plan render_plan;
+  granit::example::gltf_rendering::scene_resources scene_resources;
+  granit::environment_map environment_map;
+  granit::environment_map_info environment_info;
   if (result.ok()) {
     stage = "上传 glTF Scene GPU 资源";
     const auto environment_asset = environment.value();
     const auto environment_bytes = environment_asset
                                        ? std::span<const std::byte>{environment_asset->bytes}
                                        : std::span<const std::byte>{};
-    result = core.upload(renderer, environment_bytes, arguments.sampler_anisotropy);
+    result = core.prepare_upload(render_scene, render_plan);
+    if (result.ok()) {
+      result = scene_resources.initialize(renderer, render_scene, std::move(render_plan),
+                                          arguments.sampler_anisotropy);
+    }
+    if (result.ok()) {
+      result = environment_bytes.empty() ? environment_map.initialize_builtin(renderer)
+                                         : environment_map.initialize(renderer, environment_bytes);
+    }
+    if (result.ok())
+      result = environment_map.get_info(environment_info);
+    if (result.ok()) {
+      const auto exposure =
+          environment_bytes.empty() ? -0.5F : environment_info.recommended_exposure_ev;
+      const auto intensity =
+          environment_bytes.empty() ? 0.12F : environment_info.environment.intensity;
+      result = core.complete_upload(exposure, intensity);
+    }
   }
 
   granit::texture output_texture;
@@ -423,8 +447,38 @@ int main(int argc, char** argv) {
     if (result.ok()) {
       stage = "渲染离屏帧";
       tick.clear_color = {0.0F, 0.0F, 0.0F, 1.0F};
-      const auto render = tick.render_desc(output_view.ref(), granit::texture_format::rgba8_unorm);
-      result = pipeline.render(render);
+      result =
+          scene_resources.update_debug_display(static_cast<std::uint32_t>(arguments.debug_display));
+      granit::scene_snapshot snapshot;
+      if (result.ok()) {
+        result = scene_resources.create_snapshot(
+            std::span{&tick.view, 1}, std::span{&tick.directional_light, 1}, {}, {}, snapshot);
+      }
+      granit::render_pipeline_environment render_environment{
+          .irradiance = environment_info.environment.irradiance,
+          .prefiltered_environment = environment_info.environment.prefiltered_environment,
+          .brdf_lut = environment_info.environment.brdf_lut,
+          .rotation_radians = tick.environment_rotation_radians,
+          .intensity = tick.environment_intensity,
+          .prefiltered_max_mip = environment_info.environment.prefiltered_max_mip,
+      };
+      if (result.ok()) {
+        result = pipeline.render({.scene = snapshot.ref(),
+                                  .output = output_view.ref(),
+                                  .output_format = granit::texture_format::rgba8_unorm,
+                                  .width = tick.width,
+                                  .height = tick.height,
+                                  .first_view = 0,
+                                  .view_count = 1,
+                                  .exposure_ev = tick.exposure_ev,
+                                  .draw_bindings = scene_resources.draw_bindings(),
+                                  .outputs = {},
+                                  .frame = nullptr,
+                                  .canvas = {},
+                                  .debug_draw = {},
+                                  .clear_color = tick.clear_color,
+                                  .environment = &render_environment});
+      }
     }
   }
   if (result.failed()) {

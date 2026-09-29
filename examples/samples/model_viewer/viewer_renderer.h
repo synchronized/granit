@@ -4,10 +4,12 @@
 #ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_VIEWER_RENDERER_H_
 #define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_VIEWER_RENDERER_H_
 
+#include "gltf_rendering/scene_resources.h"
 #include "model_viewer/render_execution.h"
 
 #include <granit/granit.hpp>
 #include <granit/pipeline/canvas_draw_list.hpp>
+#include <granit/pipeline/environment_map.hpp>
 #include <granit/pipeline/render_pipeline.hpp>
 #include <granit/window.hpp>
 
@@ -17,8 +19,6 @@
 #include <span>
 
 namespace granit::example::model_viewer {
-
-class viewer_session;
 
 struct render_quality_change_result {
   bool scene_reuploaded{};
@@ -32,8 +32,7 @@ public:
   viewer_renderer(const viewer_renderer&) = delete;
   viewer_renderer& operator=(const viewer_renderer&) = delete;
 
-  [[nodiscard]] granit::result initialize_renderer(const granit::renderer_desc& desc,
-                                                   viewer_session& session) noexcept;
+  [[nodiscard]] granit::result initialize_renderer(const granit::renderer_desc& desc) noexcept;
   /** Renderer 进入 ready 后查询稳定属性；异步后端由平台循环决定调用时机。 */
   [[nodiscard]] granit::result complete_renderer_initialization() noexcept;
   [[nodiscard]] granit::result initialize_presentation(granit::window& window,
@@ -44,7 +43,8 @@ public:
   query_renderer_status(granit::renderer_status& status) const noexcept;
 
   [[nodiscard]] granit::result
-  upload_scene(std::span<const std::byte> environment_bytes, float sampler_anisotropy,
+  upload_scene(gltf::scene scene, gltf_rendering::scene_plan plan,
+               std::span<const std::byte> environment_bytes, float sampler_anisotropy,
                gltf_rendering::scene_upload_callback progress = nullptr,
                void* progress_user_data = nullptr);
   [[nodiscard]] granit::result render(frame_packet&& packet, frame_execution_result& output);
@@ -61,6 +61,7 @@ public:
   [[nodiscard]] granit::result
   update_material(std::uint32_t material_index,
                   const gltf_rendering::material_factor_update& edit) noexcept;
+  [[nodiscard]] granit::result update_debug_display(std::uint32_t mode) noexcept;
   [[nodiscard]] granit::result recreate_swapchain(const granit::swapchain_desc& desc) noexcept;
   [[nodiscard]] granit::result recreate_surface(granit::window& window,
                                                 const granit::swapchain_desc& desc) noexcept;
@@ -76,6 +77,8 @@ public:
   [[nodiscard]] granit::texture_view_ref font_view() const noexcept;
   [[nodiscard]] granit::sampler_ref font_sampler() const noexcept;
   [[nodiscard]] granit::renderer_ref renderer() const noexcept;
+  [[nodiscard]] gltf_rendering::scene_resources& scene_resources() noexcept;
+  [[nodiscard]] const granit::environment_map_info& environment_info() const noexcept;
   /** 仅供浏览器 C ABI 验收钩子使用。 */
   [[nodiscard]] granit_renderer native_renderer() const noexcept;
   /** 仅供浏览器 C ABI 验收钩子使用。 */

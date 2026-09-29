@@ -5,14 +5,12 @@
 #define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_APPLICATION_CORE_H_
 
 #include "gltf/importer.h"
-#include "gltf_rendering/scene_resources.h"
 #include "model_viewer/viewer_document.h"
 
-#include <granit/pipeline/environment_map.hpp>
+#include <granit/pipeline/render_pipeline.hpp>
 
 #include <span>
 #include <string>
-#include <vector>
 
 namespace granit::example::model_viewer {
 
@@ -25,21 +23,16 @@ enum class application_phase {
   failed,
 };
 
-/** Core 生成的单帧不可变渲染数据；其数组和环境数据不借用下一帧可变状态。 */
+/** Document 生成的单帧不可变数据；GPU Snapshot 由渲染线程创建。 */
 struct viewer_frame {
-  granit::scene_snapshot snapshot;
-  granit::render_pipeline_environment environment;
-  std::vector<granit::render_pipeline_draw_binding> draw_bindings;
+  granit::scene_view view;
+  granit::scene_directional_light directional_light;
   std::uint32_t width{};
   std::uint32_t height{};
   float exposure_ev{};
+  float environment_intensity{};
+  float environment_rotation_radians{};
   granit::clear_color_value clear_color{0.0F, 0.0F, 0.0F, 1.0F};
-
-  /** 在消费线程生成只借用当前提交包的渲染描述。 */
-  [[nodiscard]] granit::render_pipeline_render_desc
-  render_desc(granit::texture_view_ref output, granit::texture_format output_format,
-              const granit::acquired_frame* frame = nullptr,
-              granit::canvas_draw_list_ref canvas_list = {}) const noexcept;
 };
 
 class application_core {
@@ -49,28 +42,14 @@ public:
   [[nodiscard]] granit::result accept_scene(gltf::scene scene);
   /** 接收已经在资产线程完成打包的 CPU Scene 与 GPU 创建计划。 */
   [[nodiscard]] granit::result accept_scene(gltf::scene scene, gltf_rendering::scene_plan plan);
-  /** 上传场景；environment_bytes 为空时使用内置摄影棚环境，否则加载 GRENV 资产。 */
-  [[nodiscard]] granit::result upload(granit::renderer_ref renderer,
-                                      std::span<const std::byte> environment_bytes = {},
-                                      float sampler_anisotropy = 8.0F,
-                                      gltf_rendering::scene_upload_callback progress = nullptr,
-                                      void* progress_user_data = nullptr);
-  [[nodiscard]] granit::result upload(granit::renderer& renderer,
-                                      std::span<const std::byte> environment_bytes = {},
-                                      float sampler_anisotropy = 8.0F,
-                                      gltf_rendering::scene_upload_callback progress = nullptr,
-                                      void* progress_user_data = nullptr) {
-    return upload(renderer.ref(), environment_bytes, sampler_anisotropy, progress,
-                  progress_user_data);
-  }
-  /** 按新采样质量事务式重建 glTF Scene GPU 资源；环境资源与查看器状态保持不变。 */
-  [[nodiscard]] granit::result reupload_scene(granit::renderer_ref renderer,
-                                              float sampler_anisotropy);
-  [[nodiscard]] granit::result reupload_scene(granit::renderer& renderer,
-                                              float sampler_anisotropy) {
-    return reupload_scene(renderer.ref(), sampler_anisotropy);
-  }
+  [[nodiscard]] granit::result prepare_upload(gltf::scene& scene,
+                                              gltf_rendering::scene_plan& plan) const;
+  [[nodiscard]] granit::result complete_upload(float recommended_exposure_ev,
+                                               float environment_intensity) noexcept;
   [[nodiscard]] granit::result tick(const viewer_document_update& input, viewer_frame& output);
+  [[nodiscard]] granit::result
+  update_material(std::uint32_t material_index,
+                  const gltf_rendering::material_factor_update& edit) noexcept;
   void fail(granit::result result, std::string diagnostic);
   void reset() noexcept;
 
@@ -79,7 +58,6 @@ public:
   [[nodiscard]] const std::string& diagnostic() const noexcept { return diagnostic_; }
   [[nodiscard]] gltf::scene& cpu_scene() noexcept { return document_.scene(); }
   [[nodiscard]] const gltf::scene& cpu_scene() const noexcept { return document_.scene(); }
-  [[nodiscard]] gltf_rendering::scene_resources& resources() noexcept { return scene_resources_; }
   [[nodiscard]] viewer_state& state() noexcept { return document_.state(); }
   [[nodiscard]] performance_history& performance() noexcept { return document_.performance(); }
 
@@ -89,9 +67,6 @@ private:
   std::string diagnostic_;
   viewer_document document_;
   gltf_rendering::scene_plan gpu_plan_;
-  gltf_rendering::scene_resources scene_resources_;
-  granit::environment_map environment_;
-  granit::environment_map_info environment_info_;
 };
 
 } // namespace granit::example::model_viewer

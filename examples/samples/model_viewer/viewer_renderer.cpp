@@ -3,8 +3,6 @@
 
 #include "model_viewer/viewer_renderer.h"
 
-#include "model_viewer/viewer_session.h"
-
 #include <array>
 #include <chrono>
 #include <new>
@@ -19,7 +17,10 @@ struct viewer_renderer::state {
   granit::surface surface;
   granit::swapchain swapchain;
   granit::swapchain_info swapchain_info;
-  viewer_session* session{};
+  gltf::scene source_scene;
+  gltf_rendering::scene_resources scene_resources;
+  granit::environment_map environment;
+  granit::environment_map_info environment_info;
   granit::frame_context loading_frame_context;
   granit::canvas_draw_list loading_canvas;
   std::array<granit::canvas_draw_list, 3> frame_canvases;
@@ -35,8 +36,7 @@ viewer_renderer::viewer_renderer() = default;
 
 viewer_renderer::~viewer_renderer() { static_cast<void>(shutdown()); }
 
-granit::result viewer_renderer::initialize_renderer(const granit::renderer_desc& desc,
-                                                    viewer_session& session) noexcept {
+granit::result viewer_renderer::initialize_renderer(const granit::renderer_desc& desc) noexcept {
   if (state_)
     return granit::result::invalid_argument;
   try {
@@ -44,7 +44,6 @@ granit::result viewer_renderer::initialize_renderer(const granit::renderer_desc&
     const auto result = state->renderer_owner.initialize(desc);
     if (result.failed())
       return result;
-    state->session = &session;
     state_ = std::move(state);
     return granit::result::success;
   } catch (const std::bad_alloc&) {
@@ -95,13 +94,31 @@ viewer_renderer::query_renderer_status(granit::renderer_status& status) const no
   return state_ ? state_->renderer_owner.get_status(status) : granit::result::not_ready;
 }
 
-granit::result viewer_renderer::upload_scene(std::span<const std::byte> environment_bytes,
+granit::result viewer_renderer::upload_scene(gltf::scene scene, gltf_rendering::scene_plan plan,
+                                             std::span<const std::byte> environment_bytes,
                                              float sampler_anisotropy,
                                              gltf_rendering::scene_upload_callback progress,
                                              void* progress_user_data) {
-  return state_ ? state_->session->upload(state_->renderer_owner.ref(), environment_bytes,
-                                          sampler_anisotropy, progress, progress_user_data)
-                : granit::result::not_ready;
+  if (!state_)
+    return granit::result::not_ready;
+  auto result =
+      state_->scene_resources.initialize(state_->renderer_owner.ref(), scene, std::move(plan),
+                                         sampler_anisotropy, progress, progress_user_data);
+  if (result.ok()) {
+    result = environment_bytes.empty()
+                 ? state_->environment.initialize_builtin(state_->renderer_owner.ref())
+                 : state_->environment.initialize(state_->renderer_owner.ref(), environment_bytes);
+  }
+  if (result.ok())
+    result = state_->environment.get_info(state_->environment_info);
+  if (result.ok())
+    state_->source_scene = std::move(scene);
+  else {
+    state_->scene_resources.reset();
+    static_cast<void>(state_->environment.reset());
+    state_->environment_info = {};
+  }
+  return result;
 }
 
 granit::result viewer_renderer::render(frame_packet&& packet, frame_execution_result& output) {
@@ -134,8 +151,35 @@ granit::result viewer_renderer::render(frame_packet&& packet, frame_execution_re
       static_cast<void>(state_->swapchain.cancel(frame));
       return result;
     }
-    result = state_->pipeline.render(
-        packet.viewer.render_desc(backbuffer.view, state_->swapchain_info.format, &frame, canvas));
+    granit::scene_snapshot snapshot;
+    result = state_->scene_resources.create_snapshot(std::span{&packet.viewer.view, 1},
+                                                     std::span{&packet.viewer.directional_light, 1},
+                                                     {}, {}, snapshot);
+    granit::render_pipeline_environment environment{
+        .irradiance = state_->environment_info.environment.irradiance,
+        .prefiltered_environment = state_->environment_info.environment.prefiltered_environment,
+        .brdf_lut = state_->environment_info.environment.brdf_lut,
+        .rotation_radians = packet.viewer.environment_rotation_radians,
+        .intensity = packet.viewer.environment_intensity,
+        .prefiltered_max_mip = state_->environment_info.environment.prefiltered_max_mip,
+    };
+    if (result.ok()) {
+      result = state_->pipeline.render({.scene = snapshot.ref(),
+                                        .output = backbuffer.view,
+                                        .output_format = state_->swapchain_info.format,
+                                        .width = packet.viewer.width,
+                                        .height = packet.viewer.height,
+                                        .first_view = 0,
+                                        .view_count = 1,
+                                        .exposure_ev = packet.viewer.exposure_ev,
+                                        .draw_bindings = state_->scene_resources.draw_bindings(),
+                                        .outputs = {},
+                                        .frame = &frame,
+                                        .canvas = canvas,
+                                        .debug_draw = {},
+                                        .clear_color = packet.viewer.clear_color,
+                                        .environment = &environment});
+    }
   }
   if (result.failed()) {
     static_cast<void>(state_->swapchain.cancel(frame));
@@ -260,7 +304,8 @@ granit::result viewer_renderer::change_quality(const granit::render_pipeline_des
       result = metrics_result;
   }
   if (result.ok() && reupload_scene)
-    result = state_->session->reupload_scene(state_->renderer_owner.ref(), sampler_anisotropy);
+    result = state_->scene_resources.initialize(state_->renderer_owner.ref(), state_->source_scene,
+                                                sampler_anisotropy);
   if (result.ok()) {
     state_->pipeline = std::move(replacement);
     state_->metrics_enabled = metrics_enabled;
@@ -272,8 +317,13 @@ granit::result viewer_renderer::change_quality(const granit::render_pipeline_des
 granit::result
 viewer_renderer::update_material(std::uint32_t material_index,
                                  const gltf_rendering::material_factor_update& edit) noexcept {
-  return state_ ? state_->session->update_material(material_index, edit)
+  return state_ ? state_->scene_resources.update_material_factors(state_->source_scene,
+                                                                  material_index, edit)
                 : granit::result::not_ready;
+}
+
+granit::result viewer_renderer::update_debug_display(std::uint32_t mode) noexcept {
+  return state_ ? state_->scene_resources.update_debug_display(mode) : granit::result::not_ready;
 }
 
 granit::result viewer_renderer::recreate_swapchain(const granit::swapchain_desc& desc) noexcept {
@@ -315,7 +365,10 @@ granit::result viewer_renderer::shutdown(granit::renderer_resource_stats* final_
       first_failure = value;
   };
   collect(state_->pipeline.reset());
-  state_->session->reset();
+  state_->scene_resources.reset();
+  collect(state_->environment.reset());
+  state_->environment_info = {};
+  state_->source_scene = {};
   for (auto& canvas : state_->frame_canvases)
     collect(canvas.destroy());
   collect(state_->loading_canvas.destroy());
@@ -354,6 +407,14 @@ granit::sampler_ref viewer_renderer::font_sampler() const noexcept {
 
 granit::renderer_ref viewer_renderer::renderer() const noexcept {
   return state_ ? state_->renderer_owner.ref() : granit::renderer_ref{};
+}
+
+gltf_rendering::scene_resources& viewer_renderer::scene_resources() noexcept {
+  return state_->scene_resources;
+}
+
+const granit::environment_map_info& viewer_renderer::environment_info() const noexcept {
+  return state_->environment_info;
 }
 
 granit_renderer viewer_renderer::native_renderer() const noexcept {

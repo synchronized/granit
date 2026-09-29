@@ -4,54 +4,42 @@
 #include "application_core.h"
 
 #include <catch2/catch_all.hpp>
-#include <granit/renderer/renderer.hpp>
 
-#include <array>
+#include <limits>
 
-TEST_CASE("模型查看器 Core 严格执行启动状态机", "[tutorial][model-viewer][core]") {
-  using namespace granit::example::model_viewer;
+using namespace granit::example::model_viewer;
+
+TEST_CASE("模型查看器 Core 严格执行启动状态机", "[example][model-viewer][core]") {
   application_core core;
   CHECK(core.phase() == application_phase::platform_ready);
   CHECK(core.renderer_ready() == granit::result::invalid_argument);
-  REQUIRE(core.begin_renderer() == granit::result::success);
-  REQUIRE(core.renderer_ready() == granit::result::success);
+  REQUIRE(core.begin_renderer().ok());
+  REQUIRE(core.renderer_ready().ok());
   granit::example::gltf::scene scene;
   scene.nodes.resize(1);
-  REQUIRE(core.accept_scene(std::move(scene)) == granit::result::success);
+  REQUIRE(core.accept_scene(std::move(scene)).ok());
   CHECK(core.phase() == application_phase::gpu_upload);
-  CHECK(core.upload(granit::renderer_ref{}) == granit::result::invalid_handle);
-  CHECK(core.phase() == application_phase::failed);
-  CHECK_FALSE(core.diagnostic().empty());
+  granit::example::gltf::scene upload_scene;
+  granit::example::gltf_rendering::scene_plan upload_plan;
+  REQUIRE(core.prepare_upload(upload_scene, upload_plan).ok());
+  CHECK(upload_scene.nodes.size() == 1);
+  REQUIRE(core.complete_upload(-0.5F, 0.12F).ok());
+  CHECK(core.phase() == application_phase::ready);
   core.reset();
   CHECK(core.phase() == application_phase::platform_ready);
 }
 
-TEST_CASE("模型查看器 Core 拒绝无效环境包", "[tutorial][model-viewer][core][gpu]") {
-  using namespace granit::example::model_viewer;
-  granit::renderer renderer;
-  const auto renderer_result = renderer.initialize({.application_name = "Environment Test"});
-  if (renderer_result.failed())
-    SKIP("当前环境没有可用 Renderer");
-
-  granit::example::gltf::scene scene;
-  scene.nodes.emplace_back();
+TEST_CASE("模型查看器 Core 拒绝无效环境建议", "[example][model-viewer][core]") {
   application_core core;
-  REQUIRE(core.begin_renderer() == granit::result::success);
-  REQUIRE(core.renderer_ready() == granit::result::success);
-  REQUIRE(core.accept_scene(std::move(scene)) == granit::result::success);
-  const std::array invalid{std::byte{1}};
-  CHECK(core.upload(renderer, invalid) == granit::result::invalid_argument);
-  CHECK(core.phase() == application_phase::failed);
-  CHECK_FALSE(core.diagnostic().empty());
+  REQUIRE(core.begin_renderer().ok());
+  REQUIRE(core.renderer_ready().ok());
+  REQUIRE(core.accept_scene({}).ok());
+  CHECK(core.complete_upload(std::numeric_limits<float>::infinity(), 1.0F) ==
+        granit::result::invalid_argument);
+  CHECK(core.phase() == application_phase::gpu_upload);
 }
 
-TEST_CASE("模型查看器 Core 生成后端无关单帧描述", "[tutorial][model-viewer][core][gpu]") {
-  using namespace granit::example::model_viewer;
-  granit::renderer renderer;
-  const auto renderer_result = renderer.initialize({.application_name = "Model Viewer Core Test"});
-  if (renderer_result.failed())
-    SKIP("当前环境没有可用 Renderer");
-
+TEST_CASE("模型查看器 Core 生成不含 GPU 资源的单帧数据", "[example][model-viewer][core]") {
   granit::example::gltf::scene scene;
   auto& primitive = scene.meshes.emplace_back().primitives.emplace_back();
   primitive.positions = {{-1, -1, 0}, {1, -1, 0}, {0, 1, 0}};
@@ -61,50 +49,26 @@ TEST_CASE("模型查看器 Core 生成后端无关单帧描述", "[tutorial][mod
   primitive.local_bounds = {.minimum = {-1, -1, 0}, .maximum = {1, 1, 0}, .valid = true};
   scene.materials.emplace_back();
   scene.nodes.emplace_back().mesh = 0;
-
   application_core core;
-  REQUIRE(core.begin_renderer() == granit::result::success);
-  REQUIRE(core.renderer_ready() == granit::result::success);
-  REQUIRE(core.accept_scene(std::move(scene)) == granit::result::success);
-  REQUIRE(core.upload(renderer) == granit::result::success);
-  const auto original_mesh = core.resources().meshes().front().native_handle();
-  REQUIRE(core.reupload_scene(renderer, 1.0F) == granit::result::success);
-  CHECK(core.resources().meshes().front().native_handle() != original_mesh);
-  const auto rebuilt_mesh = core.resources().meshes().front().native_handle();
-  CHECK(core.reupload_scene(renderer, 0.0F) == granit::result::invalid_argument);
-  CHECK(core.resources().meshes().front().native_handle() == rebuilt_mesh);
-
+  REQUIRE(core.begin_renderer().ok());
+  REQUIRE(core.renderer_ready().ok());
+  REQUIRE(core.accept_scene(std::move(scene)).ok());
+  REQUIRE(core.complete_upload(-0.5F, 0.12F).ok());
   viewer_frame output;
   viewer_document_update zero_sized;
   zero_sized.height = 480;
   CHECK(core.tick(zero_sized, output) == granit::result::not_ready);
-  const performance_sample sample{.frames_per_second = 60.0F, .cpu_frame_ms = 2.0F};
   viewer_document_update input;
   input.width = 640;
   input.height = 480;
-  input.performance = sample;
-  REQUIRE(core.tick(input, output) == granit::result::success);
-  CHECK(output.snapshot.valid());
-  const auto render = output.render_desc(granit::texture_view_ref::from_native(11),
-                                         granit::texture_format::rgba8_unorm, nullptr,
-                                         granit::canvas_draw_list_ref::from_native(13));
-  CHECK(render.scene.native_handle() == output.snapshot.native_handle());
-  CHECK(render.output.native_handle() == 11);
-  CHECK(render.frame == nullptr);
-  CHECK(render.canvas.native_handle() == 13);
-  CHECK(render.width == 640);
-  CHECK(render.height == 480);
-  CHECK(render.clear_color.red == Catch::Approx(0.025F));
-  CHECK(render.clear_color.green == Catch::Approx(0.04F));
-  CHECK(render.clear_color.blue == Catch::Approx(0.065F));
-  CHECK(render.draw_bindings.size() == 1);
-  CHECK(render.draw_bindings.data() == output.draw_bindings.data());
-  CHECK(render.draw_bindings.data() != core.resources().draw_bindings().data());
-  REQUIRE(render.environment == &output.environment);
-  CHECK(render.environment->irradiance.valid());
-  CHECK(render.environment->prefiltered_environment.valid());
-  CHECK(render.environment->brdf_lut.valid());
-  CHECK(render.environment->intensity == Catch::Approx(0.12F));
-  CHECK(render.environment->rotation_radians == Catch::Approx(0.0F));
+  input.performance = performance_sample{.frames_per_second = 60.0F, .cpu_frame_ms = 2.0F};
+  REQUIRE(core.tick(input, output).ok());
+  CHECK(output.width == 640);
+  CHECK(output.height == 480);
+  CHECK(output.clear_color.red == Catch::Approx(0.025F));
+  CHECK(output.clear_color.green == Catch::Approx(0.04F));
+  CHECK(output.clear_color.blue == Catch::Approx(0.065F));
+  CHECK(output.environment_intensity == Catch::Approx(0.12F));
+  CHECK(output.environment_rotation_radians == Catch::Approx(0.0F));
   CHECK(core.performance().size() == 1);
 }

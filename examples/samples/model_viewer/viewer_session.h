@@ -36,22 +36,18 @@ public:
   [[nodiscard]] granit::result tick(const viewer_document_update& input, viewer_frame& output) {
     return core_.tick(input, output);
   }
-  [[nodiscard]] granit::result upload(granit::renderer_ref renderer,
-                                      std::span<const std::byte> environment_bytes,
-                                      float sampler_anisotropy,
-                                      gltf_rendering::scene_upload_callback progress = nullptr,
-                                      void* progress_user_data = nullptr) {
-    return core_.upload(renderer, environment_bytes, sampler_anisotropy, progress,
-                        progress_user_data);
+  [[nodiscard]] granit::result prepare_upload(gltf::scene& scene,
+                                              gltf_rendering::scene_plan& plan) const {
+    return core_.prepare_upload(scene, plan);
   }
-  [[nodiscard]] granit::result reupload_scene(granit::renderer_ref renderer,
-                                              float sampler_anisotropy) {
-    return core_.reupload_scene(renderer, sampler_anisotropy);
+  [[nodiscard]] granit::result complete_upload(float recommended_exposure_ev,
+                                               float environment_intensity) noexcept {
+    return core_.complete_upload(recommended_exposure_ev, environment_intensity);
   }
   [[nodiscard]] granit::result
   update_material(std::uint32_t material_index,
                   const gltf_rendering::material_factor_update& edit) noexcept {
-    return core_.resources().update_material_factors(core_.cpu_scene(), material_index, edit);
+    return core_.update_material(material_index, edit);
   }
   void fail(granit::result result, std::string diagnostic) {
     core_.fail(result, std::move(diagnostic));
@@ -61,7 +57,6 @@ public:
   [[nodiscard]] const std::string& diagnostic() const noexcept { return core_.diagnostic(); }
   [[nodiscard]] gltf::scene& cpu_scene() noexcept { return core_.cpu_scene(); }
   [[nodiscard]] const gltf::scene& cpu_scene() const noexcept { return core_.cpu_scene(); }
-  [[nodiscard]] gltf_rendering::scene_resources& resources() noexcept { return core_.resources(); }
   [[nodiscard]] viewer_state& state() noexcept { return core_.state(); }
   [[nodiscard]] performance_history& performance() noexcept { return core_.performance(); }
 

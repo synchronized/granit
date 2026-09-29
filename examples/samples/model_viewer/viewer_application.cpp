@@ -443,8 +443,14 @@ struct viewer_application::implementation {
   granit::result update_gpu_upload() {
     if (!upload_started) {
       cancel_requested.store(false, std::memory_order_release);
-      auto result = rendering.begin_upload_scene(environment_bytes, quality.sampler_anisotropy,
-                                                 upload_progress_callback, this, upload_sequence);
+      gltf::scene scene;
+      gltf_rendering::scene_plan plan;
+      auto result = session.prepare_upload(scene, plan);
+      if (result.ok()) {
+        result = rendering.begin_upload_scene(std::move(scene), std::move(plan), environment_bytes,
+                                              quality.sampler_anisotropy, upload_progress_callback,
+                                              this, upload_sequence);
+      }
       if (result.failed())
         return result;
       upload_started = true;
@@ -456,6 +462,14 @@ struct viewer_application::implementation {
       return granit::result::internal;
     if (completion.status.failed())
       return completion.status;
+    const auto& environment = rendering.environment_info();
+    const auto exposure = environment_bytes.empty() ? session.state().exposure_ev()
+                                                    : environment.recommended_exposure_ev;
+    const auto intensity = environment_bytes.empty() ? session.state().environment_intensity()
+                                                     : environment.environment.intensity;
+    const auto complete_result = session.complete_upload(exposure, intensity);
+    if (complete_result.failed())
+      return complete_result;
     asset_ready = true;
     phase = viewer_runtime_phase::pipeline_prepare;
     return granit::result::success;
@@ -466,7 +480,7 @@ struct viewer_application::implementation {
     if (result.failed())
       return result;
     if (!pipelines.started()) {
-      result = pipelines.begin(rendering.renderer(), session.resources(),
+      result = pipelines.begin(rendering.renderer(), rendering.scene_resources(),
                                rendering.swapchain_info().format, quality.sample_count);
       if (result.failed())
         return result;
@@ -496,7 +510,7 @@ struct viewer_application::implementation {
     };
     auto result = rendering.initialize_pipeline(pipeline_desc);
     if (result.ok() && desc.show_ui)
-      result = previews.rebuild(session.cpu_scene(), session.resources(), ui);
+      result = previews.rebuild(session.cpu_scene(), rendering.scene_resources(), ui);
     if (result.ok() && desc.show_ui)
       result = render_loading("Loading complete", 1.0F);
     if (result.ok() && desc.show_ui)
@@ -611,11 +625,15 @@ struct viewer_application::implementation {
     if (frame.input_applied)
       ++applied_input_count;
     input.begin_frame();
-    if (frame.changes.quality) {
+    if (frame.changes.state.debug_display) {
+      result = rendering.update_debug_display(
+          static_cast<std::uint32_t>(*frame.changes.state.debug_display));
+    }
+    if (result.ok() && frame.changes.quality) {
       const bool reupload = frame.changes.quality->sampler_anisotropy != quality.sampler_anisotropy;
       result = configure_quality(*frame.changes.quality);
       if (result.ok() && reupload && desc.show_ui) {
-        result = previews.rebuild(session.cpu_scene(), session.resources(), ui);
+        result = previews.rebuild(session.cpu_scene(), rendering.scene_resources(), ui);
         frame.packet.canvas.clear();
       }
     }
@@ -623,6 +641,10 @@ struct viewer_application::implementation {
         session.state().selected_material() != gltf::invalid_index) {
       result =
           rendering.update_material(session.state().selected_material(), *frame.changes.material);
+      if (result.ok()) {
+        result =
+            session.update_material(session.state().selected_material(), *frame.changes.material);
+      }
     }
     if (result.failed())
       return result;
@@ -702,15 +724,13 @@ granit::result viewer_application::on_host_initialize() noexcept {
   if (result.ok())
     result = state.session.begin_renderer();
   if (result.ok()) {
-    result =
-        state.rendering.initialize_renderer(*state.executor,
-                                            {.application_name = "Granit Model Viewer",
-                                             .enable_validation = state.desc.enable_validation,
-                                             .presentation = granit::presentation_mode::enabled,
-                                             .diagnostics = implementation::diagnose,
-                                             .diagnostic_user_data = &state,
-                                             .backend = state.desc.renderer_backend},
-                                            state.session);
+    result = state.rendering.initialize_renderer(
+        *state.executor, {.application_name = "Granit Model Viewer",
+                          .enable_validation = state.desc.enable_validation,
+                          .presentation = granit::presentation_mode::enabled,
+                          .diagnostics = implementation::diagnose,
+                          .diagnostic_user_data = &state,
+                          .backend = state.desc.renderer_backend});
   }
   if (result.ok() && !state.session.start_loading(
                          assets(), assets::asset_location::external(state.desc.model_location))) {

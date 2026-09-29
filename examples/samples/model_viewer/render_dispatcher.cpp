@@ -21,13 +21,12 @@ render_dispatcher::~render_dispatcher() {
 }
 
 granit::result render_dispatcher::initialize_renderer(render_execution_policy& executor,
-                                                      const granit::renderer_desc& desc,
-                                                      viewer_session& session) noexcept {
+                                                      const granit::renderer_desc& desc) noexcept {
   if (state_)
     return granit::result::invalid_argument;
   try {
     auto state = std::make_unique<render_dispatcher::state>();
-    auto result = state->runtime.initialize_renderer(desc, session);
+    auto result = state->runtime.initialize_renderer(desc);
     if (result.ok()) {
       result = executor.initialize([context = state.get()](auto&& packet, auto& output) {
         return context->runtime.render(std::move(packet), output);
@@ -63,7 +62,8 @@ render_dispatcher::query_renderer_status(granit::renderer_status& status) const 
   return state_ ? state_->runtime.query_renderer_status(status) : granit::result::not_ready;
 }
 
-granit::result render_dispatcher::upload_scene(std::span<const std::byte> environment_bytes,
+granit::result render_dispatcher::upload_scene(gltf::scene scene, gltf_rendering::scene_plan plan,
+                                               std::span<const std::byte> environment_bytes,
                                                float sampler_anisotropy,
                                                gltf_rendering::scene_upload_callback progress,
                                                void* progress_user_data) {
@@ -71,9 +71,11 @@ granit::result render_dispatcher::upload_scene(std::span<const std::byte> enviro
     return granit::result::not_ready;
   try {
     std::vector<std::byte> owned(environment_bytes.begin(), environment_bytes.end());
-    return state_->executor->run_task([context = state_.get(), bytes = std::move(owned),
-                                       sampler_anisotropy, progress, progress_user_data] {
-      return context->runtime.upload_scene(bytes, sampler_anisotropy, progress, progress_user_data);
+    return state_->executor->run_task([context = state_.get(), scene = std::move(scene),
+                                       plan = std::move(plan), bytes = std::move(owned),
+                                       sampler_anisotropy, progress, progress_user_data]() mutable {
+      return context->runtime.upload_scene(std::move(scene), std::move(plan), bytes,
+                                           sampler_anisotropy, progress, progress_user_data);
     });
   } catch (const std::bad_alloc&) {
     return granit::result::out_of_memory;
@@ -83,14 +85,17 @@ granit::result render_dispatcher::upload_scene(std::span<const std::byte> enviro
 }
 
 granit::result render_dispatcher::execute_upload_scene(
+    gltf::scene scene, gltf_rendering::scene_plan plan,
     std::span<const std::byte> environment_bytes, float sampler_anisotropy,
     gltf_rendering::scene_upload_callback progress, void* progress_user_data) {
-  return state_ ? state_->runtime.upload_scene(environment_bytes, sampler_anisotropy, progress,
-                                               progress_user_data)
+  return state_ ? state_->runtime.upload_scene(std::move(scene), std::move(plan), environment_bytes,
+                                               sampler_anisotropy, progress, progress_user_data)
                 : granit::result::not_ready;
 }
 
-granit::result render_dispatcher::begin_upload_scene(std::span<const std::byte> environment_bytes,
+granit::result render_dispatcher::begin_upload_scene(gltf::scene scene,
+                                                     gltf_rendering::scene_plan plan,
+                                                     std::span<const std::byte> environment_bytes,
                                                      float sampler_anisotropy,
                                                      gltf_rendering::scene_upload_callback progress,
                                                      void* progress_user_data,
@@ -100,10 +105,10 @@ granit::result render_dispatcher::begin_upload_scene(std::span<const std::byte> 
   try {
     std::vector<std::byte> owned(environment_bytes.begin(), environment_bytes.end());
     return state_->executor->submit_control(
-        [context = state_.get(), bytes = std::move(owned), sampler_anisotropy, progress,
-         progress_user_data] {
-          return context->runtime.upload_scene(bytes, sampler_anisotropy, progress,
-                                               progress_user_data);
+        [context = state_.get(), scene = std::move(scene), plan = std::move(plan),
+         bytes = std::move(owned), sampler_anisotropy, progress, progress_user_data]() mutable {
+          return context->runtime.upload_scene(std::move(scene), std::move(plan), bytes,
+                                               sampler_anisotropy, progress, progress_user_data);
         },
         sequence);
   } catch (const std::bad_alloc&) {
@@ -205,6 +210,13 @@ render_dispatcher::update_material(std::uint32_t material_index,
                 : granit::result::not_ready;
 }
 
+granit::result render_dispatcher::update_debug_display(std::uint32_t mode) noexcept {
+  return state_ ? state_->executor->run_task([context = state_.get(), mode] {
+    return context->runtime.update_debug_display(mode);
+  })
+                : granit::result::not_ready;
+}
+
 granit::result render_dispatcher::recreate_swapchain(const granit::swapchain_desc& desc) noexcept {
   return state_ ? state_->executor->run_task([context = state_.get(), desc] {
     return context->runtime.recreate_swapchain(desc);
@@ -258,6 +270,14 @@ granit::sampler_ref render_dispatcher::font_sampler() const noexcept {
 
 granit::renderer_ref render_dispatcher::renderer() const noexcept {
   return state_ ? state_->runtime.renderer() : granit::renderer_ref{};
+}
+
+gltf_rendering::scene_resources& render_dispatcher::scene_resources() noexcept {
+  return state_->runtime.scene_resources();
+}
+
+const granit::environment_map_info& render_dispatcher::environment_info() const noexcept {
+  return state_->runtime.environment_info();
 }
 
 granit_renderer render_dispatcher::native_renderer() const noexcept {
