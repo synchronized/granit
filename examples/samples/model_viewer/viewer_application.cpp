@@ -5,7 +5,6 @@
 
 #include "assets/asset_manager.h"
 #include "camera/orbit_camera_input_accumulator.h"
-#include "model_viewer/pipeline_prepare.h"
 #include "model_viewer/presentation_recovery.h"
 #include "model_viewer/render_dispatcher.h"
 #include "model_viewer/render_execution.h"
@@ -183,7 +182,6 @@ struct viewer_application::implementation {
   viewer_session session;
   std::unique_ptr<render_execution_policy> executor;
   render_dispatcher rendering;
-  pipeline_prepare pipelines;
   viewer_ui ui;
   camera::orbit_camera_input_accumulator input;
   viewer_texture_previews previews;
@@ -199,6 +197,7 @@ struct viewer_application::implementation {
   bool renderer_observed{};
   bool presentation_observed{};
   bool upload_started{};
+  bool pipeline_prepare_started{};
   bool pipeline_observer_complete{};
   bool shutdown_complete{};
   std::atomic<bool> cancel_requested{};
@@ -479,13 +478,14 @@ struct viewer_application::implementation {
     auto result = rendering.process_renderer_events();
     if (result.failed())
       return result;
-    if (!pipelines.started()) {
-      result = pipelines.begin(rendering.renderer(), rendering.scene_resources(),
-                               rendering.swapchain_info().format, quality.sample_count);
+    if (!pipeline_prepare_started) {
+      result =
+          rendering.begin_pipeline_prepare(rendering.swapchain_info().format, quality.sample_count);
       if (result.failed())
         return result;
+      pipeline_prepare_started = true;
     }
-    result = pipelines.poll();
+    result = rendering.poll_pipeline_prepare();
     if (result == granit::result::not_ready)
       return granit::result::success;
     if (result.failed())
@@ -510,7 +510,7 @@ struct viewer_application::implementation {
     };
     auto result = rendering.initialize_pipeline(pipeline_desc);
     if (result.ok() && desc.show_ui)
-      result = previews.rebuild(session.cpu_scene(), rendering.scene_resources(), ui);
+      result = previews.rebuild(session.cpu_scene(), rendering, ui);
     if (result.ok() && desc.show_ui)
       result = render_loading("Loading complete", 1.0F);
     if (result.ok() && desc.show_ui)
@@ -633,7 +633,7 @@ struct viewer_application::implementation {
       const bool reupload = frame.changes.quality->sampler_anisotropy != quality.sampler_anisotropy;
       result = configure_quality(*frame.changes.quality);
       if (result.ok() && reupload && desc.show_ui) {
-        result = previews.rebuild(session.cpu_scene(), rendering.scene_resources(), ui);
+        result = previews.rebuild(session.cpu_scene(), rendering, ui);
         frame.packet.canvas.clear();
       }
     }
@@ -835,7 +835,6 @@ granit::result viewer_application::shutdown_resources() noexcept {
     state.desc.observer->on_shutdown();
   state.previews.clear(state.ui);
   state.ui.clear_textures();
-  state.pipelines.reset();
   state.session.reset();
   std::optional<granit::renderer_info> renderer_info;
   std::optional<granit::swapchain_info> swapchain_info;

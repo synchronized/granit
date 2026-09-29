@@ -28,6 +28,7 @@ struct viewer_renderer::state {
   granit::texture_view font_view;
   granit::sampler font_sampler;
   granit::render_pipeline pipeline;
+  pipeline_prepare pipelines;
   std::size_t next_canvas{};
   bool metrics_enabled{};
 };
@@ -287,6 +288,17 @@ viewer_renderer::initialize_pipeline(const granit::render_pipeline_desc& desc) n
   return change_quality(desc, 1.0F, false, ignored);
 }
 
+granit::result viewer_renderer::begin_pipeline_prepare(granit::texture_format color_format,
+                                                       granit::sample_count samples) {
+  return state_ ? state_->pipelines.begin(state_->renderer_owner.ref(), state_->scene_resources,
+                                          color_format, samples)
+                : granit::result::not_ready;
+}
+
+granit::result viewer_renderer::poll_pipeline_prepare() {
+  return state_ ? state_->pipelines.poll() : granit::result::not_ready;
+}
+
 granit::result viewer_renderer::change_quality(const granit::render_pipeline_desc& desc,
                                                float sampler_anisotropy, bool reupload_scene,
                                                render_quality_change_result& output) noexcept {
@@ -324,6 +336,13 @@ viewer_renderer::update_material(std::uint32_t material_index,
 
 granit::result viewer_renderer::update_debug_display(std::uint32_t mode) noexcept {
   return state_ ? state_->scene_resources.update_debug_display(mode) : granit::result::not_ready;
+}
+
+granit::result viewer_renderer::texture_binding(const gltf::texture_reference& reference, bool srgb,
+                                                granit::texture_view_ref& view,
+                                                granit::sampler_ref& sampler) const noexcept {
+  return state_ ? state_->scene_resources.texture_binding(reference, srgb, view, sampler)
+                : granit::result::not_ready;
 }
 
 granit::result viewer_renderer::recreate_swapchain(const granit::swapchain_desc& desc) noexcept {
@@ -364,6 +383,7 @@ granit::result viewer_renderer::shutdown(granit::renderer_resource_stats* final_
     if (first_failure.ok() && value.failed())
       first_failure = value;
   };
+  state_->pipelines.reset();
   collect(state_->pipeline.reset());
   state_->scene_resources.reset();
   collect(state_->environment.reset());
@@ -407,10 +427,6 @@ granit::sampler_ref viewer_renderer::font_sampler() const noexcept {
 
 granit::renderer_ref viewer_renderer::renderer() const noexcept {
   return state_ ? state_->renderer_owner.ref() : granit::renderer_ref{};
-}
-
-gltf_rendering::scene_resources& viewer_renderer::scene_resources() noexcept {
-  return state_->scene_resources;
 }
 
 const granit::environment_map_info& viewer_renderer::environment_info() const noexcept {

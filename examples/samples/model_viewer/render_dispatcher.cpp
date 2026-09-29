@@ -190,6 +190,20 @@ render_dispatcher::initialize_pipeline(const granit::render_pipeline_desc& desc)
                 : granit::result::not_ready;
 }
 
+granit::result render_dispatcher::begin_pipeline_prepare(granit::texture_format color_format,
+                                                         granit::sample_count samples) noexcept {
+  return state_ ? state_->executor->run_task([context = state_.get(), color_format, samples] {
+    return context->runtime.begin_pipeline_prepare(color_format, samples);
+  })
+                : granit::result::not_ready;
+}
+
+granit::result render_dispatcher::poll_pipeline_prepare() noexcept {
+  return state_ ? state_->executor->run_task(
+                      [context = state_.get()] { return context->runtime.poll_pipeline_prepare(); })
+                : granit::result::not_ready;
+}
+
 granit::result render_dispatcher::change_quality(const granit::render_pipeline_desc& desc,
                                                  float sampler_anisotropy, bool reupload_scene,
                                                  render_quality_change_result& output) noexcept {
@@ -214,6 +228,16 @@ granit::result render_dispatcher::update_debug_display(std::uint32_t mode) noexc
   return state_ ? state_->executor->run_task([context = state_.get(), mode] {
     return context->runtime.update_debug_display(mode);
   })
+                : granit::result::not_ready;
+}
+
+granit::result render_dispatcher::texture_binding(const gltf::texture_reference& reference,
+                                                  bool srgb, granit::texture_view_ref& view,
+                                                  granit::sampler_ref& sampler) noexcept {
+  return state_ ? state_->executor->run_task(
+                      [context = state_.get(), &reference, srgb, &view, &sampler] {
+                        return context->runtime.texture_binding(reference, srgb, view, sampler);
+                      })
                 : granit::result::not_ready;
 }
 
@@ -270,10 +294,6 @@ granit::sampler_ref render_dispatcher::font_sampler() const noexcept {
 
 granit::renderer_ref render_dispatcher::renderer() const noexcept {
   return state_ ? state_->runtime.renderer() : granit::renderer_ref{};
-}
-
-gltf_rendering::scene_resources& render_dispatcher::scene_resources() noexcept {
-  return state_->runtime.scene_resources();
 }
 
 const granit::environment_map_info& render_dispatcher::environment_info() const noexcept {

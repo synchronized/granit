@@ -60,6 +60,9 @@ public:
                                                      std::uint32_t height) noexcept;
   [[nodiscard]] granit::result
   initialize_pipeline(const granit::render_pipeline_desc& desc) noexcept;
+  [[nodiscard]] granit::result begin_pipeline_prepare(granit::texture_format color_format,
+                                                      granit::sample_count samples) noexcept;
+  [[nodiscard]] granit::result poll_pipeline_prepare() noexcept;
   [[nodiscard]] granit::result change_quality(const granit::render_pipeline_desc& desc,
                                               float sampler_anisotropy, bool reupload_scene,
                                               render_quality_change_result& output) noexcept;
@@ -67,6 +70,9 @@ public:
   update_material(std::uint32_t material_index,
                   const gltf_rendering::material_factor_update& edit) noexcept;
   [[nodiscard]] granit::result update_debug_display(std::uint32_t mode) noexcept;
+  [[nodiscard]] granit::result texture_binding(const gltf::texture_reference& reference, bool srgb,
+                                               granit::texture_view_ref& view,
+                                               granit::sampler_ref& sampler) noexcept;
   [[nodiscard]] granit::result recreate_swapchain(const granit::swapchain_desc& desc) noexcept;
   [[nodiscard]] granit::result recreate_surface(granit::window& window,
                                                 const granit::swapchain_desc& desc) noexcept;
@@ -81,7 +87,6 @@ public:
   [[nodiscard]] granit::texture_view_ref font_view() const noexcept;
   [[nodiscard]] granit::sampler_ref font_sampler() const noexcept;
   [[nodiscard]] granit::renderer_ref renderer() const noexcept;
-  [[nodiscard]] gltf_rendering::scene_resources& scene_resources() noexcept;
   [[nodiscard]] const granit::environment_map_info& environment_info() const noexcept;
   /** 仅供浏览器 C ABI 验收钩子使用。 */
   [[nodiscard]] granit_renderer native_renderer() const noexcept;

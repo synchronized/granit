@@ -3,14 +3,13 @@
 
 #include "model_viewer/viewer_texture_previews.h"
 
-#include "gltf_rendering/scene_resources.h"
+#include "model_viewer/render_dispatcher.h"
 #include "model_viewer/viewer_ui.h"
 
 namespace granit::example::model_viewer {
 
 granit::result viewer_texture_previews::rebuild(const gltf::scene& scene,
-                                                gltf_rendering::scene_resources& gpu,
-                                                viewer_ui& ui) {
+                                                render_dispatcher& rendering, viewer_ui& ui) {
   clear(ui);
   const auto register_preview = [&](const gltf::texture_reference& reference, bool srgb) {
     if (reference.image == gltf::invalid_index)
@@ -20,7 +19,7 @@ granit::result viewer_texture_previews::rebuild(const gltf::scene& scene,
       return granit::result::success;
     granit::texture_view_ref view;
     granit::sampler_ref sampler;
-    auto result = gpu.texture_binding(reference, srgb, view, sampler);
+    auto result = rendering.texture_binding(reference, srgb, view, sampler);
     ImTextureID texture = ImTextureID_Invalid;
     if (result.ok())
       result = ui.register_texture(view, sampler, texture);
