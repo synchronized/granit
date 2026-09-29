@@ -29,9 +29,19 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段通过可运行�
 
 ## 当前计划
 
-### v0.42.0：Model Viewer 架构与跨平台收敛
+### v0.43.0：Gneiss PBR 兼容性审计
 
 **状态：规划中，P1。**
+
+[v0.43.0](versions/v0.43.0.md) 通过 [S-80](plans/S-80-0.43.0-gneiss-pbr-compatibility.md) 核对 Gneiss
+`UPSTREAM-043` 与 Granit v0.42.0 已发布的五项 PBR 契约。默认不新增公共 API；只有确认属于 Granit 的
+通用缺口才实施最小修复。
+
+## 最近完成
+
+### v0.42.0：Model Viewer 架构与跨平台收敛
+
+**状态：已发布。**
 
 [v0.42.0](versions/v0.42.0.md) 通过
 [S-77](plans/S-77-0.42.0-model-viewer-convergence.md) 重新划分 glTF Rendering、Asset Manager、
@@ -40,8 +50,6 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段通过可运行�
 修复 v0.41.0 遗留的 Linux 托管 Emscripten 浏览器 WebGPU 生命周期波动，并完成原生 Linux 验收；
 [S-79](plans/S-79-0.42.0-imgui-integration-layout.md) 将已重叠的 ImGui 综合 Sample 收敛为
 `08_sdl_imgui` 第三方宿主集成教程、Integration 测试、Web 验收和 Benchmark。
-
-## 最近完成
 
 ### v0.41.0：标准 PBR 材质正确性
 
