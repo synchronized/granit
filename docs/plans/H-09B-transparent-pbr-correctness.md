@@ -6,7 +6,8 @@
 ## 状态
 
 - 文档状态：已确认评估契约
-- 实现状态：暂缓；当前没有足够需求或性能依据进入原型
+- 实现状态：基础对象级透明 PBR 已由 [S-76](S-76-0.41.0-pbr-material-correctness.md) 承接；
+  本文剩余高级能力仍暂缓
 - 所属任务：H-09B
 - 基线：[透明覆盖层 GPU 性能基线](../../benchmarks/results/2026-08-18-windows-clang-transparent-b4b0396.md)
 
@@ -83,8 +84,11 @@ warning/error；性能采样关闭 Validation，并与 Unlit 透明基线使用�
 ## 当前结论
 
 当前 64×64 基线显示，32 层兼容合批的 GPU P50 约为 26.3 µs，明显成本主要来自逐层 Draw 和
-绑定切换，而不是单纯 overdraw。仓库也没有已确认的透明受光材质产品需求。因此 H-09B 的结论是
-保留现有 Unlit 透明路径，并暂缓透明 PBR 原型。
+绑定切换，而不是单纯 overdraw。S-76 已将本文定义的基础透明 PBR 阶段落地为对象级排序、线性 HDR、
+预乘 Alpha 和明确的深度语义；本文不再作为“透明 PBR 尚未实现”的当前结论。
+
+本文仍然保留以下高级能力的暂缓结论：相交几何的顺序无关透明、透明阴影、OIT、折射和体积吸收。
+当前行为和限制以 [Render Pipeline 参考](../reference/render-pipeline.md) 为准。
 
 出现以下任一情况时重新评估：
 
