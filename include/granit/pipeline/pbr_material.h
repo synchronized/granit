@@ -10,9 +10,13 @@
 #include <granit/renderer/pipeline.h>
 
 typedef uint32_t granit_pbr_texture_flags;
-#define GRANIT_PBR_MATERIAL_TEMPLATE_VERSION UINT32_C(5)
+typedef uint32_t granit_pbr_alpha_mode;
+#define GRANIT_PBR_ALPHA_MODE_OPAQUE UINT32_C(0)
+#define GRANIT_PBR_ALPHA_MODE_MASK UINT32_C(1)
+#define GRANIT_PBR_ALPHA_MODE_BLEND UINT32_C(2)
+#define GRANIT_PBR_MATERIAL_TEMPLATE_VERSION UINT32_C(6)
 #define GRANIT_PBR_MATERIAL_CONTENT_HASH_HEX                                                       \
-  "4d94395da5efb2fc82f60715247fe4d4f1f73e2b371c745cfbdbfc2183fa0274"
+  "72991e2f971148edcf5eca355c751f4f9bddf09af773ba0ec40328bba3cb1125"
 #define GRANIT_PBR_TEXTURE_BASE_COLOR (UINT32_C(1) << 0)
 #define GRANIT_PBR_TEXTURE_METALLIC_ROUGHNESS (UINT32_C(1) << 1)
 #define GRANIT_PBR_TEXTURE_NORMAL (UINT32_C(1) << 2)
@@ -24,6 +28,8 @@ typedef uint32_t granit_pbr_texture_flags;
 
 #define GRANIT_PBR_TEXTURE_FEATURE_NAME "pbr_texture_mask"
 #define GRANIT_PBR_TRANSFORM_REFLECTED_FEATURE_NAME "pbr_transform_reflected"
+#define GRANIT_PBR_ALPHA_MODE_FEATURE_NAME "pbr_alpha_mode"
+#define GRANIT_PBR_DOUBLE_SIDED_FEATURE_NAME "pbr_double_sided"
 #define GRANIT_PBR_PARAMETER_BASE_COLOR "base_color"
 #define GRANIT_PBR_PARAMETER_METALLIC "metallic"
 #define GRANIT_PBR_PARAMETER_PERCEPTUAL_ROUGHNESS "perceptual_roughness"
@@ -31,6 +37,7 @@ typedef uint32_t granit_pbr_texture_flags;
 #define GRANIT_PBR_PARAMETER_OCCLUSION_STRENGTH "occlusion_strength"
 #define GRANIT_PBR_PARAMETER_EMISSIVE "emissive"
 #define GRANIT_PBR_PARAMETER_DEBUG_DISPLAY "debug_display"
+#define GRANIT_PBR_PARAMETER_ALPHA_CUTOFF "alpha_cutoff"
 #define GRANIT_PBR_PARAMETER_BASE_COLOR_TEXTURE "base_color_texture"
 #define GRANIT_PBR_PARAMETER_METALLIC_ROUGHNESS_TEXTURE "metallic_roughness_texture"
 #define GRANIT_PBR_PARAMETER_NORMAL_TEXTURE "normal_texture"
@@ -38,7 +45,7 @@ typedef uint32_t granit_pbr_texture_flags;
 #define GRANIT_PBR_PARAMETER_EMISSIVE_TEXTURE "emissive_texture"
 #define GRANIT_PBR_PARAMETER_SAMPLER "pbr_sampler"
 
-#define GRANIT_PBR_CONSTANT_BUFFER_SIZE UINT32_C(48)
+#define GRANIT_PBR_CONSTANT_BUFFER_SIZE UINT32_C(64)
 #define GRANIT_PBR_CONSTANT_BASE_COLOR_OFFSET UINT32_C(0)
 #define GRANIT_PBR_CONSTANT_METALLIC_OFFSET UINT32_C(16)
 #define GRANIT_PBR_CONSTANT_PERCEPTUAL_ROUGHNESS_OFFSET UINT32_C(20)
@@ -46,6 +53,7 @@ typedef uint32_t granit_pbr_texture_flags;
 #define GRANIT_PBR_CONSTANT_OCCLUSION_STRENGTH_OFFSET UINT32_C(28)
 #define GRANIT_PBR_CONSTANT_EMISSIVE_OFFSET UINT32_C(32)
 #define GRANIT_PBR_CONSTANT_DEBUG_DISPLAY_OFFSET UINT32_C(44)
+#define GRANIT_PBR_CONSTANT_ALPHA_CUTOFF_OFFSET UINT32_C(48)
 
 #define GRANIT_PBR_BINDING_CONSTANTS UINT32_C(0)
 #define GRANIT_PBR_BINDING_BASE_COLOR UINT32_C(1)
@@ -77,6 +85,10 @@ extern "C" {
 GRANIT_RENDER_PIPELINE_API granit_pbr_vertex_layout_result
 granit_pbr_validate_vertex_layout(const granit_vertex_buffer_layout* vertex_buffers,
                                   uint32_t vertex_buffer_count, granit_pbr_texture_flags textures);
+
+/** 计算标准 PBR 材质语义对应的稳定 Variant Key；非法组合返回零。 */
+GRANIT_RENDER_PIPELINE_API uint64_t granit_pbr_material_variant_key(
+    granit_pbr_texture_flags textures, granit_pbr_alpha_mode alpha_mode, uint32_t double_sided);
 
 #ifdef __cplusplus
 }

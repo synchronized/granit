@@ -24,6 +24,7 @@ Render Pipeline component，不取代核心 Renderer 的 Shader、Pipeline 或 B
 - 五类纹理、Sampler 的 Binding，以及 `pbr_texture_mask` 特性位；
 - Position、Normal、Tangent 和 UV0 的标准 Vertex Location；
 - `granit_pbr_validate_vertex_layout`，用于在创建资产前检查布局是否满足所选纹理变体。
+- `granit_pbr_material_variant_key`，用于从纹理掩码、Alpha 模式和双面语义取得稳定 Variant Key。
 
 这些值是公共标准 PBR 模板和内置实现共同使用的权威定义。上游仍拥有自己的材质语义和资产身份，
 只需在 GPU 实例边界映射到该 Schema；不需要包含 `src/material` 私有头文件。
@@ -66,6 +67,7 @@ C++20 描述通过 `std::span` 借用归档和初始更新。数值参数使用
 
 - `pbr_texture_mask` 决定无纹理、普通纹理或法线贴图 Shader 结构，并决定是否要求 UV0 和 Tangent；
 - Alpha 模式决定深度写入、混合和 Alpha Cutoff Shader；
+- 双面语义决定剔除状态；背面片元使用面朝向修正法线和切线基；
 - Shadow 与 Unlit 是独立 Pass，分别选择对应 Shader 和 Pipeline 状态；
 - 阴影、IBL 和灯光等会改变 Shader 资源契约的能力属于静态功能。
 
@@ -73,6 +75,12 @@ C++20 描述通过 `std::span` 借用归档和初始更新。数值参数使用
 `granit_material_update` 只事务式替换常量或资源绑定，不重新选择变体，也不创建 Graphics Pipeline。
 因此，启用或禁用一种纹理功能必须选择已有的 `pbr_texture_mask` 变体；在同一纹理功能内更换贴图
 只更新资源句柄。缺少贴图时，上层资产导入器应绑定与该功能契约匹配的中性默认资源。
+
+标准 PBR 的 `opaque` 和 `mask` 都在不透明阶段写入深度。`mask` 使用
+`alpha_cutoff` 对基础色因子与基础色纹理组合后的 Alpha 执行一次裁剪，阴影 Pass 使用同一参数和
+纹理形成一致轮廓。双面 Variant 关闭剔除；单面负缩放实例由 RenderPipeline 自动选择相反正面
+绕序。调用方把 `granit_pbr_material_variant_key` 的结果写入 Draw Binding 的 `variant`，无需为
+反射实例生成另一个 Variant Key。
 
 ## 所有权与生命周期
 

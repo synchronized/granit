@@ -3,6 +3,8 @@
 
 #include <granit/pipeline/pbr_material.h>
 
+#include "material/pbr_material_schema.h"
+
 #include <array>
 #include <cstdint>
 
@@ -37,4 +39,14 @@ granit_pbr_validate_vertex_layout(const granit_vertex_buffer_layout* vertex_buff
   if ((textures & GRANIT_PBR_TEXTURE_NORMAL) != 0 && !locations[GRANIT_PBR_VERTEX_LOCATION_TANGENT])
     return GRANIT_PBR_VERTEX_LAYOUT_MISSING_TANGENT;
   return GRANIT_PBR_VERTEX_LAYOUT_VALID;
+}
+
+extern "C" uint64_t granit_pbr_material_variant_key(granit_pbr_texture_flags textures,
+                                                    granit_pbr_alpha_mode alpha_mode,
+                                                    uint32_t double_sided) {
+  if (granit::material::classify_pbr_shader_textures(textures) ==
+          granit::material::pbr_shader_texture_class::invalid ||
+      alpha_mode > GRANIT_PBR_ALPHA_MODE_BLEND || double_sided > 1)
+    return 0;
+  return granit::material::standard_pbr_variant_key(textures, alpha_mode, double_sided != 0, false);
 }

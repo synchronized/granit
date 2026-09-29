@@ -56,7 +56,8 @@ typedef struct granit_render_pipeline_draw_binding {
   uint64_t payload;
   granit_mesh mesh;
   granit_material material;
-  uint64_t reserved;
+  /** Material Variant Key；零值选择该 Pass 中 feature 最少的默认变体。 */
+  uint64_t variant;
 } granit_render_pipeline_draw_binding;
 
 /** 固定阶段录制回调的只读上下文；所有指针和 Texture View 只在回调期间有效。 */

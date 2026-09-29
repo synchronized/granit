@@ -33,6 +33,12 @@ std::string_view tone_mapping_vertex_shader_name() noexcept { return "tone_mappi
 std::string_view tone_mapping_fragment_shader_name() noexcept { return "tone_mapping.fragment"; }
 std::string_view shadow_depth_vertex_shader_name() noexcept { return "shadow_depth.vertex"; }
 std::string_view shadow_depth_fragment_shader_name() noexcept { return "shadow_depth.fragment"; }
+std::string_view shadow_depth_mask_vertex_shader_name() noexcept {
+  return "shadow_depth_mask.vertex";
+}
+std::string_view shadow_depth_mask_fragment_shader_name() noexcept {
+  return "shadow_depth_mask.fragment";
+}
 
 std::span<const std::byte> debug_draw_shader_library() noexcept {
   return {reinterpret_cast<const std::byte*>(debug_draw_library_bytes),

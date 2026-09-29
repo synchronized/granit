@@ -44,6 +44,8 @@ granit_result record_canvas_pass(granit_renderer renderer, granit_command_record
   const material_draw_request request{
       .pass = granit::material::make_feature_id(desc.encode_srgb ? "unlit_canvas_encode_srgb"
                                                                  : "unlit_canvas"),
+      .variant = 0,
+      .draw_feature = {},
       .color_format = desc.color_format,
       .depth_stencil_format = GRANIT_TEXTURE_FORMAT_UNDEFINED};
   result = acquire_material_draw_state(renderer, desc.material, request, material);

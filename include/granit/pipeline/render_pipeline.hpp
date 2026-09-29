@@ -36,6 +36,7 @@ struct render_pipeline_draw_binding {
   std::uint64_t payload{};
   mesh_ref mesh;
   material_instance_ref material;
+  std::uint64_t variant{};
 };
 
 struct render_pipeline_desc {
@@ -140,7 +141,7 @@ public:
         bindings.push_back({.payload = binding.payload,
                             .mesh = binding.mesh.native_handle(),
                             .material = binding.material.native_handle(),
-                            .reserved = 0});
+                            .variant = binding.variant});
       }
       std::vector<granit_render_pipeline_output> outputs;
       outputs.reserve(desc.outputs.size());
@@ -188,8 +189,7 @@ public:
   }
   [[nodiscard]] result get_metrics(render_pipeline_metrics& metrics) const noexcept {
     granit_render_pipeline_metrics native = GRANIT_RENDER_PIPELINE_METRICS_INIT;
-    const auto value =
-        from_native(granit_render_pipeline_get_metrics(renderer_, handle_, &native));
+    const auto value = from_native(granit_render_pipeline_get_metrics(renderer_, handle_, &native));
     if (value.ok()) {
       metrics = {.sample_sequence = native.sample_sequence,
                  .shadow_gpu_ns = native.shadow_gpu_ns,
@@ -207,9 +207,7 @@ public:
     return from_native(granit_render_pipeline_destroy(renderer, handle));
   }
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
-  [[nodiscard]] renderer_ref owner() const noexcept {
-    return renderer_ref::from_native(renderer_);
-  }
+  [[nodiscard]] renderer_ref owner() const noexcept { return renderer_ref::from_native(renderer_); }
   [[nodiscard]] granit_render_pipeline native_handle() const noexcept { return handle_; }
 
 private:
@@ -224,8 +222,7 @@ private:
     return value;
   }
 
-  [[nodiscard]] result
-  render_native(const granit_render_pipeline_render_desc& desc) noexcept {
+  [[nodiscard]] result render_native(const granit_render_pipeline_render_desc& desc) noexcept {
     return from_native(granit_render_pipeline_render(renderer_, handle_, &desc));
   }
 

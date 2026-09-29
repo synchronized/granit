@@ -14,10 +14,14 @@ namespace granit::pipeline::detail {
 namespace {
 constexpr lighting::light_limits automatic_light_limits{.directional = 4, .point = 128, .spot = 64};
 
-std::uint64_t pbr_variant(const granit::material::pbr_object_constants& object) {
+granit::material::material_feature_value
+pbr_draw_feature(const granit::material::pbr_object_constants& object) {
   return object.transform_handedness < 0.0F
-             ? granit::material::standard_pbr_variant_key(GRANIT_PBR_TEXTURE_ALL, true)
-             : 0;
+             ? granit::material::
+                   material_feature_value{granit::material::make_feature_id(
+                                              GRANIT_PBR_TRANSFORM_REFLECTED_FEATURE_NAME),
+                                          1}
+             : granit::material::material_feature_value{};
 }
 } // namespace
 granit_result
@@ -75,7 +79,8 @@ record_opaque_draws(render_pipeline_state& state, granit_command_recorder record
         result = granit::pipeline::detail::acquire_material_draw_state(
             state.renderer, draws[index].material,
             {.pass = granit::material::make_feature_id("opaque"),
-             .variant = pbr_variant(objects[index]),
+             .variant = draws[index].variant,
+             .draw_feature = pbr_draw_feature(objects[index]),
              .color_format = GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT,
              .depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT,
              .sample_count = resolve_color == GRANIT_NULL_HANDLE ? GRANIT_SAMPLE_COUNT_1
@@ -100,7 +105,8 @@ record_opaque_draws(render_pipeline_state& state, granit_command_recorder record
       result = granit::pipeline::detail::acquire_material_draw_state(
           state.renderer, draws[index].material,
           {.pass = granit::material::make_feature_id("opaque"),
-           .variant = pbr_variant(objects[index]),
+           .variant = draws[index].variant,
+           .draw_feature = pbr_draw_feature(objects[index]),
            .color_format = GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT,
            .depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT,
            .sample_count =

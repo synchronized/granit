@@ -64,7 +64,8 @@ TEST_CASE("PBR 精确纹理掩码归并为三个 Shader 结构类别") {
 
 TEST_CASE("PBR 反射实例使用独立且稳定的 Material Variant") {
   using namespace granit::material;
-  CHECK(standard_pbr_variant_key(pbr_texture_all, false) !=
-        standard_pbr_variant_key(pbr_texture_all, true));
-  CHECK(standard_pbr_variant_key(pbr_texture_all, true) == UINT64_C(0x6b2b30a82239ddf1));
+  CHECK(standard_pbr_variant_key(pbr_texture_all, GRANIT_PBR_ALPHA_MODE_OPAQUE, false, false) !=
+        standard_pbr_variant_key(pbr_texture_all, GRANIT_PBR_ALPHA_MODE_OPAQUE, false, true));
+  CHECK(standard_pbr_variant_key(pbr_texture_all, GRANIT_PBR_ALPHA_MODE_OPAQUE, false, true) ==
+        UINT64_C(0x6b2b30a82239ddf1));
 }

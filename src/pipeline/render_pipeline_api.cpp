@@ -536,6 +536,16 @@ extern "C" granit_result granit_render_pipeline_create(granit_renderer renderer,
         state->shadow_fragment_shader);
     if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
+    resource_result = state->shader_library.create_shader(
+        granit::pipeline::detail::shadow_depth_mask_vertex_shader_name(),
+        state->shadow_mask_vertex_shader);
+    if (resource_result.failed())
+      return static_cast<granit_result>(resource_result);
+    resource_result = state->shader_library.create_shader(
+        granit::pipeline::detail::shadow_depth_mask_fragment_shader_name(),
+        state->shadow_mask_fragment_shader);
+    if (resource_result.failed())
+      return static_cast<granit_result>(resource_result);
     resource_result = state->shadow_placeholder_texture.initialize(
         renderer_view, {.format = granit::texture_format::d32_float,
                         .usage = granit::texture_usage::sampled |
@@ -620,7 +630,7 @@ granit_render_pipeline_render(granit_renderer renderer, granit_render_pipeline p
     bindings.reserve(desc->draw_binding_count);
     for (uint32_t index = 0; index < desc->draw_binding_count; ++index) {
       const auto& binding = desc->draw_bindings[index];
-      if (binding.mesh == 0 || binding.material == GRANIT_NULL_HANDLE || binding.reserved != 0 ||
+      if (binding.mesh == 0 || binding.material == GRANIT_NULL_HANDLE ||
           !bindings.emplace(binding.payload, binding).second) {
         return GRANIT_ERROR_INVALID_ARGUMENT;
       }
@@ -722,6 +732,12 @@ extern "C" granit_result granit_render_pipeline_destroy(granit_renderer renderer
   const auto placeholder_texture_result = removed->shadow_placeholder_texture.reset();
   if (result == GRANIT_SUCCESS)
     result = static_cast<granit_result>(placeholder_texture_result);
+  const auto mask_fragment_result = removed->shadow_mask_fragment_shader.reset();
+  if (result == GRANIT_SUCCESS)
+    result = static_cast<granit_result>(mask_fragment_result);
+  const auto mask_vertex_result = removed->shadow_mask_vertex_shader.reset();
+  if (result == GRANIT_SUCCESS)
+    result = static_cast<granit_result>(mask_vertex_result);
   const auto fragment_result = removed->shadow_fragment_shader.reset();
   if (result == GRANIT_SUCCESS)
     result = static_cast<granit_result>(fragment_result);

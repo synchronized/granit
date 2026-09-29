@@ -26,6 +26,8 @@ granit_result record_unlit_pass(granit_renderer renderer, granit_command_recorde
                                                                 : "unlit_opaque";
   auto result = acquire_material_draw_state(renderer, desc.material,
                                             {.pass = granit::material::make_feature_id(pass_name),
+                                             .variant = 0,
+                                             .draw_feature = {},
                                              .color_format = desc.color_format,
                                              .depth_stencil_format = desc.depth_format},
                                             material);

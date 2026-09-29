@@ -36,6 +36,8 @@ struct vertex_output {
   float occlusion_strength;
   float3 emissive;
   uint debug_display;
+  float alpha_cutoff;
+  uint3 material_reserved;
 };
 
 [[vk::binding(1, 1)]] Texture2D<float4> base_color_texture;
@@ -110,7 +112,7 @@ float3 rotate_environment(float3 direction) {
                 -environment_rotation_sin * direction.x + environment_rotation_cos * direction.z);
 }
 
-float4 fragment_main(vertex_output input) : SV_Target0 {
+float4 fragment_main(vertex_output input, bool is_front_face : SV_IsFrontFace) : SV_Target0 {
   const float4 sampled_base_color =
       base_color_texture.Sample(pbr_sampler, input.texture_coordinate);
   const float4 resolved_base_color = base_color * sampled_base_color;
@@ -120,7 +122,7 @@ float4 fragment_main(vertex_output input) : SV_Target0 {
   const float sampled_roughness =
       clamp(perceptual_roughness * sampled_metallic_roughness.g, 0.045, 1.0);
 
-  const float3 geometric_normal = normalize(input.world_normal);
+  const float3 geometric_normal = normalize(input.world_normal) * (is_front_face ? 1.0 : -1.0);
   const float3 tangent = normalize(input.world_tangent.xyz -
                                    geometric_normal * dot(geometric_normal,
                                                           input.world_tangent.xyz));
@@ -157,23 +159,6 @@ float4 fragment_main(vertex_output input) : SV_Target0 {
   const float3 resolved_emissive =
       emissive * emissive_texture.Sample(pbr_sampler, input.texture_coordinate).rgb;
 
-  if (debug_display == 1)
-    return float4(resolved_base_color.rgb, resolved_base_color.a);
-  if (debug_display == 2)
-    return float4(normal * 0.5 + 0.5, 1.0);
-  if (debug_display == 3)
-    return float4(resolved_metallic.xxx, 1.0);
-  if (debug_display == 4)
-    return float4(roughness.xxx, 1.0);
-  if (debug_display == 5)
-    return float4(geometric_normal * 0.5 + 0.5, 1.0);
-  if (debug_display == 6)
-    return float4(sampled_normal * 0.5 + 0.5, 1.0);
-  if (debug_display == 7)
-    return float4(normalize(input.vertex_normal) * 0.5 + 0.5, 1.0);
-  if (debug_display == 8)
-    return float4(normalize(input.vertex_tangent) * 0.5 + 0.5, 1.0);
-
   const float3 environment_fresnel =
       fresnel_schlick_roughness(normal_dot_view, reflectance, roughness);
   const float3 environment_diffuse =
@@ -192,5 +177,24 @@ float4 fragment_main(vertex_output input) : SV_Target0 {
                           environment_intensity * occlusion);
   const float3 color =
       ambient + (diffuse + specular) * light_radiance.rgb * normal_dot_light + resolved_emissive;
+#if GRANIT_PBR_ALPHA_MASK
+  clip(resolved_base_color.a - alpha_cutoff);
+#endif
+  if (debug_display == 1)
+    return float4(resolved_base_color.rgb, resolved_base_color.a);
+  if (debug_display == 2)
+    return float4(normal * 0.5 + 0.5, 1.0);
+  if (debug_display == 3)
+    return float4(resolved_metallic.xxx, 1.0);
+  if (debug_display == 4)
+    return float4(roughness.xxx, 1.0);
+  if (debug_display == 5)
+    return float4(geometric_normal * 0.5 + 0.5, 1.0);
+  if (debug_display == 6)
+    return float4(sampled_normal * 0.5 + 0.5, 1.0);
+  if (debug_display == 7)
+    return float4(normalize(input.vertex_normal) * 0.5 + 0.5, 1.0);
+  if (debug_display == 8)
+    return float4(normalize(input.vertex_tangent) * 0.5 + 0.5, 1.0);
   return float4(color, resolved_base_color.a);
 }

@@ -16,7 +16,8 @@
       "stage": "fragment",
       "entry_point": "fragment_main",
       "variants": [
-        {"name": "textured", "defines": {"GRANIT_PBR_TEXTURE_MASK": "31"}}
+        {"name": "textured", "defines": {"GRANIT_PBR_TEXTURE_MASK": "31", "GRANIT_PBR_ALPHA_MASK": "0"}},
+        {"name": "textured_alpha_mask", "defines": {"GRANIT_PBR_TEXTURE_MASK": "31", "GRANIT_PBR_ALPHA_MASK": "1"}}
       ]
     }
   ]

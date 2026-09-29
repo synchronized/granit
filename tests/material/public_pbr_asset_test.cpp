@@ -4,6 +4,7 @@
 #include "asset_formats/material/material_archive.h"
 #include "asset_formats/material/material_package_archive.h"
 #include "asset_formats/shader/shader_library.h"
+#include "material/pbr_material_schema.h"
 
 #include <granit/pipeline/pbr_material.h>
 
@@ -76,7 +77,7 @@ TEST_CASE("公共 PBR 片段资产固定材质和 IBL 契约") {
   const auto& shader = find_shader(library, granit::shader_stage::fragment);
   CHECK(shader.entry_point == "fragment_main");
   require_binding(shader.reflection_json, 0, 0, "uniform_buffer", 128);
-  require_binding(shader.reflection_json, 1, 0, "uniform_buffer", 48);
+  require_binding(shader.reflection_json, 1, 0, "uniform_buffer", 64);
   for (std::uint32_t binding = 1; binding <= 5; ++binding)
     require_binding(shader.reflection_json, 1, binding, "sampled_texture", 0);
   require_binding(shader.reflection_json, 1, 6, "sampler", 0);
@@ -91,7 +92,7 @@ TEST_CASE("公共 PBR 材质模板具有稳定 Schema 和内容身份") {
   granit::material::material_archive_layout layout;
   REQUIRE(granit::material::parse_material_archive_layout(bytes, layout) ==
           granit::material::archive_error::none);
-  CHECK(GRANIT_PBR_MATERIAL_TEMPLATE_VERSION == 5);
+  CHECK(GRANIT_PBR_MATERIAL_TEMPLATE_VERSION == 6);
 
   constexpr std::string_view hex = GRANIT_PBR_MATERIAL_CONTENT_HASH_HEX;
   REQUIRE(hex.size() == layout.header.content_hash.size() * 2);
@@ -110,17 +111,43 @@ TEST_CASE("公共 PBR 材质模板为反射实例提供相反正面变体") {
   granit::material::material_package package;
   REQUIRE(granit::material::decode_material_package_archive(bytes, package) ==
           granit::material::archive_error::none);
-  REQUIRE(package.variants().size() == 2);
+  REQUIRE(package.variants().size() == 8);
   const auto clockwise = std::ranges::find_if(package.variants(), [](const auto& variant) {
-    return variant.pipeline.primitive.front_face == GRANIT_FRONT_FACE_CLOCKWISE;
+    return variant.features.size() == 1 &&
+           variant.pipeline.primitive.front_face == GRANIT_FRONT_FACE_CLOCKWISE;
   });
-  const auto counter_clockwise =
-      std::ranges::find_if(package.variants(), [](const auto& variant) {
-        return variant.pipeline.primitive.front_face == GRANIT_FRONT_FACE_COUNTER_CLOCKWISE;
-      });
+  const auto counter_clockwise = std::ranges::find_if(package.variants(), [](const auto& variant) {
+    return variant.features.size() == 2 &&
+           variant.pipeline.primitive.front_face == GRANIT_FRONT_FACE_COUNTER_CLOCKWISE &&
+           variant.pipeline.primitive.cull_mode == GRANIT_CULL_MODE_BACK;
+  });
   REQUIRE(clockwise != package.variants().end());
   REQUIRE(counter_clockwise != package.variants().end());
   CHECK(clockwise->pipeline.primitive.cull_mode == GRANIT_CULL_MODE_BACK);
   CHECK(counter_clockwise->pipeline.primitive.cull_mode == GRANIT_CULL_MODE_BACK);
   CHECK(counter_clockwise->features.size() == 2);
+}
+
+TEST_CASE("公共 PBR 材质模板区分镂空和双面 Pipeline") {
+  const auto bytes = read_binary(GRANIT_PBR_MATERIAL_ASSET);
+  granit::material::material_package package;
+  REQUIRE(granit::material::decode_material_package_archive(bytes, package) ==
+          granit::material::archive_error::none);
+  const auto pass = granit::material::make_feature_id("opaque");
+  const auto opaque_key = granit::material::standard_pbr_variant_key(
+      GRANIT_PBR_TEXTURE_ALL, GRANIT_PBR_ALPHA_MODE_OPAQUE, false, false);
+  const auto mask_key = granit::material::standard_pbr_variant_key(
+      GRANIT_PBR_TEXTURE_ALL, GRANIT_PBR_ALPHA_MODE_MASK, false, false);
+  const auto double_key = granit::material::standard_pbr_variant_key(
+      GRANIT_PBR_TEXTURE_ALL, GRANIT_PBR_ALPHA_MODE_OPAQUE, true, false);
+  const auto* opaque = package.find(pass, opaque_key);
+  const auto* mask = package.find(pass, mask_key);
+  const auto* double_sided = package.find(pass, double_key);
+  REQUIRE(opaque != nullptr);
+  REQUIRE(mask != nullptr);
+  REQUIRE(double_sided != nullptr);
+  CHECK(opaque->pipeline.primitive.cull_mode == GRANIT_CULL_MODE_BACK);
+  CHECK(mask->pipeline.depth.write_enabled == 1);
+  CHECK(mask->shaders[1].asset_id != opaque->shaders[1].asset_id);
+  CHECK(double_sided->pipeline.primitive.cull_mode == GRANIT_CULL_MODE_NONE);
 }

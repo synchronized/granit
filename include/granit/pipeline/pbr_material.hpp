@@ -24,6 +24,12 @@ enum class pbr_texture : std::uint32_t {
   all = GRANIT_PBR_TEXTURE_ALL,
 };
 
+enum class pbr_alpha_mode : std::uint32_t {
+  opaque = GRANIT_PBR_ALPHA_MODE_OPAQUE,
+  mask = GRANIT_PBR_ALPHA_MODE_MASK,
+  blend = GRANIT_PBR_ALPHA_MODE_BLEND,
+};
+
 [[nodiscard]] constexpr pbr_texture operator|(pbr_texture left, pbr_texture right) noexcept {
   return static_cast<pbr_texture>(static_cast<std::uint32_t>(left) |
                                   static_cast<std::uint32_t>(right));
@@ -67,12 +73,21 @@ validate_pbr_vertex_layout(std::span<const vertex_buffer_layout> vertex_buffers,
                         .reserved = 0,
                         .attributes = native_attributes.data()});
     }
-    return static_cast<pbr_vertex_layout_result>(granit_pbr_validate_vertex_layout(
-        native.data(), static_cast<std::uint32_t>(native.size()),
-        static_cast<std::uint32_t>(textures)));
+    return static_cast<pbr_vertex_layout_result>(
+        granit_pbr_validate_vertex_layout(native.data(), static_cast<std::uint32_t>(native.size()),
+                                          static_cast<std::uint32_t>(textures)));
   } catch (...) {
     return pbr_vertex_layout_result::invalid_argument;
   }
+}
+
+/** 计算标准 PBR 材质语义对应的稳定 Variant Key；非法组合返回零。 */
+[[nodiscard]] inline std::uint64_t
+pbr_material_variant_key(pbr_texture textures, pbr_alpha_mode alpha_mode = pbr_alpha_mode::opaque,
+                         bool double_sided = false) noexcept {
+  return granit_pbr_material_variant_key(static_cast<std::uint32_t>(textures),
+                                         static_cast<std::uint32_t>(alpha_mode),
+                                         double_sided ? 1U : 0U);
 }
 
 } // namespace granit

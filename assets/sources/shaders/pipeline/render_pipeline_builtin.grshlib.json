@@ -27,6 +27,18 @@
       "source": "shadow_depth.hlsl",
       "stage": "fragment",
       "entry_point": "fragment_main"
+    },
+    {
+      "name": "shadow_depth_mask.vertex",
+      "source": "shadow_depth.hlsl",
+      "stage": "vertex",
+      "entry_point": "mask_vertex_main"
+    },
+    {
+      "name": "shadow_depth_mask.fragment",
+      "source": "shadow_depth.hlsl",
+      "stage": "fragment",
+      "entry_point": "mask_fragment_main"
     }
   ]
 }

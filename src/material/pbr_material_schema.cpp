@@ -4,8 +4,8 @@
 #include "material/pbr_material_schema.h"
 #include "asset_formats/material/material_package.h"
 
+#include <algorithm>
 #include <array>
-#include <utility>
 
 namespace granit::material {
 
@@ -19,15 +19,20 @@ pbr_shader_texture_class classify_pbr_shader_textures(pbr_texture_flags textures
   return pbr_shader_texture_class::untextured;
 }
 
-std::uint64_t standard_pbr_variant_key(pbr_texture_flags textures, bool reflected) noexcept {
-  std::array<material_feature_value, 2> features{
-      material_feature_value{make_feature_id(pbr_texture_feature_name), textures},
-      material_feature_value{make_feature_id(pbr_transform_reflected_feature_name), 1}};
-  if (!reflected)
-    return make_variant_key(std::span{features}.first(1));
-  if (features[1].id < features[0].id)
-    std::swap(features[0], features[1]);
-  return make_variant_key(features);
+std::uint64_t standard_pbr_variant_key(pbr_texture_flags textures, std::uint32_t alpha_mode,
+                                       bool double_sided, bool reflected) noexcept {
+  std::array<material_feature_value, 4> features{};
+  std::size_t count = 0;
+  features[count++] = {make_feature_id(pbr_texture_feature_name), textures};
+  if (alpha_mode != GRANIT_PBR_ALPHA_MODE_OPAQUE)
+    features[count++] = {make_feature_id(pbr_alpha_mode_feature_name), alpha_mode};
+  if (double_sided)
+    features[count++] = {make_feature_id(pbr_double_sided_feature_name), 1};
+  if (reflected)
+    features[count++] = {make_feature_id(pbr_transform_reflected_feature_name), 1};
+  auto selected = std::span{features}.first(count);
+  std::ranges::sort(selected, {}, &material_feature_value::id);
+  return make_variant_key(selected);
 }
 
 pbr_vertex_layout_error

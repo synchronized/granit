@@ -7,17 +7,18 @@
 #include "pipeline/mesh_access.h"
 #include <algorithm>
 #include <array>
+#include <granit/pipeline/pbr_material.h>
 #include <granit/renderer/render_target.h>
 #include <new>
 #include <vector>
 namespace granit::pipeline::detail {
 granit_result acquire_shadow_pipeline(render_pipeline_state& state,
                                       const granit::pipeline::detail::material_draw_state& material,
-                                      granit_mesh mesh, bool reflected,
+                                      granit_mesh mesh, bool reflected, bool alpha_mask,
                                       granit_graphics_pipeline& pipeline) {
   const auto cached = std::ranges::find_if(state.shadow_pipelines, [&](const auto& entry) {
     return entry.layout == material.pipeline_layout && entry.mesh == mesh &&
-           entry.reflected == reflected;
+           entry.reflected == reflected && entry.alpha_mask == alpha_mask;
   });
   if (cached != state.shadow_pipelines.end()) {
     pipeline = cached->pipeline;
@@ -39,8 +40,10 @@ granit_result acquire_shadow_pipeline(render_pipeline_state& state,
   const granit_depth_bias_state depth_bias{1.25F, 1.75F, 0.0F, 0};
   granit_graphics_pipeline_desc desc = GRANIT_GRAPHICS_PIPELINE_DESC_INIT;
   desc.layout = material.pipeline_layout;
-  desc.vertex_shader = state.shadow_vertex_shader.native_handle();
-  desc.fragment_shader = state.shadow_fragment_shader.native_handle();
+  desc.vertex_shader = alpha_mask ? state.shadow_mask_vertex_shader.native_handle()
+                                  : state.shadow_vertex_shader.native_handle();
+  desc.fragment_shader = alpha_mask ? state.shadow_mask_fragment_shader.native_handle()
+                                    : state.shadow_fragment_shader.native_handle();
   desc.depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT;
   desc.vertex_buffer_layout_count = static_cast<uint32_t>(layouts.size());
   desc.vertex_buffer_layouts = layouts.data();
@@ -55,7 +58,8 @@ granit_result acquire_shadow_pipeline(render_pipeline_state& state,
   if (result != GRANIT_SUCCESS)
     return result;
   try {
-    state.shadow_pipelines.push_back({material.pipeline_layout, mesh, reflected, created});
+    state.shadow_pipelines.push_back(
+        {material.pipeline_layout, mesh, reflected, alpha_mask, created});
   } catch (const std::bad_alloc&) {
     static_cast<void>(granit_graphics_pipeline_destroy(state.renderer, created));
     return GRANIT_ERROR_OUT_OF_MEMORY;
@@ -107,20 +111,20 @@ granit_result record_shadow_draws(render_pipeline_state& state, granit_command_r
         result = granit::pipeline::detail::acquire_material_draw_state(
             state.renderer, draws[index].material,
             {.pass = granit::material::make_feature_id("opaque"),
-             .variant = 0,
+             .variant = draws[index].variant,
+             .draw_feature = {},
              .color_format = GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT,
              .depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT},
             arena_materials[index]);
         if (result != GRANIT_SUCCESS)
           break;
-        arena_objects.push_back({.model = casters[index].model,
-                                 .normal_matrix = granit::math::identity_matrix4,
-                                 .object_id = casters[index].object_id,
-                                 .transform_handedness =
-                                     granit::math::linear_determinant(casters[index].model) < 0.0F
-                                         ? -1.0F
-                                         : 1.0F,
-                                 .reserved = {0, 0}});
+        arena_objects.push_back(
+            {.model = casters[index].model,
+             .normal_matrix = granit::math::identity_matrix4,
+             .object_id = casters[index].object_id,
+             .transform_handedness =
+                 granit::math::linear_determinant(casters[index].model) < 0.0F ? -1.0F : 1.0F,
+             .reserved = {0, 0}});
         requests.push_back({.material = &arena_materials[index],
                             .frame = std::as_bytes(std::span{&unused_frame, 1}),
                             .object = std::as_bytes(std::span{&arena_objects.back(), 1})});
@@ -138,24 +142,31 @@ granit_result record_shadow_draws(render_pipeline_state& state, granit_command_r
       result = granit::pipeline::detail::acquire_material_draw_state(
           state.renderer, draws[index].material,
           {.pass = granit::material::make_feature_id("opaque"),
-           .variant = 0,
+           .variant = draws[index].variant,
+           .draw_feature = {},
            .color_format = GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT,
            .depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT},
           material);
     }
     if (result != GRANIT_SUCCESS)
       break;
-    const auto object = use_uniform_arena ? arena_objects[index]
-                                          : granit::material::pbr_object_constants{
-                                                .model = casters[index].model,
-                                                .normal_matrix = granit::math::identity_matrix4,
-                                                .object_id = casters[index].object_id,
-                                                .transform_handedness =
-                                                    granit::math::linear_determinant(
-                                                        casters[index].model) < 0.0F
-                                                        ? -1.0F
-                                                        : 1.0F,
-                                                .reserved = {0, 0}};
+    bool alpha_mask = false;
+    result = material_variant_has_feature(
+        state.renderer, draws[index].material, granit::material::make_feature_id("opaque"),
+        draws[index].variant, granit::material::make_feature_id(GRANIT_PBR_ALPHA_MODE_FEATURE_NAME),
+        GRANIT_PBR_ALPHA_MODE_MASK, alpha_mask);
+    if (result != GRANIT_SUCCESS)
+      break;
+    const auto object =
+        use_uniform_arena
+            ? arena_objects[index]
+            : granit::material::pbr_object_constants{
+                  .model = casters[index].model,
+                  .normal_matrix = granit::math::identity_matrix4,
+                  .object_id = casters[index].object_id,
+                  .transform_handedness =
+                      granit::math::linear_determinant(casters[index].model) < 0.0F ? -1.0F : 1.0F,
+                  .reserved = {0, 0}};
     if (index == state.shadow_draw_bindings.size())
       state.shadow_draw_bindings.emplace_back();
     auto& cached = state.shadow_draw_bindings[index];
@@ -192,7 +203,7 @@ granit_result record_shadow_draws(render_pipeline_state& state, granit_command_r
     granit_graphics_pipeline pipeline = GRANIT_NULL_HANDLE;
     if (result == GRANIT_SUCCESS)
       result = acquire_shadow_pipeline(state, material, draws[index].mesh,
-                                       object.transform_handedness < 0.0F, pipeline);
+                                       object.transform_handedness < 0.0F, alpha_mask, pipeline);
     if (result != GRANIT_SUCCESS)
       break;
     if (result == GRANIT_SUCCESS)
