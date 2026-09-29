@@ -68,8 +68,9 @@ jobs:
             test -s "${output}.wasm"
           done
           test -s build/emscripten-release/web/granit_web_platform_smoke.data
-          for name in granit_imgui_web granit_tutorial_01_cube granit_tutorial_02_pbr_assets \
-            granit_tutorial_03_instancing granit_tutorial_04_raymarch \
+          for name in granit_tutorial_08_sdl_imgui granit_tutorial_01_cube \
+            granit_tutorial_02_pbr_assets granit_tutorial_03_instancing \
+            granit_tutorial_04_raymarch \
             granit_tutorial_05_metaballs granit_tutorial_06_marching_cubes \
             granit_tutorial_07_deferred; do
             output="build/emscripten-release/web/${name}"
@@ -87,7 +88,7 @@ jobs:
             build/emscripten-release/web/granit_web_platform_smoke.*
             build/emscripten-release/web/granit_sample_model_viewer_web.*
             build/emscripten-release/web/granit_sample_model_viewer_web_test.*
-            build/emscripten-release/web/granit_imgui_web.*
+            build/emscripten-release/web/granit_tutorial_08_sdl_imgui.*
             build/emscripten-release/web/granit_tutorial_01_cube.*
             build/emscripten-release/web/granit_tutorial_02_pbr_assets.*
             build/emscripten-release/web/granit_tutorial_03_instancing.*

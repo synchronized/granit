@@ -10,8 +10,8 @@
 #include <imgui.h>
 
 #include "imgui/imgui_theme.h"
-#include "samples/imgui/content.h"
-#include "samples/imgui/resources.h"
+#include "tutorials/08_sdl_imgui/content.h"
+#include "tutorials/08_sdl_imgui/resources.h"
 
 #include <granit/granit.hpp>
 #include <granit/integrations/imgui/renderer.hpp>
@@ -44,7 +44,7 @@ struct web_imgui_state {
   granit::texture_view checker_view;
   granit::sampler sampler;
   granit::example::imgui_sample_texture_bindings bindings;
-  granit::example::imgui_sample_state sample;
+  granit::example::imgui_validation_state validation;
   std::uint32_t tick_count{};
   std::uint32_t rendered_frames{};
   std::uint32_t pointer_events{};
@@ -109,9 +109,8 @@ granit::result initialize_gpu_resources() {
                                                            state.checker_view);
   }
   if (result.ok()) {
-    state.bindings = {
-        .font = {state.font_view.ref(), state.sampler.ref()},
-        .checker = {state.checker_view.ref(), state.sampler.ref()}};
+    state.bindings = {.font = {state.font_view.ref(), state.sampler.ref()},
+                      .checker = {state.checker_view.ref(), state.sampler.ref()}};
   }
   return result;
 }
@@ -146,15 +145,15 @@ granit::result render_frame() {
   ImGui_ImplSDL3_NewFrame();
   ImGui::NewFrame();
   if (state.validation_scene) {
-    granit::example::build_imgui_validation_scene(state.sample,
+    granit::example::build_imgui_validation_scene(state.validation,
                                                   granit::example::imgui_checker_texture_id);
   } else
     granit::example::build_imgui_sample(
-        state.sample, {.framebuffer_width = state.swapchain_info.width,
-                       .framebuffer_height = state.swapchain_info.height,
-                       .presentation = "FIFO",
-                       .show_custom_texture = true,
-                       .custom_texture = granit::example::imgui_checker_texture_id});
+        {.framebuffer_width = state.swapchain_info.width,
+         .framebuffer_height = state.swapchain_info.height,
+         .presentation = "FIFO",
+         .show_custom_texture = true,
+         .custom_texture = granit::example::imgui_checker_texture_id});
   ImGui::Render();
 
   operation = "canvas-clear";
@@ -291,23 +290,23 @@ void shutdown() noexcept {
 
 } // namespace
 
-extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_imgui_rendered_frames() noexcept {
+extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_tutorial_08_rendered_frames() noexcept {
   return state.rendered_frames;
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_imgui_pointer_events() noexcept {
+extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_tutorial_08_pointer_events() noexcept {
   return state.pointer_events;
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_imgui_resize_count() noexcept {
+extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_tutorial_08_resize_count() noexcept {
   return state.resize_count;
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_imgui_validation_enabled() noexcept {
-  return state.sample.validation_overlay ? 1 : 0;
+extern "C" EMSCRIPTEN_KEEPALIVE int granit_tutorial_08_validation_enabled() noexcept {
+  return state.validation.validation_overlay ? 1 : 0;
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_imgui_shutdown() noexcept {
+extern "C" EMSCRIPTEN_KEEPALIVE int granit_tutorial_08_shutdown() noexcept {
   emscripten_cancel_main_loop();
   shutdown();
   return 0;

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_EXAMPLES_SAMPLES_IMGUI_RESOURCES_H_
-#define GRANIT_EXAMPLES_SAMPLES_IMGUI_RESOURCES_H_
+#ifndef GRANIT_EXAMPLES_TUTORIALS_08_SDL_IMGUI_RESOURCES_H_
+#define GRANIT_EXAMPLES_TUTORIALS_08_SDL_IMGUI_RESOURCES_H_
 
 #include <imgui.h>
 
@@ -24,8 +24,7 @@ struct imgui_sample_texture_bindings {
   imgui_texture_binding checker;
 };
 
-[[nodiscard]] result resolve_imgui_sample_texture(ImTextureID texture,
-                                                  canvas_draw_state& state,
+[[nodiscard]] result resolve_imgui_sample_texture(ImTextureID texture, canvas_draw_state& state,
                                                   void* user_data) noexcept;
 
 [[nodiscard]] result upload_imgui_checker_texture(renderer& renderer, texture& output,

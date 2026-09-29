@@ -4,7 +4,7 @@
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
-const { decodePng, pixelAt } = require("./png.cjs");
+const { decodePng, pixelAt } = require("../png.cjs");
 const { chromium } = require("playwright-core");
 
 const outputDirectory = path.resolve(process.argv[2] ?? "build/emscripten-release/web");
@@ -17,7 +17,7 @@ const contentTypes = new Map([
 
 const server = http.createServer((request, response) => {
   const requestPath = new URL(request.url, "http://127.0.0.1").pathname;
-  const relativePath = requestPath === "/" ? "granit_imgui_web.html" : requestPath.slice(1);
+  const relativePath = requestPath === "/" ? "granit_tutorial_08_sdl_imgui.html" : requestPath.slice(1);
   const filePath = path.resolve(outputDirectory, relativePath);
   if (!filePath.startsWith(`${outputDirectory}${path.sep}`)) {
     response.writeHead(403).end();
@@ -79,12 +79,14 @@ async function validateVisualScene(browser, address, ratio) {
     if (message.type() === "error") errors.push(message.text());
   });
   try {
-    await page.goto(`http://127.0.0.1:${address.port}/granit_imgui_web.html?validation=1`);
+    await page.goto(
+      `http://127.0.0.1:${address.port}/granit_tutorial_08_sdl_imgui.html?validation=1`,
+    );
     await page.waitForFunction(
       () =>
         Module.runtimeReady === true &&
-        typeof Module._granit_web_imgui_rendered_frames === "function" &&
-        Module._granit_web_imgui_rendered_frames() >= 30,
+        typeof Module._granit_tutorial_08_rendered_frames === "function" &&
+        Module._granit_tutorial_08_rendered_frames() >= 30,
     );
     const canvas = page.locator("#canvas");
     const artifact = path.join(outputDirectory, "validation");
@@ -92,10 +94,10 @@ async function validateVisualScene(browser, address, ratio) {
     const before = await canvas.screenshot({ path: path.join(artifact, `imgui-${ratio}x-before.png`) });
     validateScene(before, ratio, true);
     await canvas.click({ position: { x: 40, y: 176 } });
-    await page.waitForFunction(() => Module._granit_web_imgui_validation_enabled() === 0);
-    const frame = await page.evaluate(() => Module._granit_web_imgui_rendered_frames());
+    await page.waitForFunction(() => Module._granit_tutorial_08_validation_enabled() === 0);
+    const frame = await page.evaluate(() => Module._granit_tutorial_08_rendered_frames());
     await page.waitForFunction(
-      (previous) => Module._granit_web_imgui_rendered_frames() > previous + 2, frame,
+      (previous) => Module._granit_tutorial_08_rendered_frames() > previous + 2, frame,
     );
     const after = await canvas.screenshot({ path: path.join(artifact, `imgui-${ratio}x-after.png`) });
     validateScene(after, ratio, false);
@@ -132,22 +134,22 @@ async function main() {
     await page.mouse.wheel(0, -80);
     await page.waitForFunction(
       () =>
-        typeof Module._granit_web_imgui_pointer_events === "function" &&
-        Module._granit_web_imgui_pointer_events() >= 4,
+        typeof Module._granit_tutorial_08_pointer_events === "function" &&
+        Module._granit_tutorial_08_pointer_events() >= 4,
       undefined,
       { timeout: 10_000 },
     );
     await page.setViewportSize({ width: 800, height: 600 });
     await page.waitForFunction(
       () =>
-        typeof Module._granit_web_imgui_resize_count === "function" &&
-        Module._granit_web_imgui_resize_count() >= 1,
+        typeof Module._granit_tutorial_08_resize_count === "function" &&
+        Module._granit_tutorial_08_resize_count() >= 1,
       undefined,
       { timeout: 10_000 },
     );
     if (errors.length !== 0)
       throw new Error(`Web ImGui 控制台出现异常：\n${errors.join("\n")}`);
-    const shutdown = await page.evaluate(() => Module._granit_web_imgui_shutdown());
+    const shutdown = await page.evaluate(() => Module._granit_tutorial_08_shutdown());
     if (shutdown !== 0) throw new Error(`Web ImGui 关闭失败：${shutdown}`);
     console.log("浏览器 SDL3 + ImGui 多帧渲染、输入、Resize 与资源释放验证通过");
   } finally {

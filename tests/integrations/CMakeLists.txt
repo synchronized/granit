@@ -27,7 +27,7 @@ if(GRANIT_BUILD_INTEGRATION_SDL3)
   endif()
 endif()
 
-if(GRANIT_BUILD_INTEGRATION_IMGUI)
+if(TARGET granit::integration_imgui)
   add_executable(granit_integration_imgui_test imgui/renderer_test.cpp)
   target_link_libraries(
     granit_integration_imgui_test
@@ -36,6 +36,32 @@ if(GRANIT_BUILD_INTEGRATION_IMGUI)
   granit_target_compile_warnings(granit_integration_imgui_test)
   granit_target_output_directories(granit_integration_imgui_test)
   add_test(NAME granit.integration.imgui COMMAND granit_integration_imgui_test)
+
+  if(TARGET granit_example_validation)
+    add_executable(
+      granit_integration_imgui_visual_test
+      imgui/visual_test.cpp
+      "${PROJECT_SOURCE_DIR}/examples/tutorials/08_sdl_imgui/resources.cpp"
+    )
+    target_include_directories(
+      granit_integration_imgui_visual_test
+      PRIVATE "${PROJECT_SOURCE_DIR}/examples" "${PROJECT_SOURCE_DIR}/examples/common"
+              "${granit_imgui_SOURCE_DIR}"
+    )
+    target_link_libraries(
+      granit_integration_imgui_visual_test
+      PRIVATE granit::integration_imgui granit_example_validation Catch2::Catch2WithMain
+    )
+    granit_target_compile_warnings(granit_integration_imgui_visual_test)
+    granit_target_output_directories(granit_integration_imgui_visual_test)
+    add_test(NAME granit.integration.imgui.visual COMMAND granit_integration_imgui_visual_test)
+    set_tests_properties(
+      granit.integration.imgui.visual
+      PROPERTIES TIMEOUT 60
+                 ENVIRONMENT_MODIFICATION
+                 "PATH=path_list_prepend:$<TARGET_FILE_DIR:granit::granit>"
+    )
+  endif()
 endif()
 if(GRANIT_BUILD_INTEGRATION_SDL3 AND WIN32)
   set_property(TEST granit.integration.sdl3.surface APPEND PROPERTY LABELS gpu platform)

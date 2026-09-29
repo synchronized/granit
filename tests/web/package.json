@@ -5,7 +5,7 @@
   "license": "MIT",
   "scripts": {
     "test": "node platform_smoke_test.cjs",
-    "test:imgui": "node imgui_test.cjs",
+    "test:imgui": "node imgui/browser_test.cjs",
     "test:tutorial-01": "node tutorial_01_test.cjs",
     "test:tutorial-02": "node tutorial_02_test.cjs",
     "test:tutorial-feature": "node tutorial_feature_test.cjs"

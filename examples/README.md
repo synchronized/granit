@@ -3,8 +3,8 @@
 
 # Granit 示例
 
-本目录保存特性教程的可运行源码和面向使用者的完整应用。聚焦单条渲染路径的内容进入
-`tutorials`，完整应用与集成示例进入 `samples`；单项 API、错误路径和平台能力验证进入 `tests`，不为
+本目录保存特性教程的可运行源码和面向使用者的完整应用。聚焦单条渲染路径或明确集成边界的内容
+进入 `tutorials`，完整应用进入 `samples`；单项 API、错误路径和平台能力验证进入 `tests`，不为
 展示数量复制成独立示例。
 构建与运行命令见[示例程序指南](../docs/guides/examples.md)。
 
@@ -16,11 +16,10 @@
 
 | 入口 | 位置 | 目标 | 用途 |
 |---|---|---|---|
-| ImGui | `samples/imgui` | `granit_sdl3_imgui_example`、`granit_imgui_web` | 验证 SDL3、ImGui 和 Canvas 集成 |
 | Model Viewer | `samples/model_viewer` | `granit_sample_model_viewer`、Web 目标 | 展示完整跨后端 PBR 工具 |
 
-低层纹理立方体、PBR 资产、Instancing、Raymarch 和 Metaballs 位于 `tutorials`，公共应用生命周期
-位于 `common/application`。
+低层纹理立方体、PBR 资产、Instancing、Raymarch、Metaballs 和 SDL3 + ImGui 集成位于
+`tutorials`，公共应用生命周期位于 `common/application`。
 
 ## 目录职责
 
@@ -37,7 +36,6 @@ examples/
 │  ├─ sdl/       SDL3 窗口与 ImGui 生命周期 RAII
 │  └─ validation/ 截图与视觉回归比较
 ├─ samples/      综合应用内容、平台入口及自身目标声明
-│  ├─ imgui/      SDL3 + ImGui 完整集成
 │  └─ model_viewer/ 完整跨后端模型查看器
 └─ tutorials/    编号特性教程源码
 ```

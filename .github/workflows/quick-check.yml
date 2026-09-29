@@ -49,7 +49,7 @@ jobs:
           if [[ "$suite" == auto ]]; then
             web_paths='^(tests/web/|examples/common/web/|'
             web_paths+='examples/samples/model_viewer/|'
-            web_paths+='examples/samples/imgui/(web\.cmake|web_main\.cpp)|'
+            web_paths+='examples/tutorials/08_sdl_imgui/|'
             web_paths+='cmake/(granit_web|granit_platform)\.cmake$|src/backend/webgpu/|'
             web_paths+='\.github/workflows/emscripten\.yml$)'
             git fetch --no-tags origin main
