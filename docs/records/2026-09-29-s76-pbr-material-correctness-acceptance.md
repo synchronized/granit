@@ -27,12 +27,14 @@ UV/Sampler 和 `COLOR_0`，Model Viewer 直接映射 glTF 核心语义。自动 
   [Linux](https://github.com/synchronized/granit/actions/runs/36513201854)和
   [Windows](https://github.com/synchronized/granit/actions/runs/36513209357)通过；
 - [Emscripten](https://github.com/synchronized/granit/actions/runs/36513215396)完成编译与全部浏览器
-  矩阵。发布候选复跑暴露两个 Chrome/Xvfb 实例争抢软件 Vulkan 设备会导致 Dawn 实例丢失，浏览器
-  矩阵因此改为串行执行；
+  矩阵。发布候选复跑仍在 Model Viewer 浏览器验收中偶发 Dawn 实例丢失；矩阵已改为串行以降低
+  运行器波动，但该问题不阻塞本次已通过功能验收的代码，留待下一版本整体修复；
 - PR #117 的当前提交 `2454d187` 通过以上发布前矩阵。
 
 ## 保留限制
 
 - 透明排序以 Renderable 包围球中心为对象级近似，不处理相交对象或 Mesh 内部三角形顺序；
 - 本版本不包含透明阴影、OIT、折射、透射、体积材质或 `KHR_texture_transform`；
+- Model Viewer 浏览器验收仍可能因 Dawn 外部 Instance 丢失而失败，需在下一版本统一检查 WebGPU
+  实例生命周期、浏览器启动方式与重试策略；
 - `opaque_gpu_ns` 继续表示完整 Forward PBR 图节点，包含透明阶段，不新增 ABI 字段。
