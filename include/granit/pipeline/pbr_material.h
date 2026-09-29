@@ -14,9 +14,9 @@ typedef uint32_t granit_pbr_alpha_mode;
 #define GRANIT_PBR_ALPHA_MODE_OPAQUE UINT32_C(0)
 #define GRANIT_PBR_ALPHA_MODE_MASK UINT32_C(1)
 #define GRANIT_PBR_ALPHA_MODE_BLEND UINT32_C(2)
-#define GRANIT_PBR_MATERIAL_TEMPLATE_VERSION UINT32_C(6)
+#define GRANIT_PBR_MATERIAL_TEMPLATE_VERSION UINT32_C(7)
 #define GRANIT_PBR_MATERIAL_CONTENT_HASH_HEX                                                       \
-  "72991e2f971148edcf5eca355c751f4f9bddf09af773ba0ec40328bba3cb1125"
+  "d019b68b7018e6c9195f7dc9d2358924f58eb2005efcb1c31c637cb6ab262f84"
 #define GRANIT_PBR_TEXTURE_BASE_COLOR (UINT32_C(1) << 0)
 #define GRANIT_PBR_TEXTURE_METALLIC_ROUGHNESS (UINT32_C(1) << 1)
 #define GRANIT_PBR_TEXTURE_NORMAL (UINT32_C(1) << 2)
@@ -30,6 +30,7 @@ typedef uint32_t granit_pbr_alpha_mode;
 #define GRANIT_PBR_TRANSFORM_REFLECTED_FEATURE_NAME "pbr_transform_reflected"
 #define GRANIT_PBR_ALPHA_MODE_FEATURE_NAME "pbr_alpha_mode"
 #define GRANIT_PBR_DOUBLE_SIDED_FEATURE_NAME "pbr_double_sided"
+#define GRANIT_PBR_UV1_FEATURE_NAME "pbr_uses_uv1"
 #define GRANIT_PBR_PARAMETER_BASE_COLOR "base_color"
 #define GRANIT_PBR_PARAMETER_METALLIC "metallic"
 #define GRANIT_PBR_PARAMETER_PERCEPTUAL_ROUGHNESS "perceptual_roughness"
@@ -43,7 +44,12 @@ typedef uint32_t granit_pbr_alpha_mode;
 #define GRANIT_PBR_PARAMETER_NORMAL_TEXTURE "normal_texture"
 #define GRANIT_PBR_PARAMETER_OCCLUSION_TEXTURE "occlusion_texture"
 #define GRANIT_PBR_PARAMETER_EMISSIVE_TEXTURE "emissive_texture"
-#define GRANIT_PBR_PARAMETER_SAMPLER "pbr_sampler"
+#define GRANIT_PBR_PARAMETER_UV1_MASK "uv1_mask"
+#define GRANIT_PBR_PARAMETER_BASE_COLOR_SAMPLER "base_color_sampler"
+#define GRANIT_PBR_PARAMETER_METALLIC_ROUGHNESS_SAMPLER "metallic_roughness_sampler"
+#define GRANIT_PBR_PARAMETER_NORMAL_SAMPLER "normal_sampler"
+#define GRANIT_PBR_PARAMETER_OCCLUSION_SAMPLER "occlusion_sampler"
+#define GRANIT_PBR_PARAMETER_EMISSIVE_SAMPLER "emissive_sampler"
 
 #define GRANIT_PBR_CONSTANT_BUFFER_SIZE UINT32_C(64)
 #define GRANIT_PBR_CONSTANT_BASE_COLOR_OFFSET UINT32_C(0)
@@ -54,6 +60,7 @@ typedef uint32_t granit_pbr_alpha_mode;
 #define GRANIT_PBR_CONSTANT_EMISSIVE_OFFSET UINT32_C(32)
 #define GRANIT_PBR_CONSTANT_DEBUG_DISPLAY_OFFSET UINT32_C(44)
 #define GRANIT_PBR_CONSTANT_ALPHA_CUTOFF_OFFSET UINT32_C(48)
+#define GRANIT_PBR_CONSTANT_UV1_MASK_OFFSET UINT32_C(52)
 
 #define GRANIT_PBR_BINDING_CONSTANTS UINT32_C(0)
 #define GRANIT_PBR_BINDING_BASE_COLOR UINT32_C(1)
@@ -61,12 +68,17 @@ typedef uint32_t granit_pbr_alpha_mode;
 #define GRANIT_PBR_BINDING_NORMAL UINT32_C(3)
 #define GRANIT_PBR_BINDING_OCCLUSION UINT32_C(4)
 #define GRANIT_PBR_BINDING_EMISSIVE UINT32_C(5)
-#define GRANIT_PBR_BINDING_SAMPLER UINT32_C(6)
+#define GRANIT_PBR_BINDING_BASE_COLOR_SAMPLER UINT32_C(6)
+#define GRANIT_PBR_BINDING_METALLIC_ROUGHNESS_SAMPLER UINT32_C(7)
+#define GRANIT_PBR_BINDING_NORMAL_SAMPLER UINT32_C(8)
+#define GRANIT_PBR_BINDING_OCCLUSION_SAMPLER UINT32_C(9)
+#define GRANIT_PBR_BINDING_EMISSIVE_SAMPLER UINT32_C(10)
 
 #define GRANIT_PBR_VERTEX_LOCATION_POSITION UINT32_C(0)
 #define GRANIT_PBR_VERTEX_LOCATION_NORMAL UINT32_C(1)
 #define GRANIT_PBR_VERTEX_LOCATION_TANGENT UINT32_C(2)
 #define GRANIT_PBR_VERTEX_LOCATION_UV0 UINT32_C(3)
+#define GRANIT_PBR_VERTEX_LOCATION_UV1 UINT32_C(4)
 
 typedef uint32_t granit_pbr_vertex_layout_result;
 #define GRANIT_PBR_VERTEX_LAYOUT_VALID UINT32_C(0)
@@ -76,19 +88,22 @@ typedef uint32_t granit_pbr_vertex_layout_result;
 #define GRANIT_PBR_VERTEX_LAYOUT_MISSING_UV0 UINT32_C(4)
 #define GRANIT_PBR_VERTEX_LAYOUT_MISSING_TANGENT UINT32_C(5)
 #define GRANIT_PBR_VERTEX_LAYOUT_INVALID_ARGUMENT UINT32_C(6)
+#define GRANIT_PBR_VERTEX_LAYOUT_INVALID_UV1_MASK UINT32_C(7)
+#define GRANIT_PBR_VERTEX_LAYOUT_MISSING_UV1 UINT32_C(8)
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** 检查公共顶点布局是否满足指定标准 PBR 纹理变体。 */
-GRANIT_RENDER_PIPELINE_API granit_pbr_vertex_layout_result
-granit_pbr_validate_vertex_layout(const granit_vertex_buffer_layout* vertex_buffers,
-                                  uint32_t vertex_buffer_count, granit_pbr_texture_flags textures);
+/** 检查公共顶点布局是否满足指定标准 PBR 纹理和逐槽 UV1 选择。 */
+GRANIT_RENDER_PIPELINE_API granit_pbr_vertex_layout_result granit_pbr_validate_vertex_layout(
+    const granit_vertex_buffer_layout* vertex_buffers, uint32_t vertex_buffer_count,
+    granit_pbr_texture_flags textures, granit_pbr_texture_flags uv1_mask);
 
-/** 计算标准 PBR 材质语义对应的稳定 Variant Key；非法组合返回零。 */
-GRANIT_RENDER_PIPELINE_API uint64_t granit_pbr_material_variant_key(
-    granit_pbr_texture_flags textures, granit_pbr_alpha_mode alpha_mode, uint32_t double_sided);
+/** 计算标准 PBR 材质与顶点布局语义对应的稳定 Variant Key；非法组合返回零。 */
+GRANIT_RENDER_PIPELINE_API uint64_t
+granit_pbr_material_variant_key(granit_pbr_texture_flags textures, granit_pbr_alpha_mode alpha_mode,
+                                uint32_t double_sided, uint32_t has_uv1);
 
 #ifdef __cplusplus
 }

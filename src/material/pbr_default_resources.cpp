@@ -80,11 +80,12 @@ granit_result pbr_default_resources::bind(material_gpu_instance& instance) const
       return GRANIT_ERROR_INVALID_ARGUMENT;
     }
   }
-  return instance.set_resource(make_parameter_id(pbr_sampler_parameter_name),
-                               parameter_type::sampler,
-                               sampler_.native_handle()) == metadata_error::none
-             ? GRANIT_SUCCESS
-             : GRANIT_ERROR_INVALID_ARGUMENT;
+  for (const auto name : pbr_sampler_parameter_names) {
+    if (instance.set_resource(make_parameter_id(name), parameter_type::sampler,
+                              sampler_.native_handle()) != metadata_error::none)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  return GRANIT_SUCCESS;
 }
 
 } // namespace granit::material

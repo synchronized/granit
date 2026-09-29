@@ -343,7 +343,7 @@ TEST_CASE("glTF Importer 解码 PBR Material 图片与 Sampler", "[example][gltf
     "textures":[{"source":0,"sampler":0}],
     "materials":[{"name":"paint","pbrMetallicRoughness":{
       "baseColorFactor":[0.5,0.6,0.7,1.0],"metallicFactor":0.25,"roughnessFactor":0.75,
-      "baseColorTexture":{"index":0}
+      "baseColorTexture":{"index":0,"texCoord":1}
     }}]
   })";
   const std::uint8_t png[] = {
@@ -371,6 +371,7 @@ TEST_CASE("glTF Importer 解码 PBR Material 图片与 Sampler", "[example][gltf
   CHECK(scene.materials[0].roughness == 0.75F);
   CHECK(scene.materials[0].base_color_texture.image == 0);
   CHECK(scene.materials[0].base_color_texture.sampler == 0);
+  CHECK(scene.materials[0].base_color_texture.texture_coordinate == 1);
   REQUIRE(scene.samplers.size() == 1);
   CHECK(scene.samplers[0].wrap_v == 33071);
 }

@@ -37,6 +37,7 @@ struct render_pipeline_state {
     granit_mesh mesh = GRANIT_NULL_HANDLE;
     bool reflected = false;
     bool alpha_mask = false;
+    bool uses_uv1 = false;
     granit_graphics_pipeline pipeline = GRANIT_NULL_HANDLE;
   };
   struct draw_binding_entry {
@@ -58,6 +59,7 @@ struct render_pipeline_state {
   granit::shader shadow_vertex_shader;
   granit::shader shadow_fragment_shader;
   granit::shader shadow_mask_vertex_shader;
+  granit::shader shadow_mask_uv1_vertex_shader;
   granit::shader shadow_mask_fragment_shader;
   granit::texture shadow_placeholder_texture;
   granit::texture_view shadow_placeholder_view;

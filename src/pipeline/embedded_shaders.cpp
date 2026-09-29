@@ -33,8 +33,8 @@ std::string_view tone_mapping_vertex_shader_name() noexcept { return "tone_mappi
 std::string_view tone_mapping_fragment_shader_name() noexcept { return "tone_mapping.fragment"; }
 std::string_view shadow_depth_vertex_shader_name() noexcept { return "shadow_depth.vertex"; }
 std::string_view shadow_depth_fragment_shader_name() noexcept { return "shadow_depth.fragment"; }
-std::string_view shadow_depth_mask_vertex_shader_name() noexcept {
-  return "shadow_depth_mask.vertex";
+std::string_view shadow_depth_mask_vertex_shader_name(bool uses_uv1) noexcept {
+  return uses_uv1 ? "shadow_depth_mask.vertex/uv1" : "shadow_depth_mask.vertex/uv0";
 }
 std::string_view shadow_depth_mask_fragment_shader_name() noexcept {
   return "shadow_depth_mask.fragment";

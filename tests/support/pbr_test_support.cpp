@@ -39,7 +39,7 @@ bool build_pbr_package_impl(material::material_package& package,
   variant.pipeline.depth.compare = GRANIT_COMPARE_OPERATION_LESS_EQUAL;
 
   material_package_desc desc;
-  desc.metadata.constant_buffer_size = 48;
+  desc.metadata.constant_buffer_size = 64;
   desc.metadata.parameters = {
       {.name = "base_color", .type = parameter_type::float4, .offset = 0, .default_value = {}},
       {.name = "metallic", .type = parameter_type::float32, .offset = 16, .default_value = {}},
@@ -73,7 +73,26 @@ bool build_pbr_package_impl(material::material_package& package,
        .type = parameter_type::texture_view,
        .binding = 5,
        .default_value = {}},
-      {.name = "pbr_sampler", .type = parameter_type::sampler, .binding = 6, .default_value = {}}};
+      {.name = "base_color_sampler",
+       .type = parameter_type::sampler,
+       .binding = 6,
+       .default_value = {}},
+      {.name = "metallic_roughness_sampler",
+       .type = parameter_type::sampler,
+       .binding = 7,
+       .default_value = {}},
+      {.name = "normal_sampler",
+       .type = parameter_type::sampler,
+       .binding = 8,
+       .default_value = {}},
+      {.name = "occlusion_sampler",
+       .type = parameter_type::sampler,
+       .binding = 9,
+       .default_value = {}},
+      {.name = "emissive_sampler",
+       .type = parameter_type::sampler,
+       .binding = 10,
+       .default_value = {}}};
   desc.variants.push_back(std::move(variant));
   return material_package::build(std::move(desc), package) == package_error::none;
 }
@@ -124,12 +143,10 @@ result pbr_lighting_resources::initialize(granit_renderer renderer) {
   const texture_view_desc cube_view_desc{.dimension = texture_dimension::cube,
                                          .array_layer_count = 6};
   if (value.ok()) {
-    value = irradiance_view_.initialize(renderer_view, irradiance_texture_.ref(),
-                                        cube_view_desc);
+    value = irradiance_view_.initialize(renderer_view, irradiance_texture_.ref(), cube_view_desc);
   }
   if (value.ok()) {
-    value = prefiltered_view_.initialize(renderer_view, prefiltered_texture_.ref(),
-                                         cube_view_desc);
+    value = prefiltered_view_.initialize(renderer_view, prefiltered_texture_.ref(), cube_view_desc);
   }
   if (value.ok())
     value = brdf_lut_view_.initialize(renderer_view, brdf_lut_texture_.ref());

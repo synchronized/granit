@@ -32,7 +32,11 @@
       "name": "shadow_depth_mask.vertex",
       "source": "shadow_depth.hlsl",
       "stage": "vertex",
-      "entry_point": "mask_vertex_main"
+      "entry_point": "mask_vertex_main",
+      "variants": [
+        {"name": "uv0", "defines": {"GRANIT_PBR_HAS_UV1": "0"}},
+        {"name": "uv1", "defines": {"GRANIT_PBR_HAS_UV1": "1"}}
+      ]
     },
     {
       "name": "shadow_depth_mask.fragment",

@@ -43,12 +43,14 @@ enum class pbr_vertex_layout_result : std::uint32_t {
   missing_uv0 = GRANIT_PBR_VERTEX_LAYOUT_MISSING_UV0,
   missing_tangent = GRANIT_PBR_VERTEX_LAYOUT_MISSING_TANGENT,
   invalid_argument = GRANIT_PBR_VERTEX_LAYOUT_INVALID_ARGUMENT,
+  invalid_uv1_mask = GRANIT_PBR_VERTEX_LAYOUT_INVALID_UV1_MASK,
+  missing_uv1 = GRANIT_PBR_VERTEX_LAYOUT_MISSING_UV1,
 };
 
-/** 检查强类型 C++ 顶点布局是否满足指定标准 PBR 纹理变体。 */
+/** 检查强类型 C++ 顶点布局是否满足指定标准 PBR 纹理和逐槽 UV1 选择。 */
 [[nodiscard]] inline pbr_vertex_layout_result
 validate_pbr_vertex_layout(std::span<const vertex_buffer_layout> vertex_buffers,
-                           pbr_texture textures) noexcept {
+                           pbr_texture textures, pbr_texture uv1 = pbr_texture::none) noexcept {
   if (vertex_buffers.size() > std::numeric_limits<std::uint32_t>::max())
     return pbr_vertex_layout_result::invalid_argument;
   try {
@@ -73,21 +75,21 @@ validate_pbr_vertex_layout(std::span<const vertex_buffer_layout> vertex_buffers,
                         .reserved = 0,
                         .attributes = native_attributes.data()});
     }
-    return static_cast<pbr_vertex_layout_result>(
-        granit_pbr_validate_vertex_layout(native.data(), static_cast<std::uint32_t>(native.size()),
-                                          static_cast<std::uint32_t>(textures)));
+    return static_cast<pbr_vertex_layout_result>(granit_pbr_validate_vertex_layout(
+        native.data(), static_cast<std::uint32_t>(native.size()),
+        static_cast<std::uint32_t>(textures), static_cast<std::uint32_t>(uv1)));
   } catch (...) {
     return pbr_vertex_layout_result::invalid_argument;
   }
 }
 
-/** 计算标准 PBR 材质语义对应的稳定 Variant Key；非法组合返回零。 */
+/** 计算标准 PBR 材质与顶点布局语义对应的稳定 Variant Key；非法组合返回零。 */
 [[nodiscard]] inline std::uint64_t
 pbr_material_variant_key(pbr_texture textures, pbr_alpha_mode alpha_mode = pbr_alpha_mode::opaque,
-                         bool double_sided = false) noexcept {
+                         bool double_sided = false, bool has_uv1 = false) noexcept {
   return granit_pbr_material_variant_key(static_cast<std::uint32_t>(textures),
                                          static_cast<std::uint32_t>(alpha_mode),
-                                         double_sided ? 1U : 0U);
+                                         double_sided ? 1U : 0U, has_uv1 ? 1U : 0U);
 }
 
 } // namespace granit

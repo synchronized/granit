@@ -8,6 +8,9 @@ struct vertex_input {
   float3 normal : NORMAL;
   float4 tangent : TANGENT;
   float2 texture_coordinate : TEXCOORD0;
+#if GRANIT_PBR_HAS_UV1
+  float2 texture_coordinate_1 : TEXCOORD1;
+#endif
 };
 
 struct vertex_output {
@@ -18,6 +21,9 @@ struct vertex_output {
   float2 texture_coordinate : TEXCOORD3;
   float3 vertex_normal : TEXCOORD4;
   float3 vertex_tangent : TEXCOORD5;
+#if GRANIT_PBR_HAS_UV1
+  float2 texture_coordinate_1 : TEXCOORD6;
+#endif
 };
 
 [[vk::binding(0, 0)]] cbuffer FrameConstants {
@@ -37,7 +43,8 @@ struct vertex_output {
   float3 emissive;
   uint debug_display;
   float alpha_cutoff;
-  uint3 material_reserved;
+  uint uv1_mask;
+  uint2 material_reserved;
 };
 
 [[vk::binding(1, 1)]] Texture2D<float4> base_color_texture;
@@ -45,7 +52,11 @@ struct vertex_output {
 [[vk::binding(3, 1)]] Texture2D<float4> normal_texture;
 [[vk::binding(4, 1)]] Texture2D<float4> occlusion_texture;
 [[vk::binding(5, 1)]] Texture2D<float4> emissive_texture;
-[[vk::binding(6, 1)]] SamplerState pbr_sampler;
+[[vk::binding(6, 1)]] SamplerState base_color_sampler;
+[[vk::binding(7, 1)]] SamplerState metallic_roughness_sampler;
+[[vk::binding(8, 1)]] SamplerState normal_sampler;
+[[vk::binding(9, 1)]] SamplerState occlusion_sampler;
+[[vk::binding(10, 1)]] SamplerState emissive_sampler;
 
 [[vk::binding(0, 2)]] cbuffer ObjectConstants {
   column_major float4x4 model;
@@ -79,6 +90,9 @@ vertex_output vertex_main(vertex_input input) {
   output.world_normal = world_normal;
   output.world_tangent = float4(world_tangent, input.tangent.w * transform_handedness);
   output.texture_coordinate = input.texture_coordinate;
+#if GRANIT_PBR_HAS_UV1
+  output.texture_coordinate_1 = input.texture_coordinate_1;
+#endif
   output.vertex_normal = input.normal;
   output.vertex_tangent = input.tangent.xyz;
   return output;
@@ -113,11 +127,23 @@ float3 rotate_environment(float3 direction) {
 }
 
 float4 fragment_main(vertex_output input, bool is_front_face : SV_IsFrontFace) : SV_Target0 {
+  float2 base_color_uv = input.texture_coordinate;
+  float2 metallic_roughness_uv = input.texture_coordinate;
+  float2 normal_uv = input.texture_coordinate;
+  float2 occlusion_uv = input.texture_coordinate;
+  float2 emissive_uv = input.texture_coordinate;
+#if GRANIT_PBR_HAS_UV1
+  base_color_uv = (uv1_mask & 1) != 0 ? input.texture_coordinate_1 : base_color_uv;
+  metallic_roughness_uv = (uv1_mask & 2) != 0 ? input.texture_coordinate_1 : metallic_roughness_uv;
+  normal_uv = (uv1_mask & 4) != 0 ? input.texture_coordinate_1 : normal_uv;
+  occlusion_uv = (uv1_mask & 8) != 0 ? input.texture_coordinate_1 : occlusion_uv;
+  emissive_uv = (uv1_mask & 16) != 0 ? input.texture_coordinate_1 : emissive_uv;
+#endif
   const float4 sampled_base_color =
-      base_color_texture.Sample(pbr_sampler, input.texture_coordinate);
+      base_color_texture.Sample(base_color_sampler, base_color_uv);
   const float4 resolved_base_color = base_color * sampled_base_color;
   const float4 sampled_metallic_roughness =
-      metallic_roughness_texture.Sample(pbr_sampler, input.texture_coordinate);
+      metallic_roughness_texture.Sample(metallic_roughness_sampler, metallic_roughness_uv);
   const float resolved_metallic = saturate(metallic * sampled_metallic_roughness.b);
   const float sampled_roughness =
       clamp(perceptual_roughness * sampled_metallic_roughness.g, 0.045, 1.0);
@@ -128,7 +154,7 @@ float4 fragment_main(vertex_output input, bool is_front_face : SV_IsFrontFace) :
                                                           input.world_tangent.xyz));
   const float3 bitangent = normalize(cross(geometric_normal, tangent)) * input.world_tangent.w;
   const float3 sampled_normal =
-      normal_texture.Sample(pbr_sampler, input.texture_coordinate).xyz * 2.0 - 1.0;
+      normal_texture.Sample(normal_sampler, normal_uv).xyz * 2.0 - 1.0;
   const float3 scaled_normal = float3(sampled_normal.xy * normal_scale, sampled_normal.z);
   const float3 normal = normalize(tangent * scaled_normal.x + bitangent * scaled_normal.y +
                                   geometric_normal * scaled_normal.z);
@@ -154,10 +180,10 @@ float4 fragment_main(vertex_output input, bool is_front_face : SV_IsFrontFace) :
   const float3 specular =
       distribution * geometry * fresnel / max(4.0 * normal_dot_light * normal_dot_view, 0.0001);
   const float3 diffuse = (1.0 - fresnel) * (1.0 - resolved_metallic) * resolved_base_color.rgb / PI;
-  const float occlusion_sample = occlusion_texture.Sample(pbr_sampler, input.texture_coordinate).r;
+  const float occlusion_sample = occlusion_texture.Sample(occlusion_sampler, occlusion_uv).r;
   const float occlusion = lerp(1.0, occlusion_sample, occlusion_strength);
   const float3 resolved_emissive =
-      emissive * emissive_texture.Sample(pbr_sampler, input.texture_coordinate).rgb;
+      emissive * emissive_texture.Sample(emissive_sampler, emissive_uv).rgb;
 
   const float3 environment_fresnel =
       fresnel_schlick_roughness(normal_dot_view, reflectance, roughness);

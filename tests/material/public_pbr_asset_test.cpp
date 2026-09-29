@@ -80,7 +80,8 @@ TEST_CASE("公共 PBR 片段资产固定材质和 IBL 契约") {
   require_binding(shader.reflection_json, 1, 0, "uniform_buffer", 64);
   for (std::uint32_t binding = 1; binding <= 5; ++binding)
     require_binding(shader.reflection_json, 1, binding, "sampled_texture", 0);
-  require_binding(shader.reflection_json, 1, 6, "sampler", 0);
+  for (std::uint32_t binding = 6; binding <= 10; ++binding)
+    require_binding(shader.reflection_json, 1, binding, "sampler", 0);
   require_binding(shader.reflection_json, 3, 3, "uniform_buffer", 16);
   for (std::uint32_t binding = 4; binding <= 6; ++binding)
     require_binding(shader.reflection_json, 3, binding, "sampled_texture", 0);
@@ -92,7 +93,7 @@ TEST_CASE("公共 PBR 材质模板具有稳定 Schema 和内容身份") {
   granit::material::material_archive_layout layout;
   REQUIRE(granit::material::parse_material_archive_layout(bytes, layout) ==
           granit::material::archive_error::none);
-  CHECK(GRANIT_PBR_MATERIAL_TEMPLATE_VERSION == 6);
+  CHECK(GRANIT_PBR_MATERIAL_TEMPLATE_VERSION == 7);
 
   constexpr std::string_view hex = GRANIT_PBR_MATERIAL_CONTENT_HASH_HEX;
   REQUIRE(hex.size() == layout.header.content_hash.size() * 2);
@@ -111,7 +112,7 @@ TEST_CASE("公共 PBR 材质模板为反射实例提供相反正面变体") {
   granit::material::material_package package;
   REQUIRE(granit::material::decode_material_package_archive(bytes, package) ==
           granit::material::archive_error::none);
-  REQUIRE(package.variants().size() == 8);
+  REQUIRE(package.variants().size() == 16);
   const auto clockwise = std::ranges::find_if(package.variants(), [](const auto& variant) {
     return variant.features.size() == 1 &&
            variant.pipeline.primitive.front_face == GRANIT_FRONT_FACE_CLOCKWISE;

@@ -28,6 +28,7 @@ struct primitive {
   std::vector<math::float3> normals;
   std::vector<math::float4> tangents;
   std::vector<math::float2> texture_coordinates;
+  std::vector<math::float2> texture_coordinates_1;
   std::uint32_t material{invalid_index};
   bounds local_bounds{};
 };
@@ -40,6 +41,7 @@ struct mesh {
 struct texture_reference {
   std::uint32_t image{invalid_index};
   std::uint32_t sampler{invalid_index};
+  std::uint32_t texture_coordinate{};
 };
 
 struct material {

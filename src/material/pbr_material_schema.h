@@ -22,6 +22,7 @@ inline constexpr std::string_view pbr_transform_reflected_feature_name =
 inline constexpr std::string_view pbr_alpha_mode_feature_name = GRANIT_PBR_ALPHA_MODE_FEATURE_NAME;
 inline constexpr std::string_view pbr_double_sided_feature_name =
     GRANIT_PBR_DOUBLE_SIDED_FEATURE_NAME;
+inline constexpr std::string_view pbr_uv1_feature_name = GRANIT_PBR_UV1_FEATURE_NAME;
 inline constexpr pbr_texture_flags pbr_texture_base_color = GRANIT_PBR_TEXTURE_BASE_COLOR;
 inline constexpr pbr_texture_flags pbr_texture_metallic_roughness =
     GRANIT_PBR_TEXTURE_METALLIC_ROUGHNESS;
@@ -37,17 +38,24 @@ inline constexpr std::uint32_t pbr_binding_metallic_roughness =
 inline constexpr std::uint32_t pbr_binding_normal = GRANIT_PBR_BINDING_NORMAL;
 inline constexpr std::uint32_t pbr_binding_occlusion = GRANIT_PBR_BINDING_OCCLUSION;
 inline constexpr std::uint32_t pbr_binding_emissive = GRANIT_PBR_BINDING_EMISSIVE;
-inline constexpr std::uint32_t pbr_binding_sampler = GRANIT_PBR_BINDING_SAMPLER;
+inline constexpr std::array<std::uint32_t, 5> pbr_sampler_bindings{
+    GRANIT_PBR_BINDING_BASE_COLOR_SAMPLER, GRANIT_PBR_BINDING_METALLIC_ROUGHNESS_SAMPLER,
+    GRANIT_PBR_BINDING_NORMAL_SAMPLER, GRANIT_PBR_BINDING_OCCLUSION_SAMPLER,
+    GRANIT_PBR_BINDING_EMISSIVE_SAMPLER};
 inline constexpr std::array<std::string_view, 5> pbr_texture_parameter_names{
     GRANIT_PBR_PARAMETER_BASE_COLOR_TEXTURE, GRANIT_PBR_PARAMETER_METALLIC_ROUGHNESS_TEXTURE,
     GRANIT_PBR_PARAMETER_NORMAL_TEXTURE, GRANIT_PBR_PARAMETER_OCCLUSION_TEXTURE,
     GRANIT_PBR_PARAMETER_EMISSIVE_TEXTURE};
-inline constexpr std::string_view pbr_sampler_parameter_name = GRANIT_PBR_PARAMETER_SAMPLER;
+inline constexpr std::array<std::string_view, 5> pbr_sampler_parameter_names{
+    GRANIT_PBR_PARAMETER_BASE_COLOR_SAMPLER, GRANIT_PBR_PARAMETER_METALLIC_ROUGHNESS_SAMPLER,
+    GRANIT_PBR_PARAMETER_NORMAL_SAMPLER, GRANIT_PBR_PARAMETER_OCCLUSION_SAMPLER,
+    GRANIT_PBR_PARAMETER_EMISSIVE_SAMPLER};
 
 inline constexpr std::uint32_t pbr_vertex_location_position = GRANIT_PBR_VERTEX_LOCATION_POSITION;
 inline constexpr std::uint32_t pbr_vertex_location_normal = GRANIT_PBR_VERTEX_LOCATION_NORMAL;
 inline constexpr std::uint32_t pbr_vertex_location_tangent = GRANIT_PBR_VERTEX_LOCATION_TANGENT;
 inline constexpr std::uint32_t pbr_vertex_location_uv0 = GRANIT_PBR_VERTEX_LOCATION_UV0;
+inline constexpr std::uint32_t pbr_vertex_location_uv1 = GRANIT_PBR_VERTEX_LOCATION_UV1;
 
 enum class pbr_vertex_layout_error : std::uint8_t {
   none,
@@ -56,6 +64,8 @@ enum class pbr_vertex_layout_error : std::uint8_t {
   missing_normal,
   missing_uv0,
   missing_tangent,
+  invalid_uv1_mask,
+  missing_uv1,
 };
 
 /** 控制 Shader 资源布局的 PBR 纹理类别；同类的精确纹理掩码共享二进制。 */
@@ -73,12 +83,12 @@ classify_pbr_shader_textures(pbr_texture_flags textures) noexcept;
 /** 返回标准 PBR 精确纹理掩码和实例反射状态对应的 Material Variant Key。 */
 [[nodiscard]] std::uint64_t standard_pbr_variant_key(pbr_texture_flags textures,
                                                      std::uint32_t alpha_mode, bool double_sided,
-                                                     bool reflected) noexcept;
+                                                     bool reflected, bool has_uv1 = false) noexcept;
 
 /** 按 H-03 标准 location 检查网格是否满足指定 PBR 纹理变体。 */
 [[nodiscard]] pbr_vertex_layout_error
 validate_pbr_vertex_layout(std::span<const material_vertex_buffer_layout> vertex_buffers,
-                           pbr_texture_flags textures) noexcept;
+                           pbr_texture_flags textures, pbr_texture_flags uv1_mask = 0) noexcept;
 
 } // namespace granit::material
 

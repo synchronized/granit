@@ -4,5 +4,5 @@
 #include <granit/pipeline/pbr_material.h>
 
 typedef char
-    granit_pbr_constant_buffer_size_is_stable[GRANIT_PBR_CONSTANT_BUFFER_SIZE == UINT32_C(48) ? 1
+    granit_pbr_constant_buffer_size_is_stable[GRANIT_PBR_CONSTANT_BUFFER_SIZE == UINT32_C(64) ? 1
                                                                                               : -1];

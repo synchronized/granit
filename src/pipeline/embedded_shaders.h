@@ -17,7 +17,7 @@ namespace granit::pipeline::detail {
 [[nodiscard]] std::string_view tone_mapping_fragment_shader_name() noexcept;
 [[nodiscard]] std::string_view shadow_depth_vertex_shader_name() noexcept;
 [[nodiscard]] std::string_view shadow_depth_fragment_shader_name() noexcept;
-[[nodiscard]] std::string_view shadow_depth_mask_vertex_shader_name() noexcept;
+[[nodiscard]] std::string_view shadow_depth_mask_vertex_shader_name(bool uses_uv1) noexcept;
 [[nodiscard]] std::string_view shadow_depth_mask_fragment_shader_name() noexcept;
 
 [[nodiscard]] std::span<const std::byte> debug_draw_shader_library() noexcept;

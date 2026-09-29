@@ -23,6 +23,9 @@ void fragment_main() {}
 struct mask_vertex_input {
   [[vk::location(0)]] float3 position : POSITION;
   [[vk::location(3)]] float2 texture_coordinate : TEXCOORD0;
+#if GRANIT_PBR_HAS_UV1
+  [[vk::location(4)]] float2 texture_coordinate_1 : TEXCOORD1;
+#endif
 };
 
 struct mask_vertex_output {
@@ -39,21 +42,27 @@ struct mask_vertex_output {
   float3 emissive;
   uint debug_display;
   float alpha_cutoff;
-  uint3 material_reserved;
+  uint uv1_mask;
+  uint2 material_reserved;
 };
 
 [[vk::binding(1, 1)]] Texture2D<float4> base_color_texture;
-[[vk::binding(6, 1)]] SamplerState pbr_sampler;
+[[vk::binding(6, 1)]] SamplerState base_color_sampler;
 
 mask_vertex_output mask_vertex_main(mask_vertex_input input) {
   mask_vertex_output output;
   output.position = mul(light_view_projection, mul(model, float4(input.position, 1.0)));
+#if GRANIT_PBR_HAS_UV1
+  output.texture_coordinate = (uv1_mask & 1) != 0 ? input.texture_coordinate_1
+                                                   : input.texture_coordinate;
+#else
   output.texture_coordinate = input.texture_coordinate;
+#endif
   return output;
 }
 
 void mask_fragment_main(mask_vertex_output input) {
   const float alpha =
-      base_color.a * base_color_texture.Sample(pbr_sampler, input.texture_coordinate).a;
+      base_color.a * base_color_texture.Sample(base_color_sampler, input.texture_coordinate).a;
   clip(alpha - alpha_cutoff);
 }
