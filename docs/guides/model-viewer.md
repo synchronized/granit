@@ -10,16 +10,16 @@ Emscripten WebGPU 上显示 glTF 2.0 模型。两个目标叠加同一套 ImGui 
 
 ## 运行时边界
 
-桌面与浏览器入口使用同一个 `viewer_application` 状态机。它在 `application_host` 提供的 Window、
+桌面与浏览器入口使用同一个 `model_viewer_app` 状态机。它在 `application_host` 提供的 Window、
 Input、循环和 Asset System 上依次推进 Renderer、Surface/Swapchain、资产读取、CPU Scene 准备、
-GPU 上传、Pipeline 准备、运行帧和释放。`viewer_session` 拥有 Application Core 与模型加载状态；
-`render_runtime` 统一 Renderer、Surface、Swapchain、Pipeline、Scene 上传、质量切换、帧执行和释放；
-`render_service` 将这些操作与 `render_task_executor` 组合，统一帧与不可丢弃控制任务的执行语义。
-`viewer_frame_builder` 统一面板构造、输入消费、Viewer Tick、Canvas 捕获和帧包生成：
+GPU 上传、Pipeline 准备、运行帧和释放。`viewer_document` 保存 CPU Scene、相机、选择和查看设置，
+`model_load_operation` 保存加载生命周期；`viewer_renderer` 独占 GPU 与呈现资源，
+`render_dispatcher` 统一帧与不可丢弃控制任务的执行语义。`frame_builder` 负责输入消费、Viewer
+Document 更新、面板构造、Canvas 捕获和帧包生成：
 
 - Desktop 入口只设置 SDL3/Vulkan、文件位置和专用线程策略；threaded Executor 为共用
-  Render Service 提供专用线程、异步上传和帧完成回执；普通帧允许替换，控制任务有序执行。
-- Web 入口只设置 Emscripten/WebGPU、URL 和主线程策略；inline Executor 调用同一个 Render Service，
+  Render Dispatcher 提供专用线程、异步上传和帧完成回执；普通帧允许替换，控制任务有序执行。
+- Web 入口只设置 Emscripten/WebGPU、URL 和主线程策略；inline Executor 调用同一个 Render Dispatcher，
   Fetch 和资源上传在明确边界通过 Asyncify 让出事件循环。
   正式 `pipeline_warmup` 只预热场景材质；临时 Shader、Compute 和资源生命周期探针仅编入浏览器
   测试目标。
