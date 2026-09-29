@@ -20,6 +20,17 @@
 
 namespace {
 
+EM_JS(void, publish_status, (int status, const char* stage, unsigned stage_length, int result), {
+  const names = {[-1] : "failed", 0 : "starting", 1 : "loading", 2 : "ready", 3 : "stopped"};
+  if (Module["onGranitStatus"])
+    Module["onGranitStatus"](names[status] || "unknown", UTF8ToString(stage, stage_length), result);
+});
+
+EM_JS(void, publish_progress, (const char* stage, unsigned completed, unsigned total), {
+  if (Module["onGranitProgress"])
+    Module["onGranitProgress"](UTF8ToString(stage), completed, total);
+});
+
 using granit::example::model_viewer::model_viewer_app_status;
 using granit::example::model_viewer::render_dispatcher;
 
@@ -70,6 +81,8 @@ class web_observer final : public granit::example::model_viewer::model_viewer_ap
 public:
   void on_status(model_viewer_app_status status, std::string_view stage,
                  granit::result result) noexcept override {
+    publish_status(static_cast<int>(status), stage.data(), static_cast<unsigned>(stage.size()),
+                   granit::to_native(result));
     if (status == model_viewer_app_status::ready) {
       std::puts("GRANIT_STATUS:ready");
     } else if (status == model_viewer_app_status::failed) {
@@ -87,16 +100,18 @@ public:
 
   bool on_scene_prepare_progress(
       const granit::example::gltf::import_progress& progress) noexcept override {
-    std::printf("GRANIT_PROGRESS:%s:%u:%u\n", load_stage_name(progress.stage), progress.completed,
-                progress.total);
+    const auto* stage = load_stage_name(progress.stage);
+    publish_progress(stage, progress.completed, progress.total);
+    std::printf("GRANIT_PROGRESS:%s:%u:%u\n", stage, progress.completed, progress.total);
     emscripten_sleep(0);
     return true;
   }
 
   bool on_gpu_upload_progress(
       const granit::example::gltf_rendering::scene_upload_progress& progress) noexcept override {
-    std::printf("GRANIT_PROGRESS:%s:%u:%u\n", upload_stage_name(progress.stage), progress.completed,
-                progress.total);
+    const auto* stage = upload_stage_name(progress.stage);
+    publish_progress(stage, progress.completed, progress.total);
+    std::printf("GRANIT_PROGRESS:%s:%u:%u\n", stage, progress.completed, progress.total);
     emscripten_sleep(0);
     return true;
   }
@@ -143,6 +158,7 @@ public:
   }
 
   granit::result on_pipeline_ready(render_dispatcher& rendering) noexcept override {
+    publish_progress("pipelines", 1, 1);
 #if defined(GRANIT_MODEL_VIEWER_BROWSER_TESTS)
     if (!validation_.started()) {
       const auto result = validation_.begin(rendering.renderer());
@@ -283,6 +299,9 @@ int granit::example::model_viewer::web::run_application(const application_option
   double height{};
   if (emscripten_get_element_css_size("#canvas", &width, &height) != EMSCRIPTEN_RESULT_SUCCESS ||
       width < 1.0 || height < 1.0) {
+    constexpr std::string_view stage{"window-create"};
+    publish_status(static_cast<int>(model_viewer_app_status::failed), stage.data(),
+                   static_cast<unsigned>(stage.size()), GRANIT_ERROR_BACKEND_UNAVAILABLE);
     std::fprintf(stderr, "GRANIT_STATUS:failed:window-create:%d\n",
                  GRANIT_ERROR_BACKEND_UNAVAILABLE);
     return 1;

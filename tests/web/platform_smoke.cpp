@@ -34,10 +34,8 @@
 #include <granit/window/native.hpp>
 #include <granit/window/window.hpp>
 
-#include "model_viewer/application_core.h"
 #include "model_viewer/platform/web/application.h"
 #include "model_viewer/platform/web/testing/browser_test_hooks.h"
-#include "model_viewer/render_task_executor.h"
 #include "support/renderer_fixture.h"
 
 namespace {
