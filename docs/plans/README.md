@@ -9,11 +9,12 @@
 
 ## 当前计划
 
-- [S-76：0.41.0 标准 PBR 材质正确性](S-76-0.41.0-pbr-material-correctness.md)——根据真实
-  glTF 场景和负缩放 GPU 复现，补齐标准 PBR 的反射实例、Alpha、双面、逐贴图输入、顶点色与
-  透明 HDR 阶段。
+当前没有实施中的已确认计划。
 
 ## 最近完成
+
+- [S-76：0.41.0 标准 PBR 材质正确性](S-76-0.41.0-pbr-material-correctness.md)——补齐标准
+  PBR 的反射实例、Alpha、双面、逐贴图输入、顶点色与透明 HDR 阶段，并完成跨后端发布前验收。
 
 - [S-75：0.40.0 Deferred 与多 Pass 渲染](S-75-0.40.0-deferred-rendering.md)——新增
   `07_deferred`，以 MRT G-buffer、全屏光照、调试视图和 Resize 验证现有跨后端多 Pass 能力，
