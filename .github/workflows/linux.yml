@@ -211,6 +211,10 @@ jobs:
             --smoke-test
           xvfb-run -a env SDL_VIDEODRIVER=x11 \
             "build/${{ steps.preset.outputs.name }}/bin/granit_sdl3_imgui_example" --smoke-test
+          xvfb-run -a env SDL_VIDEODRIVER=x11 \
+            "build/${{ steps.preset.outputs.name }}/bin/granit_sample_model_viewer" \
+            --asset "$PWD/tests/web/assets/model_viewer_fixture.gltf" \
+            --backend=vulkan --validation --smoke-test --present-mode=fifo
       - name: 运行 Wayland SDL3 Surface 与 ImGui 集成测试
         shell: bash
         run: |
@@ -234,6 +238,10 @@ jobs:
             --smoke-test
           SDL_VIDEODRIVER=wayland \
             "build/${{ steps.preset.outputs.name }}/bin/granit_sdl3_imgui_example" --smoke-test
+          SDL_VIDEODRIVER=wayland \
+            "build/${{ steps.preset.outputs.name }}/bin/granit_sample_model_viewer" \
+            --asset "$PWD/tests/web/assets/model_viewer_fixture.gltf" \
+            --backend=vulkan --validation --smoke-test --present-mode=fifo
       - name: 输出编译缓存统计
         if: always()
         shell: bash

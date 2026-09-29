@@ -181,16 +181,9 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          for attempt in 1 2 3; do
-            log="$RUNNER_TEMP/granit-webgpu-attempt-${attempt}.log"
-            if xvfb-run -a env GRANIT_BROWSER_HEADLESS=0 \
-              npm run "${{ matrix.script }}" -- ${{ matrix.arguments }} \
-              2>&1 | tee "$log"; then
-              exit 0
-            fi
-            echo "浏览器 WebGPU 验收失败，重试（${attempt}/3）"
-          done
-          exit 1
+          xvfb-run -a env GRANIT_BROWSER_HEADLESS=0 \
+            npm run "${{ matrix.script }}" -- ${{ matrix.arguments }} \
+            2>&1 | tee "$RUNNER_TEMP/granit-webgpu-${{ matrix.name }}.log"
       - name: 保存 ImGui 视觉验收截图
         if: always() && matrix.name == 'imgui'
         uses: actions/upload-artifact@v6
