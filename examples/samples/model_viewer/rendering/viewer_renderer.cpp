@@ -63,12 +63,13 @@ granit::result viewer_renderer::complete_renderer_initialization() noexcept {
   return result;
 }
 
-granit::result viewer_renderer::initialize_presentation(granit::window& window,
+granit::result viewer_renderer::initialize_presentation(granit::surface surface,
                                                         const granit::swapchain_desc& desc,
                                                         bool enable_ui) noexcept {
-  if (!state_ || state_->surface.valid() || state_->swapchain.valid())
+  if (!state_ || !surface.valid() || state_->surface.valid() || state_->swapchain.valid())
     return granit::result::not_ready;
-  auto result = window.create_surface(state_->renderer_owner, state_->surface);
+  state_->surface = std::move(surface);
+  auto result = granit::result::success;
   if (result.ok())
     result = state_->swapchain.initialize(state_->renderer_owner, state_->surface, desc);
   if (result.ok())
@@ -354,15 +355,15 @@ granit::result viewer_renderer::recreate_swapchain(const granit::swapchain_desc&
   return result;
 }
 
-granit::result viewer_renderer::recreate_surface(granit::window& window,
+granit::result viewer_renderer::recreate_surface(granit::surface surface,
                                                  const granit::swapchain_desc& desc) noexcept {
-  if (!state_)
+  if (!state_ || !surface.valid())
     return granit::result::not_ready;
   auto result = state_->swapchain.reset();
   if (result.ok())
     result = state_->surface.reset();
   if (result.ok())
-    result = window.create_surface(state_->renderer_owner, state_->surface);
+    state_->surface = std::move(surface);
   if (result.ok())
     result = state_->swapchain.initialize(state_->renderer_owner, state_->surface, desc);
   if (result.ok())

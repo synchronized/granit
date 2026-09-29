@@ -371,8 +371,14 @@ struct model_viewer_app::implementation {
         .minimum_image_count = 2,
         .presentation = desc.present_mode,
     };
-    result = recreate_surface ? rendering.recreate_surface(owner.app_window(), swapchain_desc)
-                              : rendering.recreate_swapchain(swapchain_desc);
+    if (recreate_surface) {
+      granit::surface surface;
+      result = owner.app_window().create_surface(rendering.renderer(), surface);
+      if (result.ok())
+        result = rendering.recreate_surface(std::move(surface), swapchain_desc);
+    } else {
+      result = rendering.recreate_swapchain(swapchain_desc);
+    }
     if (result.ok()) {
       recreate_surface = false;
       recreate_swapchain = false;
@@ -407,12 +413,15 @@ struct model_viewer_app::implementation {
       result = granit::result::invalid_argument;
     }
     if (result.ok()) {
-      result = rendering.initialize_presentation(owner.app_window(),
-                                                 {.width = window_state.framebuffer_width,
-                                                  .height = window_state.framebuffer_height,
-                                                  .minimum_image_count = 2,
-                                                  .presentation = desc.present_mode},
-                                                 desc.show_ui);
+      granit::surface surface;
+      result = owner.app_window().create_surface(rendering.renderer(), surface);
+      if (result.ok())
+        result = rendering.initialize_presentation(std::move(surface),
+                                                   {.width = window_state.framebuffer_width,
+                                                    .height = window_state.framebuffer_height,
+                                                    .minimum_image_count = 2,
+                                                    .presentation = desc.present_mode},
+                                                   desc.show_ui);
     }
     if (result.ok() && desc.observer != nullptr && !presentation_observed) {
       result = desc.observer->on_presentation_ready(rendering);

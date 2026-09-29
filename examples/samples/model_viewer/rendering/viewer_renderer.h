@@ -36,7 +36,7 @@ public:
   [[nodiscard]] granit::result initialize_renderer(const granit::renderer_desc& desc) noexcept;
   /** Renderer 进入 ready 后查询稳定属性；异步后端由平台循环决定调用时机。 */
   [[nodiscard]] granit::result complete_renderer_initialization() noexcept;
-  [[nodiscard]] granit::result initialize_presentation(granit::window& window,
+  [[nodiscard]] granit::result initialize_presentation(granit::surface surface,
                                                        const granit::swapchain_desc& desc,
                                                        bool enable_ui) noexcept;
   [[nodiscard]] granit::result process_renderer_events() noexcept;
@@ -70,7 +70,7 @@ public:
                                                granit::texture_view_ref& view,
                                                granit::sampler_ref& sampler) const noexcept;
   [[nodiscard]] granit::result recreate_swapchain(const granit::swapchain_desc& desc) noexcept;
-  [[nodiscard]] granit::result recreate_surface(granit::window& window,
+  [[nodiscard]] granit::result recreate_surface(granit::surface surface,
                                                 const granit::swapchain_desc& desc) noexcept;
   [[nodiscard]] granit::result
   query_resource_stats(granit::renderer_resource_stats& stats) const noexcept;

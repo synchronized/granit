@@ -53,13 +53,21 @@ granit::result render_dispatcher::complete_renderer_initialization() noexcept {
                 : granit::result::not_ready;
 }
 
-granit::result render_dispatcher::initialize_presentation(granit::window& window,
+granit::result render_dispatcher::initialize_presentation(granit::surface surface,
                                                           const granit::swapchain_desc& desc,
                                                           bool enable_ui) noexcept {
-  return state_ ? state_->executor->run_task([context = state_.get(), &window, desc, enable_ui] {
-    return context->runtime.initialize_presentation(window, desc, enable_ui);
-  })
-                : granit::result::not_ready;
+  if (!state_)
+    return granit::result::not_ready;
+  try {
+    auto owned_surface = std::make_shared<granit::surface>(std::move(surface));
+    return state_->executor->run_task([context = state_.get(),
+                                       owned_surface = std::move(owned_surface), desc,
+                                       enable_ui]() mutable {
+      return context->runtime.initialize_presentation(std::move(*owned_surface), desc, enable_ui);
+    });
+  } catch (const std::bad_alloc&) {
+    return granit::result::out_of_memory;
+  }
 }
 
 granit::result render_dispatcher::process_renderer_events() noexcept {
@@ -274,16 +282,22 @@ granit::result render_dispatcher::recreate_swapchain(const granit::swapchain_des
                 : granit::result::not_ready;
 }
 
-granit::result render_dispatcher::recreate_surface(granit::window& window,
+granit::result render_dispatcher::recreate_surface(granit::surface surface,
                                                    const granit::swapchain_desc& desc) noexcept {
   if (!state_)
     return granit::result::not_ready;
-  auto result = state_->executor->flush();
-  if (result.ok())
-    result = state_->executor->run_task([context = state_.get(), &window, desc] {
-      return context->runtime.recreate_surface(window, desc);
-    });
-  return result;
+  try {
+    auto owned_surface = std::make_shared<granit::surface>(std::move(surface));
+    auto result = state_->executor->flush();
+    if (result.ok())
+      result = state_->executor->run_task(
+          [context = state_.get(), owned_surface = std::move(owned_surface), desc]() mutable {
+            return context->runtime.recreate_surface(std::move(*owned_surface), desc);
+          });
+    return result;
+  } catch (const std::bad_alloc&) {
+    return granit::result::out_of_memory;
+  }
 }
 
 granit::result
