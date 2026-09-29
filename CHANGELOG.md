@@ -8,6 +8,12 @@
 
 ## Unreleased
 
+### 修复
+
+- 修正 MASK 阴影 MaterialConstants 的顶点/片元阶段可见性，消除 Vulkan `VUID-07988`。
+- Vulkan 设备选择现在查询并启用标准 Alpha Cutoff Shader 所需的
+  `shaderDemoteToHelperInvocation`；不支持该特性的设备不会创建非法逻辑设备。
+
 ## 0.42.0 - 2026-09-29
 
 ## 0.41.0 - 2026-09-29

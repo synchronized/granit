@@ -157,8 +157,13 @@ TEST_CASE("物理设备必须满足 Vulkan 1.3 基础能力", "[vulkan][device_s
       .dynamic_rendering = true,
       .synchronization2 = true,
       .maintenance4 = true,
+      .shader_demote_to_helper_invocation = true,
   };
   CHECK(is_suitable(candidate));
+
+  candidate.shader_demote_to_helper_invocation = false;
+  CHECK_FALSE(is_suitable(candidate));
+  candidate.shader_demote_to_helper_invocation = true;
 
   candidate.api_version = VK_API_VERSION_1_2;
   CHECK_FALSE(is_suitable(candidate));
@@ -183,6 +188,7 @@ TEST_CASE("设备选择优先类型、显存和枚举顺序", "[vulkan][device_s
       .dynamic_rendering = true,
       .synchronization2 = true,
       .maintenance4 = true,
+      .shader_demote_to_helper_invocation = true,
   };
   auto discrete = integrated;
   discrete.kind = physical_device_kind::discrete_gpu;
@@ -218,6 +224,7 @@ TEST_CASE("创建带独立函数表的 Vulkan 逻辑设备", "[vulkan][device]")
   REQUIRE(device.valid());
   CHECK(device.physical_device() != VK_NULL_HANDLE);
   CHECK(device.graphics_queue() != VK_NULL_HANDLE);
+  CHECK(device.shader_demote_to_helper_invocation_supported());
   CHECK(device.functions().vkQueueSubmit2 != nullptr);
   CHECK_FALSE(physical_device_supports_linear_blit(instance, device, VK_FORMAT_UNDEFINED));
   CHECK(physical_device_supports_linear_blit(instance, device, VK_FORMAT_R8G8B8A8_UNORM));

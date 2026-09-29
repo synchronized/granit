@@ -30,6 +30,7 @@ struct physical_device_candidate {
   bool dynamic_rendering{};
   bool synchronization2{};
   bool maintenance4{};
+  bool shader_demote_to_helper_invocation{};
   bool supports_requested_surfaces{true};
   bool supports_swapchain{true};
 };
@@ -41,6 +42,7 @@ struct selected_physical_device {
   std::uint64_t device_local_memory{};
   bool sampler_anisotropy{};
   bool fill_mode_non_solid{};
+  bool shader_demote_to_helper_invocation{};
 };
 
 [[nodiscard]] bool is_suitable(const physical_device_candidate& candidate) noexcept;

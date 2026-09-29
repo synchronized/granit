@@ -62,7 +62,8 @@ material_template_gpu::initialize(granit_renderer renderer, const material_packa
     material_entries.reserve(package.metadata().parameters().size() + 1U);
     if (package.metadata().constant_buffer_size() != 0) {
       material_entries.push_back(
-          {0, GRANIT_BINDING_TYPE_UNIFORM_BUFFER, 1, GRANIT_SHADER_STAGE_FRAGMENT_BIT,
+          {0, GRANIT_BINDING_TYPE_UNIFORM_BUFFER, 1,
+           GRANIT_SHADER_STAGE_VERTEX_BIT | GRANIT_SHADER_STAGE_FRAGMENT_BIT,
            GRANIT_TEXTURE_FORMAT_UNDEFINED, 0});
     }
     for (const auto& parameter : package.metadata().parameters()) {

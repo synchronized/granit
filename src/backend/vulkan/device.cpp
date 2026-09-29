@@ -41,11 +41,14 @@ vulkan_device::vulkan_device(vulkan_device&& other) noexcept
       graphics_queue_family_(std::exchange(other.graphics_queue_family_, 0)),
       properties_(other.properties_), functions_(other.functions_),
       sampler_anisotropy_supported_(other.sampler_anisotropy_supported_),
-      fill_mode_non_solid_supported_(other.fill_mode_non_solid_supported_) {
+      fill_mode_non_solid_supported_(other.fill_mode_non_solid_supported_),
+      shader_demote_to_helper_invocation_supported_(
+          other.shader_demote_to_helper_invocation_supported_) {
   other.properties_ = {};
   other.functions_ = {};
   other.sampler_anisotropy_supported_ = false;
   other.fill_mode_non_solid_supported_ = false;
+  other.shader_demote_to_helper_invocation_supported_ = false;
 }
 
 vulkan_device& vulkan_device::operator=(vulkan_device&& other) noexcept {
@@ -61,10 +64,13 @@ vulkan_device& vulkan_device::operator=(vulkan_device&& other) noexcept {
   functions_ = other.functions_;
   sampler_anisotropy_supported_ = other.sampler_anisotropy_supported_;
   fill_mode_non_solid_supported_ = other.fill_mode_non_solid_supported_;
+  shader_demote_to_helper_invocation_supported_ =
+      other.shader_demote_to_helper_invocation_supported_;
   other.properties_ = {};
   other.functions_ = {};
   other.sampler_anisotropy_supported_ = false;
   other.fill_mode_non_solid_supported_ = false;
+  other.shader_demote_to_helper_invocation_supported_ = false;
   return *this;
 }
 
@@ -93,6 +99,7 @@ granit_result vulkan_device::initialize(const vulkan_instance& instance,
   features.synchronization2 = VK_TRUE;
   features.dynamicRendering = VK_TRUE;
   features.maintenance4 = VK_TRUE;
+  features.shaderDemoteToHelperInvocation = VK_TRUE;
 
   VkDeviceCreateInfo create_info{};
   create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -120,6 +127,8 @@ granit_result vulkan_device::initialize(const vulkan_instance& instance,
   properties_ = selected.properties;
   sampler_anisotropy_supported_ = selected.sampler_anisotropy;
   fill_mode_non_solid_supported_ = selected.fill_mode_non_solid;
+  shader_demote_to_helper_invocation_supported_ =
+      selected.shader_demote_to_helper_invocation;
   graphics_queue_family_ = selected.graphics_queue_family;
   volk::volkLoadDeviceTable(&functions_, device_);
   if (functions_.vkGetDeviceQueue == nullptr || functions_.vkDestroyDevice == nullptr ||
@@ -184,6 +193,7 @@ void vulkan_device::reset() noexcept {
   functions_ = {};
   sampler_anisotropy_supported_ = false;
   fill_mode_non_solid_supported_ = false;
+  shader_demote_to_helper_invocation_supported_ = false;
 }
 
 } // namespace granit::detail

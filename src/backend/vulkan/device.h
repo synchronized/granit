@@ -49,6 +49,9 @@ public:
   [[nodiscard]] bool fill_mode_non_solid_supported() const noexcept {
     return fill_mode_non_solid_supported_;
   }
+  [[nodiscard]] bool shader_demote_to_helper_invocation_supported() const noexcept {
+    return shader_demote_to_helper_invocation_supported_;
+  }
 
 private:
   VkPhysicalDevice physical_device_{VK_NULL_HANDLE};
@@ -59,6 +62,7 @@ private:
   volk::VolkDeviceTable functions_{};
   bool sampler_anisotropy_supported_{};
   bool fill_mode_non_solid_supported_{};
+  bool shader_demote_to_helper_invocation_supported_{};
 };
 
 [[nodiscard]] bool physical_device_supports_linear_blit(const vulkan_instance& instance,
