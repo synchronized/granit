@@ -9,9 +9,10 @@
 
 ## 当前计划
 
-- [S-77：0.42.0 Model Viewer 加载与运行时收敛](S-77-0.42.0-model-viewer-convergence.md)——
-  统一 Desktop/Web 的 ImGui 加载状态、协作式执行、取消与失败处理，并解决浏览器 WebGPU
-  生命周期波动。计划当前为草案，等待补充其余 Model Viewer 问题后固定完整范围。
+- [S-77：0.42.0 Model Viewer 架构收敛](S-77-0.42.0-model-viewer-convergence.md)——拆分共享 glTF
+  渲染支持，收敛加载操作、Viewer Document、Renderer 与调度边界，删除重叠状态和转发层。
+- [S-78：0.42.0 Model Viewer Linux 与 Emscripten 可靠性](S-78-0.42.0-model-viewer-platform-reliability.md)
+  ——统一 ImGui 加载体验，修复 Linux 托管浏览器 WebGPU 生命周期波动，并补齐原生 Linux 验收。
 
 ## 最近完成
 
