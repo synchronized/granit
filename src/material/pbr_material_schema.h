@@ -17,6 +17,8 @@ namespace granit::material {
 
 using pbr_texture_flags = std::uint32_t;
 inline constexpr std::string_view pbr_texture_feature_name = GRANIT_PBR_TEXTURE_FEATURE_NAME;
+inline constexpr std::string_view pbr_transform_reflected_feature_name =
+    GRANIT_PBR_TRANSFORM_REFLECTED_FEATURE_NAME;
 inline constexpr pbr_texture_flags pbr_texture_base_color = GRANIT_PBR_TEXTURE_BASE_COLOR;
 inline constexpr pbr_texture_flags pbr_texture_metallic_roughness =
     GRANIT_PBR_TEXTURE_METALLIC_ROUGHNESS;
@@ -64,6 +66,10 @@ enum class pbr_shader_texture_class : std::uint8_t {
 /** 将材质的精确纹理 feature 掩码归并为少量 Shader 结构类别。 */
 [[nodiscard]] pbr_shader_texture_class
 classify_pbr_shader_textures(pbr_texture_flags textures) noexcept;
+
+/** 返回标准 PBR 精确纹理掩码和实例反射状态对应的 Material Variant Key。 */
+[[nodiscard]] std::uint64_t standard_pbr_variant_key(pbr_texture_flags textures,
+                                                     bool reflected) noexcept;
 
 /** 按 H-03 标准 location 检查网格是否满足指定 PBR 纹理变体。 */
 [[nodiscard]] pbr_vertex_layout_error

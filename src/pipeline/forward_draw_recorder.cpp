@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 #include "pipeline/forward_draw_recorder.h"
 #include "asset_formats/material/material_package.h"
+#include "material/pbr_material_schema.h"
 #include "pipeline/draw_binding_cache.h"
 #include "pipeline/material_access.h"
 #include "pipeline/mesh_access.h"
@@ -12,6 +13,12 @@
 namespace granit::pipeline::detail {
 namespace {
 constexpr lighting::light_limits automatic_light_limits{.directional = 4, .point = 128, .spot = 64};
+
+std::uint64_t pbr_variant(const granit::material::pbr_object_constants& object) {
+  return object.transform_handedness < 0.0F
+             ? granit::material::standard_pbr_variant_key(GRANIT_PBR_TEXTURE_ALL, true)
+             : 0;
+}
 } // namespace
 granit_result
 record_opaque_draws(render_pipeline_state& state, granit_command_recorder recorder,
@@ -68,7 +75,7 @@ record_opaque_draws(render_pipeline_state& state, granit_command_recorder record
         result = granit::pipeline::detail::acquire_material_draw_state(
             state.renderer, draws[index].material,
             {.pass = granit::material::make_feature_id("opaque"),
-             .variant = 0,
+             .variant = pbr_variant(objects[index]),
              .color_format = GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT,
              .depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT,
              .sample_count = resolve_color == GRANIT_NULL_HANDLE ? GRANIT_SAMPLE_COUNT_1
@@ -93,7 +100,7 @@ record_opaque_draws(render_pipeline_state& state, granit_command_recorder record
       result = granit::pipeline::detail::acquire_material_draw_state(
           state.renderer, draws[index].material,
           {.pass = granit::material::make_feature_id("opaque"),
-           .variant = 0,
+           .variant = pbr_variant(objects[index]),
            .color_format = GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT,
            .depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT,
            .sample_count =

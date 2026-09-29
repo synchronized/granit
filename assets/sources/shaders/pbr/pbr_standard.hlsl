@@ -48,7 +48,9 @@ struct vertex_output {
 [[vk::binding(0, 2)]] cbuffer ObjectConstants {
   column_major float4x4 model;
   column_major float4x4 normal_matrix;
-  uint4 object_id;
+  uint object_id;
+  float transform_handedness;
+  uint2 object_reserved;
 };
 
 [[vk::binding(3, 3)]] cbuffer IblConstants {
@@ -68,9 +70,12 @@ vertex_output vertex_main(vertex_input input) {
   const float4 resolved_world_position = mul(model, float4(input.position, 1.0));
   output.position = mul(view_projection, resolved_world_position);
   output.world_position = resolved_world_position.xyz;
-  output.world_normal = normalize(mul(normal_matrix, float4(input.normal, 0.0)).xyz);
-  output.world_tangent =
-      float4(normalize(mul(model, float4(input.tangent.xyz, 0.0)).xyz), input.tangent.w);
+  const float3 world_normal = normalize(mul(normal_matrix, float4(input.normal, 0.0)).xyz);
+  const float3 transformed_tangent = mul(model, float4(input.tangent.xyz, 0.0)).xyz;
+  const float3 world_tangent =
+      normalize(transformed_tangent - world_normal * dot(world_normal, transformed_tangent));
+  output.world_normal = world_normal;
+  output.world_tangent = float4(world_tangent, input.tangent.w * transform_handedness);
   output.texture_coordinate = input.texture_coordinate;
   output.vertex_normal = input.normal;
   output.vertex_tangent = input.tangent.xyz;
@@ -115,8 +120,10 @@ float4 fragment_main(vertex_output input) : SV_Target0 {
   const float sampled_roughness =
       clamp(perceptual_roughness * sampled_metallic_roughness.g, 0.045, 1.0);
 
-  const float3 tangent = normalize(input.world_tangent.xyz);
   const float3 geometric_normal = normalize(input.world_normal);
+  const float3 tangent = normalize(input.world_tangent.xyz -
+                                   geometric_normal * dot(geometric_normal,
+                                                          input.world_tangent.xyz));
   const float3 bitangent = normalize(cross(geometric_normal, tangent)) * input.world_tangent.w;
   const float3 sampled_normal =
       normal_texture.Sample(pbr_sampler, input.texture_coordinate).xyz * 2.0 - 1.0;

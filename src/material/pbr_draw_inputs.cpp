@@ -48,7 +48,11 @@ pbr_draw_input_error pack_pbr_draw_inputs(const pbr_view_input& view,
                      .render_options = {0, 0, 0, 0}};
   object_constants = {.model = object.model,
                       .normal_matrix = object.normal_matrix,
-                      .object_id = {object.object_id, 0, 0, 0}};
+                      .object_id = object.object_id,
+                      .transform_handedness = math::linear_determinant(object.model) < 0.0F
+                                                  ? -1.0F
+                                                  : 1.0F,
+                      .reserved = {0, 0}};
   return pbr_draw_input_error::none;
 }
 

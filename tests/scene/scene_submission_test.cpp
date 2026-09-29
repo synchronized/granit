@@ -93,6 +93,13 @@ TEST_CASE("场景帧快照拒绝非法 View 与 Renderable") {
   submission.renderables = std::span{&invalid, 1};
   CHECK(granit::scene::build_frame_snapshot(submission, snapshot) ==
         granit::scene::submission_error::invalid_bounds);
+
+  auto singular = invalid;
+  singular.bounds.radius = 1;
+  singular.model[0] = 0;
+  submission.renderables = std::span{&singular, 1};
+  CHECK(granit::scene::build_frame_snapshot(submission, snapshot) ==
+        granit::scene::submission_error::singular_model_transform);
 }
 
 TEST_CASE("场景帧快照拒绝非法光源并保持旧快照") {

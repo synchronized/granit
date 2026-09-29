@@ -51,6 +51,39 @@
         {"library": "pbr_standard", "shader": "standard.vertex"},
         {"library": "pbr_standard", "shader": "standard.fragment", "variant": "textured"}
       ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {"name": "pbr_texture_mask", "value": 31},
+        {"name": "pbr_transform_reflected", "value": 1}
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 48,
+            "step_mode": "vertex",
+            "attributes": [
+              {"location": 0, "format": "float32x3", "offset": 0},
+              {"location": 1, "format": "float32x3", "offset": 12},
+              {"location": 2, "format": "float32x4", "offset": 24},
+              {"location": 3, "format": "float32x2", "offset": 40}
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "counter_clockwise",
+          "cull_mode": "back",
+          "polygon_mode": "fill"
+        },
+        "depth": {"test_enabled": true, "write_enabled": true, "compare": "less_equal"},
+        "color_blend": {"enabled": false}
+      },
+      "shaders": [
+        {"library": "pbr_standard", "shader": "standard.vertex"},
+        {"library": "pbr_standard", "shader": "standard.fragment", "variant": "textured"}
+      ]
     }
   ]
 }

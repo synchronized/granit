@@ -35,6 +35,14 @@ TEST_CASE("列主序矩阵乘法和点变换保持顺序") {
   check_float3(result, {4, 6, 8});
 }
 
+TEST_CASE("线性行列式区分普通、反射和双反射变换") {
+  using namespace granit::math;
+  CHECK(linear_determinant(identity_matrix4) == 1.0F);
+  CHECK(linear_determinant(scaling_matrix4({-2, 3, 4})) == -24.0F);
+  CHECK(linear_determinant(scaling_matrix4({-2, -3, 4})) == 24.0F);
+  CHECK(linear_determinant(scaling_matrix4({0, 3, 4})) == 0.0F);
+}
+
 TEST_CASE("轴旋转矩阵遵循右手坐标系") {
   granit::math::float3 result{};
   REQUIRE(granit::math::transform_point(

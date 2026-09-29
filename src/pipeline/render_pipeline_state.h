@@ -35,6 +35,7 @@ struct render_pipeline_state {
   struct shadow_pipeline_entry {
     granit_pipeline_layout layout = GRANIT_NULL_HANDLE;
     granit_mesh mesh = GRANIT_NULL_HANDLE;
+    bool reflected = false;
     granit_graphics_pipeline pipeline = GRANIT_NULL_HANDLE;
   };
   struct draw_binding_entry {

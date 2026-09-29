@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "asset_formats/material/material_archive.h"
+#include "asset_formats/material/material_package_archive.h"
 #include "asset_formats/shader/shader_library.h"
 
 #include <granit/pipeline/pbr_material.h>
@@ -90,7 +91,7 @@ TEST_CASE("公共 PBR 材质模板具有稳定 Schema 和内容身份") {
   granit::material::material_archive_layout layout;
   REQUIRE(granit::material::parse_material_archive_layout(bytes, layout) ==
           granit::material::archive_error::none);
-  CHECK(GRANIT_PBR_MATERIAL_TEMPLATE_VERSION == 4);
+  CHECK(GRANIT_PBR_MATERIAL_TEMPLATE_VERSION == 5);
 
   constexpr std::string_view hex = GRANIT_PBR_MATERIAL_CONTENT_HASH_HEX;
   REQUIRE(hex.size() == layout.header.content_hash.size() * 2);
@@ -102,4 +103,24 @@ TEST_CASE("公共 PBR 材质模板具有稳定 Schema 和内容身份") {
         static_cast<std::uint8_t>((nibble(hex[index * 2]) << 4) | nibble(hex[index * 2 + 1]));
     CHECK(std::to_integer<std::uint8_t>(layout.header.content_hash[index]) == expected);
   }
+}
+
+TEST_CASE("公共 PBR 材质模板为反射实例提供相反正面变体") {
+  const auto bytes = read_binary(GRANIT_PBR_MATERIAL_ASSET);
+  granit::material::material_package package;
+  REQUIRE(granit::material::decode_material_package_archive(bytes, package) ==
+          granit::material::archive_error::none);
+  REQUIRE(package.variants().size() == 2);
+  const auto clockwise = std::ranges::find_if(package.variants(), [](const auto& variant) {
+    return variant.pipeline.primitive.front_face == GRANIT_FRONT_FACE_CLOCKWISE;
+  });
+  const auto counter_clockwise =
+      std::ranges::find_if(package.variants(), [](const auto& variant) {
+        return variant.pipeline.primitive.front_face == GRANIT_FRONT_FACE_COUNTER_CLOCKWISE;
+      });
+  REQUIRE(clockwise != package.variants().end());
+  REQUIRE(counter_clockwise != package.variants().end());
+  CHECK(clockwise->pipeline.primitive.cull_mode == GRANIT_CULL_MODE_BACK);
+  CHECK(counter_clockwise->pipeline.primitive.cull_mode == GRANIT_CULL_MODE_BACK);
+  CHECK(counter_clockwise->features.size() == 2);
 }

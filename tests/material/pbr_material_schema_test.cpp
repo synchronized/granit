@@ -61,3 +61,10 @@ TEST_CASE("PBR 精确纹理掩码归并为三个 Shader 结构类别") {
   CHECK(classify_pbr_shader_textures(pbr_texture_all) == normal_mapped);
   CHECK(classify_pbr_shader_textures(UINT32_C(1) << 31) == invalid);
 }
+
+TEST_CASE("PBR 反射实例使用独立且稳定的 Material Variant") {
+  using namespace granit::material;
+  CHECK(standard_pbr_variant_key(pbr_texture_all, false) !=
+        standard_pbr_variant_key(pbr_texture_all, true));
+  CHECK(standard_pbr_variant_key(pbr_texture_all, true) == UINT64_C(0x6b2b30a82239ddf1));
+}

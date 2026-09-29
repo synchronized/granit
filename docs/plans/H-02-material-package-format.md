@@ -112,8 +112,8 @@ Renderer 后端和 portable 档位取得 `.grshader` 清单及对应 sidecar；�
 
 格式 v2 新增必需的 Pipeline States 区段。它按规范化 Variant 顺序保存顶点 Buffer/Attribute
 记录、Primitive、Depth 和单颜色 Attachment Blend 状态。所有记录使用定宽整数和索引，不保存
-`granit_vertex_buffer_layout` 中的临时指针。同一 Pass 的 Variant 必须共享状态，解码后仍通过
-材质包语义校验。
+`granit_vertex_buffer_layout` 中的临时指针。同一 Pass 的 Variant 可以具有不同状态，用于表达
+正面绕序、剔除、深度写入和混合等静态 Pipeline 差异；每个 Variant 解码后独立通过语义校验。
 
 ## 可选构建信息
 

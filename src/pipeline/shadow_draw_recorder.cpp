@@ -13,9 +13,11 @@
 namespace granit::pipeline::detail {
 granit_result acquire_shadow_pipeline(render_pipeline_state& state,
                                       const granit::pipeline::detail::material_draw_state& material,
-                                      granit_mesh mesh, granit_graphics_pipeline& pipeline) {
+                                      granit_mesh mesh, bool reflected,
+                                      granit_graphics_pipeline& pipeline) {
   const auto cached = std::ranges::find_if(state.shadow_pipelines, [&](const auto& entry) {
-    return entry.layout == material.pipeline_layout && entry.mesh == mesh;
+    return entry.layout == material.pipeline_layout && entry.mesh == mesh &&
+           entry.reflected == reflected;
   });
   if (cached != state.shadow_pipelines.end()) {
     pipeline = cached->pipeline;
@@ -43,7 +45,8 @@ granit_result acquire_shadow_pipeline(render_pipeline_state& state,
   desc.vertex_buffer_layout_count = static_cast<uint32_t>(layouts.size());
   desc.vertex_buffer_layouts = layouts.data();
   desc.primitive.topology = mesh_state.topology;
-  desc.primitive.front_face = GRANIT_FRONT_FACE_CLOCKWISE;
+  desc.primitive.front_face =
+      reflected ? GRANIT_FRONT_FACE_COUNTER_CLOCKWISE : GRANIT_FRONT_FACE_CLOCKWISE;
   desc.primitive.cull_mode = GRANIT_CULL_MODE_BACK;
   desc.depth = &depth_state;
   desc.depth_bias = &depth_bias;
@@ -52,7 +55,7 @@ granit_result acquire_shadow_pipeline(render_pipeline_state& state,
   if (result != GRANIT_SUCCESS)
     return result;
   try {
-    state.shadow_pipelines.push_back({material.pipeline_layout, mesh, created});
+    state.shadow_pipelines.push_back({material.pipeline_layout, mesh, reflected, created});
   } catch (const std::bad_alloc&) {
     static_cast<void>(granit_graphics_pipeline_destroy(state.renderer, created));
     return GRANIT_ERROR_OUT_OF_MEMORY;
@@ -112,7 +115,12 @@ granit_result record_shadow_draws(render_pipeline_state& state, granit_command_r
           break;
         arena_objects.push_back({.model = casters[index].model,
                                  .normal_matrix = granit::math::identity_matrix4,
-                                 .object_id = {casters[index].object_id, 0, 0, 0}});
+                                 .object_id = casters[index].object_id,
+                                 .transform_handedness =
+                                     granit::math::linear_determinant(casters[index].model) < 0.0F
+                                         ? -1.0F
+                                         : 1.0F,
+                                 .reserved = {0, 0}});
         requests.push_back({.material = &arena_materials[index],
                             .frame = std::as_bytes(std::span{&unused_frame, 1}),
                             .object = std::as_bytes(std::span{&arena_objects.back(), 1})});
@@ -141,7 +149,13 @@ granit_result record_shadow_draws(render_pipeline_state& state, granit_command_r
                                           : granit::material::pbr_object_constants{
                                                 .model = casters[index].model,
                                                 .normal_matrix = granit::math::identity_matrix4,
-                                                .object_id = {casters[index].object_id, 0, 0, 0}};
+                                                .object_id = casters[index].object_id,
+                                                .transform_handedness =
+                                                    granit::math::linear_determinant(
+                                                        casters[index].model) < 0.0F
+                                                        ? -1.0F
+                                                        : 1.0F,
+                                                .reserved = {0, 0}};
     if (index == state.shadow_draw_bindings.size())
       state.shadow_draw_bindings.emplace_back();
     auto& cached = state.shadow_draw_bindings[index];
@@ -177,7 +191,8 @@ granit_result record_shadow_draws(render_pipeline_state& state, granit_command_r
       break;
     granit_graphics_pipeline pipeline = GRANIT_NULL_HANDLE;
     if (result == GRANIT_SUCCESS)
-      result = acquire_shadow_pipeline(state, material, draws[index].mesh, pipeline);
+      result = acquire_shadow_pipeline(state, material, draws[index].mesh,
+                                       object.transform_handedness < 0.0F, pipeline);
     if (result != GRANIT_SUCCESS)
       break;
     if (result == GRANIT_SUCCESS)

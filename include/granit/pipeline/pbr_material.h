@@ -10,9 +10,9 @@
 #include <granit/renderer/pipeline.h>
 
 typedef uint32_t granit_pbr_texture_flags;
-#define GRANIT_PBR_MATERIAL_TEMPLATE_VERSION UINT32_C(4)
+#define GRANIT_PBR_MATERIAL_TEMPLATE_VERSION UINT32_C(5)
 #define GRANIT_PBR_MATERIAL_CONTENT_HASH_HEX                                                       \
-  "d30305713f07b6e9068b9e1f2fa700304d858ee7b2e738870790da3dfa15dee9"
+  "4d94395da5efb2fc82f60715247fe4d4f1f73e2b371c745cfbdbfc2183fa0274"
 #define GRANIT_PBR_TEXTURE_BASE_COLOR (UINT32_C(1) << 0)
 #define GRANIT_PBR_TEXTURE_METALLIC_ROUGHNESS (UINT32_C(1) << 1)
 #define GRANIT_PBR_TEXTURE_NORMAL (UINT32_C(1) << 2)
@@ -23,6 +23,7 @@ typedef uint32_t granit_pbr_texture_flags;
    GRANIT_PBR_TEXTURE_NORMAL | GRANIT_PBR_TEXTURE_OCCLUSION | GRANIT_PBR_TEXTURE_EMISSIVE)
 
 #define GRANIT_PBR_TEXTURE_FEATURE_NAME "pbr_texture_mask"
+#define GRANIT_PBR_TRANSFORM_REFLECTED_FEATURE_NAME "pbr_transform_reflected"
 #define GRANIT_PBR_PARAMETER_BASE_COLOR "base_color"
 #define GRANIT_PBR_PARAMETER_METALLIC "metallic"
 #define GRANIT_PBR_PARAMETER_PERCEPTUAL_ROUGHNESS "perceptual_roughness"

@@ -83,6 +83,7 @@ enum class submission_error : std::uint8_t {
   invalid_viewport,
   invalid_layer_mask,
   invalid_bounds,
+  singular_model_transform,
   invalid_direction,
   negative_light_value,
   invalid_light_radius,

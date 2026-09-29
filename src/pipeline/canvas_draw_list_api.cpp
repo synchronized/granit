@@ -347,7 +347,11 @@ extern "C" granit_result granit_canvas_draw_list_record(granit_renderer renderer
                                                     .light_radiance = {},
                                                     .render_options = {}};
   const granit::material::pbr_object_constants object{
-      .model = identity_matrix(), .normal_matrix = identity_matrix(), .object_id = {}};
+      .model = identity_matrix(),
+      .normal_matrix = identity_matrix(),
+      .object_id = 0,
+      .transform_handedness = 1.0F,
+      .reserved = {}};
   if (result == GRANIT_SUCCESS) {
     result = granit::pipeline::detail::record_canvas_pass(
         renderer, recorder,

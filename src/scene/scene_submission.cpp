@@ -50,6 +50,8 @@ submission_error validate_renderable(const renderable_input& value) noexcept {
   }
   if (value.bounds.radius < 0.0F)
     return submission_error::invalid_bounds;
+  if (math::linear_determinant(value.model) == 0.0F)
+    return submission_error::singular_model_transform;
   return value.layer_mask == 0 ? submission_error::invalid_layer_mask : submission_error::none;
 }
 

@@ -61,6 +61,13 @@ namespace granit::math {
   return true;
 }
 
+/** 返回仿射矩阵左上 3x3 线性部分的行列式；负值表示变换包含奇数次反射。 */
+[[nodiscard]] inline constexpr float linear_determinant(const matrix4& value) noexcept {
+  return value[0] * (value[5] * value[10] - value[9] * value[6]) -
+         value[4] * (value[1] * value[10] - value[9] * value[2]) +
+         value[8] * (value[1] * value[6] - value[5] * value[2]);
+}
+
 [[nodiscard]] inline constexpr matrix4 multiply(const matrix4& left,
                                                 const matrix4& right) noexcept {
   matrix4 result{};
