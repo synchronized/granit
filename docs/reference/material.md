@@ -82,11 +82,13 @@ C++20 描述通过 `std::span` 借用归档和初始更新。数值参数使用
 因此，启用或禁用一种纹理功能必须选择已有的 `pbr_texture_mask` 变体；在同一纹理功能内更换贴图
 只更新资源句柄。缺少贴图时，上层资产导入器应绑定与该功能契约匹配的中性默认资源。
 
-标准 PBR 的 `opaque` 和 `mask` 都在不透明阶段写入深度。`mask` 使用
+标准 PBR 的 `opaque` 和 `mask` 都在不透明阶段写入深度。`blend` 使用独立的 `transparent`
+Pass，保持深度测试但关闭深度写入；Fragment Shader 输出预乘 Alpha，Pipeline 使用
+`ONE / ONE_MINUS_SRC_ALPHA` 颜色与 Alpha 混合。`mask` 使用
 `alpha_cutoff` 对基础色因子与基础色纹理组合后的 Alpha 执行一次裁剪，阴影 Pass 使用同一参数和
 纹理形成一致轮廓。双面 Variant 关闭剔除；单面负缩放实例由 RenderPipeline 自动选择相反正面
 绕序。调用方把 `granit_pbr_material_variant_key` 的结果写入 Draw Binding 的 `variant`，无需为
-反射实例生成另一个 Variant Key。
+反射实例生成另一个 Variant Key。`blend` 首版不投射阴影。
 
 ## 所有权与生命周期
 

@@ -93,7 +93,7 @@ TEST_CASE("公共 PBR 材质模板具有稳定 Schema 和内容身份") {
   granit::material::material_archive_layout layout;
   REQUIRE(granit::material::parse_material_archive_layout(bytes, layout) ==
           granit::material::archive_error::none);
-  CHECK(GRANIT_PBR_MATERIAL_TEMPLATE_VERSION == 8);
+  CHECK(GRANIT_PBR_MATERIAL_TEMPLATE_VERSION == 9);
 
   constexpr std::string_view hex = GRANIT_PBR_MATERIAL_CONTENT_HASH_HEX;
   REQUIRE(hex.size() == layout.header.content_hash.size() * 2);
@@ -112,7 +112,7 @@ TEST_CASE("公共 PBR 材质模板为反射实例提供相反正面变体") {
   granit::material::material_package package;
   REQUIRE(granit::material::decode_material_package_archive(bytes, package) ==
           granit::material::archive_error::none);
-  REQUIRE(package.variants().size() == 32);
+  REQUIRE(package.variants().size() == 48);
   const auto clockwise = std::ranges::find_if(package.variants(), [](const auto& variant) {
     return variant.features.size() == 1 &&
            variant.pipeline.primitive.front_face == GRANIT_FRONT_FACE_CLOCKWISE;
@@ -151,4 +151,22 @@ TEST_CASE("公共 PBR 材质模板区分镂空和双面 Pipeline") {
   CHECK(mask->pipeline.depth.write_enabled == 1);
   CHECK(mask->shaders[1].asset_id != opaque->shaders[1].asset_id);
   CHECK(double_sided->pipeline.primitive.cull_mode == GRANIT_CULL_MODE_NONE);
+}
+
+TEST_CASE("公共 PBR 材质模板提供预乘 Alpha 透明 Pipeline") {
+  const auto bytes = read_binary(GRANIT_PBR_MATERIAL_ASSET);
+  granit::material::material_package package;
+  REQUIRE(granit::material::decode_material_package_archive(bytes, package) ==
+          granit::material::archive_error::none);
+  const auto pass = granit::material::make_feature_id("transparent");
+  const auto key = granit::material::standard_pbr_variant_key(
+      GRANIT_PBR_TEXTURE_ALL, GRANIT_PBR_ALPHA_MODE_BLEND, false, false);
+  const auto* transparent = package.find(pass, key);
+  REQUIRE(transparent != nullptr);
+  CHECK(transparent->pipeline.depth.test_enabled == 1);
+  CHECK(transparent->pipeline.depth.write_enabled == 0);
+  CHECK(transparent->pipeline.color_blend.enabled == 1);
+  CHECK(transparent->pipeline.color_blend.source_color_factor == GRANIT_BLEND_FACTOR_ONE);
+  CHECK(transparent->pipeline.color_blend.destination_color_factor ==
+        GRANIT_BLEND_FACTOR_ONE_MINUS_SOURCE_ALPHA);
 }

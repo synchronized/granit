@@ -29,7 +29,11 @@
         {"name": "textured_alpha_mask_uv0", "defines": {"GRANIT_PBR_TEXTURE_MASK": "31", "GRANIT_PBR_ALPHA_MASK": "1", "GRANIT_PBR_HAS_UV1": "0", "GRANIT_PBR_HAS_VERTEX_COLOR": "0"}},
         {"name": "textured_alpha_mask_uv1", "defines": {"GRANIT_PBR_TEXTURE_MASK": "31", "GRANIT_PBR_ALPHA_MASK": "1", "GRANIT_PBR_HAS_UV1": "1", "GRANIT_PBR_HAS_VERTEX_COLOR": "0"}},
         {"name": "textured_alpha_mask_uv0_color", "defines": {"GRANIT_PBR_TEXTURE_MASK": "31", "GRANIT_PBR_ALPHA_MASK": "1", "GRANIT_PBR_HAS_UV1": "0", "GRANIT_PBR_HAS_VERTEX_COLOR": "1"}},
-        {"name": "textured_alpha_mask_uv1_color", "defines": {"GRANIT_PBR_TEXTURE_MASK": "31", "GRANIT_PBR_ALPHA_MASK": "1", "GRANIT_PBR_HAS_UV1": "1", "GRANIT_PBR_HAS_VERTEX_COLOR": "1"}}
+        {"name": "textured_alpha_mask_uv1_color", "defines": {"GRANIT_PBR_TEXTURE_MASK": "31", "GRANIT_PBR_ALPHA_MASK": "1", "GRANIT_PBR_HAS_UV1": "1", "GRANIT_PBR_HAS_VERTEX_COLOR": "1"}},
+        {"name": "textured_alpha_blend_uv0", "defines": {"GRANIT_PBR_TEXTURE_MASK": "31", "GRANIT_PBR_ALPHA_MASK": "0", "GRANIT_PBR_ALPHA_BLEND": "1", "GRANIT_PBR_HAS_UV1": "0", "GRANIT_PBR_HAS_VERTEX_COLOR": "0"}},
+        {"name": "textured_alpha_blend_uv1", "defines": {"GRANIT_PBR_TEXTURE_MASK": "31", "GRANIT_PBR_ALPHA_MASK": "0", "GRANIT_PBR_ALPHA_BLEND": "1", "GRANIT_PBR_HAS_UV1": "1", "GRANIT_PBR_HAS_VERTEX_COLOR": "0"}},
+        {"name": "textured_alpha_blend_uv0_color", "defines": {"GRANIT_PBR_TEXTURE_MASK": "31", "GRANIT_PBR_ALPHA_MASK": "0", "GRANIT_PBR_ALPHA_BLEND": "1", "GRANIT_PBR_HAS_UV1": "0", "GRANIT_PBR_HAS_VERTEX_COLOR": "1"}},
+        {"name": "textured_alpha_blend_uv1_color", "defines": {"GRANIT_PBR_TEXTURE_MASK": "31", "GRANIT_PBR_ALPHA_MASK": "0", "GRANIT_PBR_ALPHA_BLEND": "1", "GRANIT_PBR_HAS_UV1": "1", "GRANIT_PBR_HAS_VERTEX_COLOR": "1"}}
       ]
     }
   ]

@@ -3,8 +3,8 @@
 
 # Render Pipeline
 
-Render Pipeline 是可选的高级参考渲染入口。当前实现组织 Directional Shadow、Forward PBR HDR
-和 ACES Tone Mapping，并输出 LDR 图像；它不是 Deferred 或 Forward+ Renderer。
+Render Pipeline 是可选的高级参考渲染入口。当前实现组织 Directional Shadow、不透明与透明
+Forward PBR HDR 和 ACES Tone Mapping，并输出 LDR 图像；它不是 Deferred 或 Forward+ Renderer。
 
 ## 公共入口
 
@@ -21,8 +21,9 @@ C API 创建描述使用 `GRANIT_RENDER_PIPELINE_DESC_INIT` 初始化。未提�
 提供回调时可以覆盖 Shadow 和 Opaque 阶段的 Draw 录制，并在 Tone Mapping 后接收 Overlay 阶段。
 
 创建描述的 `sample_count` 控制自动 PBR 路径的采样数，当前接受 1 或 4。选择 4 时，
-HDR 颜色和深度先写入四倍多采样附件，颜色在 PBR 阶段结束时解析到单采样 HDR 目标，再进入
-Tone Mapping。自定义录制回调仍使用单采样契约，避免回调在未声明支持时收到多采样目标。
+HDR 颜色和深度先写入四倍多采样附件；自动路径在不透明与透明 PBR 都完成后把颜色解析到单采样
+HDR 目标，再进入 Tone Mapping。自定义录制回调仍使用单采样契约，避免回调在未声明支持时收到
+多采样目标。
 
 `enable_fxaa` 和 `enable_specular_aa` 分别控制 Tone Mapping 阶段的 FXAA 与自动 PBR 路径的
 镜面高光抗锯齿，初始化宏默认都启用。两个字段只接受 0 或 1；它们通过后端无关的每帧常量生效，
@@ -42,6 +43,12 @@ C API 渲染描述使用 `GRANIT_RENDER_PIPELINE_RENDER_DESC_INIT` 初始化，�
 
 每个可见 Renderable 的 `payload` 必须唯一映射到一个 Draw Binding。绑定中的 Mesh、Material、
 Scene Snapshot 和输出资源必须属于同一 Renderer，并在调用期间保持有效。
+
+自动路径根据 Material Variant 的 Alpha 模式把 Draw 分入不透明或透明列表。不透明列表保持 Scene
+可见性顺序；透明列表按包围球中心到当前 View 相机的距离从远到近稳定排序。相同距离依次比较
+`sort_key`、`object_id` 和原提交序号。该排序是对象级近似，不能解决相交对象或单个 Mesh 内部的
+三角形顺序；需要精确合成时应拆分 Renderable 或使用自定义渲染路径。透明 Draw 在不透明 Draw 后、
+Tone Mapping 前写入同一线性 HDR 目标，开启深度测试、关闭深度写入，并且不进入阴影 Pass。
 
 有效 View 的可见 Renderable 可以为空，包括 Scene 没有 Renderable 或全部 Renderable 被视锥、
 layer mask 裁剪的情况。该帧仍会清除 HDR Color 与 Depth、执行 Tone Mapping、录制可选 Debug Draw、
@@ -109,7 +116,8 @@ HDRI 文件格式、资产系统或离线卷积工具；这些仍由应用决定
 首个已测阶段开始到 Tone Mapping 结束的 GPU 纳秒数。它不包含后续 Debug Draw、Canvas、Overlay、
 CPU 帧时间、帧槽等待或 Present 等待，因此不能与 CPU 墙钟相加。Timestamp Query Pool 按真实
 Frame Slot 隔离，只在槽位完成并再次复用后读取；离屏同步路径可在本次执行完成后读取。指标回读
-暂不可用不会把已经提交成功的渲染改判为失败。
+暂不可用不会把已经提交成功的渲染改判为失败。现有 `opaque_gpu_ns` 字段测量完整 Forward PBR
+图节点，因此包含随后执行的透明 PBR Draw。
 
 ## Material Pipeline 预热
 
@@ -135,9 +143,10 @@ Upload 环形分配。
 
 ## 当前范围与限制
 
-- 渲染路径固定为 Opaque Forward PBR、可选单方向光阴影和 ACES Tone Mapping。
+- 渲染路径固定为 Opaque/Mask/Blend Forward PBR、可选单方向光阴影和 ACES Tone Mapping。
 - 阴影目标固定为 1024×1024；尚不支持 CSM、多阴影光源或可配置阴影质量。
-- 不包含透明 PBR、Bindless、Clustered Forward 或 Deferred。
+- 透明 PBR 只提供稳定的对象级远近排序；不包含逐三角形排序、透明阴影、OIT 或折射。
+- 不包含 Bindless、Clustered Forward 或内建 Deferred。
 - Overlay 路径依次支持世界 Debug Draw、Canvas Draw List，并保留用户回调作为最终自定义扩展点。
 - 默认 IBL 占位资源由 Pipeline 内部持有；调用者可按次覆盖预处理环境资源。
 - 自动 PBR 路径支持 1× 或 4× MSAA；MSAA 只处理几何边缘，不替代纹理 Mipmap、各向异性过滤

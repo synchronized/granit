@@ -392,9 +392,13 @@ gpu_scene::add_pipeline_warmups(pipeline_warmup_batch_ref batch, texture_format 
     return granit::result::invalid_argument;
   try {
     result_indices.reserve(materials_.size());
-    for (const auto& material : materials_) {
+    for (std::size_t material_index = 0; material_index < materials_.size(); ++material_index) {
+      const auto& material = materials_[material_index];
+      const auto transparent =
+          material_index < material_alpha_modes_.size() &&
+          material_alpha_modes_[material_index] == gltf::material_alpha_mode::blend;
       const material_pipeline_warmup_desc desc{
-          .pass = granit::material_parameter_id("opaque"),
+          .pass = granit::material_parameter_id(transparent ? "transparent" : "opaque"),
           .color_format = color_format,
           .depth_stencil_format = texture_format::d32_float,
           .samples = samples,
@@ -508,6 +512,7 @@ gpu_scene::gpu_scene(gpu_scene&& other) noexcept
       default_textures_(std::move(other.default_textures_)),
       default_sampler_(std::move(other.default_sampler_)),
       shader_library_(std::move(other.shader_library_)), materials_(std::move(other.materials_)),
+      material_alpha_modes_(std::move(other.material_alpha_modes_)),
       draw_bindings_(std::move(other.draw_bindings_)) {
   other.renderer_ = {};
 }
@@ -527,6 +532,7 @@ gpu_scene& gpu_scene::operator=(gpu_scene&& other) noexcept {
     default_sampler_ = std::move(other.default_sampler_);
     shader_library_ = std::move(other.shader_library_);
     materials_ = std::move(other.materials_);
+    material_alpha_modes_ = std::move(other.material_alpha_modes_);
     draw_bindings_ = std::move(other.draw_bindings_);
   }
   return *this;
@@ -909,6 +915,7 @@ granit::result gpu_scene::create(granit::renderer_ref renderer, const gltf::scen
       result.failed())
     return result;
   materials_.reserve(source.materials.size() + 1);
+  material_alpha_modes_.reserve(source.materials.size() + 1);
   for (std::size_t material_index = 0; material_index < source.materials.size(); ++material_index) {
     const auto& source_material = source.materials[material_index];
     materials_.emplace_back();
@@ -917,6 +924,7 @@ granit::result gpu_scene::create(granit::renderer_ref renderer, const gltf::scen
                                             shader_library_.ref(), materials_.back());
         result.failed())
       return result;
+    material_alpha_modes_.push_back(source_material.alpha_mode);
     if (!report(gpu_scene_upload_stage::materials, material_index + 1, source.materials.size() + 1))
       return granit::result::cancelled;
   }
@@ -926,6 +934,7 @@ granit::result gpu_scene::create(granit::renderer_ref renderer, const gltf::scen
                           default_sampler_, shader_library_.ref(), materials_.back());
       result.failed())
     return result;
+  material_alpha_modes_.push_back(gltf::material_alpha_mode::opaque);
   if (!report(gpu_scene_upload_stage::materials, source.materials.size() + 1,
               source.materials.size() + 1))
     return granit::result::cancelled;

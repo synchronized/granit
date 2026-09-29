@@ -24,20 +24,22 @@ pbr_draw_feature(const granit::material::pbr_object_constants& object) {
              : granit::material::material_feature_value{};
 }
 } // namespace
-granit_result
-record_opaque_draws(render_pipeline_state& state, granit_command_recorder recorder,
-                    granit_texture_view color, granit_texture_view resolve_color,
-                    granit_texture_view depth, granit_texture_view shadow, uint32_t width,
-                    uint32_t height, const granit::material::pbr_frame_constants& frame,
-                    std::span<const granit::material::pbr_object_constants> objects,
-                    std::span<const granit_render_pipeline_draw_binding> draws,
-                    const granit::lighting::packed_view_lights& lights,
-                    const granit::lighting::shadow_sampling_constants& shadow_constants,
-                    granit::lighting::ibl_texture_views ibl_views,
-                    const granit::lighting::ibl_sampling_constants& ibl_constants,
-                    bool use_uniform_arena, granit_clear_color_value clear_color) {
+granit_result record_forward_draws(
+    render_pipeline_state& state, granit_command_recorder recorder, granit_texture_view color,
+    granit_texture_view resolve_color, granit_texture_view depth, granit_texture_view shadow,
+    uint32_t width, uint32_t height, const granit::material::pbr_frame_constants& frame,
+    std::span<const granit::material::pbr_object_constants> objects,
+    std::span<const granit_render_pipeline_draw_binding> draws,
+    const granit::lighting::packed_view_lights& lights,
+    const granit::lighting::shadow_sampling_constants& shadow_constants,
+    granit::lighting::ibl_texture_views ibl_views,
+    const granit::lighting::ibl_sampling_constants& ibl_constants, bool use_uniform_arena,
+    granit_clear_color_value clear_color, forward_draw_phase phase, bool resolve_after_draws) {
   if (shadow == GRANIT_NULL_HANDLE || objects.size() != draws.size())
     return GRANIT_ERROR_NOT_READY;
+  const bool transparent = phase == forward_draw_phase::transparent;
+  const auto pass = granit::material::make_feature_id(transparent ? "transparent" : "opaque");
+  auto& draw_bindings = transparent ? state.transparent_draw_bindings : state.opaque_draw_bindings;
   granit_color_attachment_desc color_attachment = GRANIT_COLOR_ATTACHMENT_DESC_INIT;
   color_attachment.view = color;
   color_attachment.clear_value = clear_color;
@@ -48,15 +50,21 @@ record_opaque_draws(render_pipeline_state& state, granit_command_recorder record
   rendering.color_attachments = &color_attachment;
   rendering.depth_stencil_attachment = &depth_attachment;
   rendering.area = {0, 0, width, height};
+  if (transparent) {
+    color_attachment.load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD;
+    depth_attachment.depth_load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD;
+  }
   auto result = GRANIT_SUCCESS;
   if (draws.empty()) {
-    result = trim_draw_binding_cache(state.opaque_draw_bindings, 0);
+    result = trim_draw_binding_cache(draw_bindings, 0);
     if (result != GRANIT_SUCCESS)
       return result;
-    color_attachment.resolve_view = resolve_color;
-    color_attachment.store_operation = resolve_color == GRANIT_NULL_HANDLE
-                                           ? GRANIT_ATTACHMENT_STORE_OPERATION_STORE
-                                           : GRANIT_ATTACHMENT_STORE_OPERATION_DISCARD;
+    if (transparent)
+      return GRANIT_SUCCESS;
+    color_attachment.resolve_view = resolve_after_draws ? resolve_color : GRANIT_NULL_HANDLE;
+    color_attachment.store_operation = resolve_after_draws && resolve_color != GRANIT_NULL_HANDLE
+                                           ? GRANIT_ATTACHMENT_STORE_OPERATION_DISCARD
+                                           : GRANIT_ATTACHMENT_STORE_OPERATION_STORE;
     result = granit_command_recorder_begin_rendering(state.renderer, recorder, &rendering);
     if (result == GRANIT_SUCCESS)
       result = granit_command_recorder_end_rendering(state.renderer, recorder);
@@ -67,7 +75,7 @@ record_opaque_draws(render_pipeline_state& state, granit_command_recorder record
   std::vector<granit::pipeline::detail::material_draw_state> arena_materials;
   std::vector<granit::pipeline::detail::dynamic_uniform_binding> arena_bindings;
   if (use_uniform_arena) {
-    result = release_legacy_uniform_bindings(state.opaque_draw_bindings);
+    result = release_legacy_uniform_bindings(draw_bindings);
     if (result != GRANIT_SUCCESS)
       return result;
     try {
@@ -78,7 +86,7 @@ record_opaque_draws(render_pipeline_state& state, granit_command_recorder record
       for (std::size_t index = 0; index < draws.size(); ++index) {
         result = granit::pipeline::detail::acquire_material_draw_state(
             state.renderer, draws[index].material,
-            {.pass = granit::material::make_feature_id("opaque"),
+            {.pass = pass,
              .variant = draws[index].variant,
              .draw_feature = pbr_draw_feature(objects[index]),
              .color_format = GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT,
@@ -104,7 +112,7 @@ record_opaque_draws(render_pipeline_state& state, granit_command_recorder record
     if (!use_uniform_arena) {
       result = granit::pipeline::detail::acquire_material_draw_state(
           state.renderer, draws[index].material,
-          {.pass = granit::material::make_feature_id("opaque"),
+          {.pass = pass,
            .variant = draws[index].variant,
            .draw_feature = pbr_draw_feature(objects[index]),
            .color_format = GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT,
@@ -113,9 +121,9 @@ record_opaque_draws(render_pipeline_state& state, granit_command_recorder record
                resolve_color == GRANIT_NULL_HANDLE ? GRANIT_SAMPLE_COUNT_1 : GRANIT_SAMPLE_COUNT_4},
           material);
     }
-    if (index == state.opaque_draw_bindings.size())
-      state.opaque_draw_bindings.emplace_back();
-    auto& cached = state.opaque_draw_bindings[index];
+    if (index == draw_bindings.size())
+      draw_bindings.emplace_back();
+    auto& cached = draw_bindings[index];
     const bool ibl_changed =
         cached.ibl_views.irradiance != ibl_views.irradiance ||
         cached.ibl_views.prefiltered_environment != ibl_views.prefiltered_environment ||
@@ -178,7 +186,7 @@ record_opaque_draws(render_pipeline_state& state, granit_command_recorder record
       result =
           granit::pipeline::detail::bind_mesh_buffers(state.renderer, recorder, draws[index].mesh);
     if (result == GRANIT_SUCCESS) {
-      const bool final_draw = index + 1 == draws.size();
+      const bool final_draw = resolve_after_draws && index + 1 == draws.size();
       color_attachment.resolve_view = final_draw ? resolve_color : GRANIT_NULL_HANDLE;
       color_attachment.store_operation = final_draw && resolve_color != GRANIT_NULL_HANDLE
                                              ? GRANIT_ATTACHMENT_STORE_OPERATION_DISCARD
@@ -197,7 +205,7 @@ record_opaque_draws(render_pipeline_state& state, granit_command_recorder record
     }
   }
   if (result == GRANIT_SUCCESS)
-    result = trim_draw_binding_cache(state.opaque_draw_bindings, draws.size());
+    result = trim_draw_binding_cache(draw_bindings, draws.size());
   return result;
 }
 

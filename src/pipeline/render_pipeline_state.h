@@ -65,6 +65,7 @@ struct render_pipeline_state {
   granit::texture_view shadow_placeholder_view;
   std::vector<shadow_pipeline_entry> shadow_pipelines;
   std::vector<draw_binding_entry> opaque_draw_bindings;
+  std::vector<draw_binding_entry> transparent_draw_bindings;
   std::vector<draw_binding_entry> shadow_draw_bindings;
   dynamic_uniform_arena uniform_arena;
   std::vector<metrics_slot> metrics_slots;

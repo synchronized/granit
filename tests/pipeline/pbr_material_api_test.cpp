@@ -60,12 +60,17 @@ TEST_CASE("公共 PBR Variant Key 区分 Alpha 与双面语义") {
                                                       GRANIT_PBR_ALPHA_MODE_OPAQUE, 0, 0, 0);
   const auto mask =
       granit_pbr_material_variant_key(GRANIT_PBR_TEXTURE_ALL, GRANIT_PBR_ALPHA_MODE_MASK, 0, 0, 0);
+  const auto blend =
+      granit_pbr_material_variant_key(GRANIT_PBR_TEXTURE_ALL, GRANIT_PBR_ALPHA_MODE_BLEND, 0, 0, 0);
   const auto double_sided = granit_pbr_material_variant_key(GRANIT_PBR_TEXTURE_ALL,
                                                             GRANIT_PBR_ALPHA_MODE_OPAQUE, 1, 0, 0);
   CHECK(opaque != 0);
   CHECK(mask != 0);
+  CHECK(blend != 0);
   CHECK(double_sided != 0);
   CHECK(opaque != mask);
+  CHECK(opaque != blend);
+  CHECK(mask != blend);
   CHECK(opaque != double_sided);
   CHECK(granit_pbr_material_variant_key(GRANIT_PBR_TEXTURE_ALL, GRANIT_PBR_ALPHA_MODE_BLEND + 1, 0,
                                         0, 0) == 0);

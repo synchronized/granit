@@ -135,6 +135,14 @@ float3 rotate_environment(float3 direction) {
                 -environment_rotation_sin * direction.x + environment_rotation_cos * direction.z);
 }
 
+float4 encode_output(float3 color, float alpha) {
+#if GRANIT_PBR_ALPHA_BLEND
+  return float4(color * alpha, alpha);
+#else
+  return float4(color, alpha);
+#endif
+}
+
 float4 fragment_main(vertex_output input, bool is_front_face : SV_IsFrontFace) : SV_Target0 {
   float2 base_color_uv = input.texture_coordinate;
   float2 metallic_roughness_uv = input.texture_coordinate;
@@ -219,20 +227,21 @@ float4 fragment_main(vertex_output input, bool is_front_face : SV_IsFrontFace) :
   clip(resolved_base_color.a - alpha_cutoff);
 #endif
   if (debug_display == 1)
-    return float4(resolved_base_color.rgb, resolved_base_color.a);
+    return encode_output(resolved_base_color.rgb, resolved_base_color.a);
   if (debug_display == 2)
-    return float4(normal * 0.5 + 0.5, 1.0);
+    return encode_output(normal * 0.5 + 0.5, resolved_base_color.a);
   if (debug_display == 3)
-    return float4(resolved_metallic.xxx, 1.0);
+    return encode_output(resolved_metallic.xxx, resolved_base_color.a);
   if (debug_display == 4)
-    return float4(roughness.xxx, 1.0);
+    return encode_output(roughness.xxx, resolved_base_color.a);
   if (debug_display == 5)
-    return float4(geometric_normal * 0.5 + 0.5, 1.0);
+    return encode_output(geometric_normal * 0.5 + 0.5, resolved_base_color.a);
   if (debug_display == 6)
-    return float4(sampled_normal * 0.5 + 0.5, 1.0);
+    return encode_output(sampled_normal * 0.5 + 0.5, resolved_base_color.a);
   if (debug_display == 7)
-    return float4(normalize(input.vertex_normal) * 0.5 + 0.5, 1.0);
+    return encode_output(normalize(input.vertex_normal) * 0.5 + 0.5, resolved_base_color.a);
   if (debug_display == 8)
-    return float4(normalize(input.vertex_tangent) * 0.5 + 0.5, 1.0);
-  return float4(color, resolved_base_color.a);
+    return encode_output(normalize(input.vertex_tangent) * 0.5 + 0.5,
+                         resolved_base_color.a);
+  return encode_output(color, resolved_base_color.a);
 }
