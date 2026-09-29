@@ -406,6 +406,14 @@ async function main() {
           `frames=${framesBeforeShutdown}->${framesAfterShutdown}->${stableFramesAfterShutdown}`,
       );
     }
+    const destroyedDiagnostic = "Dawn WebGPU device, adapter and instance destroyed";
+    if (
+      !browserMessages.some(
+        (message) => message === `log: GRANIT_DIAGNOSTIC:${destroyedDiagnostic}`,
+      )
+    ) {
+      throw new Error(`WebGPU 关闭未报告完整销毁诊断：${destroyedDiagnostic}`);
+    }
     console.log(
       "浏览器 WebGPU 多帧渲染、MRT、Storage Texture、Readback、输入与资源释放验证通过",
     );

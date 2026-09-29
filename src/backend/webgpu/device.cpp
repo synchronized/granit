@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <cstring>
 #include <limits>
+#include <memory>
 #include <mutex>
 #include <new>
 
@@ -20,6 +21,7 @@
 
 namespace {
 
+using granit::detail::webgpu_callback_context;
 using granit::detail::webgpu_device_state;
 using namespace granit::detail::webgpu_native;
 
@@ -240,22 +242,23 @@ void emit_dawn_message(const webgpu_host_api* host, WGPUStringView message) noex
 
 void receive_device_lost(const WGPUDevice*, WGPUDeviceLostReason reason, WGPUStringView message,
                          void* data, void*) noexcept {
-  auto& state = *static_cast<webgpu_device_state*>(data);
-  static_cast<void>(state.device_lost_ticket.invoke([&state, reason, message] {
+  const auto& context = *static_cast<const webgpu_callback_context*>(data);
+  static_cast<void>(context.ticket.invoke([state = context.state, reason, message] {
     if (reason == WGPUDeviceLostReason_Destroyed ||
         reason == WGPUDeviceLostReason_CallbackCancelled)
       return;
-    state.lifecycle.mark_device_lost();
-    emit_dawn_message(&state.host, message);
+    state->lifecycle.mark_device_lost();
+    emit_dawn_message(&state->host, message);
     constexpr char diagnostic[] = "Dawn WebGPU device lost";
-    emit(state.host, GRANIT_DIAGNOSTIC_SEVERITY_ERROR, diagnostic, sizeof(diagnostic) - 1);
+    emit(state->host, GRANIT_DIAGNOSTIC_SEVERITY_ERROR, diagnostic, sizeof(diagnostic) - 1);
   }));
 }
 
 void receive_uncaptured_error(const WGPUDevice*, WGPUErrorType, WGPUStringView message, void* data,
                               void*) noexcept {
-  const auto& state = *static_cast<const webgpu_device_state*>(data);
-  emit_dawn_message(&state.host, message);
+  const auto& context = *static_cast<const webgpu_callback_context*>(data);
+  static_cast<void>(context.ticket.invoke(
+      [state = context.state, message] { emit_dawn_message(&state->host, message); }));
 }
 
 #if !defined(__EMSCRIPTEN__)
@@ -287,21 +290,24 @@ void receive_device(WGPURequestDeviceStatus status, WGPUDevice device, WGPUStrin
 #if defined(__EMSCRIPTEN__)
 void receive_device_async(WGPURequestDeviceStatus status, WGPUDevice device, WGPUStringView message,
                           void* data, void*) noexcept {
-  auto& state = *static_cast<webgpu_device_state*>(data);
-  static_cast<void>(state.device_ticket.invoke([&state, status, device, message] {
+  const std::unique_ptr<webgpu_callback_context> context{
+      static_cast<webgpu_callback_context*>(data)};
+  const auto accepted = context->ticket.invoke([state = context->state, status, device, message] {
     if (status != WGPURequestDeviceStatus_Success || device == nullptr) {
-      emit_dawn_message(&state.host, message);
-      state.lifecycle.mark_failed(GRANIT_ERROR_INITIALIZATION_FAILED);
+      emit_dawn_message(&state->host, message);
+      state->lifecycle.mark_failed(GRANIT_ERROR_INITIALIZATION_FAILED);
+      if (device != nullptr)
+        wgpuDeviceRelease(device);
       return;
     }
-    state.device = device;
-    state.queue = wgpuDeviceGetQueue(device);
+    state->device = device;
+    state->queue = wgpuDeviceGetQueue(device);
     WGPULimits limits = WGPU_LIMITS_INIT;
-    if (state.queue == nullptr || wgpuDeviceGetLimits(device, &limits) != WGPUStatus_Success) {
-      state.lifecycle.mark_failed(GRANIT_ERROR_INITIALIZATION_FAILED);
+    if (state->queue == nullptr || wgpuDeviceGetLimits(device, &limits) != WGPUStatus_Success) {
+      state->lifecycle.mark_failed(GRANIT_ERROR_INITIALIZATION_FAILED);
       return;
     }
-    state.capabilities = {
+    state->capabilities = {
         sizeof(webgpu_capabilities),
         0,
         limits.minUniformBufferOffsetAlignment,
@@ -322,25 +328,30 @@ void receive_device_async(WGPURequestDeviceStatus status, WGPUDevice device, WGP
         texture_compression_features(device),
         0,
     };
-    state.lifecycle.mark_ready();
+    state->lifecycle.mark_ready();
     constexpr char diagnostic[] = "Emscripten WebGPU adapter and device are ready";
-    emit(state.host, GRANIT_DIAGNOSTIC_SEVERITY_INFO, diagnostic, sizeof(diagnostic) - 1);
-  }));
+    emit(state->host, GRANIT_DIAGNOSTIC_SEVERITY_INFO, diagnostic, sizeof(diagnostic) - 1);
+  });
+  if (!accepted && device != nullptr)
+    wgpuDeviceRelease(device);
 }
 
 void receive_adapter_async(WGPURequestAdapterStatus status, WGPUAdapter adapter,
                            WGPUStringView message, void* data, void*) noexcept {
-  auto& state = *static_cast<webgpu_device_state*>(data);
-  static_cast<void>(state.adapter_ticket.invoke([&state, status, adapter, message] {
+  const std::unique_ptr<webgpu_callback_context> context{
+      static_cast<webgpu_callback_context*>(data)};
+  const auto accepted = context->ticket.invoke([state = context->state, status, adapter, message] {
     if (status != WGPURequestAdapterStatus_Success || adapter == nullptr) {
-      emit_dawn_message(&state.host, message);
-      state.lifecycle.mark_failed(GRANIT_ERROR_NO_SUITABLE_DEVICE);
+      emit_dawn_message(&state->host, message);
+      state->lifecycle.mark_failed(GRANIT_ERROR_NO_SUITABLE_DEVICE);
+      if (adapter != nullptr)
+        wgpuAdapterRelease(adapter);
       return;
     }
-    state.adapter = adapter;
+    state->adapter = adapter;
     WGPULimits adapter_limits = WGPU_LIMITS_INIT;
     if (wgpuAdapterGetLimits(adapter, &adapter_limits) != WGPUStatus_Success) {
-      state.lifecycle.mark_failed(GRANIT_ERROR_INITIALIZATION_FAILED);
+      state->lifecycle.mark_failed(GRANIT_ERROR_INITIALIZATION_FAILED);
       return;
     }
     WGPULimits required_limits = WGPU_LIMITS_INIT;
@@ -352,15 +363,23 @@ void receive_adapter_async(WGPURequestAdapterStatus status, WGPUAdapter adapter,
     descriptor.requiredFeatures = descriptor.requiredFeatureCount == 0 ? nullptr : features.data();
     descriptor.deviceLostCallbackInfo.mode = WGPUCallbackMode_AllowSpontaneous;
     descriptor.deviceLostCallbackInfo.callback = receive_device_lost;
-    descriptor.deviceLostCallbackInfo.userdata1 = &state;
+    descriptor.deviceLostCallbackInfo.userdata1 = &state->device_lost_callback;
     descriptor.uncapturedErrorCallbackInfo.callback = receive_uncaptured_error;
-    descriptor.uncapturedErrorCallbackInfo.userdata1 = &state;
+    descriptor.uncapturedErrorCallbackInfo.userdata1 = &state->uncaptured_error_callback;
+    auto* device_context =
+        new (std::nothrow) webgpu_callback_context{state->callback_lifetime.ticket(), state};
+    if (device_context == nullptr) {
+      state->lifecycle.mark_failed(GRANIT_ERROR_OUT_OF_MEMORY);
+      return;
+    }
     WGPURequestDeviceCallbackInfo callback = WGPU_REQUEST_DEVICE_CALLBACK_INFO_INIT;
     callback.mode = WGPUCallbackMode_AllowSpontaneous;
     callback.callback = receive_device_async;
-    callback.userdata1 = &state;
+    callback.userdata1 = device_context;
     static_cast<void>(wgpuAdapterRequestDevice(adapter, &descriptor, callback));
-  }));
+  });
+  if (!accepted && adapter != nullptr)
+    wgpuAdapterRelease(adapter);
 }
 #endif
 
@@ -444,8 +463,17 @@ granit_result create_backend(const webgpu_host_api* host,
   }
 
 #if defined(__EMSCRIPTEN__)
+  auto* adapter_context =
+      new (std::nothrow) webgpu_callback_context{state->callback_lifetime.ticket(), state};
+  if (adapter_context == nullptr) {
+    release_resources(*state);
+    state->~webgpu_device_state();
+    deallocate(*host, memory);
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
   const auto register_result = register_instance(state, out_instance);
   if (register_result != GRANIT_SUCCESS) {
+    delete adapter_context;
     release_resources(*state);
     state->~webgpu_device_state();
     deallocate(*host, memory);
@@ -455,7 +483,7 @@ granit_result create_backend(const webgpu_host_api* host,
   WGPURequestAdapterCallbackInfo callback = WGPU_REQUEST_ADAPTER_CALLBACK_INFO_INIT;
   callback.mode = WGPUCallbackMode_AllowSpontaneous;
   callback.callback = receive_adapter_async;
-  callback.userdata1 = state;
+  callback.userdata1 = adapter_context;
   static_cast<void>(wgpuInstanceRequestAdapter(state->instance, &options, callback));
   constexpr char initializing_message[] = "Emscripten WebGPU initialization started";
   emit(*host, GRANIT_DIAGNOSTIC_SEVERITY_INFO, initializing_message,

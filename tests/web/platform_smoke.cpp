@@ -24,6 +24,7 @@
 #include <granit/renderer/pipeline.hpp>
 #include <granit/renderer/pipeline_warmup.h>
 #include <granit/renderer/renderer.h>
+#include <granit/renderer/renderer.hpp>
 #include <granit/renderer/sampler.hpp>
 #include <granit/renderer/shader.hpp>
 #include <granit/renderer/surface.h>
@@ -39,6 +40,21 @@
 #include "support/renderer_fixture.h"
 
 namespace {
+
+bool validate_cancelled_renderer_initialization() {
+  granit::renderer renderer;
+  auto result = renderer.initialize({.application_name = "Granit cancelled initialization test",
+                                     .backend = granit::renderer_backend::webgpu});
+  if (result.ok())
+    result = renderer.reset();
+  // 让被 Instance 销毁取消的 Adapter 回调在 State 释放后交付。
+  emscripten_sleep(0);
+  if (result.failed()) {
+    std::fprintf(stderr, "GRANIT_WEBGPU_CANCELLED_INITIALIZATION:%d\n", granit::to_native(result));
+    return false;
+  }
+  return true;
+}
 
 bool validate_texture_asset_contract() {
   std::array<std::byte, 192> manifest{};
@@ -785,7 +801,7 @@ extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_validate_multi_window() noexcept 
 
 int main() {
   if (!load_startup_resource() || !validate_fixture_assets() ||
-      !validate_texture_asset_contract()) {
+      !validate_texture_asset_contract() || !validate_cancelled_renderer_initialization()) {
     std::fprintf(stderr, "GRANIT_STATUS:failed:preloaded-resource:%d\n",
                  GRANIT_ERROR_INITIALIZATION_FAILED);
     return 1;

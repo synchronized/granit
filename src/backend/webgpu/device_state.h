@@ -21,6 +21,14 @@
 
 namespace granit::detail {
 
+struct webgpu_device_state;
+
+/** 回调先校验独立票据，再访问可能已经销毁的 Device State。 */
+struct webgpu_callback_context {
+  backend_callback_ticket ticket;
+  webgpu_device_state* state{};
+};
+
 /** 集中拥有 Dawn 设备对象、异步回调状态及各类原生资源句柄表。 */
 struct webgpu_device_state {
   struct buffer_record {
@@ -143,9 +151,8 @@ struct webgpu_device_state {
   webgpu_capabilities capabilities;
   backend_lifecycle lifecycle;
   backend_callback_lifetime callback_lifetime;
-  backend_callback_ticket adapter_ticket;
-  backend_callback_ticket device_ticket;
-  backend_callback_ticket device_lost_ticket;
+  webgpu_callback_context device_lost_callback;
+  webgpu_callback_context uncaptured_error_callback;
   bool deferred_initialization_for_test;
   bool fail_initialization_for_test;
   bool force_device_loss_for_test;
@@ -171,8 +178,8 @@ struct webgpu_device_state {
 
   webgpu_device_state(const webgpu_host_api& host_api, WGPUInstance native_instance) noexcept
       : host(host_api), instance(native_instance), adapter(nullptr), device(nullptr),
-        queue(nullptr), capabilities{}, adapter_ticket(callback_lifetime.ticket()),
-        device_ticket(callback_lifetime.ticket()), device_lost_ticket(callback_lifetime.ticket()),
+        queue(nullptr), capabilities{}, device_lost_callback{callback_lifetime.ticket(), this},
+        uncaptured_error_callback{callback_lifetime.ticket(), this},
         deferred_initialization_for_test(false), fail_initialization_for_test(false),
         force_device_loss_for_test(false) {}
 };
