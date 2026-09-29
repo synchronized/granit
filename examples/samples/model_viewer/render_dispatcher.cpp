@@ -26,16 +26,20 @@ granit::result render_dispatcher::initialize_renderer(render_execution_policy& e
     return granit::result::invalid_argument;
   try {
     auto state = std::make_unique<render_dispatcher::state>();
-    auto result = state->runtime.initialize_renderer(desc);
-    if (result.ok()) {
-      result = executor.initialize([context = state.get()](auto&& packet, auto& output) {
-        return context->runtime.render(std::move(packet), output);
-      });
-    }
+    auto result = executor.initialize([context = state.get()](auto&& packet, auto& output) {
+      return context->runtime.render(std::move(packet), output);
+    });
     if (result.failed())
       return result;
     state->executor = &executor;
     state_ = std::move(state);
+    result = executor.run_task(
+        [context = state_.get(), desc] { return context->runtime.initialize_renderer(desc); });
+    if (result.failed()) {
+      executor.stop();
+      state_.reset();
+      return result;
+    }
     return granit::result::success;
   } catch (const std::bad_alloc&) {
     return granit::result::out_of_memory;
@@ -43,23 +47,34 @@ granit::result render_dispatcher::initialize_renderer(render_execution_policy& e
 }
 
 granit::result render_dispatcher::complete_renderer_initialization() noexcept {
-  return state_ ? state_->runtime.complete_renderer_initialization() : granit::result::not_ready;
+  return state_ ? state_->executor->run_task([context = state_.get()] {
+    return context->runtime.complete_renderer_initialization();
+  })
+                : granit::result::not_ready;
 }
 
 granit::result render_dispatcher::initialize_presentation(granit::window& window,
                                                           const granit::swapchain_desc& desc,
                                                           bool enable_ui) noexcept {
-  return state_ ? state_->runtime.initialize_presentation(window, desc, enable_ui)
+  return state_ ? state_->executor->run_task([context = state_.get(), &window, desc, enable_ui] {
+    return context->runtime.initialize_presentation(window, desc, enable_ui);
+  })
                 : granit::result::not_ready;
 }
 
 granit::result render_dispatcher::process_renderer_events() noexcept {
-  return state_ ? state_->runtime.process_renderer_events() : granit::result::not_ready;
+  return state_ ? state_->executor->run_task([context = state_.get()] {
+    return context->runtime.process_renderer_events();
+  })
+                : granit::result::not_ready;
 }
 
 granit::result
 render_dispatcher::query_renderer_status(granit::renderer_status& status) const noexcept {
-  return state_ ? state_->runtime.query_renderer_status(status) : granit::result::not_ready;
+  return state_ ? state_->executor->run_task([context = state_.get(), &status] {
+    return context->runtime.query_renderer_status(status);
+  })
+                : granit::result::not_ready;
 }
 
 granit::result render_dispatcher::upload_scene(gltf::scene scene, gltf_rendering::scene_plan plan,
@@ -155,7 +170,18 @@ granit::result render_dispatcher::flush() noexcept {
 
 granit::result
 render_dispatcher::render_loading_frame(const imgui::frame_canvas_data& data) noexcept {
-  return state_ ? state_->runtime.render_loading_frame(data) : granit::result::not_ready;
+  if (!state_)
+    return granit::result::not_ready;
+  try {
+    auto owned = data;
+    return state_->executor->run_task([context = state_.get(), data = std::move(owned)] {
+      return context->runtime.render_loading_frame(data);
+    });
+  } catch (const std::bad_alloc&) {
+    return granit::result::out_of_memory;
+  } catch (...) {
+    return granit::result::internal;
+  }
 }
 
 granit::result render_dispatcher::finish_loading() noexcept {
@@ -254,13 +280,18 @@ granit::result render_dispatcher::recreate_surface(granit::window& window,
     return granit::result::not_ready;
   auto result = state_->executor->flush();
   if (result.ok())
-    result = state_->runtime.recreate_surface(window, desc);
+    result = state_->executor->run_task([context = state_.get(), &window, desc] {
+      return context->runtime.recreate_surface(window, desc);
+    });
   return result;
 }
 
 granit::result
 render_dispatcher::query_resource_stats(granit::renderer_resource_stats& stats) const noexcept {
-  return state_ ? state_->runtime.query_resource_stats(stats) : granit::result::not_ready;
+  return state_ ? state_->executor->run_task([context = state_.get(), &stats] {
+    return context->runtime.query_resource_stats(stats);
+  })
+                : granit::result::not_ready;
 }
 
 granit::result render_dispatcher::shutdown(granit::renderer_resource_stats* final_stats) noexcept {
