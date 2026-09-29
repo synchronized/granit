@@ -29,7 +29,14 @@ UV/Sampler 和 `COLOR_0`，Model Viewer 直接映射 glTF 核心语义。自动 
 - [Emscripten](https://github.com/synchronized/granit/actions/runs/36513215396)完成编译与全部浏览器
   矩阵。发布候选复跑仍在 Model Viewer 浏览器验收中偶发 Dawn 实例丢失；矩阵已改为串行以降低
   运行器波动，但该问题不阻塞本次已通过功能验收的代码，留待下一版本整体修复；
-- PR #117 的当前提交 `2454d187` 通过以上发布前矩阵。
+- PR #117 的功能提交 `2454d187` 通过以上发布前矩阵，最终由合并提交 `bd361bd9` 发布。
+
+## 发布结果
+
+- [Release 工作流](https://github.com/synchronized/granit/actions/runs/36516253026)完成 Windows/Linux
+  shared SDK 构建、测试、安装审计、打包和公开产物复验；
+- [`v0.41.0`](https://github.com/synchronized/granit/releases/tag/v0.41.0) 已于 2026-09-29 发布，
+  包含两个平台 SDK 与 `SHA256SUMS`。
 
 ## 保留限制
 

@@ -29,15 +29,17 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段通过可运行�
 
 ## 当前计划
 
-### v0.41.0：标准 PBR 材质正确性
-
-**状态：发布候选已通过验收，P0/P1。**
-
-[v0.41.0](versions/v0.41.0.md) 由 [S-76](plans/S-76-0.41.0-pbr-material-correctness.md) 承接
-真实 glTF 场景和负缩放 GPU 复现，先修复反射实例的切线空间与正面判定，再补齐标准 PBR 的
-OPAQUE/MASK/BLEND、双面、逐贴图 UV/Sampler 和顶点色契约。
+当前没有实施中的已确认版本计划。
 
 ## 最近完成
+
+### v0.41.0：标准 PBR 材质正确性
+
+**状态：已发布。**
+
+[v0.41.0](versions/v0.41.0.md) 完成 S-76，修复反射实例的切线空间与正面判定，并补齐标准 PBR
+的 OPAQUE/MASK/BLEND、双面、逐贴图 UV/Sampler 和顶点色契约；最终结果见
+[S-76 验收记录](records/2026-09-29-s76-pbr-material-correctness-acceptance.md)。
 
 ### v0.40.0：Deferred 与多 Pass 渲染验证
 
