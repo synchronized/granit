@@ -29,7 +29,13 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段通过可运行�
 
 ## 当前计划
 
-下一版本范围尚未固定。新的版本计划应从已记录的能力缺口或教程证据中选择聚焦目标。
+### v0.41.0：标准 PBR 材质正确性
+
+**状态：实施中，P0/P1。**
+
+[v0.41.0](versions/v0.41.0.md) 由 [S-76](plans/S-76-0.41.0-pbr-material-correctness.md) 承接
+真实 glTF 场景和负缩放 GPU 复现，先修复反射实例的切线空间与正面判定，再补齐标准 PBR 的
+OPAQUE/MASK/BLEND、双面、逐贴图 UV/Sampler 和顶点色契约。
 
 ## 最近完成
 
@@ -188,7 +194,7 @@ Viewer 不再维护私有 DOM 输入和 Canvas Surface 生命周期。
 | 方向 | 当前决定 | 恢复条件 |
 |---|---|---|
 | [Bindless Resource Table](plans/D-09-bindless-resource-table.md) | 暂缓 | 真实材质绑定压力证明传统 Bind Group 成为瓶颈 |
-| [透明 PBR](plans/H-09B-transparent-pbr-correctness.md) | 暂缓 | 产品需要正确折射、排序或大量透明 PBR 材质 |
+| [透明 PBR](plans/H-09B-transparent-pbr-correctness.md) | 已恢复 | 真实 glTF 场景已经提供 Alpha、排序和验收需求，由 S-76 实施 |
 | Clustered Forward | 暂缓 | 多光源负载稳定超过当前 Forward 路径预算 |
 | Cascaded Shadow Maps | 暂缓 | 大尺度室外场景证明单方向光 Shadow Map 不足 |
 | 公共 glTF/Scene SDK | 暂缓 | 至少第二个独立 Consumer 需要复用示例私有加载器 |

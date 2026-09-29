@@ -9,7 +9,9 @@
 
 ## 当前计划
 
-下一版本范围尚未固定。候选任务应先在路线图中形成明确证据，再进入版本文档。
+- [S-76：0.41.0 标准 PBR 材质正确性](S-76-0.41.0-pbr-material-correctness.md)——根据真实
+  glTF 场景和负缩放 GPU 复现，补齐标准 PBR 的反射实例、Alpha、双面、逐贴图输入、顶点色与
+  透明 HDR 阶段。
 
 ## 最近完成
 
@@ -69,7 +71,8 @@
 ## 暂缓与重新评估
 
 - [D-09：Bindless Resource Table](D-09-bindless-resource-table.md)——等待真实绑定压力证据。
-- [H-09B：透明 PBR 正确性](H-09B-transparent-pbr-correctness.md)——等待明确产品场景和正确性需求。
+- [H-09B：透明 PBR 正确性](H-09B-transparent-pbr-correctness.md)——评估契约已经满足恢复条件，
+  实现由 [S-76](S-76-0.41.0-pbr-material-correctness.md) 承接。
 
 ## 状态与维护
 
