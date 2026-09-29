@@ -28,5 +28,6 @@ Windows Clang Debug：
 - `granit.documentation.links`：通过。
 
 标准 Shader 仍保留原有 Alpha Cutoff 语义和像素路径；不支持 Demote 的设备不会进入 Granit 可用设备
-集合，因此不会以未声明特性创建逻辑设备。Linux Lavapipe、Vulkan validation 和 Gneiss 端到端像素矩阵
-需由 PR 远端 Linux 工作流继续确认。
+集合，因此不会以未声明特性创建逻辑设备。远端 PR 矩阵已通过 Linux、Windows、Emscripten 浏览器和
+安装 SDK 检查；Linux Vulkan 集成验证、MASK/UV1/顶点色模型路径及原有像素测试均通过。浏览器 runtime
+首次因 Dawn 设备瞬时丢失失败，重跑后通过，未发现本次 Vulkan 契约修复引入的回归。
