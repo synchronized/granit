@@ -36,6 +36,7 @@ if(TARGET granit::integration_imgui)
   granit_target_compile_warnings(granit_integration_imgui_test)
   granit_target_output_directories(granit_integration_imgui_test)
   add_test(NAME granit.integration.imgui COMMAND granit_integration_imgui_test)
+  set_property(TEST granit.integration.imgui APPEND PROPERTY LABELS gpu)
 
   if(TARGET granit_example_validation)
     add_executable(
@@ -61,6 +62,7 @@ if(TARGET granit::integration_imgui)
                  ENVIRONMENT_MODIFICATION
                  "PATH=path_list_prepend:$<TARGET_FILE_DIR:granit::granit>"
     )
+    set_property(TEST granit.integration.imgui.visual APPEND PROPERTY LABELS gpu)
   endif()
 endif()
 if(GRANIT_BUILD_INTEGRATION_SDL3 AND WIN32)
