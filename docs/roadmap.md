@@ -31,7 +31,7 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段通过可运行�
 
 ### v0.43.0：Gneiss PBR 兼容性审计
 
-**状态：规划中，P1。**
+**状态：已发布，P1。**
 
 [v0.43.0](versions/v0.43.0.md) 通过 [S-80](plans/S-80-0.43.0-gneiss-pbr-compatibility.md) 核对 Gneiss
 `UPSTREAM-043` 与 Granit v0.42.0 已发布的五项 PBR 契约。默认不新增公共 API；只有确认属于 Granit 的
