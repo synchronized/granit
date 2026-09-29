@@ -25,7 +25,7 @@ granit::result build_viewer_frame(viewer_session& session, viewer_ui& ui,
       return capture_result;
   }
 
-  application_tick_input tick;
+  viewer_document_update tick;
   tick.input = input.finish(desc.show_ui && ui.wants_mouse(), desc.show_ui && ui.wants_keyboard());
   candidate.input_applied = tick.input.pointer_delta_x != 0.0F ||
                             tick.input.pointer_delta_y != 0.0F || tick.input.wheel_delta != 0.0F ||

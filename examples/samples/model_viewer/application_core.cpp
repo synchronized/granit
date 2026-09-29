@@ -3,42 +3,10 @@
 
 #include "application_core.h"
 
-#include <algorithm>
-#include <cmath>
-#include <limits>
 #include <new>
 #include <utility>
 
 namespace granit::example::model_viewer {
-namespace {
-
-camera::camera_bounds scene_bounds(const gltf_rendering::scene_plan& plan,
-                                   std::uint32_t selected_node) noexcept {
-  math::float3 minimum{std::numeric_limits<float>::max(), std::numeric_limits<float>::max(),
-                       std::numeric_limits<float>::max()};
-  math::float3 maximum{-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(),
-                       -std::numeric_limits<float>::max()};
-  bool found = false;
-  for (const auto& draw : plan.draws) {
-    if (selected_node != gltf::invalid_index && draw.node != selected_node)
-      continue;
-    minimum.x = std::min(minimum.x, draw.bounds_center.x - draw.bounds_radius);
-    minimum.y = std::min(minimum.y, draw.bounds_center.y - draw.bounds_radius);
-    minimum.z = std::min(minimum.z, draw.bounds_center.z - draw.bounds_radius);
-    maximum.x = std::max(maximum.x, draw.bounds_center.x + draw.bounds_radius);
-    maximum.y = std::max(maximum.y, draw.bounds_center.y + draw.bounds_radius);
-    maximum.z = std::max(maximum.z, draw.bounds_center.z + draw.bounds_radius);
-    found = true;
-  }
-  if (!found)
-    return {{}, 1.0F};
-  const math::float3 center{(minimum.x + maximum.x) * 0.5F, (minimum.y + maximum.y) * 0.5F,
-                            (minimum.z + maximum.z) * 0.5F};
-  const auto extent = math::subtract(maximum, center);
-  return {center, std::max(math::length(extent), 0.001F)};
-}
-
-} // namespace
 
 granit::render_pipeline_render_desc
 viewer_frame::render_desc(granit::texture_view_ref output, granit::texture_format output_format,
@@ -92,8 +60,7 @@ granit::result application_core::accept_scene(gltf::scene scene, gltf_rendering:
   if (phase_ != application_phase::asset_loading)
     return granit::result::invalid_argument;
   try {
-    state_.reset(scene);
-    cpu_scene_ = std::move(scene);
+    document_.assign(std::move(scene));
     gpu_plan_ = std::move(plan);
     phase_ = application_phase::gpu_upload;
     return granit::result::success;
@@ -110,7 +77,7 @@ granit::result application_core::upload(granit::renderer_ref renderer,
                                         void* progress_user_data) {
   if (phase_ != application_phase::gpu_upload)
     return granit::result::invalid_argument;
-  const auto result = scene_resources_.initialize(renderer, cpu_scene_, std::move(gpu_plan_),
+  const auto result = scene_resources_.initialize(renderer, document_.scene(), std::move(gpu_plan_),
                                                   sampler_anisotropy, progress, progress_user_data);
   if (result.failed()) {
     fail(result, "模型查看器 glTF Scene GPU 资源 上传失败");
@@ -128,7 +95,7 @@ granit::result application_core::upload(granit::renderer_ref renderer,
     viewer_change recommended_lighting;
     recommended_lighting.environment_intensity = environment_info_.environment.intensity;
     recommended_lighting.exposure_ev = environment_info_.recommended_exposure_ev;
-    if (state_.apply(cpu_scene_, recommended_lighting) != viewer_state_error::none)
+    if (document_.apply(recommended_lighting) != viewer_state_error::none)
       environment_result = granit::result::invalid_argument;
   }
   if (environment_result.failed()) {
@@ -144,16 +111,16 @@ granit::result application_core::reupload_scene(granit::renderer_ref renderer,
                                                 float sampler_anisotropy) {
   if (phase_ != application_phase::ready)
     return granit::result::invalid_argument;
-  return scene_resources_.initialize(renderer, cpu_scene_, sampler_anisotropy);
+  return scene_resources_.initialize(renderer, document_.scene(), sampler_anisotropy);
 }
 
-granit::result application_core::tick(const application_tick_input& input, viewer_frame& output) {
+granit::result application_core::tick(const viewer_document_update& input, viewer_frame& output) {
   if (phase_ != application_phase::ready)
     return granit::result::invalid_argument;
-  if (input.width == 0 || input.height == 0)
-    return granit::result::not_ready;
-  if (state_.apply(cpu_scene_, input.change) != viewer_state_error::none)
-    return granit::result::invalid_argument;
+  viewer_document_frame document_frame;
+  const auto document_result = document_.update(input, scene_resources_.plan(), document_frame);
+  if (document_result.failed())
+    return document_result;
   if (input.change.debug_display) {
     const auto debug_result = scene_resources_.update_debug_display(
         static_cast<std::uint32_t>(*input.change.debug_display));
@@ -161,52 +128,16 @@ granit::result application_core::tick(const application_tick_input& input, viewe
       return debug_result;
   }
 
-  const auto whole_scene_bounds = scene_bounds(scene_resources_.plan(), gltf::invalid_index);
-  if (!camera_initialized_) {
-    if (!state_.camera().focus(whole_scene_bounds, input.width, input.height))
-      return granit::result::invalid_argument;
-    camera_initialized_ = true;
-  }
-  const auto selected_bounds = scene_bounds(scene_resources_.plan(), state_.selected_node());
-  if (!state_.camera().update(input.input, input.width, input.height, &selected_bounds))
-    return granit::result::invalid_argument;
-
-  camera::camera_matrices matrices;
-  if (!state_.camera().matrices(input.width, input.height, matrices))
-    return granit::result::invalid_argument;
-  const granit::scene_view view{.view = matrices.view,
-                                .projection = matrices.projection,
-                                .view_projection = matrices.view_projection,
-                                .camera_position = matrices.position,
-                                .viewport_x = 0.0F,
-                                .viewport_y = 0.0F,
-                                .viewport_width = static_cast<float>(input.width),
-                                .viewport_height = static_cast<float>(input.height),
-                                .layer_mask = std::numeric_limits<std::uint64_t>::max()};
-  const auto& light_state = state_.directional_light();
-  const auto camera_forward =
-      math::normalize(math::subtract(state_.camera().target(), matrices.position));
-  const auto camera_right = math::normalize(math::cross(camera_forward, {0.0F, 1.0F, 0.0F}));
-  const auto camera_up = math::cross(camera_right, camera_forward);
-  const auto light_direction =
-      math::normalize(math::add(math::add(math::multiply(camera_right, light_state.direction.x),
-                                          math::multiply(camera_up, light_state.direction.y)),
-                                math::multiply(camera_forward, light_state.direction.z)));
-  const granit::scene_directional_light light{
-      .direction_to_light = {-light_direction.x, -light_direction.y, -light_direction.z},
-      .radiance = light_state.radiance,
-      .layer_mask = std::numeric_limits<std::uint64_t>::max()};
-
   viewer_frame candidate;
   const auto snapshot_result = scene_resources_.create_snapshot(
-      std::span{&view, 1}, std::span{&light, 1}, {}, {}, candidate.snapshot);
+      std::span{&document_frame.view, 1}, std::span{&document_frame.directional_light, 1}, {}, {},
+      candidate.snapshot);
   if (snapshot_result.failed())
     return snapshot_result;
   candidate.width = input.width;
   candidate.height = input.height;
-  candidate.exposure_ev = state_.exposure_ev();
-  const auto background = state_.background_color();
-  candidate.clear_color = {background.x, background.y, background.z, 1.0F};
+  candidate.exposure_ev = document_frame.exposure_ev;
+  candidate.clear_color = document_frame.clear_color;
   candidate.environment = {
       .irradiance = environment_info_.environment.irradiance,
       .prefiltered_environment = environment_info_.environment.prefiltered_environment,
@@ -215,15 +146,13 @@ granit::result application_core::tick(const application_tick_input& input, viewe
       .intensity = environment_info_.environment.intensity,
       .prefiltered_max_mip = environment_info_.environment.prefiltered_max_mip,
   };
-  candidate.environment.intensity = state_.environment_intensity();
-  candidate.environment.rotation_radians = state_.environment_rotation_radians();
+  candidate.environment.intensity = document_frame.environment_intensity;
+  candidate.environment.rotation_radians = document_frame.environment_rotation_radians;
   try {
     candidate.draw_bindings = scene_resources_.draw_bindings();
   } catch (const std::bad_alloc&) {
     return granit::result::out_of_memory;
   }
-  if (input.performance)
-    performance_.push(*input.performance);
   output = std::move(candidate);
   return granit::result::success;
 }
@@ -239,11 +168,8 @@ void application_core::reset() noexcept {
   scene_resources_.reset();
   static_cast<void>(environment_.reset());
   environment_info_ = {};
-  cpu_scene_ = {};
+  document_.clear();
   gpu_plan_ = {};
-  state_ = {};
-  performance_.clear();
-  camera_initialized_ = false;
   diagnostic_.clear();
   failure_result_ = granit::result::success;
   phase_ = application_phase::platform_ready;

@@ -19,6 +19,8 @@ add_library(
   model_load_operation.h
   viewer_session.cpp
   viewer_session.h
+  viewer_document.cpp
+  viewer_document.h
   performance_history.cpp
   performance_history.h
   pipeline_prepare.cpp

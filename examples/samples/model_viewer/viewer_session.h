@@ -33,7 +33,7 @@ public:
   [[nodiscard]] const std::string& loading_diagnostic() const noexcept;
   [[nodiscard]] assets::asset_progress loading_progress() const noexcept;
 
-  [[nodiscard]] granit::result tick(const application_tick_input& input, viewer_frame& output) {
+  [[nodiscard]] granit::result tick(const viewer_document_update& input, viewer_frame& output) {
     return core_.tick(input, output);
   }
   [[nodiscard]] granit::result upload(granit::renderer_ref renderer,

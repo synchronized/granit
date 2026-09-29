@@ -6,12 +6,10 @@
 
 #include "gltf/importer.h"
 #include "gltf_rendering/scene_resources.h"
-#include "model_viewer/performance_history.h"
-#include "model_viewer/viewer_state.h"
+#include "model_viewer/viewer_document.h"
 
 #include <granit/pipeline/environment_map.hpp>
 
-#include <optional>
 #include <span>
 #include <string>
 #include <vector>
@@ -25,15 +23,6 @@ enum class application_phase {
   gpu_upload,
   ready,
   failed,
-};
-
-/** 平台壳在一帧开始时提交的后端无关输入。 */
-struct application_tick_input {
-  camera::orbit_camera_input input;
-  viewer_change change;
-  std::uint32_t width{};
-  std::uint32_t height{};
-  std::optional<performance_sample> performance;
 };
 
 /** Core 生成的单帧不可变渲染数据；其数组和环境数据不借用下一帧可变状态。 */
@@ -81,31 +70,28 @@ public:
                                               float sampler_anisotropy) {
     return reupload_scene(renderer.ref(), sampler_anisotropy);
   }
-  [[nodiscard]] granit::result tick(const application_tick_input& input, viewer_frame& output);
+  [[nodiscard]] granit::result tick(const viewer_document_update& input, viewer_frame& output);
   void fail(granit::result result, std::string diagnostic);
   void reset() noexcept;
 
   [[nodiscard]] application_phase phase() const noexcept { return phase_; }
   [[nodiscard]] granit::result failure_result() const noexcept { return failure_result_; }
   [[nodiscard]] const std::string& diagnostic() const noexcept { return diagnostic_; }
-  [[nodiscard]] gltf::scene& cpu_scene() noexcept { return cpu_scene_; }
-  [[nodiscard]] const gltf::scene& cpu_scene() const noexcept { return cpu_scene_; }
+  [[nodiscard]] gltf::scene& cpu_scene() noexcept { return document_.scene(); }
+  [[nodiscard]] const gltf::scene& cpu_scene() const noexcept { return document_.scene(); }
   [[nodiscard]] gltf_rendering::scene_resources& resources() noexcept { return scene_resources_; }
-  [[nodiscard]] viewer_state& state() noexcept { return state_; }
-  [[nodiscard]] performance_history& performance() noexcept { return performance_; }
+  [[nodiscard]] viewer_state& state() noexcept { return document_.state(); }
+  [[nodiscard]] performance_history& performance() noexcept { return document_.performance(); }
 
 private:
   application_phase phase_{application_phase::platform_ready};
   granit::result failure_result_{granit::result::success};
   std::string diagnostic_;
-  gltf::scene cpu_scene_;
+  viewer_document document_;
   gltf_rendering::scene_plan gpu_plan_;
   gltf_rendering::scene_resources scene_resources_;
   granit::environment_map environment_;
   granit::environment_map_info environment_info_;
-  viewer_state state_;
-  performance_history performance_;
-  bool camera_initialized_{};
 };
 
 } // namespace granit::example::model_viewer

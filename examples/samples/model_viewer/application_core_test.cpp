@@ -75,11 +75,11 @@ TEST_CASE("模型查看器 Core 生成后端无关单帧描述", "[tutorial][mod
   CHECK(core.resources().meshes().front().native_handle() == rebuilt_mesh);
 
   viewer_frame output;
-  application_tick_input zero_sized;
+  viewer_document_update zero_sized;
   zero_sized.height = 480;
   CHECK(core.tick(zero_sized, output) == granit::result::not_ready);
   const performance_sample sample{.frames_per_second = 60.0F, .cpu_frame_ms = 2.0F};
-  application_tick_input input;
+  viewer_document_update input;
   input.width = 640;
   input.height = 480;
   input.performance = sample;
