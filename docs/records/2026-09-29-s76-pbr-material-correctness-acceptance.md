@@ -27,7 +27,8 @@ UV/Sampler 和 `COLOR_0`，Model Viewer 直接映射 glTF 核心语义。自动 
   [Linux](https://github.com/synchronized/granit/actions/runs/36513201854)和
   [Windows](https://github.com/synchronized/granit/actions/runs/36513209357)通过；
 - [Emscripten](https://github.com/synchronized/granit/actions/runs/36513215396)完成编译与全部浏览器
-  矩阵。首次 ImGui 浏览器 job 在页面初始化等待中无日志超时，单独重跑后通过；
+  矩阵。发布候选复跑暴露两个 Chrome/Xvfb 实例争抢软件 Vulkan 设备会导致 Dawn 实例丢失，浏览器
+  矩阵因此改为串行执行；
 - PR #117 的当前提交 `2454d187` 通过以上发布前矩阵。
 
 ## 保留限制
