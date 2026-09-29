@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "model_viewer/render_runtime.h"
+#include "model_viewer/viewer_renderer.h"
 
 #include "model_viewer/viewer_session.h"
 
@@ -12,7 +12,7 @@
 
 namespace granit::example::model_viewer {
 
-struct render_runtime::state {
+struct viewer_renderer::state {
   granit::renderer renderer_owner;
   granit::renderer_info renderer_info;
   granit::renderer_limits renderer_limits;
@@ -31,16 +31,16 @@ struct render_runtime::state {
   bool metrics_enabled{};
 };
 
-render_runtime::render_runtime() = default;
+viewer_renderer::viewer_renderer() = default;
 
-render_runtime::~render_runtime() { static_cast<void>(shutdown()); }
+viewer_renderer::~viewer_renderer() { static_cast<void>(shutdown()); }
 
-granit::result render_runtime::initialize_renderer(const granit::renderer_desc& desc,
-                                                   viewer_session& session) noexcept {
+granit::result viewer_renderer::initialize_renderer(const granit::renderer_desc& desc,
+                                                    viewer_session& session) noexcept {
   if (state_)
     return granit::result::invalid_argument;
   try {
-    auto state = std::make_unique<render_runtime::state>();
+    auto state = std::make_unique<viewer_renderer::state>();
     const auto result = state->renderer_owner.initialize(desc);
     if (result.failed())
       return result;
@@ -54,7 +54,7 @@ granit::result render_runtime::initialize_renderer(const granit::renderer_desc& 
   }
 }
 
-granit::result render_runtime::complete_renderer_initialization() noexcept {
+granit::result viewer_renderer::complete_renderer_initialization() noexcept {
   if (!state_)
     return granit::result::not_ready;
   auto result = state_->renderer_owner.get_info(state_->renderer_info);
@@ -63,9 +63,9 @@ granit::result render_runtime::complete_renderer_initialization() noexcept {
   return result;
 }
 
-granit::result render_runtime::initialize_presentation(granit::window& window,
-                                                       const granit::swapchain_desc& desc,
-                                                       bool enable_ui) noexcept {
+granit::result viewer_renderer::initialize_presentation(granit::window& window,
+                                                        const granit::swapchain_desc& desc,
+                                                        bool enable_ui) noexcept {
   if (!state_ || state_->surface.valid() || state_->swapchain.valid())
     return granit::result::not_ready;
   auto result = window.create_surface(state_->renderer_owner, state_->surface);
@@ -86,25 +86,25 @@ granit::result render_runtime::initialize_presentation(granit::window& window,
   return result;
 }
 
-granit::result render_runtime::process_renderer_events() noexcept {
+granit::result viewer_renderer::process_renderer_events() noexcept {
   return state_ ? state_->renderer_owner.process_events() : granit::result::not_ready;
 }
 
 granit::result
-render_runtime::query_renderer_status(granit::renderer_status& status) const noexcept {
+viewer_renderer::query_renderer_status(granit::renderer_status& status) const noexcept {
   return state_ ? state_->renderer_owner.get_status(status) : granit::result::not_ready;
 }
 
-granit::result render_runtime::upload_scene(std::span<const std::byte> environment_bytes,
-                                            float sampler_anisotropy,
-                                            gltf_rendering::scene_upload_callback progress,
-                                            void* progress_user_data) {
+granit::result viewer_renderer::upload_scene(std::span<const std::byte> environment_bytes,
+                                             float sampler_anisotropy,
+                                             gltf_rendering::scene_upload_callback progress,
+                                             void* progress_user_data) {
   return state_ ? state_->session->upload(state_->renderer_owner.ref(), environment_bytes,
                                           sampler_anisotropy, progress, progress_user_data)
                 : granit::result::not_ready;
 }
 
-granit::result render_runtime::render(frame_packet&& packet, frame_execution_result& output) {
+granit::result viewer_renderer::render(frame_packet&& packet, frame_execution_result& output) {
   if (!state_ || !state_->pipeline.valid() || !state_->swapchain.valid())
     return granit::result::not_ready;
   granit::acquired_frame frame;
@@ -161,7 +161,8 @@ granit::result render_runtime::render(frame_packet&& packet, frame_execution_res
   return result;
 }
 
-granit::result render_runtime::render_loading_frame(const imgui::frame_canvas_data& data) noexcept {
+granit::result
+viewer_renderer::render_loading_frame(const imgui::frame_canvas_data& data) noexcept {
   if (!state_ || !state_->loading_frame_context.valid())
     return granit::result::not_ready;
   auto result = state_->loading_canvas.clear();
@@ -201,7 +202,7 @@ granit::result render_runtime::render_loading_frame(const imgui::frame_canvas_da
   return result;
 }
 
-granit::result render_runtime::finish_loading() noexcept {
+granit::result viewer_renderer::finish_loading() noexcept {
   if (!state_)
     return granit::result::not_ready;
   const auto frame_result = state_->loading_frame_context.reset();
@@ -209,9 +210,9 @@ granit::result render_runtime::finish_loading() noexcept {
   return frame_result.failed() ? frame_result : canvas_result;
 }
 
-granit::result render_runtime::initialize_font_atlas(std::span<const std::byte> pixels,
-                                                     std::uint32_t width,
-                                                     std::uint32_t height) noexcept {
+granit::result viewer_renderer::initialize_font_atlas(std::span<const std::byte> pixels,
+                                                      std::uint32_t width,
+                                                      std::uint32_t height) noexcept {
   if (!state_ || pixels.empty() || width == 0 || height == 0)
     return granit::result::invalid_argument;
   auto result = state_->font_texture.initialize(
@@ -237,14 +238,14 @@ granit::result render_runtime::initialize_font_atlas(std::span<const std::byte> 
 }
 
 granit::result
-render_runtime::initialize_pipeline(const granit::render_pipeline_desc& desc) noexcept {
+viewer_renderer::initialize_pipeline(const granit::render_pipeline_desc& desc) noexcept {
   render_quality_change_result ignored;
   return change_quality(desc, 1.0F, false, ignored);
 }
 
-granit::result render_runtime::change_quality(const granit::render_pipeline_desc& desc,
-                                              float sampler_anisotropy, bool reupload_scene,
-                                              render_quality_change_result& output) noexcept {
+granit::result viewer_renderer::change_quality(const granit::render_pipeline_desc& desc,
+                                               float sampler_anisotropy, bool reupload_scene,
+                                               render_quality_change_result& output) noexcept {
   output = {};
   if (!state_)
     return granit::result::not_ready;
@@ -269,13 +270,13 @@ granit::result render_runtime::change_quality(const granit::render_pipeline_desc
 }
 
 granit::result
-render_runtime::update_material(std::uint32_t material_index,
-                                const gltf_rendering::material_factor_update& edit) noexcept {
+viewer_renderer::update_material(std::uint32_t material_index,
+                                 const gltf_rendering::material_factor_update& edit) noexcept {
   return state_ ? state_->session->update_material(material_index, edit)
                 : granit::result::not_ready;
 }
 
-granit::result render_runtime::recreate_swapchain(const granit::swapchain_desc& desc) noexcept {
+granit::result viewer_renderer::recreate_swapchain(const granit::swapchain_desc& desc) noexcept {
   if (!state_)
     return granit::result::not_ready;
   auto result = state_->swapchain.recreate(desc);
@@ -284,8 +285,8 @@ granit::result render_runtime::recreate_swapchain(const granit::swapchain_desc& 
   return result;
 }
 
-granit::result render_runtime::recreate_surface(granit::window& window,
-                                                const granit::swapchain_desc& desc) noexcept {
+granit::result viewer_renderer::recreate_surface(granit::window& window,
+                                                 const granit::swapchain_desc& desc) noexcept {
   if (!state_)
     return granit::result::not_ready;
   auto result = state_->swapchain.reset();
@@ -301,11 +302,11 @@ granit::result render_runtime::recreate_surface(granit::window& window,
 }
 
 granit::result
-render_runtime::query_resource_stats(granit::renderer_resource_stats& stats) const noexcept {
+viewer_renderer::query_resource_stats(granit::renderer_resource_stats& stats) const noexcept {
   return state_ ? state_->renderer_owner.get_resource_stats(stats) : granit::result::not_ready;
 }
 
-granit::result render_runtime::shutdown(granit::renderer_resource_stats* final_stats) noexcept {
+granit::result viewer_renderer::shutdown(granit::renderer_resource_stats* final_stats) noexcept {
   if (!state_)
     return granit::result::success;
   granit::result first_failure = granit::result::success;
@@ -331,41 +332,41 @@ granit::result render_runtime::shutdown(granit::renderer_resource_stats* final_s
   return first_failure;
 }
 
-const granit::renderer_info& render_runtime::renderer_info() const noexcept {
+const granit::renderer_info& viewer_renderer::renderer_info() const noexcept {
   return state_->renderer_info;
 }
 
-const granit::renderer_limits& render_runtime::renderer_limits() const noexcept {
+const granit::renderer_limits& viewer_renderer::renderer_limits() const noexcept {
   return state_->renderer_limits;
 }
 
-const granit::swapchain_info& render_runtime::swapchain_info() const noexcept {
+const granit::swapchain_info& viewer_renderer::swapchain_info() const noexcept {
   return state_->swapchain_info;
 }
 
-granit::texture_view_ref render_runtime::font_view() const noexcept {
+granit::texture_view_ref viewer_renderer::font_view() const noexcept {
   return state_ ? state_->font_view.ref() : granit::texture_view_ref{};
 }
 
-granit::sampler_ref render_runtime::font_sampler() const noexcept {
+granit::sampler_ref viewer_renderer::font_sampler() const noexcept {
   return state_ ? state_->font_sampler.ref() : granit::sampler_ref{};
 }
 
-granit::renderer_ref render_runtime::renderer() const noexcept {
+granit::renderer_ref viewer_renderer::renderer() const noexcept {
   return state_ ? state_->renderer_owner.ref() : granit::renderer_ref{};
 }
 
-granit_renderer render_runtime::native_renderer() const noexcept {
+granit_renderer viewer_renderer::native_renderer() const noexcept {
   return state_ ? state_->renderer_owner.native_handle() : GRANIT_NULL_HANDLE;
 }
 
-granit_swapchain render_runtime::native_swapchain() const noexcept {
+granit_swapchain viewer_renderer::native_swapchain() const noexcept {
   return state_ ? state_->swapchain.native_handle() : GRANIT_NULL_HANDLE;
 }
 
-bool render_runtime::valid() const noexcept { return state_ && state_->renderer_owner.valid(); }
+bool viewer_renderer::valid() const noexcept { return state_ && state_->renderer_owner.valid(); }
 
-bool render_runtime::presentation_valid() const noexcept {
+bool viewer_renderer::presentation_valid() const noexcept {
   return state_ && state_->surface.valid() && state_->swapchain.valid();
 }
 

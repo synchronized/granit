@@ -19,7 +19,7 @@
 
 namespace granit::example::model_viewer {
 
-class render_service;
+class render_dispatcher;
 
 enum class viewer_execution_mode { inline_current_thread, dedicated_thread };
 
@@ -39,14 +39,14 @@ public:
   on_gpu_upload_progress(const gltf_rendering::scene_upload_progress&) noexcept {
     return true;
   }
-  [[nodiscard]] virtual granit::result on_renderer_ready(render_service&) noexcept {
+  [[nodiscard]] virtual granit::result on_renderer_ready(render_dispatcher&) noexcept {
     return granit::result::success;
   }
-  [[nodiscard]] virtual granit::result on_presentation_ready(render_service&) noexcept {
+  [[nodiscard]] virtual granit::result on_presentation_ready(render_dispatcher&) noexcept {
     return granit::result::success;
   }
   /** 可以返回 not_ready，让状态机在后续 tick 继续等待测试或平台准备。 */
-  [[nodiscard]] virtual granit::result on_pipeline_ready(render_service&) noexcept {
+  [[nodiscard]] virtual granit::result on_pipeline_ready(render_dispatcher&) noexcept {
     return granit::result::success;
   }
   virtual void on_shutdown() noexcept {}

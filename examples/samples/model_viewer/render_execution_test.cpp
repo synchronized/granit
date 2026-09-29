@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "render_task_executor.h"
+#include "render_execution.h"
 
 #include <catch2/catch_all.hpp>
 
@@ -60,7 +60,7 @@ granit::result execute_command(void* user_data) {
 
 TEST_CASE("同步帧执行器完整转发帧包和执行结果") {
   callback_state state;
-  granit::example::model_viewer::inline_render_task_executor executor(
+  granit::example::model_viewer::inline_render_execution executor(
       [&state](auto&& packet, auto& output) {
         return execute_frame(std::move(packet), output, &state);
       });
@@ -77,7 +77,7 @@ TEST_CASE("同步帧执行器完整转发帧包和执行结果") {
 }
 
 TEST_CASE("同步帧执行器拒绝空回调") {
-  granit::example::model_viewer::inline_render_task_executor executor;
+  granit::example::model_viewer::inline_render_execution executor;
   granit::example::model_viewer::frame_execution_result output;
   output.needs_recreate = true;
 
@@ -87,7 +87,7 @@ TEST_CASE("同步帧执行器拒绝空回调") {
 
 TEST_CASE("同步渲染任务执行器持久初始化并执行控制任务") {
   using namespace granit::example::model_viewer;
-  inline_render_task_executor executor;
+  inline_render_execution executor;
   callback_state state;
   REQUIRE(executor
               .initialize([&state](auto&& packet, auto& output) {
@@ -109,7 +109,7 @@ TEST_CASE("帧执行策略通过统一接口保持相同行为") {
   using namespace granit::example::model_viewer;
   callback_state state;
 
-  const auto verify = [&state](render_task_executor& executor) {
+  const auto verify = [&state](render_execution_policy& executor) {
     REQUIRE(executor
                 .initialize([&state](auto&& packet, auto& output) {
                   return execute_frame(std::move(packet), output, &state);
@@ -154,11 +154,11 @@ TEST_CASE("帧执行策略通过统一接口保持相同行为") {
   };
 
   SECTION("调用线程执行") {
-    inline_render_task_executor executor;
+    inline_render_execution executor;
     verify(executor);
   }
   SECTION("专用线程执行") {
-    threaded_render_task_executor executor;
+    threaded_render_execution executor;
     verify(executor);
   }
 }
@@ -166,7 +166,7 @@ TEST_CASE("帧执行策略通过统一接口保持相同行为") {
 TEST_CASE("线程帧执行器限制待处理队列并回报被替换帧") {
   using namespace granit::example::model_viewer;
   blocking_callback_state state;
-  threaded_render_task_executor executor;
+  threaded_render_execution executor;
   REQUIRE(executor
               .initialize(
                   [&state](auto&& packet, auto& output) {
@@ -240,7 +240,7 @@ TEST_CASE("线程帧执行器限制待处理队列并回报被替换帧") {
 
 TEST_CASE("线程帧执行器拒绝空命令") {
   using namespace granit::example::model_viewer;
-  threaded_render_task_executor executor;
+  threaded_render_execution executor;
   REQUIRE(executor
               .initialize([](auto&& packet, auto& output) {
                 return execute_frame(std::move(packet), output, nullptr);
@@ -254,7 +254,7 @@ TEST_CASE("线程帧执行器拒绝空命令") {
 TEST_CASE("线程帧执行器同步等待不可丢弃命令") {
   using namespace granit::example::model_viewer;
   blocking_callback_state state;
-  threaded_render_task_executor executor;
+  threaded_render_execution executor;
   REQUIRE(executor
               .initialize([](auto&& packet, auto& output) {
                 return execute_frame(std::move(packet), output, nullptr);

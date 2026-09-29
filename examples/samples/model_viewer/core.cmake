@@ -9,12 +9,12 @@ add_library(
   application_core.h
   environment_ktx2.cpp
   environment_ktx2.h
-  render_task_executor.cpp
-  render_task_executor.h
-  render_service.cpp
-  render_service.h
-  render_runtime.cpp
-  render_runtime.h
+  render_execution.cpp
+  render_execution.h
+  render_dispatcher.cpp
+  render_dispatcher.h
+  viewer_renderer.cpp
+  viewer_renderer.h
   model_load_operation.cpp
   model_load_operation.h
   viewer_session.cpp
@@ -66,7 +66,7 @@ if(GRANIT_HAS_NATIVE_WINDOW AND GRANIT_TESTING_ENABLED)
     granit_sample_model_viewer_support_test
     application_core_test.cpp
     environment_ktx2_test.cpp
-    render_task_executor_test.cpp
+    render_execution_test.cpp
     model_load_operation_test.cpp
     viewer_session_test.cpp
     performance_history_test.cpp

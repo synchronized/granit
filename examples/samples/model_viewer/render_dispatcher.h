@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_RENDER_SERVICE_H_
-#define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_RENDER_SERVICE_H_
+#ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_RENDER_DISPATCHER_H_
+#define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_RENDER_DISPATCHER_H_
 
-#include "model_viewer/render_runtime.h"
+#include "model_viewer/viewer_renderer.h"
 
 #include <memory>
 
@@ -13,15 +13,15 @@ namespace granit::example::model_viewer {
 class viewer_session;
 
 /** Desktop/Web 共用的渲染调用门面；执行位置由外部 executor 决定。 */
-class render_service final {
+class render_dispatcher final {
 public:
-  render_service();
-  ~render_service();
-  render_service(const render_service&) = delete;
-  render_service& operator=(const render_service&) = delete;
+  render_dispatcher();
+  ~render_dispatcher();
+  render_dispatcher(const render_dispatcher&) = delete;
+  render_dispatcher& operator=(const render_dispatcher&) = delete;
 
   /** executor 不转移所有权，必须保持到 shutdown 或本对象析构之后。 */
-  [[nodiscard]] granit::result initialize_renderer(render_task_executor& executor,
+  [[nodiscard]] granit::result initialize_renderer(render_execution_policy& executor,
                                                    const granit::renderer_desc& desc,
                                                    viewer_session& session) noexcept;
   [[nodiscard]] granit::result complete_renderer_initialization() noexcept;
@@ -96,4 +96,4 @@ private:
 
 } // namespace granit::example::model_viewer
 
-#endif // GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_RENDER_SERVICE_H_
+#endif // GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_RENDER_DISPATCHER_H_

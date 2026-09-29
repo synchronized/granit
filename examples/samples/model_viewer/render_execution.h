@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_RENDER_TASK_EXECUTOR_H_
-#define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_RENDER_TASK_EXECUTOR_H_
+#ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_RENDER_EXECUTION_H_
+#define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_RENDER_EXECUTION_H_
 
 #include "imgui/frame_canvas_data.h"
 #include "model_viewer/application_core.h"
@@ -60,9 +60,9 @@ struct render_task_queue_stats {
 };
 
 /** 示例私有帧执行边界；实现负责完整消费传入的不可变帧包。 */
-class render_task_executor {
+class render_execution_policy {
 public:
-  virtual ~render_task_executor() = default;
+  virtual ~render_execution_policy() = default;
 
   [[nodiscard]] virtual granit::result initialize(render_frame_callback callback) noexcept = 0;
   [[nodiscard]] virtual granit::result submit(frame_packet packet,
@@ -83,11 +83,11 @@ public:
   [[nodiscard]] virtual bool running() const noexcept = 0;
 };
 
-/** 在调用线程立即执行帧的实现，供同步平台和线程迁移前的桌面路径使用。 */
-class inline_render_task_executor final : public render_task_executor {
+/** 在调用线程立即执行帧的策略，供浏览器等协作式主循环使用。 */
+class inline_render_execution final : public render_execution_policy {
 public:
-  inline_render_task_executor() = default;
-  explicit inline_render_task_executor(render_frame_callback callback) noexcept;
+  inline_render_execution() = default;
+  explicit inline_render_execution(render_frame_callback callback) noexcept;
 
   [[nodiscard]] granit::result initialize(render_frame_callback callback) noexcept override;
   [[nodiscard]] granit::result submit(frame_packet packet, frame_execution_result& output) override;
@@ -126,12 +126,12 @@ private:
 };
 
 /** 桌面用有界异步执行器；所有回调只在其专用工作线程串行执行。 */
-class threaded_render_task_executor final : public render_task_executor {
+class threaded_render_execution final : public render_execution_policy {
 public:
-  threaded_render_task_executor();
-  ~threaded_render_task_executor();
-  threaded_render_task_executor(const threaded_render_task_executor&) = delete;
-  threaded_render_task_executor& operator=(const threaded_render_task_executor&) = delete;
+  threaded_render_execution();
+  ~threaded_render_execution();
+  threaded_render_execution(const threaded_render_execution&) = delete;
+  threaded_render_execution& operator=(const threaded_render_execution&) = delete;
 
   [[nodiscard]] granit::result initialize(render_frame_callback callback,
                                           std::size_t maximum_pending_frames) noexcept;

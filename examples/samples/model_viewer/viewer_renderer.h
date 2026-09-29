@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_RENDER_RUNTIME_H_
-#define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_RENDER_RUNTIME_H_
+#ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_VIEWER_RENDERER_H_
+#define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_VIEWER_RENDERER_H_
 
-#include "model_viewer/render_task_executor.h"
+#include "model_viewer/render_execution.h"
 
 #include <granit/granit.hpp>
 #include <granit/pipeline/canvas_draw_list.hpp>
@@ -25,12 +25,12 @@ struct render_quality_change_result {
 };
 
 /** 同步 GPU 运行时；调用方保证所有 GPU 操作在选定执行器线程中串行执行。 */
-class render_runtime final {
+class viewer_renderer final {
 public:
-  render_runtime();
-  ~render_runtime();
-  render_runtime(const render_runtime&) = delete;
-  render_runtime& operator=(const render_runtime&) = delete;
+  viewer_renderer();
+  ~viewer_renderer();
+  viewer_renderer(const viewer_renderer&) = delete;
+  viewer_renderer& operator=(const viewer_renderer&) = delete;
 
   [[nodiscard]] granit::result initialize_renderer(const granit::renderer_desc& desc,
                                                    viewer_session& session) noexcept;
@@ -90,4 +90,4 @@ private:
 
 } // namespace granit::example::model_viewer
 
-#endif // GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_RENDER_RUNTIME_H_
+#endif // GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_VIEWER_RENDERER_H_

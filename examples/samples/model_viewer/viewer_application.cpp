@@ -7,8 +7,8 @@
 #include "camera/orbit_camera_input_accumulator.h"
 #include "model_viewer/pipeline_prepare.h"
 #include "model_viewer/presentation_recovery.h"
-#include "model_viewer/render_service.h"
-#include "model_viewer/render_task_executor.h"
+#include "model_viewer/render_dispatcher.h"
+#include "model_viewer/render_execution.h"
 #include "model_viewer/viewer_frame_builder.h"
 #include "model_viewer/viewer_session.h"
 #include "model_viewer/viewer_texture_previews.h"
@@ -181,8 +181,8 @@ granit::result capture_loading_frame(const granit::window_state& window_state,
 struct viewer_application::implementation {
   viewer_application_desc desc;
   viewer_session session;
-  std::unique_ptr<render_task_executor> executor;
-  render_service rendering;
+  std::unique_ptr<render_execution_policy> executor;
+  render_dispatcher rendering;
   pipeline_prepare pipelines;
   viewer_ui ui;
   camera::orbit_camera_input_accumulator input;
@@ -243,7 +243,7 @@ struct viewer_application::implementation {
       return "provider-events";
     case viewer_runtime_phase::asset_wait:
       return session.loading_error() == model_load_error::resource_read ? "asset-resource-fetch"
-                                                                           : "asset-fetch";
+                                                                        : "asset-fetch";
     case viewer_runtime_phase::scene_prepare:
       return "asset-load";
     case viewer_runtime_phase::gpu_upload:
@@ -692,9 +692,9 @@ granit::result viewer_application::on_host_initialize() noexcept {
   try {
     if (result.ok()) {
       if (state.desc.execution == viewer_execution_mode::dedicated_thread)
-        state.executor = std::make_unique<threaded_render_task_executor>();
+        state.executor = std::make_unique<threaded_render_execution>();
       else
-        state.executor = std::make_unique<inline_render_task_executor>();
+        state.executor = std::make_unique<inline_render_execution>();
     }
   } catch (const std::bad_alloc&) {
     result = granit::result::out_of_memory;

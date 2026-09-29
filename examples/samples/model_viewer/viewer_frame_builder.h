@@ -5,7 +5,7 @@
 #define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_VIEWER_FRAME_BUILDER_H_
 
 #include "camera/orbit_camera_input_accumulator.h"
-#include "model_viewer/render_task_executor.h"
+#include "model_viewer/render_execution.h"
 #include "model_viewer/viewer_panels.h"
 
 #include <granit/window.hpp>

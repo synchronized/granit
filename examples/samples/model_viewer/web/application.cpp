@@ -3,7 +3,7 @@
 
 #include "application.h"
 
-#include "model_viewer/render_service.h"
+#include "model_viewer/render_dispatcher.h"
 #include "model_viewer/viewer_application.h"
 #if defined(GRANIT_MODEL_VIEWER_BROWSER_TESTS)
 #include "browser_test_control.h"
@@ -20,7 +20,7 @@
 
 namespace {
 
-using granit::example::model_viewer::render_service;
+using granit::example::model_viewer::render_dispatcher;
 using granit::example::model_viewer::viewer_application_status;
 
 granit::example::model_viewer::web::application_options options;
@@ -101,7 +101,7 @@ public:
     return true;
   }
 
-  granit::result on_renderer_ready(render_service& rendering) noexcept override {
+  granit::result on_renderer_ready(render_dispatcher& rendering) noexcept override {
 #if defined(GRANIT_MODEL_VIEWER_BROWSER_TESTS)
     if (test_hooks.renderer_ready != nullptr) {
       const auto& limits = rendering.renderer_limits();
@@ -121,7 +121,7 @@ public:
     return granit::result::success;
   }
 
-  granit::result on_presentation_ready(render_service& rendering) noexcept override {
+  granit::result on_presentation_ready(render_dispatcher& rendering) noexcept override {
 #if defined(GRANIT_MODEL_VIEWER_BROWSER_TESTS)
     if (test_hooks.presentation_ready != nullptr) {
       const auto& info = rendering.swapchain_info();
@@ -142,7 +142,7 @@ public:
     return granit::result::success;
   }
 
-  granit::result on_pipeline_ready(render_service& rendering) noexcept override {
+  granit::result on_pipeline_ready(render_dispatcher& rendering) noexcept override {
 #if defined(GRANIT_MODEL_VIEWER_BROWSER_TESTS)
     if (!validation_.started()) {
       const auto result = validation_.begin(rendering.renderer());
