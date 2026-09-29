@@ -25,6 +25,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
+#include <mutex>
 #include <new>
 #include <optional>
 #include <span>
@@ -176,6 +177,38 @@ granit::result capture_loading_frame(const granit::window_state& window_state,
   return ui.capture(output);
 }
 
+const char* upload_stage_label(gltf_rendering::scene_upload_stage stage) noexcept {
+  using enum gltf_rendering::scene_upload_stage;
+  switch (stage) {
+  case planning:
+    return "Planning GPU resources...";
+  case geometry:
+    return "Uploading geometry...";
+  case textures:
+    return "Uploading textures...";
+  case samplers:
+    return "Creating samplers...";
+  case meshes:
+    return "Creating meshes...";
+  case materials:
+    return "Creating materials...";
+  }
+  return "Uploading scene...";
+}
+
+float upload_stage_fraction(const gltf_rendering::scene_upload_progress& progress) noexcept {
+  constexpr float begin = 0.40F;
+  constexpr float extent = 0.45F;
+  constexpr float stage_count = 6.0F;
+  const auto stage = static_cast<float>(progress.stage);
+  const auto local =
+      progress.total == 0
+          ? 0.0F
+          : std::clamp(static_cast<float>(progress.completed) / static_cast<float>(progress.total),
+                       0.0F, 1.0F);
+  return begin + extent * (stage + local) / stage_count;
+}
+
 } // namespace
 
 struct model_viewer_app::implementation {
@@ -205,7 +238,9 @@ struct model_viewer_app::implementation {
   bool shutdown_complete{};
   std::atomic<bool> cancel_requested{};
   std::uint64_t upload_sequence{};
+  mutable std::mutex upload_progress_mutex;
   gltf_rendering::scene_upload_progress upload_progress{};
+  granit::result loading_render_result{granit::result::success};
   performance_sample latest_performance{};
   bool has_performance{};
   std::unordered_map<std::uint64_t, float> submitted_frames;
@@ -214,6 +249,7 @@ struct model_viewer_app::implementation {
   std::uint64_t shutdown_pending_retirement_count{};
   granit::result shutdown_result{granit::result::success};
   unsigned input_event_count{};
+  unsigned loading_frame_count{};
   unsigned rendered_frame_count{};
   unsigned applied_input_count{};
   unsigned resize_count{};
@@ -272,6 +308,12 @@ struct model_viewer_app::implementation {
 
   static bool scene_progress(const gltf::import_progress& progress, void* user_data) {
     auto& self = *static_cast<implementation*>(user_data);
+    if (self.desc.execution == viewer_execution_mode::inline_current_thread) {
+      self.loading_render_result =
+          self.render_loading("Parsing glTF and decoding textures...", 0.30F);
+      if (self.loading_render_result.failed())
+        return false;
+    }
     return !self.cancel_requested.load(std::memory_order_acquire) &&
            (self.desc.observer == nullptr ||
             self.desc.observer->on_scene_prepare_progress(progress));
@@ -280,9 +322,23 @@ struct model_viewer_app::implementation {
   static bool upload_progress_callback(const gltf_rendering::scene_upload_progress& progress,
                                        void* user_data) {
     auto& self = *static_cast<implementation*>(user_data);
-    self.upload_progress = progress;
+    {
+      const std::scoped_lock lock{self.upload_progress_mutex};
+      self.upload_progress = progress;
+    }
+    if (self.desc.execution == viewer_execution_mode::inline_current_thread) {
+      self.loading_render_result =
+          self.render_loading(upload_stage_label(progress.stage), upload_stage_fraction(progress));
+      if (self.loading_render_result.failed())
+        return false;
+    }
     return !self.cancel_requested.load(std::memory_order_acquire) &&
            (self.desc.observer == nullptr || self.desc.observer->on_gpu_upload_progress(progress));
+  }
+
+  [[nodiscard]] gltf_rendering::scene_upload_progress upload_progress_snapshot() const noexcept {
+    const std::scoped_lock lock{upload_progress_mutex};
+    return upload_progress;
   }
 
   granit::result render_loading(const char* label, float progress) {
@@ -293,6 +349,8 @@ struct model_viewer_app::implementation {
         capture_loading_frame(window_state, rendering.swapchain_info(), ui, label, progress, frame);
     if (result.ok())
       result = rendering.render_loading_frame(frame);
+    if (result.ok())
+      ++loading_frame_count;
     return result == granit::result::out_of_date ? granit::result::success : result;
   }
 
@@ -425,6 +483,9 @@ struct model_viewer_app::implementation {
 
   granit::result update_scene_prepare() {
     if (model_load.status() == model_load_status::assets_ready) {
+      const auto loading_result = render_loading("Parsing glTF and decoding textures...", 0.30F);
+      if (loading_result.failed())
+        return loading_result;
       cancel_requested.store(false, std::memory_order_release);
       const auto begin_result = model_load.begin_prepare(scene_progress, this);
       if (begin_result.failed())
@@ -453,6 +514,9 @@ struct model_viewer_app::implementation {
 
   granit::result update_gpu_upload() {
     if (!upload_started) {
+      const auto loading_result = render_loading("Planning GPU resources...", 0.40F);
+      if (loading_result.failed())
+        return loading_result;
       cancel_requested.store(false, std::memory_order_release);
       gltf::scene scene;
       gltf_rendering::scene_plan plan;
@@ -474,10 +538,17 @@ struct model_viewer_app::implementation {
       upload_started = true;
     }
     render_task_completion completion;
-    if (!rendering.try_take_control_completion(completion))
-      return granit::result::success;
+    if (!rendering.try_take_control_completion(completion)) {
+      if (desc.execution == viewer_execution_mode::dedicated_thread) {
+        const auto progress = upload_progress_snapshot();
+        return render_loading(upload_stage_label(progress.stage), upload_stage_fraction(progress));
+      }
+      return loading_render_result;
+    }
     if (completion.sequence != upload_sequence)
       return granit::result::internal;
+    if (loading_render_result.failed())
+      return loading_render_result;
     if (completion.status.failed())
       return completion.status;
     const auto& environment = rendering.environment_info();
@@ -511,13 +582,13 @@ struct model_viewer_app::implementation {
     }
     result = rendering.poll_pipeline_prepare();
     if (result == granit::result::not_ready)
-      return granit::result::success;
+      return render_loading("Preparing rendering pipelines...", 0.90F);
     if (result.failed())
       return result;
     if (desc.observer != nullptr && !pipeline_observer_complete) {
       result = desc.observer->on_pipeline_ready(rendering);
       if (result == granit::result::not_ready)
-        return granit::result::success;
+        return render_loading("Validating rendering pipelines...", 0.95F);
       if (result.failed())
         return result;
       pipeline_observer_complete = true;
@@ -911,6 +982,9 @@ model_viewer_app_status model_viewer_app::status() const noexcept {
 }
 
 unsigned model_viewer_app::input_event_count() const noexcept { return state_->input_event_count; }
+unsigned model_viewer_app::loading_frame_count() const noexcept {
+  return state_->loading_frame_count;
+}
 unsigned model_viewer_app::rendered_frame_count() const noexcept {
   return state_->rendered_frame_count;
 }
@@ -928,7 +1002,7 @@ unsigned model_viewer_app::asset_status() const noexcept {
   return state_->phase == viewer_runtime_phase::failed ? 3U : (state_->asset_ready ? 2U : 1U);
 }
 gltf_rendering::scene_upload_progress model_viewer_app::upload_progress() const noexcept {
-  return state_->upload_progress;
+  return state_->upload_progress_snapshot();
 }
 std::uint64_t model_viewer_app::shutdown_live_resource_count() const noexcept {
   return state_->shutdown_live_resource_count;

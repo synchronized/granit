@@ -207,6 +207,11 @@ async function main() {
         `WebGPU 生命周期异常，state=${rendererState}, failure=${failureResult}, asset=${assetStatus}`,
       );
     }
+    const loadingFrameCount = await page.evaluate(() =>
+      Module._granit_web_loading_frame_count(),
+    );
+    if (loadingFrameCount < 1)
+      throw new Error("浏览器 Model Viewer 未提交共享 ImGui 加载帧");
     if (
       entryName === "granit_web_platform_smoke.html" &&
       !browserMessages.some((message) => message === "log: GRANIT_EMPTY_FRAME:ready")

@@ -10,6 +10,7 @@ namespace granit::example::model_viewer::web::browser_test_control {
 void ensure_browser_api_linked() noexcept;
 [[nodiscard]] int platform_status() noexcept;
 [[nodiscard]] unsigned input_event_count() noexcept;
+[[nodiscard]] unsigned loading_frame_count() noexcept;
 [[nodiscard]] unsigned rendered_frame_count() noexcept;
 [[nodiscard]] unsigned applied_input_count() noexcept;
 [[nodiscard]] unsigned resize_count() noexcept;

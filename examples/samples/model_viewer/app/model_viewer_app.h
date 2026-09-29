@@ -85,6 +85,7 @@ public:
 
   [[nodiscard]] model_viewer_app_status status() const noexcept;
   [[nodiscard]] unsigned input_event_count() const noexcept;
+  [[nodiscard]] unsigned loading_frame_count() const noexcept;
   [[nodiscard]] unsigned rendered_frame_count() const noexcept;
   [[nodiscard]] unsigned applied_input_count() const noexcept;
   [[nodiscard]] unsigned resize_count() const noexcept;

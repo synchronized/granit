@@ -21,6 +21,10 @@ extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_input_event_count() noexcept
   return control::input_event_count();
 }
 
+extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_loading_frame_count() noexcept {
+  return control::loading_frame_count();
+}
+
 extern "C" EMSCRIPTEN_KEEPALIVE unsigned granit_web_rendered_frame_count() noexcept {
   return control::rendered_frame_count();
 }

@@ -207,6 +207,9 @@ int granit::example::model_viewer::web::browser_test_control::platform_status() 
 unsigned granit::example::model_viewer::web::browser_test_control::input_event_count() noexcept {
   return application.input_event_count();
 }
+unsigned granit::example::model_viewer::web::browser_test_control::loading_frame_count() noexcept {
+  return application.loading_frame_count();
+}
 unsigned granit::example::model_viewer::web::browser_test_control::rendered_frame_count() noexcept {
   return application.rendered_frame_count();
 }
