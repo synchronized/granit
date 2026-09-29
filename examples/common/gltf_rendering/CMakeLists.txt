@@ -69,6 +69,8 @@ add_library(
   granit_example_gltf_rendering STATIC
   gpu_scene.cpp
   gpu_scene.h
+  scene_plan.cpp
+  scene_plan.h
   standard_pbr_assets.cpp
   standard_pbr_assets.h
   material_update.h
