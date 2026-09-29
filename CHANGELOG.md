@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+## 0.41.0 - 2026-09-29
+
 ### 新增
 
 - 标准 PBR 支持 OPAQUE、MASK 和 BLEND、双面材质、逐贴图 UV0/UV1 与独立 Sampler，以及可选
