@@ -5,7 +5,7 @@
 #define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_VIEWER_SESSION_H_
 
 #include "model_viewer/application_core.h"
-#include "model_viewer/model_loading_session.h"
+#include "model_viewer/model_load_operation.h"
 
 #include <utility>
 
@@ -19,14 +19,16 @@ public:
   [[nodiscard]] bool start_loading(assets::asset_manager& assets,
                                    assets::asset_location model) noexcept;
   void poll_loading();
-  /** 完成 CPU 导入并把 Scene 与 GPU 计划交给 Core；调用期间不能并发访问 Core。 */
-  [[nodiscard]] granit::result prepare_scene(gltf::import_progress_callback progress = nullptr,
-                                             void* progress_user_data = nullptr);
+  [[nodiscard]] granit::result
+  begin_scene_prepare(gltf::import_progress_callback progress = nullptr,
+                      void* progress_user_data = nullptr) noexcept;
+  /** 完成后在调用线程把 Scene 与 GPU 计划交给 Core。 */
+  [[nodiscard]] granit::result poll_scene_prepare() noexcept;
   void cancel_loading() noexcept;
   void reset() noexcept;
 
-  [[nodiscard]] model_loading_status loading_status() const noexcept;
-  [[nodiscard]] model_loading_error loading_error() const noexcept;
+  [[nodiscard]] model_load_status loading_status() const noexcept;
+  [[nodiscard]] model_load_error loading_error() const noexcept;
   [[nodiscard]] granit::result loading_result() const noexcept;
   [[nodiscard]] const std::string& loading_diagnostic() const noexcept;
   [[nodiscard]] assets::asset_progress loading_progress() const noexcept;
@@ -67,7 +69,7 @@ private:
   void fail_from_loading();
 
   application_core core_;
-  model_loading_session loading_;
+  model_load_operation load_operation_;
 };
 
 } // namespace granit::example::model_viewer

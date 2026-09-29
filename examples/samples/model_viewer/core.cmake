@@ -15,10 +15,8 @@ add_library(
   render_service.h
   render_runtime.cpp
   render_runtime.h
-  scene_prepare_task.cpp
-  scene_prepare_task.h
-  model_loading_session.cpp
-  model_loading_session.h
+  model_load_operation.cpp
+  model_load_operation.h
   viewer_session.cpp
   viewer_session.h
   performance_history.cpp
@@ -67,7 +65,7 @@ if(GRANIT_HAS_NATIVE_WINDOW AND GRANIT_TESTING_ENABLED)
     application_core_test.cpp
     environment_ktx2_test.cpp
     render_task_executor_test.cpp
-    model_loading_session_test.cpp
+    model_load_operation_test.cpp
     viewer_session_test.cpp
     performance_history_test.cpp
     presentation_recovery_test.cpp

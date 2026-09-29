@@ -9,7 +9,6 @@
 #include "model_viewer/presentation_recovery.h"
 #include "model_viewer/render_service.h"
 #include "model_viewer/render_task_executor.h"
-#include "model_viewer/scene_prepare_task.h"
 #include "model_viewer/viewer_frame_builder.h"
 #include "model_viewer/viewer_session.h"
 #include "model_viewer/viewer_texture_previews.h"
@@ -185,7 +184,6 @@ struct viewer_application::implementation {
   std::unique_ptr<render_task_executor> executor;
   render_service rendering;
   pipeline_prepare pipelines;
-  scene_prepare_task scene_prepare;
   viewer_ui ui;
   camera::orbit_camera_input_accumulator input;
   viewer_texture_previews previews;
@@ -244,7 +242,7 @@ struct viewer_application::implementation {
     case viewer_runtime_phase::renderer_wait:
       return "provider-events";
     case viewer_runtime_phase::asset_wait:
-      return session.loading_error() == model_loading_error::resource_read ? "asset-resource-fetch"
+      return session.loading_error() == model_load_error::resource_read ? "asset-resource-fetch"
                                                                            : "asset-fetch";
     case viewer_runtime_phase::scene_prepare:
       return "asset-load";
@@ -406,12 +404,12 @@ struct viewer_application::implementation {
 
   granit::result update_asset_wait() {
     session.poll_loading();
-    if (session.loading_status() == model_loading_status::failed)
+    if (session.loading_status() == model_load_status::failed)
       return session.loading_result();
     if (environment_request && environment_request.status() == assets::asset_status::failed)
       return granit::result::invalid_argument;
     const bool environment_ready = !environment_request || environment_request.ready();
-    if (session.loading_status() == model_loading_status::assets_ready && environment_ready) {
+    if (session.loading_status() == model_load_status::assets_ready && environment_ready) {
       if (environment_request)
         environment_bytes = environment_request.value()->bytes;
       phase = viewer_runtime_phase::scene_prepare;
@@ -426,12 +424,13 @@ struct viewer_application::implementation {
   }
 
   granit::result update_scene_prepare() {
-    if (!scene_prepare.started())
+    if (session.loading_status() == model_load_status::assets_ready) {
       cancel_requested.store(false, std::memory_order_release);
-    auto result = scene_prepare.started() ? scene_prepare.poll()
-                                          : scene_prepare.begin(session, scene_progress, this);
-    if (result.ok())
-      result = scene_prepare.poll();
+      const auto begin_result = session.begin_scene_prepare(scene_progress, this);
+      if (begin_result.failed())
+        return begin_result;
+    }
+    auto result = session.poll_scene_prepare();
     if (result == granit::result::not_ready) {
       const auto loading_result = render_loading("Parsing glTF and decoding textures...", 0.30F);
       return loading_result.failed() ? loading_result : granit::result::success;
@@ -812,7 +811,6 @@ granit::result viewer_application::shutdown_resources() noexcept {
   state.cancel_requested.store(true, std::memory_order_release);
   state.session.cancel_loading();
   state.environment_request.cancel();
-  state.scene_prepare.reset();
   if (state.desc.observer != nullptr)
     state.desc.observer->on_shutdown();
   state.previews.clear(state.ui);

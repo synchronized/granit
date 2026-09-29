@@ -13,10 +13,10 @@ TEST_CASE("Viewer Session 拥有并统一 Renderer 与加载生命周期") {
   CHECK(session.phase() == application_phase::renderer_pending);
   CHECK(session.renderer_ready().ok());
   CHECK(session.phase() == application_phase::asset_loading);
-  CHECK(session.loading_status() == model_loading_status::idle);
+  CHECK(session.loading_status() == model_load_status::idle);
 
   session.cancel_loading();
   session.reset();
   CHECK(session.phase() == application_phase::platform_ready);
-  CHECK(session.loading_status() == model_loading_status::idle);
+  CHECK(session.loading_status() == model_load_status::idle);
 }
