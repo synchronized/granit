@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+## 0.43.0 - 2026-09-30
+
 ### 修复
 
 - 修正 MASK 阴影 MaterialConstants 的顶点/片元阶段可见性，消除 Vulkan `VUID-07988`。
