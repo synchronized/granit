@@ -6,7 +6,7 @@
 #include "camera/orbit_camera.h"
 #include "camera/orbit_camera_input_accumulator.h"
 #include "gltf/scene.h"
-#include "gltf_rendering/gpu_scene.h"
+#include "gltf_rendering/scene_resources.h"
 #include "tutorial/tutorial_runtime.h"
 
 #include <granit/pipeline/render_pipeline.hpp>
@@ -229,7 +229,7 @@ private:
 
   granit::example::assets::asset_handle<granit::example::gltf::scene> model_asset_;
   granit::example::gltf::scene model_scene_;
-  granit::example::gltf_rendering::gpu_scene model_gpu_;
+  granit::example::gltf_rendering::scene_resources model_gpu_;
   granit::render_pipeline pipeline_;
   granit::scene_snapshot scene_;
   granit::example::tutorial::tutorial_runtime runtime_;

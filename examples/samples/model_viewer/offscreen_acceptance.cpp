@@ -374,7 +374,7 @@ int main(int argc, char** argv) {
     result = core.accept_scene(*model.value());
   }
   if (result.ok()) {
-    stage = "上传 GPU Scene";
+    stage = "上传 glTF Scene GPU 资源";
     const auto environment_asset = environment.value();
     const auto environment_bytes = environment_asset
                                        ? std::span<const std::byte>{environment_asset->bytes}

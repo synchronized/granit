@@ -12,7 +12,7 @@
 namespace granit::example::model_viewer {
 namespace {
 
-camera::camera_bounds scene_bounds(const gltf_rendering::gpu_scene_plan& plan,
+camera::camera_bounds scene_bounds(const gltf_rendering::scene_plan& plan,
                                    std::uint32_t selected_node) noexcept {
   math::float3 minimum{std::numeric_limits<float>::max(), std::numeric_limits<float>::max(),
                        std::numeric_limits<float>::max()};
@@ -76,20 +76,19 @@ granit::result application_core::renderer_ready() noexcept {
 granit::result application_core::accept_scene(gltf::scene scene) {
   if (phase_ != application_phase::asset_loading)
     return granit::result::invalid_argument;
-  gltf_rendering::gpu_scene_plan plan;
-  const auto plan_result = gltf_rendering::build_gpu_scene_plan(scene, plan);
-  if (plan_result != gltf_rendering::gpu_scene_plan_error::none) {
-    const auto result = plan_result == gltf_rendering::gpu_scene_plan_error::out_of_memory
+  gltf_rendering::scene_plan plan;
+  const auto plan_result = gltf_rendering::build_scene_plan(scene, plan);
+  if (plan_result != gltf_rendering::scene_plan_error::none) {
+    const auto result = plan_result == gltf_rendering::scene_plan_error::out_of_memory
                             ? granit::result::out_of_memory
                             : granit::result::invalid_argument;
-    fail(result, "模型查看器 GPU Scene 计划生成失败");
+    fail(result, "模型查看器 glTF Scene GPU 资源 计划生成失败");
     return result;
   }
   return accept_scene(std::move(scene), std::move(plan));
 }
 
-granit::result application_core::accept_scene(gltf::scene scene,
-                                              gltf_rendering::gpu_scene_plan plan) {
+granit::result application_core::accept_scene(gltf::scene scene, gltf_rendering::scene_plan plan) {
   if (phase_ != application_phase::asset_loading)
     return granit::result::invalid_argument;
   try {
@@ -107,14 +106,14 @@ granit::result application_core::accept_scene(gltf::scene scene,
 granit::result application_core::upload(granit::renderer_ref renderer,
                                         std::span<const std::byte> environment_bytes,
                                         float sampler_anisotropy,
-                                        gltf_rendering::gpu_scene_upload_callback progress,
+                                        gltf_rendering::scene_upload_callback progress,
                                         void* progress_user_data) {
   if (phase_ != application_phase::gpu_upload)
     return granit::result::invalid_argument;
-  const auto result = gpu_scene_.initialize(renderer, cpu_scene_, std::move(gpu_plan_),
-                                            sampler_anisotropy, progress, progress_user_data);
+  const auto result = scene_resources_.initialize(renderer, cpu_scene_, std::move(gpu_plan_),
+                                                  sampler_anisotropy, progress, progress_user_data);
   if (result.failed()) {
-    fail(result, "模型查看器 GPU Scene 上传失败");
+    fail(result, "模型查看器 glTF Scene GPU 资源 上传失败");
     return result;
   }
   granit::result environment_result;
@@ -133,7 +132,7 @@ granit::result application_core::upload(granit::renderer_ref renderer,
       environment_result = granit::result::invalid_argument;
   }
   if (environment_result.failed()) {
-    gpu_scene_.reset();
+    scene_resources_.reset();
     fail(environment_result, "模型查看器内建环境上传失败");
     return environment_result;
   }
@@ -145,7 +144,7 @@ granit::result application_core::reupload_scene(granit::renderer_ref renderer,
                                                 float sampler_anisotropy) {
   if (phase_ != application_phase::ready)
     return granit::result::invalid_argument;
-  return gpu_scene_.initialize(renderer, cpu_scene_, sampler_anisotropy);
+  return scene_resources_.initialize(renderer, cpu_scene_, sampler_anisotropy);
 }
 
 granit::result application_core::tick(const application_tick_input& input, viewer_frame& output) {
@@ -156,19 +155,19 @@ granit::result application_core::tick(const application_tick_input& input, viewe
   if (state_.apply(cpu_scene_, input.change) != viewer_state_error::none)
     return granit::result::invalid_argument;
   if (input.change.debug_display) {
-    const auto debug_result =
-        gpu_scene_.update_debug_display(static_cast<std::uint32_t>(*input.change.debug_display));
+    const auto debug_result = scene_resources_.update_debug_display(
+        static_cast<std::uint32_t>(*input.change.debug_display));
     if (debug_result.failed())
       return debug_result;
   }
 
-  const auto whole_scene_bounds = scene_bounds(gpu_scene_.plan(), gltf::invalid_index);
+  const auto whole_scene_bounds = scene_bounds(scene_resources_.plan(), gltf::invalid_index);
   if (!camera_initialized_) {
     if (!state_.camera().focus(whole_scene_bounds, input.width, input.height))
       return granit::result::invalid_argument;
     camera_initialized_ = true;
   }
-  const auto selected_bounds = scene_bounds(gpu_scene_.plan(), state_.selected_node());
+  const auto selected_bounds = scene_bounds(scene_resources_.plan(), state_.selected_node());
   if (!state_.camera().update(input.input, input.width, input.height, &selected_bounds))
     return granit::result::invalid_argument;
 
@@ -199,8 +198,8 @@ granit::result application_core::tick(const application_tick_input& input, viewe
       .layer_mask = std::numeric_limits<std::uint64_t>::max()};
 
   viewer_frame candidate;
-  const auto snapshot_result = gpu_scene_.create_snapshot(std::span{&view, 1}, std::span{&light, 1},
-                                                          {}, {}, candidate.snapshot);
+  const auto snapshot_result = scene_resources_.create_snapshot(
+      std::span{&view, 1}, std::span{&light, 1}, {}, {}, candidate.snapshot);
   if (snapshot_result.failed())
     return snapshot_result;
   candidate.width = input.width;
@@ -219,7 +218,7 @@ granit::result application_core::tick(const application_tick_input& input, viewe
   candidate.environment.intensity = state_.environment_intensity();
   candidate.environment.rotation_radians = state_.environment_rotation_radians();
   try {
-    candidate.draw_bindings = gpu_scene_.draw_bindings();
+    candidate.draw_bindings = scene_resources_.draw_bindings();
   } catch (const std::bad_alloc&) {
     return granit::result::out_of_memory;
   }
@@ -230,14 +229,14 @@ granit::result application_core::tick(const application_tick_input& input, viewe
 }
 
 void application_core::fail(granit::result result, std::string diagnostic) {
-  gpu_scene_.reset();
+  scene_resources_.reset();
   failure_result_ = result;
   diagnostic_ = std::move(diagnostic);
   phase_ = application_phase::failed;
 }
 
 void application_core::reset() noexcept {
-  gpu_scene_.reset();
+  scene_resources_.reset();
   static_cast<void>(environment_.reset());
   environment_info_ = {};
   cpu_scene_ = {};

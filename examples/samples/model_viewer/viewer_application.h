@@ -6,7 +6,7 @@
 
 #include "application/application_host.h"
 #include "gltf/importer.h"
-#include "gltf_rendering/gpu_scene.h"
+#include "gltf_rendering/scene_resources.h"
 #include "model_viewer/viewer_panels.h"
 
 #include <granit/renderer/renderer.hpp>
@@ -36,7 +36,7 @@ public:
     return true;
   }
   [[nodiscard]] virtual bool
-  on_gpu_upload_progress(const gltf_rendering::gpu_scene_upload_progress&) noexcept {
+  on_gpu_upload_progress(const gltf_rendering::scene_upload_progress&) noexcept {
     return true;
   }
   [[nodiscard]] virtual granit::result on_renderer_ready(render_service&) noexcept {
@@ -91,7 +91,7 @@ public:
   [[nodiscard]] unsigned quality_generation() const noexcept;
   [[nodiscard]] unsigned lighting_generation() const noexcept;
   [[nodiscard]] unsigned asset_status() const noexcept;
-  [[nodiscard]] gltf_rendering::gpu_scene_upload_progress upload_progress() const noexcept;
+  [[nodiscard]] gltf_rendering::scene_upload_progress upload_progress() const noexcept;
   [[nodiscard]] std::uint64_t shutdown_live_resource_count() const noexcept;
   [[nodiscard]] std::uint64_t shutdown_pending_retirement_count() const noexcept;
   [[nodiscard]] granit::result shutdown_result() const noexcept;

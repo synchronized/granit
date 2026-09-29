@@ -67,12 +67,12 @@ TEST_CASE("模型查看器 Core 生成后端无关单帧描述", "[tutorial][mod
   REQUIRE(core.renderer_ready() == granit::result::success);
   REQUIRE(core.accept_scene(std::move(scene)) == granit::result::success);
   REQUIRE(core.upload(renderer) == granit::result::success);
-  const auto original_mesh = core.scene_gpu().meshes().front().native_handle();
+  const auto original_mesh = core.resources().meshes().front().native_handle();
   REQUIRE(core.reupload_scene(renderer, 1.0F) == granit::result::success);
-  CHECK(core.scene_gpu().meshes().front().native_handle() != original_mesh);
-  const auto rebuilt_mesh = core.scene_gpu().meshes().front().native_handle();
+  CHECK(core.resources().meshes().front().native_handle() != original_mesh);
+  const auto rebuilt_mesh = core.resources().meshes().front().native_handle();
   CHECK(core.reupload_scene(renderer, 0.0F) == granit::result::invalid_argument);
-  CHECK(core.scene_gpu().meshes().front().native_handle() == rebuilt_mesh);
+  CHECK(core.resources().meshes().front().native_handle() == rebuilt_mesh);
 
   viewer_frame output;
   application_tick_input zero_sized;
@@ -99,7 +99,7 @@ TEST_CASE("模型查看器 Core 生成后端无关单帧描述", "[tutorial][mod
   CHECK(render.clear_color.blue == Catch::Approx(0.065F));
   CHECK(render.draw_bindings.size() == 1);
   CHECK(render.draw_bindings.data() == output.draw_bindings.data());
-  CHECK(render.draw_bindings.data() != core.scene_gpu().draw_bindings().data());
+  CHECK(render.draw_bindings.data() != core.resources().draw_bindings().data());
   REQUIRE(render.environment == &output.environment);
   CHECK(render.environment->irradiance.valid());
   CHECK(render.environment->prefiltered_environment.valid());

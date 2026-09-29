@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
-# 教程与完整 Model Viewer 共用的私有 glTF → GPU Scene 映射。
+# 教程与完整 Model Viewer 共用的私有 glTF → Granit 渲染资源映射。
 set(granit_gltf_rendering_material_package
     "${CMAKE_CURRENT_BINARY_DIR}/standard_pbr.grmat")
 set(granit_gltf_rendering_material_include
@@ -67,10 +67,13 @@ add_custom_command(
 
 add_library(
   granit_example_gltf_rendering STATIC
-  gpu_scene.cpp
-  gpu_scene.h
+  scene_resources.cpp
+  scene_resources.h
   scene_plan.cpp
   scene_plan.h
+  scene_snapshot.cpp
+  scene_upload.cpp
+  scene_upload.h
   standard_pbr_assets.cpp
   standard_pbr_assets.h
   material_update.h
@@ -91,7 +94,7 @@ set_target_properties(granit_example_gltf_rendering PROPERTIES FOLDER "Examples/
 granit_target_compile_warnings(granit_example_gltf_rendering)
 
 if(GRANIT_HAS_NATIVE_WINDOW AND GRANIT_TESTING_ENABLED)
-  add_executable(granit_example_gltf_rendering_test gpu_scene_test.cpp)
+  add_executable(granit_example_gltf_rendering_test scene_resources_test.cpp)
   target_link_libraries(
     granit_example_gltf_rendering_test
     PRIVATE granit_example_gltf_rendering Catch2::Catch2WithMain

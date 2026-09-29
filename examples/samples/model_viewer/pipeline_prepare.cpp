@@ -3,14 +3,14 @@
 
 #include "model_viewer/pipeline_prepare.h"
 
-#include "gltf_rendering/gpu_scene.h"
+#include "gltf_rendering/scene_resources.h"
 
 #include <cstdio>
 
 namespace granit::example::model_viewer {
 
 granit::result pipeline_prepare::begin(granit::renderer_ref renderer,
-                                       gltf_rendering::gpu_scene& scene,
+                                       gltf_rendering::scene_resources& scene,
                                        granit::texture_format color_format,
                                        granit::sample_count samples) {
   if (!renderer || phase_ != phase::idle)

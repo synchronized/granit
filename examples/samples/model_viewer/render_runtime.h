@@ -45,7 +45,7 @@ public:
 
   [[nodiscard]] granit::result
   upload_scene(std::span<const std::byte> environment_bytes, float sampler_anisotropy,
-               gltf_rendering::gpu_scene_upload_callback progress = nullptr,
+               gltf_rendering::scene_upload_callback progress = nullptr,
                void* progress_user_data = nullptr);
   [[nodiscard]] granit::result render(frame_packet&& packet, frame_execution_result& output);
   [[nodiscard]] granit::result render_loading_frame(const imgui::frame_canvas_data& data) noexcept;

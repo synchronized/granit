@@ -4,7 +4,7 @@
 #ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_VIEWER_TEXTURE_PREVIEWS_H_
 #define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_VIEWER_TEXTURE_PREVIEWS_H_
 
-#include "gltf_rendering/gpu_scene.h"
+#include "gltf_rendering/scene_resources.h"
 #include "model_viewer/viewer_panels.h"
 
 #include <granit/core/result.hpp>
@@ -18,8 +18,8 @@ class viewer_ui;
 /** 管理 Viewer 面板使用的去重材质纹理注册。 */
 class viewer_texture_previews final {
 public:
-  [[nodiscard]] granit::result rebuild(const gltf::scene& scene, gltf_rendering::gpu_scene& gpu,
-                                       viewer_ui& ui);
+  [[nodiscard]] granit::result rebuild(const gltf::scene& scene,
+                                       gltf_rendering::scene_resources& gpu, viewer_ui& ui);
   void clear(viewer_ui& ui) noexcept;
 
   [[nodiscard]] std::span<const texture_preview> items() const noexcept { return items_; }

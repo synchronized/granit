@@ -4,7 +4,7 @@
 #ifndef GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_PIPELINE_PREPARE_H_
 #define GRANIT_EXAMPLES_SAMPLES_MODEL_VIEWER_PIPELINE_PREPARE_H_
 
-#include "gltf_rendering/gpu_scene.h"
+#include "gltf_rendering/scene_resources.h"
 
 #include <granit/renderer/pipeline_warmup.hpp>
 
@@ -17,7 +17,7 @@ namespace granit::example::model_viewer {
 class pipeline_prepare final {
 public:
   [[nodiscard]] granit::result begin(granit::renderer_ref renderer,
-                                     gltf_rendering::gpu_scene& scene,
+                                     gltf_rendering::scene_resources& scene,
                                      granit::texture_format color_format,
                                      granit::sample_count samples);
   [[nodiscard]] granit::result poll();

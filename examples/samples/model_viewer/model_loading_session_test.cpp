@@ -56,7 +56,7 @@ TEST_CASE("模型加载会话通过 Asset Manager 准备 GPU 计划", "[example]
   REQUIRE(session.status() == viewer::model_loading_status::ready);
 
   granit::example::gltf::scene scene;
-  granit::example::gltf_rendering::gpu_scene_plan plan;
+  granit::example::gltf_rendering::scene_plan plan;
   CHECK(session.take(scene, plan));
   CHECK_FALSE(session.take(scene, plan));
   std::filesystem::remove_all(directory, filesystem_error);

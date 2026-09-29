@@ -34,16 +34,17 @@ public:
 
   [[nodiscard]] granit::result
   upload_scene(std::span<const std::byte> environment_bytes, float sampler_anisotropy,
-               gltf_rendering::gpu_scene_upload_callback progress = nullptr,
+               gltf_rendering::scene_upload_callback progress = nullptr,
                void* progress_user_data = nullptr);
-  [[nodiscard]] granit::result
-  begin_upload_scene(std::span<const std::byte> environment_bytes, float sampler_anisotropy,
-                     gltf_rendering::gpu_scene_upload_callback progress, void* progress_user_data,
-                     std::uint64_t& sequence) noexcept;
+  [[nodiscard]] granit::result begin_upload_scene(std::span<const std::byte> environment_bytes,
+                                                  float sampler_anisotropy,
+                                                  gltf_rendering::scene_upload_callback progress,
+                                                  void* progress_user_data,
+                                                  std::uint64_t& sequence) noexcept;
   /** 仅供已经在 executor 回调内运行的任务使用，避免递归同步排队。 */
   [[nodiscard]] granit::result
   execute_upload_scene(std::span<const std::byte> environment_bytes, float sampler_anisotropy,
-                       gltf_rendering::gpu_scene_upload_callback progress = nullptr,
+                       gltf_rendering::scene_upload_callback progress = nullptr,
                        void* progress_user_data = nullptr);
   [[nodiscard]] granit::result submit(frame_packet packet, frame_execution_result& output);
   [[nodiscard]] granit::result submit_frame(frame_packet packet, std::uint64_t& sequence) noexcept;

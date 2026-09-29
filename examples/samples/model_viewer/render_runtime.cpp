@@ -97,7 +97,7 @@ render_runtime::query_renderer_status(granit::renderer_status& status) const noe
 
 granit::result render_runtime::upload_scene(std::span<const std::byte> environment_bytes,
                                             float sampler_anisotropy,
-                                            gltf_rendering::gpu_scene_upload_callback progress,
+                                            gltf_rendering::scene_upload_callback progress,
                                             void* progress_user_data) {
   return state_ ? state_->session->upload(state_->renderer_owner.ref(), environment_bytes,
                                           sampler_anisotropy, progress, progress_user_data)

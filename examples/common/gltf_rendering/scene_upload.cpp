@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "gpu_scene.h"
+#include "gltf_rendering/scene_resources.h"
 #include "gltf_rendering/standard_pbr_assets.h"
 
 #include <granit/pipeline/pbr_material.hpp>
@@ -15,7 +15,6 @@
 #include <cstring>
 #include <limits>
 #include <new>
-#include <stdexcept>
 #include <utility>
 
 namespace granit::example::gltf_rendering {
@@ -144,7 +143,7 @@ granit::texture_view_ref resolve_texture(const gltf::texture_reference& referenc
   return fallback.view.ref();
 }
 
-granit::result resolve_sampler(const gltf::texture_reference& reference, const gpu_scene_plan& plan,
+granit::result resolve_sampler(const gltf::texture_reference& reference, const scene_plan& plan,
                                const std::vector<granit::sampler>& samplers,
                                const granit::sampler& fallback, granit::sampler_ref& output) {
   if (reference.sampler == gltf::invalid_index) {
@@ -161,7 +160,7 @@ granit::result resolve_sampler(const gltf::texture_reference& reference, const g
 }
 
 granit::result create_material(granit::renderer_ref renderer, const gltf::material& source,
-                               const gpu_scene_plan& plan, const std::vector<gpu_texture>& textures,
+                               const scene_plan& plan, const std::vector<gpu_texture>& textures,
                                const std::vector<granit::sampler>& samplers,
                                const default_material_textures& defaults,
                                const granit::sampler& default_sampler,
@@ -249,91 +248,23 @@ granit::result create_material(granit::renderer_ref renderer, const gltf::materi
 
 } // namespace
 
-granit::result
-gpu_scene::add_pipeline_warmups(pipeline_warmup_batch_ref batch, texture_format color_format,
-                                sample_count samples,
-                                std::vector<std::uint32_t>& result_indices) noexcept {
-  result_indices.clear();
-  if (!valid() || !batch || color_format == texture_format::undefined)
-    return granit::result::invalid_argument;
-  try {
-    result_indices.reserve(materials_.size());
-    for (std::size_t material_index = 0; material_index < materials_.size(); ++material_index) {
-      const auto& material = materials_[material_index];
-      const auto transparent =
-          material_index < material_alpha_modes_.size() &&
-          material_alpha_modes_[material_index] == gltf::material_alpha_mode::blend;
-      const material_pipeline_warmup_desc desc{
-          .pass = granit::material_parameter_id(transparent ? "transparent" : "opaque"),
-          .color_format = color_format,
-          .depth_stencil_format = texture_format::d32_float,
-          .samples = samples,
-      };
-      std::uint32_t index{};
-      const auto result = material.add_pipeline_warmup(desc, batch, index);
-      if (result.failed()) {
-        result_indices.clear();
-        return result;
-      }
-      result_indices.push_back(index);
-    }
-    return granit::result::success;
-  } catch (const std::bad_alloc&) {
-    result_indices.clear();
-    return granit::result::out_of_memory;
-  }
-}
-
-gpu_scene::gpu_scene(gpu_scene&& other) noexcept
-    : renderer_(other.renderer_), plan_(std::move(other.plan_)),
-      vertex_buffer_(std::move(other.vertex_buffer_)),
-      index_buffer_(std::move(other.index_buffer_)), textures_(std::move(other.textures_)),
-      samplers_(std::move(other.samplers_)), meshes_(std::move(other.meshes_)),
-      default_textures_(std::move(other.default_textures_)),
-      default_sampler_(std::move(other.default_sampler_)),
-      shader_library_(std::move(other.shader_library_)), materials_(std::move(other.materials_)),
-      material_alpha_modes_(std::move(other.material_alpha_modes_)),
-      draw_bindings_(std::move(other.draw_bindings_)) {
-  other.renderer_ = {};
-}
-
-gpu_scene& gpu_scene::operator=(gpu_scene&& other) noexcept {
-  if (this != &other) {
-    reset();
-    renderer_ = other.renderer_;
-    other.renderer_ = {};
-    plan_ = std::move(other.plan_);
-    vertex_buffer_ = std::move(other.vertex_buffer_);
-    index_buffer_ = std::move(other.index_buffer_);
-    textures_ = std::move(other.textures_);
-    samplers_ = std::move(other.samplers_);
-    meshes_ = std::move(other.meshes_);
-    default_textures_ = std::move(other.default_textures_);
-    default_sampler_ = std::move(other.default_sampler_);
-    shader_library_ = std::move(other.shader_library_);
-    materials_ = std::move(other.materials_);
-    material_alpha_modes_ = std::move(other.material_alpha_modes_);
-    draw_bindings_ = std::move(other.draw_bindings_);
-  }
-  return *this;
-}
-
-granit::result gpu_scene::initialize(granit::renderer_ref renderer, const gltf::scene& source,
-                                     float sampler_anisotropy, gpu_scene_upload_callback progress,
-                                     void* progress_user_data) {
-  gpu_scene_plan plan;
-  const auto plan_result = build_gpu_scene_plan(source, plan);
-  if (plan_result != gpu_scene_plan_error::none)
-    return plan_result == gpu_scene_plan_error::out_of_memory ? granit::result::out_of_memory
-                                                              : granit::result::invalid_argument;
+granit::result scene_resources::initialize(granit::renderer_ref renderer, const gltf::scene& source,
+                                           float sampler_anisotropy, scene_upload_callback progress,
+                                           void* progress_user_data) {
+  scene_plan plan;
+  const auto plan_result = build_scene_plan(source, plan);
+  if (plan_result != scene_plan_error::none)
+    return plan_result == scene_plan_error::out_of_memory ? granit::result::out_of_memory
+                                                          : granit::result::invalid_argument;
   return initialize(renderer, source, std::move(plan), sampler_anisotropy, progress,
                     progress_user_data);
 }
 
-granit::result gpu_scene::initialize(granit::renderer_ref renderer, const gltf::scene& source,
-                                     gpu_scene_plan plan, float sampler_anisotropy,
-                                     gpu_scene_upload_callback progress, void* progress_user_data) {
-  gpu_scene candidate;
+granit::result scene_resources::initialize(granit::renderer_ref renderer, const gltf::scene& source,
+                                           scene_plan plan, float sampler_anisotropy,
+                                           scene_upload_callback progress,
+                                           void* progress_user_data) {
+  scene_resources candidate;
   const auto result = candidate.create(renderer, source, std::move(plan), sampler_anisotropy,
                                        progress, progress_user_data);
   if (result.failed())
@@ -342,127 +273,10 @@ granit::result gpu_scene::initialize(granit::renderer_ref renderer, const gltf::
   return granit::result::success;
 }
 
-void gpu_scene::reset() noexcept {
-  if (!valid())
-    return;
-  [[maybe_unused]] gpu_scene retired(std::move(*this));
-}
-
-granit::result gpu_scene::texture_binding(const gltf::texture_reference& reference, bool srgb,
-                                          granit::texture_view_ref& view,
-                                          granit::sampler_ref& sampler) const noexcept {
-  view = {};
-  sampler = {};
-  if (!valid())
-    return granit::result::invalid_handle;
-  const auto* texture = find_texture(textures_, reference.image, srgb);
-  if (texture == nullptr)
-    return granit::result::invalid_argument;
-  const granit::sampler* selected_sampler = &default_sampler_;
-  if (reference.sampler != gltf::invalid_index) {
-    if (reference.sampler >= plan_.source_sampler_to_plan.size())
-      return granit::result::invalid_argument;
-    const auto mapped = plan_.source_sampler_to_plan[reference.sampler];
-    if (mapped >= samplers_.size())
-      return granit::result::invalid_argument;
-    selected_sampler = &samplers_[mapped];
-  }
-  view = texture->view.ref();
-  sampler = selected_sampler->ref();
-  return granit::result::success;
-}
-
-granit::result
-gpu_scene::create_snapshot(std::span<const granit_scene_view> views,
-                           std::span<const granit_scene_directional_light> directional_lights,
-                           std::span<const granit_scene_point_light> point_lights,
-                           std::span<const granit_scene_spot_light> spot_lights,
-                           granit::scene_snapshot& output) const noexcept {
-  if (!valid())
-    return granit::result::invalid_handle;
-  if (views.size() > std::numeric_limits<std::uint32_t>::max() ||
-      plan_.renderables.size() > std::numeric_limits<std::uint32_t>::max() ||
-      directional_lights.size() > std::numeric_limits<std::uint32_t>::max() ||
-      point_lights.size() > std::numeric_limits<std::uint32_t>::max() ||
-      spot_lights.size() > std::numeric_limits<std::uint32_t>::max())
-    return granit::result::invalid_argument;
-  const granit::scene_snapshot_desc desc{
-      .views = views,
-      .renderables = plan_.renderables,
-      .directional_lights = directional_lights,
-      .point_lights = point_lights,
-      .spot_lights = spot_lights,
-  };
-  return output.initialize(renderer_, desc);
-}
-
-granit::result gpu_scene::update_material_factors(gltf::scene& source, std::uint32_t material_index,
-                                                  const material_factor_update& edit) noexcept {
-  const auto finite = [](float value) { return std::isfinite(value); };
-  const auto unit = [&](float value) { return finite(value) && value >= 0.0F && value <= 1.0F; };
-  if (!valid() || material_index >= source.materials.size() || material_index >= materials_.size())
-    return valid() ? granit::result::invalid_argument : granit::result::invalid_handle;
-  if (!unit(edit.base_color.x) || !unit(edit.base_color.y) || !unit(edit.base_color.z) ||
-      !unit(edit.base_color.w) || !unit(edit.metallic) || !unit(edit.roughness) ||
-      !finite(edit.normal_scale) || edit.normal_scale < 0.0F || edit.normal_scale > 10.0F ||
-      !unit(edit.occlusion_strength) || !finite(edit.emissive.x) || !finite(edit.emissive.y) ||
-      !finite(edit.emissive.z) || edit.emissive.x < 0.0F || edit.emissive.y < 0.0F ||
-      edit.emissive.z < 0.0F)
-    return granit::result::invalid_argument;
-
-  const std::array updates{
-      granit::material_parameter_update::value(granit::material_parameter_id("base_color"),
-                                               granit::material_parameter_type::float4,
-                                               std::as_bytes(std::span{&edit.base_color, 1})),
-      granit::material_parameter_update::value(granit::material_parameter_id("metallic"),
-                                               granit::material_parameter_type::float32,
-                                               std::as_bytes(std::span{&edit.metallic, 1})),
-      granit::material_parameter_update::value(
-          granit::material_parameter_id("perceptual_roughness"),
-          granit::material_parameter_type::float32, std::as_bytes(std::span{&edit.roughness, 1})),
-      granit::material_parameter_update::value(granit::material_parameter_id("normal_scale"),
-                                               granit::material_parameter_type::float32,
-                                               std::as_bytes(std::span{&edit.normal_scale, 1})),
-      granit::material_parameter_update::value(
-          granit::material_parameter_id("occlusion_strength"),
-          granit::material_parameter_type::float32,
-          std::as_bytes(std::span{&edit.occlusion_strength, 1})),
-      granit::material_parameter_update::value(granit::material_parameter_id("emissive"),
-                                               granit::material_parameter_type::float3,
-                                               std::as_bytes(std::span{&edit.emissive, 1})),
-  };
-  const auto result = materials_[material_index].update(updates);
-  if (result.failed())
-    return result;
-  auto& material = source.materials[material_index];
-  material.base_color = edit.base_color;
-  material.metallic = edit.metallic;
-  material.roughness = edit.roughness;
-  material.normal_scale = edit.normal_scale;
-  material.occlusion_strength = edit.occlusion_strength;
-  material.emissive = edit.emissive;
-  return granit::result::success;
-}
-
-granit::result gpu_scene::update_debug_display(std::uint32_t mode) noexcept {
-  if (!valid())
-    return granit::result::invalid_handle;
-  if (mode > static_cast<std::uint32_t>(debug_display_mode::vertex_tangents))
-    return granit::result::invalid_argument;
-  const auto update = granit::material_parameter_update::value(
-      granit::material_parameter_id("debug_display"), granit::material_parameter_type::uint32,
-      std::as_bytes(std::span{&mode, 1}));
-  for (auto& material : materials_) {
-    if (const auto result = material.update(std::span{&update, 1}); result.failed())
-      return result;
-  }
-  return granit::result::success;
-}
-
-granit::result gpu_scene::create(granit::renderer_ref renderer, const gltf::scene& source,
-                                 gpu_scene_plan plan, float sampler_anisotropy,
-                                 gpu_scene_upload_callback progress, void* progress_user_data) {
-  const auto report = [&](gpu_scene_upload_stage stage, std::size_t completed, std::size_t total) {
+granit::result scene_resources::create(granit::renderer_ref renderer, const gltf::scene& source,
+                                       scene_plan plan, float sampler_anisotropy,
+                                       scene_upload_callback progress, void* progress_user_data) {
+  const auto report = [&](scene_upload_stage stage, std::size_t completed, std::size_t total) {
     if (progress == nullptr)
       return true;
     if (completed > std::numeric_limits<std::uint32_t>::max() ||
@@ -477,7 +291,7 @@ granit::result gpu_scene::create(granit::renderer_ref renderer, const gltf::scen
   if (!std::isfinite(sampler_anisotropy) || sampler_anisotropy < 1.0F)
     return granit::result::invalid_argument;
   plan_ = std::move(plan);
-  if (!report(gpu_scene_upload_stage::planning, 1, 1))
+  if (!report(scene_upload_stage::planning, 1, 1))
     return granit::result::cancelled;
 
   granit::upload_batch uploads;
@@ -519,7 +333,7 @@ granit::result gpu_scene::create(granit::renderer_ref renderer, const gltf::scen
         result.failed())
       return result;
   }
-  if (!report(gpu_scene_upload_stage::geometry, 1, 1))
+  if (!report(scene_upload_stage::geometry, 1, 1))
     return granit::result::cancelled;
 
   textures_.reserve(plan_.textures.size());
@@ -596,10 +410,10 @@ granit::result gpu_scene::create(granit::renderer_ref renderer, const gltf::scen
         return result;
       textures_in_batch = 0;
     }
-    if (!report(gpu_scene_upload_stage::textures, texture_index + 1, plan_.textures.size()))
+    if (!report(scene_upload_stage::textures, texture_index + 1, plan_.textures.size()))
       return granit::result::cancelled;
   }
-  if (plan_.textures.empty() && !report(gpu_scene_upload_stage::textures, 0, 0))
+  if (plan_.textures.empty() && !report(scene_upload_stage::textures, 0, 0))
     return granit::result::cancelled;
 
   samplers_.reserve(plan_.samplers.size());
@@ -629,10 +443,10 @@ granit::result gpu_scene::create(granit::renderer_ref renderer, const gltf::scen
     }
     if (result.failed())
       return result;
-    if (!report(gpu_scene_upload_stage::samplers, sampler_index + 1, plan_.samplers.size()))
+    if (!report(scene_upload_stage::samplers, sampler_index + 1, plan_.samplers.size()))
       return granit::result::cancelled;
   }
-  if (plan_.samplers.empty() && !report(gpu_scene_upload_stage::samplers, 0, 0))
+  if (plan_.samplers.empty() && !report(scene_upload_stage::samplers, 0, 0))
     return granit::result::cancelled;
 
   if (const auto result = default_sampler_.initialize(renderer, {.max_lod = 1000.0F});
@@ -684,10 +498,10 @@ granit::result gpu_scene::create(granit::renderer_ref renderer, const gltf::scen
     meshes_.emplace_back();
     if (const auto result = meshes_.back().initialize(renderer, desc); result.failed())
       return result;
-    if (!report(gpu_scene_upload_stage::meshes, primitive_index + 1, plan_.primitives.size()))
+    if (!report(scene_upload_stage::meshes, primitive_index + 1, plan_.primitives.size()))
       return granit::result::cancelled;
   }
-  if (plan_.primitives.empty() && !report(gpu_scene_upload_stage::meshes, 0, 0))
+  if (plan_.primitives.empty() && !report(scene_upload_stage::meshes, 0, 0))
     return granit::result::cancelled;
   if (const auto result = submit_uploads(); result.failed())
     return result;
@@ -705,7 +519,7 @@ granit::result gpu_scene::create(granit::renderer_ref renderer, const gltf::scen
         result.failed())
       return result;
     material_alpha_modes_.push_back(source_material.alpha_mode);
-    if (!report(gpu_scene_upload_stage::materials, material_index + 1, source.materials.size() + 1))
+    if (!report(scene_upload_stage::materials, material_index + 1, source.materials.size() + 1))
       return granit::result::cancelled;
   }
   materials_.emplace_back();
@@ -715,7 +529,7 @@ granit::result gpu_scene::create(granit::renderer_ref renderer, const gltf::scen
       result.failed())
     return result;
   material_alpha_modes_.push_back(gltf::material_alpha_mode::opaque);
-  if (!report(gpu_scene_upload_stage::materials, source.materials.size() + 1,
+  if (!report(scene_upload_stage::materials, source.materials.size() + 1,
               source.materials.size() + 1))
     return granit::result::cancelled;
 

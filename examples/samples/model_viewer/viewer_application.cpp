@@ -205,7 +205,7 @@ struct viewer_application::implementation {
   bool shutdown_complete{};
   std::atomic<bool> cancel_requested{};
   std::uint64_t upload_sequence{};
-  gltf_rendering::gpu_scene_upload_progress upload_progress{};
+  gltf_rendering::scene_upload_progress upload_progress{};
   performance_sample latest_performance{};
   bool has_performance{};
   std::unordered_map<std::uint64_t, float> submitted_frames;
@@ -277,7 +277,7 @@ struct viewer_application::implementation {
             self.desc.observer->on_scene_prepare_progress(progress));
   }
 
-  static bool upload_progress_callback(const gltf_rendering::gpu_scene_upload_progress& progress,
+  static bool upload_progress_callback(const gltf_rendering::scene_upload_progress& progress,
                                        void* user_data) {
     auto& self = *static_cast<implementation*>(user_data);
     self.upload_progress = progress;
@@ -467,7 +467,7 @@ struct viewer_application::implementation {
     if (result.failed())
       return result;
     if (!pipelines.started()) {
-      result = pipelines.begin(rendering.renderer(), session.scene_gpu(),
+      result = pipelines.begin(rendering.renderer(), session.resources(),
                                rendering.swapchain_info().format, quality.sample_count);
       if (result.failed())
         return result;
@@ -497,7 +497,7 @@ struct viewer_application::implementation {
     };
     auto result = rendering.initialize_pipeline(pipeline_desc);
     if (result.ok() && desc.show_ui)
-      result = previews.rebuild(session.cpu_scene(), session.scene_gpu(), ui);
+      result = previews.rebuild(session.cpu_scene(), session.resources(), ui);
     if (result.ok() && desc.show_ui)
       result = render_loading("Loading complete", 1.0F);
     if (result.ok() && desc.show_ui)
@@ -616,7 +616,7 @@ struct viewer_application::implementation {
       const bool reupload = frame.changes.quality->sampler_anisotropy != quality.sampler_anisotropy;
       result = configure_quality(*frame.changes.quality);
       if (result.ok() && reupload && desc.show_ui) {
-        result = previews.rebuild(session.cpu_scene(), session.scene_gpu(), ui);
+        result = previews.rebuild(session.cpu_scene(), session.resources(), ui);
         frame.packet.canvas.clear();
       }
     }
@@ -889,7 +889,7 @@ unsigned viewer_application::lighting_generation() const noexcept {
 unsigned viewer_application::asset_status() const noexcept {
   return state_->phase == viewer_runtime_phase::failed ? 3U : (state_->asset_ready ? 2U : 1U);
 }
-gltf_rendering::gpu_scene_upload_progress viewer_application::upload_progress() const noexcept {
+gltf_rendering::scene_upload_progress viewer_application::upload_progress() const noexcept {
   return state_->upload_progress;
 }
 std::uint64_t viewer_application::shutdown_live_resource_count() const noexcept {

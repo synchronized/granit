@@ -61,7 +61,7 @@ struct sampler_key {
 };
 
 /** GPU 创建前的确定性打包结果，不包含 Renderer 句柄。 */
-struct gpu_scene_plan {
+struct scene_plan {
   std::vector<packed_vertex> vertices;
   std::vector<std::uint32_t> indices;
   std::vector<packed_primitive> primitives;
@@ -72,11 +72,10 @@ struct gpu_scene_plan {
   std::vector<std::uint32_t> source_sampler_to_plan;
 };
 
-enum class gpu_scene_plan_error { none, invalid_scene, numeric_overflow, out_of_memory };
+enum class scene_plan_error { none, invalid_scene, numeric_overflow, out_of_memory };
 
 /** 生成合并 Buffer 与纹理格式计划；失败时 output 保持不变。 */
-[[nodiscard]] gpu_scene_plan_error build_gpu_scene_plan(const gltf::scene& source,
-                                                        gpu_scene_plan& output);
+[[nodiscard]] scene_plan_error build_scene_plan(const gltf::scene& source, scene_plan& output);
 
 } // namespace granit::example::gltf_rendering
 

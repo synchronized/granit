@@ -33,7 +33,7 @@ examples/
 │  ├─ assets/    统一的 Desktop/Web 异步 Manager、Source、Loader、Handle 与 Group
 │  ├─ application/ 跨平台应用 Host、inline 呈现与异步资产服务生命周期
 │  ├─ imgui/     ImGui 输入、字体图集、Draw Data 捕获与 Texture ID 注册
-│  ├─ model_viewer/ 教程与完整查看器共用的 glTF → GPU Scene 映射
+│  ├─ gltf_rendering/ 教程与完整查看器共用的 glTF → Granit 渲染资源映射
 │  ├─ sdl/       SDL3 窗口与 ImGui 生命周期 RAII
 │  └─ validation/ 截图与视觉回归比较
 ├─ samples/      综合应用内容、平台入口及自身目标声明
@@ -51,7 +51,8 @@ examples/
 
 Model Viewer 的内容、Core、工具和验收程序均位于 `samples/model_viewer`。桌面入口与 SDL3
 平台壳层位于其 `desktop` 子目录，浏览器入口和输入适配位于 `web`；
-跨教程复用的 GPU Scene 位于 `common/model_viewer`，跨平台资源读取位于 `common/assets`。
+跨教程复用的 glTF 渲染适配位于 `common/gltf_rendering`，跨平台资源读取位于
+`common/assets`。
 
 ## 新增综合示例
 

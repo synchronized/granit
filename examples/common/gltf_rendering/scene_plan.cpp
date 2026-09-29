@@ -100,7 +100,7 @@ sampler_key normalize_sampler(const gltf::sampler& source) {
   };
 }
 
-gpu_scene_plan_error append_primitive(const gltf::primitive& source, gpu_scene_plan& output) {
+scene_plan_error append_primitive(const gltf::primitive& source, scene_plan& output) {
   const auto vertex_count = source.positions.size();
   if (vertex_count != source.normals.size() ||
       (!source.tangents.empty() && source.tangents.size() != vertex_count) ||
@@ -108,19 +108,19 @@ gpu_scene_plan_error append_primitive(const gltf::primitive& source, gpu_scene_p
       (!source.texture_coordinates_1.empty() &&
        source.texture_coordinates_1.size() != vertex_count) ||
       (!source.colors.empty() && source.colors.size() != vertex_count))
-    return gpu_scene_plan_error::invalid_scene;
+    return scene_plan_error::invalid_scene;
   if (vertex_count > std::numeric_limits<std::uint32_t>::max() ||
       source.indices.size() > std::numeric_limits<std::uint32_t>::max())
-    return gpu_scene_plan_error::numeric_overflow;
+    return scene_plan_error::numeric_overflow;
   if (vertex_count > output.vertices.max_size() - output.vertices.size() ||
       source.indices.size() > output.indices.max_size() - output.indices.size() ||
       output.primitives.size() == output.primitives.max_size())
-    return gpu_scene_plan_error::numeric_overflow;
+    return scene_plan_error::numeric_overflow;
   if constexpr (sizeof(std::size_t) > sizeof(std::uint64_t)) {
     if (output.vertices.size() >
             std::numeric_limits<std::uint64_t>::max() / sizeof(packed_vertex) ||
         output.indices.size() > std::numeric_limits<std::uint64_t>::max() / sizeof(std::uint32_t))
-      return gpu_scene_plan_error::numeric_overflow;
+      return scene_plan_error::numeric_overflow;
   }
 
   packed_primitive primitive{.vertex_offset = output.vertices.size() * sizeof(packed_vertex),
@@ -144,43 +144,43 @@ gpu_scene_plan_error append_primitive(const gltf::primitive& source, gpu_scene_p
   }
   output.indices.insert(output.indices.end(), source.indices.begin(), source.indices.end());
   output.primitives.push_back(primitive);
-  return gpu_scene_plan_error::none;
+  return scene_plan_error::none;
 }
 
 } // namespace
 
-gpu_scene_plan_error build_gpu_scene_plan(const gltf::scene& source, gpu_scene_plan& output) {
+scene_plan_error build_scene_plan(const gltf::scene& source, scene_plan& output) {
   try {
-    gpu_scene_plan candidate;
+    scene_plan candidate;
     std::vector<std::uint32_t> mesh_primitive_starts;
     mesh_primitive_starts.reserve(source.meshes.size() + 1);
     for (const auto& mesh : source.meshes) {
       if (candidate.primitives.size() > std::numeric_limits<std::uint32_t>::max())
-        return gpu_scene_plan_error::numeric_overflow;
+        return scene_plan_error::numeric_overflow;
       mesh_primitive_starts.push_back(static_cast<std::uint32_t>(candidate.primitives.size()));
       for (const auto& primitive : mesh.primitives) {
         if (primitive.material != gltf::invalid_index &&
             primitive.material >= source.materials.size())
-          return gpu_scene_plan_error::invalid_scene;
+          return scene_plan_error::invalid_scene;
         if (const auto result = append_primitive(primitive, candidate);
-            result != gpu_scene_plan_error::none)
+            result != scene_plan_error::none)
           return result;
       }
     }
     if (candidate.primitives.size() > std::numeric_limits<std::uint32_t>::max())
-      return gpu_scene_plan_error::numeric_overflow;
+      return scene_plan_error::numeric_overflow;
     mesh_primitive_starts.push_back(static_cast<std::uint32_t>(candidate.primitives.size()));
     for (std::uint32_t node_index = 0; node_index < source.nodes.size(); ++node_index) {
       const auto& node = source.nodes[node_index];
       if (node.mesh == gltf::invalid_index)
         continue;
       if (node.mesh >= source.meshes.size())
-        return gpu_scene_plan_error::invalid_scene;
+        return scene_plan_error::invalid_scene;
       const auto first = mesh_primitive_starts[node.mesh];
       const auto end = mesh_primitive_starts[node.mesh + 1];
       for (auto primitive_index = first; primitive_index < end; ++primitive_index) {
         if (candidate.draws.size() >= std::numeric_limits<std::uint32_t>::max())
-          return gpu_scene_plan_error::numeric_overflow;
+          return scene_plan_error::numeric_overflow;
         packed_draw draw{.payload = static_cast<std::uint64_t>(candidate.draws.size()) + 1,
                          .primitive = primitive_index,
                          .material = candidate.primitives[primitive_index].material,
@@ -213,7 +213,7 @@ gpu_scene_plan_error build_gpu_scene_plan(const gltf::scene& source, gpu_scene_p
       const auto found = std::ranges::find(candidate.samplers, key);
       if (found == candidate.samplers.end()) {
         if (candidate.samplers.size() >= std::numeric_limits<std::uint32_t>::max())
-          return gpu_scene_plan_error::numeric_overflow;
+          return scene_plan_error::numeric_overflow;
         candidate.samplers.push_back(key);
         candidate.source_sampler_to_plan.push_back(
             static_cast<std::uint32_t>(candidate.samplers.size() - 1));
@@ -224,14 +224,14 @@ gpu_scene_plan_error build_gpu_scene_plan(const gltf::scene& source, gpu_scene_p
     }
     for (const auto variant : candidate.textures) {
       if (variant.image >= source.images.size())
-        return gpu_scene_plan_error::invalid_scene;
+        return scene_plan_error::invalid_scene;
     }
     output = std::move(candidate);
-    return gpu_scene_plan_error::none;
+    return scene_plan_error::none;
   } catch (const std::bad_alloc&) {
-    return gpu_scene_plan_error::out_of_memory;
+    return scene_plan_error::out_of_memory;
   } catch (const std::length_error&) {
-    return gpu_scene_plan_error::numeric_overflow;
+    return scene_plan_error::numeric_overflow;
   }
 }
 
