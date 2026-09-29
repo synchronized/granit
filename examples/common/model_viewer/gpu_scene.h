@@ -30,6 +30,8 @@ struct packed_vertex {
   math::float3 normal{};
   math::float4 tangent{1, 0, 0, 1};
   math::float2 texture_coordinate{};
+  math::float2 texture_coordinate_1{};
+  math::float4 color{1, 1, 1, 1};
 };
 
 struct packed_primitive {
@@ -129,8 +131,7 @@ public:
   gpu_scene& operator=(gpu_scene&& other) noexcept;
 
   /** 成功后替换现有资源；失败时当前对象保持不变。 */
-  [[nodiscard]] granit::result initialize(granit::renderer_ref renderer,
-                                          const gltf::scene& source,
+  [[nodiscard]] granit::result initialize(granit::renderer_ref renderer, const gltf::scene& source,
                                           float sampler_anisotropy = 8.0F,
                                           gpu_scene_upload_callback progress = nullptr,
                                           void* progress_user_data = nullptr);
@@ -141,8 +142,7 @@ public:
     return initialize(renderer.ref(), source, sampler_anisotropy, progress, progress_user_data);
   }
   /** 使用工作线程预先生成的计划创建资源；plan 在失败时仍会被消费。 */
-  [[nodiscard]] granit::result initialize(granit::renderer_ref renderer,
-                                          const gltf::scene& source,
+  [[nodiscard]] granit::result initialize(granit::renderer_ref renderer, const gltf::scene& source,
                                           gpu_scene_plan plan, float sampler_anisotropy = 8.0F,
                                           gpu_scene_upload_callback progress = nullptr,
                                           void* progress_user_data = nullptr);
@@ -213,6 +213,7 @@ private:
   granit::sampler default_sampler_;
   granit::shader_library shader_library_;
   std::vector<granit::material_instance> materials_;
+  std::vector<gltf::material_alpha_mode> material_alpha_modes_;
   std::vector<granit::render_pipeline_draw_binding> draw_bindings_;
 };
 

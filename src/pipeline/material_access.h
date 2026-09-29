@@ -10,12 +10,16 @@
 #include <granit/renderer/sampler.h>
 #include <granit/renderer/texture.h>
 
+#include "asset_formats/material/material_package.h"
+
 namespace granit::pipeline::detail {
 
 struct material_draw_request {
   uint64_t pass = 0;
   /** 零值选择该 Pass 的首个默认变体；非零值要求精确匹配。 */
   uint64_t variant = 0;
+  /** 在基础 Variant 上加入的一项逐 Draw feature；id 为零表示不加入。 */
+  material::material_feature_value draw_feature{};
   granit_texture_format color_format = GRANIT_TEXTURE_FORMAT_UNDEFINED;
   granit_texture_format depth_stencil_format = GRANIT_TEXTURE_FORMAT_UNDEFINED;
   granit_sample_count sample_count = GRANIT_SAMPLE_COUNT_1;
@@ -39,6 +43,12 @@ struct material_draw_state {
                                                         granit_material material,
                                                         const material_draw_request& request,
                                                         material_draw_state& state) noexcept;
+
+/** 查询一次 Material Variant 是否包含指定 feature 值。 */
+[[nodiscard]] granit_result
+material_variant_has_feature(granit_renderer renderer, granit_material material, std::uint64_t pass,
+                             std::uint64_t variant, material::material_feature_id feature,
+                             std::uint32_t value, bool& present) noexcept;
 
 /** 基于 Material 当前常量和默认资源创建仅覆盖 Canvas 纹理资源的独立绑定组。 */
 [[nodiscard]] granit_result create_canvas_material_group(granit_renderer renderer,

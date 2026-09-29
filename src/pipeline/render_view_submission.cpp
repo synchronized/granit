@@ -72,4 +72,64 @@ granit_result build_render_view_submission(
   }
 }
 
+granit_result partition_forward_draws(const render_view_submission& input,
+                                      std::span<const std::uint8_t> transparent,
+                                      forward_draw_submission& opaque_output,
+                                      forward_draw_submission& transparent_output) noexcept {
+  const auto count = input.draw_bindings.size();
+  if (transparent.size() != count || input.renderables.size() != count ||
+      input.pbr_objects.size() != count) {
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  try {
+    forward_draw_submission opaque;
+    forward_draw_submission blended;
+    std::vector<std::size_t> transparent_indices;
+    opaque.draw_bindings.reserve(count);
+    opaque.source_indices.reserve(count);
+    transparent_indices.reserve(count);
+    for (std::size_t index = 0; index < count; ++index) {
+      if (transparent[index]) {
+        transparent_indices.push_back(index);
+      } else {
+        opaque.draw_bindings.push_back(input.draw_bindings[index]);
+        opaque.source_indices.push_back(index);
+      }
+    }
+    const auto camera = input.view.camera_position;
+    const auto distance_squared = [&](std::size_t index) {
+      const auto center = input.renderables[index].bounds_center;
+      const auto x = static_cast<double>(center.x) - camera.x;
+      const auto y = static_cast<double>(center.y) - camera.y;
+      const auto z = static_cast<double>(center.z) - camera.z;
+      return x * x + y * y + z * z;
+    };
+    std::stable_sort(transparent_indices.begin(), transparent_indices.end(),
+                     [&](std::size_t left, std::size_t right) {
+                       const auto left_distance = distance_squared(left);
+                       const auto right_distance = distance_squared(right);
+                       if (left_distance != right_distance)
+                         return left_distance > right_distance;
+                       const auto& left_renderable = input.renderables[left];
+                       const auto& right_renderable = input.renderables[right];
+                       if (left_renderable.sort_key != right_renderable.sort_key)
+                         return left_renderable.sort_key < right_renderable.sort_key;
+                       if (left_renderable.object_id != right_renderable.object_id)
+                         return left_renderable.object_id < right_renderable.object_id;
+                       return left < right;
+                     });
+    blended.draw_bindings.reserve(transparent_indices.size());
+    blended.source_indices.reserve(transparent_indices.size());
+    for (const auto index : transparent_indices) {
+      blended.draw_bindings.push_back(input.draw_bindings[index]);
+      blended.source_indices.push_back(index);
+    }
+    opaque_output = std::move(opaque);
+    transparent_output = std::move(blended);
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
+}
+
 } // namespace granit::pipeline::detail

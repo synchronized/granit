@@ -131,13 +131,15 @@ TEST_CASE("材质包保存并验证顶点布局和固定 Pipeline 状态") {
   CHECK(material_package::build(std::move(desc), package) == package_error::invalid_pipeline_state);
 }
 
-TEST_CASE("同一 Pass 的所有变体必须共享 Pipeline 状态") {
+TEST_CASE("同一 Pass 的变体可以选择不同 Pipeline 状态") {
   material_package_desc desc;
   desc.variants.push_back(variant({{make_feature_id("mode"), 0}}));
   desc.variants.push_back(variant({{make_feature_id("mode"), 1}}));
   desc.variants.back().pipeline.primitive.cull_mode = GRANIT_CULL_MODE_BACK;
   material_package package;
-  CHECK(material_package::build(std::move(desc), package) == package_error::invalid_pipeline_state);
+  REQUIRE(material_package::build(std::move(desc), package) == package_error::none);
+  REQUIRE(package.variants().size() == 2);
+  CHECK(package.variants()[0].pipeline != package.variants()[1].pipeline);
 }
 
 TEST_CASE("静态功能按 Pass 和 Feature 选择变体") {

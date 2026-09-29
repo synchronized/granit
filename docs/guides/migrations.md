@@ -12,6 +12,8 @@
 > 本页及下方迁移文档描述对应历史版本的升级方式，不定义当前 API。当前接口和兼容承诺以
 > [版本与兼容策略](../reference/compatibility.md)及对应 Reference 为准。
 
+- [从 0.40 迁移到 0.41](migrate-0.40-to-0.41.md)：更新标准 PBR Material 与 Shader Library，
+  并按真实材质语义选择新版 Variant。
 - [从 0.33 迁移到 0.34](migrate-0.33-to-0.34.md)：AssetTools Builder 结果统一改为单次
   `result_get_info` 查询。
 - [从 0.28 迁移到 0.29](migrate-0.28-to-0.29.md)

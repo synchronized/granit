@@ -2,39 +2,153 @@
   "format_version": 6,
   "target_environment": "cross_backend",
   "binding_model": "bind_group",
-  "binding_groups": ["frame", "material", "object", "lighting"],
+  "binding_groups": [
+    "frame",
+    "material",
+    "object",
+    "lighting"
+  ],
   "material": {
-    "constant_buffer_size": 48,
+    "constant_buffer_size": 64,
     "parameters": [
-      {"name": "base_color", "type": "float4", "offset": 0},
-      {"name": "metallic", "type": "float32", "offset": 16},
-      {"name": "perceptual_roughness", "type": "float32", "offset": 20},
-      {"name": "normal_scale", "type": "float32", "offset": 24},
-      {"name": "occlusion_strength", "type": "float32", "offset": 28},
-      {"name": "emissive", "type": "float3", "offset": 32},
-      {"name": "debug_display", "type": "uint32", "offset": 44},
-      {"name": "base_color_texture", "type": "texture_view", "binding": 1},
-      {"name": "metallic_roughness_texture", "type": "texture_view", "binding": 2},
-      {"name": "normal_texture", "type": "texture_view", "binding": 3},
-      {"name": "occlusion_texture", "type": "texture_view", "binding": 4},
-      {"name": "emissive_texture", "type": "texture_view", "binding": 5},
-      {"name": "pbr_sampler", "type": "sampler", "binding": 6}
+      {
+        "name": "base_color",
+        "type": "float4",
+        "offset": 0
+      },
+      {
+        "name": "metallic",
+        "type": "float32",
+        "offset": 16
+      },
+      {
+        "name": "perceptual_roughness",
+        "type": "float32",
+        "offset": 20
+      },
+      {
+        "name": "normal_scale",
+        "type": "float32",
+        "offset": 24
+      },
+      {
+        "name": "occlusion_strength",
+        "type": "float32",
+        "offset": 28
+      },
+      {
+        "name": "emissive",
+        "type": "float3",
+        "offset": 32
+      },
+      {
+        "name": "debug_display",
+        "type": "uint32",
+        "offset": 44
+      },
+      {
+        "name": "alpha_cutoff",
+        "type": "float32",
+        "offset": 48,
+        "default_bytes": [
+          0,
+          0,
+          0,
+          63
+        ]
+      },
+      {
+        "name": "uv1_mask",
+        "type": "uint32",
+        "offset": 52
+      },
+      {
+        "name": "base_color_texture",
+        "type": "texture_view",
+        "binding": 1
+      },
+      {
+        "name": "metallic_roughness_texture",
+        "type": "texture_view",
+        "binding": 2
+      },
+      {
+        "name": "normal_texture",
+        "type": "texture_view",
+        "binding": 3
+      },
+      {
+        "name": "occlusion_texture",
+        "type": "texture_view",
+        "binding": 4
+      },
+      {
+        "name": "emissive_texture",
+        "type": "texture_view",
+        "binding": 5
+      },
+      {
+        "name": "base_color_sampler",
+        "type": "sampler",
+        "binding": 6
+      },
+      {
+        "name": "metallic_roughness_sampler",
+        "type": "sampler",
+        "binding": 7
+      },
+      {
+        "name": "normal_sampler",
+        "type": "sampler",
+        "binding": 8
+      },
+      {
+        "name": "occlusion_sampler",
+        "type": "sampler",
+        "binding": 9
+      },
+      {
+        "name": "emissive_sampler",
+        "type": "sampler",
+        "binding": 10
+      }
     ]
   },
   "variants": [
     {
       "pass": "opaque",
-      "features": [{"name": "pbr_texture_mask", "value": 31}],
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        }
+      ],
       "pipeline": {
         "vertex_buffers": [
           {
             "stride": 48,
             "step_mode": "vertex",
             "attributes": [
-              {"location": 0, "format": "float32x3", "offset": 0},
-              {"location": 1, "format": "float32x3", "offset": 12},
-              {"location": 2, "format": "float32x4", "offset": 24},
-              {"location": 3, "format": "float32x2", "offset": 40}
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              }
             ]
           }
         ],
@@ -44,12 +158,3897 @@
           "cull_mode": "back",
           "polygon_mode": "fill"
         },
-        "depth": {"test_enabled": true, "write_enabled": true, "compare": "less_equal"},
-        "color_blend": {"enabled": false}
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
       },
       "shaders": [
-        {"library": "pbr_standard", "shader": "standard.vertex"},
-        {"library": "pbr_standard", "shader": "standard.fragment", "variant": "textured"}
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv0"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_uv0"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_vertex_color",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 64,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 5,
+                "format": "float32x4",
+                "offset": 48
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "clockwise",
+          "cull_mode": "back",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv0_color"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_uv0_color"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_uses_uv1",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 56,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 4,
+                "format": "float32x2",
+                "offset": 48
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "clockwise",
+          "cull_mode": "back",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv1"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_uv1"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_uses_uv1",
+          "value": 1
+        },
+        {
+          "name": "pbr_vertex_color",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 72,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 4,
+                "format": "float32x2",
+                "offset": 48
+              },
+              {
+                "location": 5,
+                "format": "float32x4",
+                "offset": 56
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "clockwise",
+          "cull_mode": "back",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv1_color"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_uv1_color"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_transform_reflected",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 48,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "counter_clockwise",
+          "cull_mode": "back",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv0"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_uv0"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_transform_reflected",
+          "value": 1
+        },
+        {
+          "name": "pbr_vertex_color",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 64,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 5,
+                "format": "float32x4",
+                "offset": 48
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "counter_clockwise",
+          "cull_mode": "back",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv0_color"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_uv0_color"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_transform_reflected",
+          "value": 1
+        },
+        {
+          "name": "pbr_uses_uv1",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 56,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 4,
+                "format": "float32x2",
+                "offset": 48
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "counter_clockwise",
+          "cull_mode": "back",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv1"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_uv1"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_transform_reflected",
+          "value": 1
+        },
+        {
+          "name": "pbr_uses_uv1",
+          "value": 1
+        },
+        {
+          "name": "pbr_vertex_color",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 72,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 4,
+                "format": "float32x2",
+                "offset": 48
+              },
+              {
+                "location": 5,
+                "format": "float32x4",
+                "offset": 56
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "counter_clockwise",
+          "cull_mode": "back",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv1_color"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_uv1_color"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_double_sided",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 48,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "clockwise",
+          "cull_mode": "none",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv0"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_uv0"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_double_sided",
+          "value": 1
+        },
+        {
+          "name": "pbr_vertex_color",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 64,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 5,
+                "format": "float32x4",
+                "offset": 48
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "clockwise",
+          "cull_mode": "none",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv0_color"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_uv0_color"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_double_sided",
+          "value": 1
+        },
+        {
+          "name": "pbr_uses_uv1",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 56,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 4,
+                "format": "float32x2",
+                "offset": 48
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "clockwise",
+          "cull_mode": "none",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv1"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_uv1"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_double_sided",
+          "value": 1
+        },
+        {
+          "name": "pbr_uses_uv1",
+          "value": 1
+        },
+        {
+          "name": "pbr_vertex_color",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 72,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 4,
+                "format": "float32x2",
+                "offset": 48
+              },
+              {
+                "location": 5,
+                "format": "float32x4",
+                "offset": 56
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "clockwise",
+          "cull_mode": "none",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv1_color"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_uv1_color"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_double_sided",
+          "value": 1
+        },
+        {
+          "name": "pbr_transform_reflected",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 48,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "counter_clockwise",
+          "cull_mode": "none",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv0"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_uv0"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_double_sided",
+          "value": 1
+        },
+        {
+          "name": "pbr_transform_reflected",
+          "value": 1
+        },
+        {
+          "name": "pbr_vertex_color",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 64,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 5,
+                "format": "float32x4",
+                "offset": 48
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "counter_clockwise",
+          "cull_mode": "none",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv0_color"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_uv0_color"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_double_sided",
+          "value": 1
+        },
+        {
+          "name": "pbr_transform_reflected",
+          "value": 1
+        },
+        {
+          "name": "pbr_uses_uv1",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 56,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 4,
+                "format": "float32x2",
+                "offset": 48
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "counter_clockwise",
+          "cull_mode": "none",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv1"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_uv1"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_double_sided",
+          "value": 1
+        },
+        {
+          "name": "pbr_transform_reflected",
+          "value": 1
+        },
+        {
+          "name": "pbr_uses_uv1",
+          "value": 1
+        },
+        {
+          "name": "pbr_vertex_color",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 72,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 4,
+                "format": "float32x2",
+                "offset": 48
+              },
+              {
+                "location": 5,
+                "format": "float32x4",
+                "offset": 56
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "counter_clockwise",
+          "cull_mode": "none",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv1_color"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_uv1_color"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 48,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "clockwise",
+          "cull_mode": "back",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv0"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_mask_uv0"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 1
+        },
+        {
+          "name": "pbr_vertex_color",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 64,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 5,
+                "format": "float32x4",
+                "offset": 48
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "clockwise",
+          "cull_mode": "back",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv0_color"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_mask_uv0_color"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 1
+        },
+        {
+          "name": "pbr_uses_uv1",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 56,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 4,
+                "format": "float32x2",
+                "offset": 48
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "clockwise",
+          "cull_mode": "back",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv1"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_mask_uv1"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 1
+        },
+        {
+          "name": "pbr_uses_uv1",
+          "value": 1
+        },
+        {
+          "name": "pbr_vertex_color",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 72,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 4,
+                "format": "float32x2",
+                "offset": 48
+              },
+              {
+                "location": 5,
+                "format": "float32x4",
+                "offset": 56
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "clockwise",
+          "cull_mode": "back",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv1_color"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_mask_uv1_color"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 1
+        },
+        {
+          "name": "pbr_transform_reflected",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 48,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "counter_clockwise",
+          "cull_mode": "back",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv0"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_mask_uv0"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 1
+        },
+        {
+          "name": "pbr_transform_reflected",
+          "value": 1
+        },
+        {
+          "name": "pbr_vertex_color",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 64,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 5,
+                "format": "float32x4",
+                "offset": 48
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "counter_clockwise",
+          "cull_mode": "back",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv0_color"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_mask_uv0_color"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 1
+        },
+        {
+          "name": "pbr_transform_reflected",
+          "value": 1
+        },
+        {
+          "name": "pbr_uses_uv1",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 56,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 4,
+                "format": "float32x2",
+                "offset": 48
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "counter_clockwise",
+          "cull_mode": "back",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv1"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_mask_uv1"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 1
+        },
+        {
+          "name": "pbr_transform_reflected",
+          "value": 1
+        },
+        {
+          "name": "pbr_uses_uv1",
+          "value": 1
+        },
+        {
+          "name": "pbr_vertex_color",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 72,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 4,
+                "format": "float32x2",
+                "offset": 48
+              },
+              {
+                "location": 5,
+                "format": "float32x4",
+                "offset": 56
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "counter_clockwise",
+          "cull_mode": "back",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv1_color"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_mask_uv1_color"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 1
+        },
+        {
+          "name": "pbr_double_sided",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 48,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "clockwise",
+          "cull_mode": "none",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv0"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_mask_uv0"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 1
+        },
+        {
+          "name": "pbr_double_sided",
+          "value": 1
+        },
+        {
+          "name": "pbr_vertex_color",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 64,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 5,
+                "format": "float32x4",
+                "offset": 48
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "clockwise",
+          "cull_mode": "none",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv0_color"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_mask_uv0_color"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 1
+        },
+        {
+          "name": "pbr_double_sided",
+          "value": 1
+        },
+        {
+          "name": "pbr_uses_uv1",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 56,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 4,
+                "format": "float32x2",
+                "offset": 48
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "clockwise",
+          "cull_mode": "none",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv1"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_mask_uv1"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 1
+        },
+        {
+          "name": "pbr_double_sided",
+          "value": 1
+        },
+        {
+          "name": "pbr_uses_uv1",
+          "value": 1
+        },
+        {
+          "name": "pbr_vertex_color",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 72,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 4,
+                "format": "float32x2",
+                "offset": 48
+              },
+              {
+                "location": 5,
+                "format": "float32x4",
+                "offset": 56
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "clockwise",
+          "cull_mode": "none",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv1_color"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_mask_uv1_color"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 1
+        },
+        {
+          "name": "pbr_double_sided",
+          "value": 1
+        },
+        {
+          "name": "pbr_transform_reflected",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 48,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "counter_clockwise",
+          "cull_mode": "none",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv0"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_mask_uv0"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 1
+        },
+        {
+          "name": "pbr_double_sided",
+          "value": 1
+        },
+        {
+          "name": "pbr_transform_reflected",
+          "value": 1
+        },
+        {
+          "name": "pbr_vertex_color",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 64,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 5,
+                "format": "float32x4",
+                "offset": 48
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "counter_clockwise",
+          "cull_mode": "none",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv0_color"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_mask_uv0_color"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 1
+        },
+        {
+          "name": "pbr_double_sided",
+          "value": 1
+        },
+        {
+          "name": "pbr_transform_reflected",
+          "value": 1
+        },
+        {
+          "name": "pbr_uses_uv1",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 56,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 4,
+                "format": "float32x2",
+                "offset": 48
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "counter_clockwise",
+          "cull_mode": "none",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv1"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_mask_uv1"
+        }
+      ]
+    },
+    {
+      "pass": "opaque",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 1
+        },
+        {
+          "name": "pbr_double_sided",
+          "value": 1
+        },
+        {
+          "name": "pbr_transform_reflected",
+          "value": 1
+        },
+        {
+          "name": "pbr_uses_uv1",
+          "value": 1
+        },
+        {
+          "name": "pbr_vertex_color",
+          "value": 1
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 72,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 4,
+                "format": "float32x2",
+                "offset": 48
+              },
+              {
+                "location": 5,
+                "format": "float32x4",
+                "offset": 56
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "counter_clockwise",
+          "cull_mode": "none",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": true,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": false
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv1_color"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_mask_uv1_color"
+        }
+      ]
+    },
+    {
+      "pass": "transparent",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 2
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 48,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "clockwise",
+          "cull_mode": "back",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": false,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": true,
+          "source_color_factor": "one",
+          "destination_color_factor": "one_minus_source_alpha",
+          "source_alpha_factor": "one",
+          "destination_alpha_factor": "one_minus_source_alpha"
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv0"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_blend_uv0"
+        }
+      ]
+    },
+    {
+      "pass": "transparent",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_vertex_color",
+          "value": 1
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 2
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 64,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 5,
+                "format": "float32x4",
+                "offset": 48
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "clockwise",
+          "cull_mode": "back",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": false,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": true,
+          "source_color_factor": "one",
+          "destination_color_factor": "one_minus_source_alpha",
+          "source_alpha_factor": "one",
+          "destination_alpha_factor": "one_minus_source_alpha"
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv0_color"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_blend_uv0_color"
+        }
+      ]
+    },
+    {
+      "pass": "transparent",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_uses_uv1",
+          "value": 1
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 2
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 56,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 4,
+                "format": "float32x2",
+                "offset": 48
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "clockwise",
+          "cull_mode": "back",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": false,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": true,
+          "source_color_factor": "one",
+          "destination_color_factor": "one_minus_source_alpha",
+          "source_alpha_factor": "one",
+          "destination_alpha_factor": "one_minus_source_alpha"
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv1"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_blend_uv1"
+        }
+      ]
+    },
+    {
+      "pass": "transparent",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_uses_uv1",
+          "value": 1
+        },
+        {
+          "name": "pbr_vertex_color",
+          "value": 1
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 2
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 72,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 4,
+                "format": "float32x2",
+                "offset": 48
+              },
+              {
+                "location": 5,
+                "format": "float32x4",
+                "offset": 56
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "clockwise",
+          "cull_mode": "back",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": false,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": true,
+          "source_color_factor": "one",
+          "destination_color_factor": "one_minus_source_alpha",
+          "source_alpha_factor": "one",
+          "destination_alpha_factor": "one_minus_source_alpha"
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv1_color"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_blend_uv1_color"
+        }
+      ]
+    },
+    {
+      "pass": "transparent",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_transform_reflected",
+          "value": 1
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 2
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 48,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "counter_clockwise",
+          "cull_mode": "back",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": false,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": true,
+          "source_color_factor": "one",
+          "destination_color_factor": "one_minus_source_alpha",
+          "source_alpha_factor": "one",
+          "destination_alpha_factor": "one_minus_source_alpha"
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv0"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_blend_uv0"
+        }
+      ]
+    },
+    {
+      "pass": "transparent",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_transform_reflected",
+          "value": 1
+        },
+        {
+          "name": "pbr_vertex_color",
+          "value": 1
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 2
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 64,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 5,
+                "format": "float32x4",
+                "offset": 48
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "counter_clockwise",
+          "cull_mode": "back",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": false,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": true,
+          "source_color_factor": "one",
+          "destination_color_factor": "one_minus_source_alpha",
+          "source_alpha_factor": "one",
+          "destination_alpha_factor": "one_minus_source_alpha"
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv0_color"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_blend_uv0_color"
+        }
+      ]
+    },
+    {
+      "pass": "transparent",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_transform_reflected",
+          "value": 1
+        },
+        {
+          "name": "pbr_uses_uv1",
+          "value": 1
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 2
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 56,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 4,
+                "format": "float32x2",
+                "offset": 48
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "counter_clockwise",
+          "cull_mode": "back",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": false,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": true,
+          "source_color_factor": "one",
+          "destination_color_factor": "one_minus_source_alpha",
+          "source_alpha_factor": "one",
+          "destination_alpha_factor": "one_minus_source_alpha"
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv1"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_blend_uv1"
+        }
+      ]
+    },
+    {
+      "pass": "transparent",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_transform_reflected",
+          "value": 1
+        },
+        {
+          "name": "pbr_uses_uv1",
+          "value": 1
+        },
+        {
+          "name": "pbr_vertex_color",
+          "value": 1
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 2
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 72,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 4,
+                "format": "float32x2",
+                "offset": 48
+              },
+              {
+                "location": 5,
+                "format": "float32x4",
+                "offset": 56
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "counter_clockwise",
+          "cull_mode": "back",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": false,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": true,
+          "source_color_factor": "one",
+          "destination_color_factor": "one_minus_source_alpha",
+          "source_alpha_factor": "one",
+          "destination_alpha_factor": "one_minus_source_alpha"
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv1_color"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_blend_uv1_color"
+        }
+      ]
+    },
+    {
+      "pass": "transparent",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_double_sided",
+          "value": 1
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 2
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 48,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "clockwise",
+          "cull_mode": "none",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": false,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": true,
+          "source_color_factor": "one",
+          "destination_color_factor": "one_minus_source_alpha",
+          "source_alpha_factor": "one",
+          "destination_alpha_factor": "one_minus_source_alpha"
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv0"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_blend_uv0"
+        }
+      ]
+    },
+    {
+      "pass": "transparent",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_double_sided",
+          "value": 1
+        },
+        {
+          "name": "pbr_vertex_color",
+          "value": 1
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 2
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 64,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 5,
+                "format": "float32x4",
+                "offset": 48
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "clockwise",
+          "cull_mode": "none",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": false,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": true,
+          "source_color_factor": "one",
+          "destination_color_factor": "one_minus_source_alpha",
+          "source_alpha_factor": "one",
+          "destination_alpha_factor": "one_minus_source_alpha"
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv0_color"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_blend_uv0_color"
+        }
+      ]
+    },
+    {
+      "pass": "transparent",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_double_sided",
+          "value": 1
+        },
+        {
+          "name": "pbr_uses_uv1",
+          "value": 1
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 2
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 56,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 4,
+                "format": "float32x2",
+                "offset": 48
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "clockwise",
+          "cull_mode": "none",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": false,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": true,
+          "source_color_factor": "one",
+          "destination_color_factor": "one_minus_source_alpha",
+          "source_alpha_factor": "one",
+          "destination_alpha_factor": "one_minus_source_alpha"
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv1"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_blend_uv1"
+        }
+      ]
+    },
+    {
+      "pass": "transparent",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_double_sided",
+          "value": 1
+        },
+        {
+          "name": "pbr_uses_uv1",
+          "value": 1
+        },
+        {
+          "name": "pbr_vertex_color",
+          "value": 1
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 2
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 72,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 4,
+                "format": "float32x2",
+                "offset": 48
+              },
+              {
+                "location": 5,
+                "format": "float32x4",
+                "offset": 56
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "clockwise",
+          "cull_mode": "none",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": false,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": true,
+          "source_color_factor": "one",
+          "destination_color_factor": "one_minus_source_alpha",
+          "source_alpha_factor": "one",
+          "destination_alpha_factor": "one_minus_source_alpha"
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv1_color"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_blend_uv1_color"
+        }
+      ]
+    },
+    {
+      "pass": "transparent",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_double_sided",
+          "value": 1
+        },
+        {
+          "name": "pbr_transform_reflected",
+          "value": 1
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 2
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 48,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "counter_clockwise",
+          "cull_mode": "none",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": false,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": true,
+          "source_color_factor": "one",
+          "destination_color_factor": "one_minus_source_alpha",
+          "source_alpha_factor": "one",
+          "destination_alpha_factor": "one_minus_source_alpha"
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv0"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_blend_uv0"
+        }
+      ]
+    },
+    {
+      "pass": "transparent",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_double_sided",
+          "value": 1
+        },
+        {
+          "name": "pbr_transform_reflected",
+          "value": 1
+        },
+        {
+          "name": "pbr_vertex_color",
+          "value": 1
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 2
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 64,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 5,
+                "format": "float32x4",
+                "offset": 48
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "counter_clockwise",
+          "cull_mode": "none",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": false,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": true,
+          "source_color_factor": "one",
+          "destination_color_factor": "one_minus_source_alpha",
+          "source_alpha_factor": "one",
+          "destination_alpha_factor": "one_minus_source_alpha"
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv0_color"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_blend_uv0_color"
+        }
+      ]
+    },
+    {
+      "pass": "transparent",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_double_sided",
+          "value": 1
+        },
+        {
+          "name": "pbr_transform_reflected",
+          "value": 1
+        },
+        {
+          "name": "pbr_uses_uv1",
+          "value": 1
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 2
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 56,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 4,
+                "format": "float32x2",
+                "offset": 48
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "counter_clockwise",
+          "cull_mode": "none",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": false,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": true,
+          "source_color_factor": "one",
+          "destination_color_factor": "one_minus_source_alpha",
+          "source_alpha_factor": "one",
+          "destination_alpha_factor": "one_minus_source_alpha"
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv1"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_blend_uv1"
+        }
+      ]
+    },
+    {
+      "pass": "transparent",
+      "features": [
+        {
+          "name": "pbr_texture_mask",
+          "value": 31
+        },
+        {
+          "name": "pbr_double_sided",
+          "value": 1
+        },
+        {
+          "name": "pbr_transform_reflected",
+          "value": 1
+        },
+        {
+          "name": "pbr_uses_uv1",
+          "value": 1
+        },
+        {
+          "name": "pbr_vertex_color",
+          "value": 1
+        },
+        {
+          "name": "pbr_alpha_mode",
+          "value": 2
+        }
+      ],
+      "pipeline": {
+        "vertex_buffers": [
+          {
+            "stride": 72,
+            "step_mode": "vertex",
+            "attributes": [
+              {
+                "location": 0,
+                "format": "float32x3",
+                "offset": 0
+              },
+              {
+                "location": 1,
+                "format": "float32x3",
+                "offset": 12
+              },
+              {
+                "location": 2,
+                "format": "float32x4",
+                "offset": 24
+              },
+              {
+                "location": 3,
+                "format": "float32x2",
+                "offset": 40
+              },
+              {
+                "location": 4,
+                "format": "float32x2",
+                "offset": 48
+              },
+              {
+                "location": 5,
+                "format": "float32x4",
+                "offset": 56
+              }
+            ]
+          }
+        ],
+        "primitive": {
+          "topology": "triangle_list",
+          "front_face": "counter_clockwise",
+          "cull_mode": "none",
+          "polygon_mode": "fill"
+        },
+        "depth": {
+          "test_enabled": true,
+          "write_enabled": false,
+          "compare": "less_equal"
+        },
+        "color_blend": {
+          "enabled": true,
+          "source_color_factor": "one",
+          "destination_color_factor": "one_minus_source_alpha",
+          "source_alpha_factor": "one",
+          "destination_alpha_factor": "one_minus_source_alpha"
+        }
+      },
+      "shaders": [
+        {
+          "library": "pbr_standard",
+          "shader": "standard.vertex",
+          "variant": "uv1_color"
+        },
+        {
+          "library": "pbr_standard",
+          "shader": "standard.fragment",
+          "variant": "textured_alpha_blend_uv1_color"
+        }
       ]
     }
   ]

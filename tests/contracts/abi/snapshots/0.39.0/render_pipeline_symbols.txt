@@ -27,6 +27,7 @@ granit_mesh_bind
 granit_mesh_create
 granit_mesh_destroy
 granit_mesh_draw
+granit_pbr_material_variant_key
 granit_pbr_validate_vertex_layout
 granit_render_pipeline_create
 granit_render_pipeline_destroy

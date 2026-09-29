@@ -44,6 +44,7 @@
 | 单次 Draw/Indexed Draw/Dispatch Indirect | 支持 | 支持 | Buffer 必须声明 Indirect Usage |
 | Pipeline Warmup | 支持 | 支持 | 检查 Warmup 能力位 |
 | Pipeline Cache 导入与导出 | 支持 | 不支持 | WebGPU 返回不支持 |
+| 标准 PBR Opaque/Mask/Blend | 支持 | 支持 | 自动路径统一执行 Alpha 分类、对象级排序和预乘混合 |
 
 当前 Graphics Pipeline 差异：
 

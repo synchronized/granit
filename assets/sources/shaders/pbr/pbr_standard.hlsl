@@ -4,10 +4,16 @@
 static const float PI = 3.14159265358979323846;
 
 struct vertex_input {
-  float3 position : POSITION;
-  float3 normal : NORMAL;
-  float4 tangent : TANGENT;
-  float2 texture_coordinate : TEXCOORD0;
+  [[vk::location(0)]] float3 position : POSITION;
+  [[vk::location(1)]] float3 normal : NORMAL;
+  [[vk::location(2)]] float4 tangent : TANGENT;
+  [[vk::location(3)]] float2 texture_coordinate : TEXCOORD0;
+#if GRANIT_PBR_HAS_UV1
+  [[vk::location(4)]] float2 texture_coordinate_1 : TEXCOORD1;
+#endif
+#if GRANIT_PBR_HAS_VERTEX_COLOR
+  [[vk::location(5)]] float4 color : COLOR0;
+#endif
 };
 
 struct vertex_output {
@@ -18,6 +24,12 @@ struct vertex_output {
   float2 texture_coordinate : TEXCOORD3;
   float3 vertex_normal : TEXCOORD4;
   float3 vertex_tangent : TEXCOORD5;
+#if GRANIT_PBR_HAS_UV1
+  float2 texture_coordinate_1 : TEXCOORD6;
+#endif
+#if GRANIT_PBR_HAS_VERTEX_COLOR
+  float4 color : TEXCOORD7;
+#endif
 };
 
 [[vk::binding(0, 0)]] cbuffer FrameConstants {
@@ -36,6 +48,9 @@ struct vertex_output {
   float occlusion_strength;
   float3 emissive;
   uint debug_display;
+  float alpha_cutoff;
+  uint uv1_mask;
+  uint2 material_reserved;
 };
 
 [[vk::binding(1, 1)]] Texture2D<float4> base_color_texture;
@@ -43,12 +58,18 @@ struct vertex_output {
 [[vk::binding(3, 1)]] Texture2D<float4> normal_texture;
 [[vk::binding(4, 1)]] Texture2D<float4> occlusion_texture;
 [[vk::binding(5, 1)]] Texture2D<float4> emissive_texture;
-[[vk::binding(6, 1)]] SamplerState pbr_sampler;
+[[vk::binding(6, 1)]] SamplerState base_color_sampler;
+[[vk::binding(7, 1)]] SamplerState metallic_roughness_sampler;
+[[vk::binding(8, 1)]] SamplerState normal_sampler;
+[[vk::binding(9, 1)]] SamplerState occlusion_sampler;
+[[vk::binding(10, 1)]] SamplerState emissive_sampler;
 
 [[vk::binding(0, 2)]] cbuffer ObjectConstants {
   column_major float4x4 model;
   column_major float4x4 normal_matrix;
-  uint4 object_id;
+  uint object_id;
+  float transform_handedness;
+  uint2 object_reserved;
 };
 
 [[vk::binding(3, 3)]] cbuffer IblConstants {
@@ -68,10 +89,19 @@ vertex_output vertex_main(vertex_input input) {
   const float4 resolved_world_position = mul(model, float4(input.position, 1.0));
   output.position = mul(view_projection, resolved_world_position);
   output.world_position = resolved_world_position.xyz;
-  output.world_normal = normalize(mul(normal_matrix, float4(input.normal, 0.0)).xyz);
-  output.world_tangent =
-      float4(normalize(mul(model, float4(input.tangent.xyz, 0.0)).xyz), input.tangent.w);
+  const float3 world_normal = normalize(mul(normal_matrix, float4(input.normal, 0.0)).xyz);
+  const float3 transformed_tangent = mul(model, float4(input.tangent.xyz, 0.0)).xyz;
+  const float3 world_tangent =
+      normalize(transformed_tangent - world_normal * dot(world_normal, transformed_tangent));
+  output.world_normal = world_normal;
+  output.world_tangent = float4(world_tangent, input.tangent.w * transform_handedness);
   output.texture_coordinate = input.texture_coordinate;
+#if GRANIT_PBR_HAS_UV1
+  output.texture_coordinate_1 = input.texture_coordinate_1;
+#endif
+#if GRANIT_PBR_HAS_VERTEX_COLOR
+  output.color = input.color;
+#endif
   output.vertex_normal = input.normal;
   output.vertex_tangent = input.tangent.xyz;
   return output;
@@ -105,21 +135,46 @@ float3 rotate_environment(float3 direction) {
                 -environment_rotation_sin * direction.x + environment_rotation_cos * direction.z);
 }
 
-float4 fragment_main(vertex_output input) : SV_Target0 {
+float4 encode_output(float3 color, float alpha) {
+#if GRANIT_PBR_ALPHA_BLEND
+  return float4(color * alpha, alpha);
+#else
+  return float4(color, alpha);
+#endif
+}
+
+float4 fragment_main(vertex_output input, bool is_front_face : SV_IsFrontFace) : SV_Target0 {
+  float2 base_color_uv = input.texture_coordinate;
+  float2 metallic_roughness_uv = input.texture_coordinate;
+  float2 normal_uv = input.texture_coordinate;
+  float2 occlusion_uv = input.texture_coordinate;
+  float2 emissive_uv = input.texture_coordinate;
+#if GRANIT_PBR_HAS_UV1
+  base_color_uv = (uv1_mask & 1) != 0 ? input.texture_coordinate_1 : base_color_uv;
+  metallic_roughness_uv = (uv1_mask & 2) != 0 ? input.texture_coordinate_1 : metallic_roughness_uv;
+  normal_uv = (uv1_mask & 4) != 0 ? input.texture_coordinate_1 : normal_uv;
+  occlusion_uv = (uv1_mask & 8) != 0 ? input.texture_coordinate_1 : occlusion_uv;
+  emissive_uv = (uv1_mask & 16) != 0 ? input.texture_coordinate_1 : emissive_uv;
+#endif
   const float4 sampled_base_color =
-      base_color_texture.Sample(pbr_sampler, input.texture_coordinate);
-  const float4 resolved_base_color = base_color * sampled_base_color;
+      base_color_texture.Sample(base_color_sampler, base_color_uv);
+  float4 resolved_base_color = base_color * sampled_base_color;
+#if GRANIT_PBR_HAS_VERTEX_COLOR
+  resolved_base_color *= input.color;
+#endif
   const float4 sampled_metallic_roughness =
-      metallic_roughness_texture.Sample(pbr_sampler, input.texture_coordinate);
+      metallic_roughness_texture.Sample(metallic_roughness_sampler, metallic_roughness_uv);
   const float resolved_metallic = saturate(metallic * sampled_metallic_roughness.b);
   const float sampled_roughness =
       clamp(perceptual_roughness * sampled_metallic_roughness.g, 0.045, 1.0);
 
-  const float3 tangent = normalize(input.world_tangent.xyz);
-  const float3 geometric_normal = normalize(input.world_normal);
+  const float3 geometric_normal = normalize(input.world_normal) * (is_front_face ? 1.0 : -1.0);
+  const float3 tangent = normalize(input.world_tangent.xyz -
+                                   geometric_normal * dot(geometric_normal,
+                                                          input.world_tangent.xyz));
   const float3 bitangent = normalize(cross(geometric_normal, tangent)) * input.world_tangent.w;
   const float3 sampled_normal =
-      normal_texture.Sample(pbr_sampler, input.texture_coordinate).xyz * 2.0 - 1.0;
+      normal_texture.Sample(normal_sampler, normal_uv).xyz * 2.0 - 1.0;
   const float3 scaled_normal = float3(sampled_normal.xy * normal_scale, sampled_normal.z);
   const float3 normal = normalize(tangent * scaled_normal.x + bitangent * scaled_normal.y +
                                   geometric_normal * scaled_normal.z);
@@ -145,27 +200,10 @@ float4 fragment_main(vertex_output input) : SV_Target0 {
   const float3 specular =
       distribution * geometry * fresnel / max(4.0 * normal_dot_light * normal_dot_view, 0.0001);
   const float3 diffuse = (1.0 - fresnel) * (1.0 - resolved_metallic) * resolved_base_color.rgb / PI;
-  const float occlusion_sample = occlusion_texture.Sample(pbr_sampler, input.texture_coordinate).r;
+  const float occlusion_sample = occlusion_texture.Sample(occlusion_sampler, occlusion_uv).r;
   const float occlusion = lerp(1.0, occlusion_sample, occlusion_strength);
   const float3 resolved_emissive =
-      emissive * emissive_texture.Sample(pbr_sampler, input.texture_coordinate).rgb;
-
-  if (debug_display == 1)
-    return float4(resolved_base_color.rgb, resolved_base_color.a);
-  if (debug_display == 2)
-    return float4(normal * 0.5 + 0.5, 1.0);
-  if (debug_display == 3)
-    return float4(resolved_metallic.xxx, 1.0);
-  if (debug_display == 4)
-    return float4(roughness.xxx, 1.0);
-  if (debug_display == 5)
-    return float4(geometric_normal * 0.5 + 0.5, 1.0);
-  if (debug_display == 6)
-    return float4(sampled_normal * 0.5 + 0.5, 1.0);
-  if (debug_display == 7)
-    return float4(normalize(input.vertex_normal) * 0.5 + 0.5, 1.0);
-  if (debug_display == 8)
-    return float4(normalize(input.vertex_tangent) * 0.5 + 0.5, 1.0);
+      emissive * emissive_texture.Sample(emissive_sampler, emissive_uv).rgb;
 
   const float3 environment_fresnel =
       fresnel_schlick_roughness(normal_dot_view, reflectance, roughness);
@@ -185,5 +223,25 @@ float4 fragment_main(vertex_output input) : SV_Target0 {
                           environment_intensity * occlusion);
   const float3 color =
       ambient + (diffuse + specular) * light_radiance.rgb * normal_dot_light + resolved_emissive;
-  return float4(color, resolved_base_color.a);
+#if GRANIT_PBR_ALPHA_MASK
+  clip(resolved_base_color.a - alpha_cutoff);
+#endif
+  if (debug_display == 1)
+    return encode_output(resolved_base_color.rgb, resolved_base_color.a);
+  if (debug_display == 2)
+    return encode_output(normal * 0.5 + 0.5, resolved_base_color.a);
+  if (debug_display == 3)
+    return encode_output(resolved_metallic.xxx, resolved_base_color.a);
+  if (debug_display == 4)
+    return encode_output(roughness.xxx, resolved_base_color.a);
+  if (debug_display == 5)
+    return encode_output(geometric_normal * 0.5 + 0.5, resolved_base_color.a);
+  if (debug_display == 6)
+    return encode_output(sampled_normal * 0.5 + 0.5, resolved_base_color.a);
+  if (debug_display == 7)
+    return encode_output(normalize(input.vertex_normal) * 0.5 + 0.5, resolved_base_color.a);
+  if (debug_display == 8)
+    return encode_output(normalize(input.vertex_tangent) * 0.5 + 0.5,
+                         resolved_base_color.a);
+  return encode_output(color, resolved_base_color.a);
 }

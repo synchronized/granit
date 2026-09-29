@@ -49,7 +49,9 @@ struct alignas(16) pbr_frame_constants {
 struct alignas(16) pbr_object_constants {
   pbr_matrix4 model;
   pbr_matrix4 normal_matrix;
-  std::array<std::uint32_t, 4> object_id;
+  std::uint32_t object_id;
+  float transform_handedness;
+  std::array<std::uint32_t, 2> reserved;
 };
 
 [[nodiscard]] pbr_draw_input_error

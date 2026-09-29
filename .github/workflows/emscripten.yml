@@ -105,9 +105,9 @@ jobs:
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
-      # Ubuntu runner 使用软件 Vulkan 驱动。限制并发，避免多个 Chrome/Xvfb 实例争抢
-      # WebGPU 设备后返回透明合成帧或初始化超时。
-      max-parallel: 2
+      # Ubuntu runner 使用软件 Vulkan 驱动。浏览器任务必须串行，避免多个 Chrome/Xvfb
+      # 实例争抢 WebGPU 设备后返回透明合成帧、丢失 Dawn 实例或初始化超时。
+      max-parallel: 1
       matrix:
         include:
           - name: platform-smoke

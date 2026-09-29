@@ -10,7 +10,9 @@
 #include <granit/pipeline/render_pipeline.h>
 #include <span>
 namespace granit::pipeline::detail {
-[[nodiscard]] granit_result record_opaque_draws(
+enum class forward_draw_phase : std::uint8_t { opaque, transparent };
+
+[[nodiscard]] granit_result record_forward_draws(
     render_pipeline_state& state, granit_command_recorder recorder, granit_texture_view color,
     granit_texture_view resolve_color, granit_texture_view depth, granit_texture_view shadow,
     std::uint32_t width, std::uint32_t height, const material::pbr_frame_constants& frame,
@@ -19,6 +21,7 @@ namespace granit::pipeline::detail {
     const lighting::packed_view_lights& lights,
     const lighting::shadow_sampling_constants& shadow_constants,
     lighting::ibl_texture_views ibl_views, const lighting::ibl_sampling_constants& ibl_constants,
-    bool use_uniform_arena, granit_clear_color_value clear_color);
+    bool use_uniform_arena, granit_clear_color_value clear_color, forward_draw_phase phase,
+    bool resolve_after_draws);
 }
 #endif

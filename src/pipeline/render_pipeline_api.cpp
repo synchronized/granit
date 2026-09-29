@@ -25,6 +25,7 @@
 #include "pipeline/shadow_draw_recorder.h"
 #include "pipeline/tone_mapping_recorder.h"
 
+#include <granit/pipeline/pbr_material.h>
 #include <granit/renderer/frame_context.h>
 #include <granit/renderer/render_target.h>
 #include <granit/renderer/shader.hpp>
@@ -129,6 +130,23 @@ bool valid_output(const granit_render_pipeline_output& output) {
          output.format <= GRANIT_TEXTURE_FORMAT_BGRA8_SRGB;
 }
 
+granit_result is_transparent_pbr_draw(granit_renderer renderer,
+                                      const granit_render_pipeline_draw_binding& binding,
+                                      bool& transparent) {
+  const auto alpha_feature = granit::material::make_feature_id(GRANIT_PBR_ALPHA_MODE_FEATURE_NAME);
+  transparent = false;
+  auto result = granit::pipeline::detail::material_variant_has_feature(
+      renderer, binding.material, granit::material::make_feature_id("opaque"), binding.variant,
+      alpha_feature, GRANIT_PBR_ALPHA_MODE_BLEND, transparent);
+  if (result == GRANIT_SUCCESS)
+    return result;
+  if (result != GRANIT_ERROR_NOT_READY)
+    return result;
+  return granit::pipeline::detail::material_variant_has_feature(
+      renderer, binding.material, granit::material::make_feature_id("transparent"), binding.variant,
+      alpha_feature, GRANIT_PBR_ALPHA_MODE_BLEND, transparent);
+}
+
 granit_result
 render_view(pipeline_state& state, const granit_render_pipeline_render_desc& desc,
             const granit::scene::multi_view_snapshot& snapshot,
@@ -149,6 +167,28 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
          .prefiltered_environment = state.default_ibl.prefiltered_environment(),
          .brdf_lut = state.default_ibl.brdf_lut()},
         desc.environment, lighting_submission);
+    if (result != GRANIT_SUCCESS)
+      return result;
+  }
+  granit::pipeline::detail::forward_draw_submission opaque_submission;
+  granit::pipeline::detail::forward_draw_submission transparent_submission;
+  if (state.record == nullptr) {
+    std::vector<std::uint8_t> transparent_flags;
+    try {
+      transparent_flags.resize(view_submission.draw_bindings.size());
+    } catch (const std::bad_alloc&) {
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    }
+    for (std::size_t index = 0; index < view_submission.draw_bindings.size(); ++index) {
+      bool transparent = false;
+      result = is_transparent_pbr_draw(state.renderer, view_submission.draw_bindings[index],
+                                       transparent);
+      if (result != GRANIT_SUCCESS)
+        return result;
+      transparent_flags[index] = transparent ? 1U : 0U;
+    }
+    result = granit::pipeline::detail::partition_forward_draws(
+        view_submission, transparent_flags, opaque_submission, transparent_submission);
     if (result != GRANIT_SUCCESS)
       return result;
   }
@@ -262,16 +302,39 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
   callbacks.pbr = [&](auto& context, const auto& frame, auto objects) {
     return measure(context.recorder(), 2, [&]() {
       if (state.record == nullptr) {
+        std::vector<granit::material::pbr_object_constants> opaque_objects;
+        std::vector<granit::material::pbr_object_constants> transparent_objects;
+        try {
+          opaque_objects.reserve(opaque_submission.source_indices.size());
+          transparent_objects.reserve(transparent_submission.source_indices.size());
+          for (const auto index : opaque_submission.source_indices)
+            opaque_objects.push_back(objects[index]);
+          for (const auto index : transparent_submission.source_indices)
+            transparent_objects.push_back(objects[index]);
+        } catch (const std::bad_alloc&) {
+          return GRANIT_ERROR_OUT_OF_MEMORY;
+        }
         auto configured_frame = frame;
         configured_frame.render_options[0] = state.enable_specular_aa ? UINT32_C(1) : UINT32_C(0);
-        const auto opaque_result = granit::pipeline::detail::record_opaque_draws(
+        auto opaque_result = granit::pipeline::detail::record_forward_draws(
             state, context.recorder(), context.texture_view(use_msaa ? msaa_color : hdr),
             use_msaa ? context.texture_view(hdr) : GRANIT_NULL_HANDLE, context.texture_view(depth),
             shadow ? context.texture_view(*shadow) : GRANIT_NULL_HANDLE, render_output.width,
-            render_output.height, configured_frame, objects, view_submission.draw_bindings,
+            render_output.height, configured_frame, opaque_objects, opaque_submission.draw_bindings,
             lighting_submission.lights, shadow_constants, lighting_submission.ibl_views,
-            lighting_submission.ibl_constants(), use_uniform_arena, desc.clear_color);
-        return opaque_result;
+            lighting_submission.ibl_constants(), use_uniform_arena, desc.clear_color,
+            granit::pipeline::detail::forward_draw_phase::opaque,
+            transparent_submission.draw_bindings.empty());
+        if (opaque_result != GRANIT_SUCCESS || transparent_submission.draw_bindings.empty())
+          return opaque_result;
+        return granit::pipeline::detail::record_forward_draws(
+            state, context.recorder(), context.texture_view(use_msaa ? msaa_color : hdr),
+            use_msaa ? context.texture_view(hdr) : GRANIT_NULL_HANDLE, context.texture_view(depth),
+            shadow ? context.texture_view(*shadow) : GRANIT_NULL_HANDLE, render_output.width,
+            render_output.height, configured_frame, transparent_objects,
+            transparent_submission.draw_bindings, lighting_submission.lights, shadow_constants,
+            lighting_submission.ibl_views, lighting_submission.ibl_constants(), use_uniform_arena,
+            desc.clear_color, granit::pipeline::detail::forward_draw_phase::transparent, true);
       }
       const granit_render_pipeline_record_info info{
           .struct_size = sizeof(granit_render_pipeline_record_info),
@@ -326,9 +389,24 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
                                         .reserved = 0});
         }
         if (state.record == nullptr) {
+          std::vector<granit::lighting::shadow_caster> opaque_casters;
+          std::vector<granit_render_pipeline_draw_binding> opaque_shadow_bindings;
+          opaque_casters.reserve(casters.size());
+          opaque_shadow_bindings.reserve(casters.size());
+          for (std::size_t index = 0; index < casters.size(); ++index) {
+            bool transparent = false;
+            const auto classify_result =
+                is_transparent_pbr_draw(state.renderer, shadow_bindings[index], transparent);
+            if (classify_result != GRANIT_SUCCESS)
+              return classify_result;
+            if (!transparent) {
+              opaque_casters.push_back(casters[index]);
+              opaque_shadow_bindings.push_back(shadow_bindings[index]);
+            }
+          }
           const auto shadow_result = granit::pipeline::detail::record_shadow_draws(
-              state, context.recorder(), context.texture_view(*shadow), frame, casters,
-              shadow_bindings, use_uniform_arena);
+              state, context.recorder(), context.texture_view(*shadow), frame, opaque_casters,
+              opaque_shadow_bindings, use_uniform_arena);
           return shadow_result;
         }
         // 没有投射物时由 Granit 清除持久阴影图，避免把清除责任泄漏给自定义录制回调。
@@ -536,6 +614,20 @@ extern "C" granit_result granit_render_pipeline_create(granit_renderer renderer,
         state->shadow_fragment_shader);
     if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
+    for (std::uint32_t color = 0; color < 2; ++color) {
+      for (std::uint32_t uv1 = 0; uv1 < 2; ++uv1) {
+        resource_result = state->shader_library.create_shader(
+            granit::pipeline::detail::shadow_depth_mask_vertex_shader_name(uv1 != 0, color != 0),
+            state->shadow_mask_vertex_shaders[color * 2 + uv1]);
+        if (resource_result.failed())
+          return static_cast<granit_result>(resource_result);
+      }
+      resource_result = state->shader_library.create_shader(
+          granit::pipeline::detail::shadow_depth_mask_fragment_shader_name(color != 0),
+          state->shadow_mask_fragment_shaders[color]);
+      if (resource_result.failed())
+        return static_cast<granit_result>(resource_result);
+    }
     resource_result = state->shadow_placeholder_texture.initialize(
         renderer_view, {.format = granit::texture_format::d32_float,
                         .usage = granit::texture_usage::sampled |
@@ -620,7 +712,7 @@ granit_render_pipeline_render(granit_renderer renderer, granit_render_pipeline p
     bindings.reserve(desc->draw_binding_count);
     for (uint32_t index = 0; index < desc->draw_binding_count; ++index) {
       const auto& binding = desc->draw_bindings[index];
-      if (binding.mesh == 0 || binding.material == GRANIT_NULL_HANDLE || binding.reserved != 0 ||
+      if (binding.mesh == 0 || binding.material == GRANIT_NULL_HANDLE ||
           !bindings.emplace(binding.payload, binding).second) {
         return GRANIT_ERROR_INVALID_ARGUMENT;
       }
@@ -688,6 +780,7 @@ extern "C" granit_result granit_render_pipeline_destroy(granit_renderer renderer
     entries.clear();
   };
   reset_draw_bindings(removed->opaque_draw_bindings);
+  reset_draw_bindings(removed->transparent_draw_bindings);
   reset_draw_bindings(removed->shadow_draw_bindings);
   for (auto& slot : removed->metrics_slots) {
     const auto metrics_result =
@@ -722,6 +815,16 @@ extern "C" granit_result granit_render_pipeline_destroy(granit_renderer renderer
   const auto placeholder_texture_result = removed->shadow_placeholder_texture.reset();
   if (result == GRANIT_SUCCESS)
     result = static_cast<granit_result>(placeholder_texture_result);
+  for (auto& shader : removed->shadow_mask_fragment_shaders) {
+    const auto reset_result = shader.reset();
+    if (result == GRANIT_SUCCESS)
+      result = static_cast<granit_result>(reset_result);
+  }
+  for (auto& shader : removed->shadow_mask_vertex_shaders) {
+    const auto reset_result = shader.reset();
+    if (result == GRANIT_SUCCESS)
+      result = static_cast<granit_result>(reset_result);
+  }
   const auto fragment_result = removed->shadow_fragment_shader.reset();
   if (result == GRANIT_SUCCESS)
     result = static_cast<granit_result>(fragment_result);

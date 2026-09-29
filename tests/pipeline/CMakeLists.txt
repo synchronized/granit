@@ -37,6 +37,7 @@ add_executable(
   $<TARGET_OBJECTS:granit_asset_format_shader>
   mesh_api_test.cpp
   render_pipeline_api_test.cpp
+  render_view_submission_test.cpp
   scene_api_test.cpp
   unlit_pass_test.cpp
   canvas_draw_list_test.cpp
@@ -44,6 +45,7 @@ add_executable(
   canvas_geometry_upload_test.cpp
   canvas_pass_test.cpp
   "${PROJECT_SOURCE_DIR}/src/pipeline/dynamic_uniform_arena.cpp"
+  "${PROJECT_SOURCE_DIR}/src/pipeline/render_view_submission.cpp"
   dynamic_uniform_arena_test.cpp
   debug_draw_list_api_test.cpp
   debug_draw_geometry_test.cpp

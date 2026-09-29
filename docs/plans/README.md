@@ -9,9 +9,12 @@
 
 ## 当前计划
 
-下一版本范围尚未固定。候选任务应先在路线图中形成明确证据，再进入版本文档。
+当前没有实施中的已确认计划。
 
 ## 最近完成
+
+- [S-76：0.41.0 标准 PBR 材质正确性](S-76-0.41.0-pbr-material-correctness.md)——补齐标准
+  PBR 的反射实例、Alpha、双面、逐贴图输入、顶点色与透明 HDR 阶段，并完成跨后端发布前验收。
 
 - [S-75：0.40.0 Deferred 与多 Pass 渲染](S-75-0.40.0-deferred-rendering.md)——新增
   `07_deferred`，以 MRT G-buffer、全屏光照、调试视图和 Resize 验证现有跨后端多 Pass 能力，
@@ -69,7 +72,8 @@
 ## 暂缓与重新评估
 
 - [D-09：Bindless Resource Table](D-09-bindless-resource-table.md)——等待真实绑定压力证据。
-- [H-09B：透明 PBR 正确性](H-09B-transparent-pbr-correctness.md)——等待明确产品场景和正确性需求。
+- [H-09B：透明 PBR 正确性](H-09B-transparent-pbr-correctness.md)——评估契约已经满足恢复条件，
+  实现由 [S-76](S-76-0.41.0-pbr-material-correctness.md) 承接。
 
 ## 状态与维护
 

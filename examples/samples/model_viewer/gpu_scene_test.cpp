@@ -32,6 +32,7 @@ TEST_CASE("GPU Scene 计划合并 Primitive 并记录字节 Offset", "[tutorial]
   auto& first = source.meshes.emplace_back().primitives.emplace_back();
   first.positions = {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}};
   first.normals = {{0, 0, 1}, {0, 0, 1}, {0, 0, 1}};
+  first.colors = {{1, 0, 0, 0.5F}, {0, 1, 0, 1}, {0, 0, 1, 1}};
   first.indices = {0, 1, 2};
   auto& second = source.meshes.emplace_back().primitives.emplace_back();
   second.positions = {{-1, 0, 0}, {0, -1, 0}, {0, 0, 0}};
@@ -48,6 +49,8 @@ TEST_CASE("GPU Scene 计划合并 Primitive 并记录字节 Offset", "[tutorial]
         3 * sizeof(granit::example::model_viewer::packed_vertex));
   CHECK(plan.primitives[1].index_offset == 3 * sizeof(std::uint32_t));
   CHECK(plan.vertices.size() == 6);
+  CHECK(plan.vertices[0].color == granit::math::float4{1, 0, 0, 0.5F});
+  CHECK(plan.vertices[3].color == granit::math::float4{1, 1, 1, 1});
   CHECK(plan.indices == std::vector<std::uint32_t>{0, 1, 2, 2, 1, 0});
 }
 

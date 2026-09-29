@@ -129,7 +129,7 @@ TEST_CASE("Asset Manager 通过 glTF Loader 加载外部依赖") {
     "buffers":[{"uri":"scene.bin","byteLength":36}],
     "bufferViews":[{"buffer":0,"byteLength":36}],
     "accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3"}],
-    "meshes":[{"primitives":[{"attributes":{"POSITION":0,"NORMAL":0}}]}],
+    "meshes":[{"primitives":[{"attributes":{"POSITION":0,"NORMAL":0,"COLOR_0":0}}]}],
     "nodes":[{"mesh":0}],"scenes":[{"nodes":[0]}],"scene":0
   })";
   std::vector<std::byte> buffer;
@@ -324,7 +324,7 @@ TEST_CASE("glTF Importer 读取 Base64 Data URI Buffer", "[example][gltf][import
     "buffers":[{"uri":"data:application/octet-stream;base64,AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAA","byteLength":36}],
     "bufferViews":[{"buffer":0,"byteLength":36}],
     "accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3"}],
-    "meshes":[{"primitives":[{"attributes":{"POSITION":0,"NORMAL":0}}]}],
+    "meshes":[{"primitives":[{"attributes":{"POSITION":0,"NORMAL":0,"COLOR_0":0}}]}],
     "nodes":[{"mesh":0}],"scenes":[{"nodes":[0]}],"scene":0
   })";
   granit::example::gltf::scene scene;
@@ -333,6 +333,8 @@ TEST_CASE("glTF Importer 读取 Base64 Data URI Buffer", "[example][gltf][import
   REQUIRE(result);
   REQUIRE(scene.meshes.size() == 1);
   CHECK(scene.meshes[0].primitives[0].positions.size() == 3);
+  REQUIRE(scene.meshes[0].primitives[0].colors.size() == 3);
+  CHECK(scene.meshes[0].primitives[0].colors[0].w == 1.0F);
 }
 
 TEST_CASE("glTF Importer 解码 PBR Material 图片与 Sampler", "[example][gltf][importer]") {
@@ -341,9 +343,9 @@ TEST_CASE("glTF Importer 解码 PBR Material 图片与 Sampler", "[example][gltf
     "images":[{"name":"pixel","uri":"pixel.png"}],
     "samplers":[{"magFilter":9729,"minFilter":9987,"wrapS":10497,"wrapT":33071}],
     "textures":[{"source":0,"sampler":0}],
-    "materials":[{"name":"paint","pbrMetallicRoughness":{
+    "materials":[{"name":"paint","alphaMode":"MASK","alphaCutoff":0.25,"doubleSided":true,"pbrMetallicRoughness":{
       "baseColorFactor":[0.5,0.6,0.7,1.0],"metallicFactor":0.25,"roughnessFactor":0.75,
-      "baseColorTexture":{"index":0}
+      "baseColorTexture":{"index":0,"texCoord":1}
     }}]
   })";
   const std::uint8_t png[] = {
@@ -371,6 +373,10 @@ TEST_CASE("glTF Importer 解码 PBR Material 图片与 Sampler", "[example][gltf
   CHECK(scene.materials[0].roughness == 0.75F);
   CHECK(scene.materials[0].base_color_texture.image == 0);
   CHECK(scene.materials[0].base_color_texture.sampler == 0);
+  CHECK(scene.materials[0].base_color_texture.texture_coordinate == 1);
+  CHECK(scene.materials[0].alpha_mode == granit::example::gltf::material_alpha_mode::mask);
+  CHECK(scene.materials[0].alpha_cutoff == 0.25F);
+  CHECK(scene.materials[0].double_sided);
   REQUIRE(scene.samplers.size() == 1);
   CHECK(scene.samplers[0].wrap_v == 33071);
 }

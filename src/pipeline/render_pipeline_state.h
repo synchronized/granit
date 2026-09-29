@@ -35,6 +35,10 @@ struct render_pipeline_state {
   struct shadow_pipeline_entry {
     granit_pipeline_layout layout = GRANIT_NULL_HANDLE;
     granit_mesh mesh = GRANIT_NULL_HANDLE;
+    bool reflected = false;
+    bool alpha_mask = false;
+    bool uses_uv1 = false;
+    bool vertex_color = false;
     granit_graphics_pipeline pipeline = GRANIT_NULL_HANDLE;
   };
   struct draw_binding_entry {
@@ -55,10 +59,13 @@ struct render_pipeline_state {
   granit::texture_view shadow_view;
   granit::shader shadow_vertex_shader;
   granit::shader shadow_fragment_shader;
+  std::array<granit::shader, 4> shadow_mask_vertex_shaders;
+  std::array<granit::shader, 2> shadow_mask_fragment_shaders;
   granit::texture shadow_placeholder_texture;
   granit::texture_view shadow_placeholder_view;
   std::vector<shadow_pipeline_entry> shadow_pipelines;
   std::vector<draw_binding_entry> opaque_draw_bindings;
+  std::vector<draw_binding_entry> transparent_draw_bindings;
   std::vector<draw_binding_entry> shadow_draw_bindings;
   dynamic_uniform_arena uniform_arena;
   std::vector<metrics_slot> metrics_slots;

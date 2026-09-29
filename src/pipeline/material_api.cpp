@@ -172,6 +172,23 @@ granit_result decode_archive(const granit_material_desc& desc,
   return GRANIT_ERROR_INVALID_ARGUMENT;
 }
 
+const granit::material::material_variant*
+select_variant(const granit::material::material_package& package, std::uint64_t pass,
+               std::uint64_t key) noexcept {
+  if (key != 0)
+    return package.find(pass, key);
+  const granit::material::material_variant* selected = nullptr;
+  for (const auto& candidate : package.variants()) {
+    if (candidate.pass == pass &&
+        (selected == nullptr || candidate.features.size() < selected->features.size() ||
+         (candidate.features.size() == selected->features.size() &&
+          candidate.key < selected->key))) {
+      selected = &candidate;
+    }
+  }
+  return selected;
+}
+
 } // namespace
 
 granit_result
@@ -196,12 +213,22 @@ granit_result granit::pipeline::detail::acquire_material_draw_state(
       return GRANIT_ERROR_INVALID_HANDLE;
     granit_graphics_pipeline pipeline = GRANIT_NULL_HANDLE;
     auto variant = request.variant;
-    if (variant == 0 && state->package.find(request.pass, variant) == nullptr) {
-      const auto found = std::ranges::find_if(
-          state->package.variants(), [&](const auto& value) { return value.pass == request.pass; });
-      if (found == state->package.variants().end())
+    const auto* selected = select_variant(state->package, request.pass, variant);
+    if (selected == nullptr)
+      return GRANIT_ERROR_NOT_READY;
+    variant = selected->key;
+    if (request.draw_feature.id != 0) {
+      auto features = selected->features;
+      const auto existing = std::ranges::find(features, request.draw_feature.id,
+                                              &granit::material::material_feature_value::id);
+      if (existing == features.end())
+        features.push_back(request.draw_feature);
+      else
+        existing->value = request.draw_feature.value;
+      std::ranges::sort(features, {}, &granit::material::material_feature_value::id);
+      variant = granit::material::make_variant_key(features);
+      if (state->package.find(request.pass, variant) == nullptr)
         return GRANIT_ERROR_NOT_READY;
-      variant = found->key;
     }
     const auto result = state->material_template.acquire_pipeline(
         {.pass = request.pass,
@@ -230,6 +257,31 @@ granit_result granit::pipeline::detail::acquire_material_draw_state(
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+granit_result granit::pipeline::detail::material_variant_has_feature(
+    granit_renderer renderer, granit_material material, std::uint64_t pass, std::uint64_t variant,
+    granit::material::material_feature_id feature, std::uint32_t value, bool& present) noexcept {
+  present = false;
+  auto state = find_material(renderer, material);
+  if (state == nullptr)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (pass == 0 || feature == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  try {
+    std::scoped_lock lock{state->mutex};
+    if (!state->alive || !state->instance.initialized())
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto* selected = select_variant(state->package, pass, variant);
+    if (selected == nullptr)
+      return GRANIT_ERROR_NOT_READY;
+    const auto found = std::ranges::find(selected->features, feature,
+                                         &granit::material::material_feature_value::id);
+    present = found != selected->features.end() && found->value == value;
+    return GRANIT_SUCCESS;
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }

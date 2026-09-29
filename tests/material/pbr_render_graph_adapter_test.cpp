@@ -45,7 +45,7 @@ TEST_CASE("PBR Render Graph Pass 声明附件并传递显式常量") {
         CHECK(context.texture_view(shadow) == 103);
         CHECK(frame.direction_to_light[2] == 1.0F);
         REQUIRE(objects.size() == 1);
-        CHECK(objects.front().object_id[0] == 7);
+        CHECK(objects.front().object_id == 7);
         return GRANIT_SUCCESS;
       });
   REQUIRE(pass != granit::render_graph::invalid_pass_id);
