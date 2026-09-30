@@ -139,6 +139,15 @@ GRANIT_API granit_result granit_upload_batch_write_texture_asset_mips(
     const void* manifest_data, uint64_t manifest_size, const void* payload_data,
     uint64_t payload_size, uint32_t variant_index, uint32_t first_mip, uint32_t mip_count);
 
+/**
+ * 以所选变体负载为基址校验并把指定 mip 范围原子加入空 Upload Batch。
+ * payload_data 必须只包含完整变体；成功后不再引用调用方内存。
+ */
+GRANIT_API granit_result granit_upload_batch_write_texture_asset_variant_mips(
+    granit_renderer renderer, granit_upload_batch batch, granit_texture texture,
+    const void* manifest_data, uint64_t manifest_size, const void* payload_data,
+    uint64_t payload_size, uint32_t variant_index, uint32_t first_mip, uint32_t mip_count);
+
 #ifdef __cplusplus
 }
 #endif

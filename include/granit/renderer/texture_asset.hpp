@@ -149,14 +149,27 @@ select_texture_asset_variant(renderer& owner, std::span<const std::byte> manifes
   return select_texture_asset_variant(owner.ref(), manifest, selection, options);
 }
 
-[[nodiscard]] inline result
-write_texture_asset_mips(upload_batch& batch, texture_ref texture,
-                         std::span<const std::byte> manifest,
-                         std::span<const std::byte> payload, std::uint32_t variant_index,
-                         std::uint32_t first_mip, std::uint32_t mip_count) noexcept {
+[[nodiscard]] inline result write_texture_asset_mips(upload_batch& batch, texture_ref texture,
+                                                     std::span<const std::byte> manifest,
+                                                     std::span<const std::byte> payload,
+                                                     std::uint32_t variant_index,
+                                                     std::uint32_t first_mip,
+                                                     std::uint32_t mip_count) noexcept {
   return from_native(granit_upload_batch_write_texture_asset_mips(
-      batch.owner().native_handle(), batch.native_handle(), texture.native_handle(), manifest.data(),
-      manifest.size(), payload.data(), payload.size(), variant_index, first_mip, mip_count));
+      batch.owner().native_handle(), batch.native_handle(), texture.native_handle(),
+      manifest.data(), manifest.size(), payload.data(), payload.size(), variant_index, first_mip,
+      mip_count));
+}
+
+[[nodiscard]] inline result
+write_texture_asset_variant_mips(upload_batch& batch, texture_ref texture,
+                                 std::span<const std::byte> manifest,
+                                 std::span<const std::byte> payload, std::uint32_t variant_index,
+                                 std::uint32_t first_mip, std::uint32_t mip_count) noexcept {
+  return from_native(granit_upload_batch_write_texture_asset_variant_mips(
+      batch.owner().native_handle(), batch.native_handle(), texture.native_handle(),
+      manifest.data(), manifest.size(), payload.data(), payload.size(), variant_index, first_mip,
+      mip_count));
 }
 
 } // namespace granit

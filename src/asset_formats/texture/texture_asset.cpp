@@ -268,4 +268,15 @@ bool validate_texture_asset_payload(const texture_asset_view& asset, uint32_t va
   return std::memcmp(actual.data(), variant.payload_digest, actual.size()) == 0;
 }
 
+bool validate_texture_asset_variant_payload(const texture_asset_view& asset, uint32_t variant_index,
+                                            std::span<const std::byte> payload) noexcept {
+  if (variant_index >= asset.variants.size())
+    return false;
+  const auto& variant = asset.variants[variant_index];
+  if (payload.size() != variant.payload_size)
+    return false;
+  const auto actual = sha256_bytes(payload);
+  return std::memcmp(actual.data(), variant.payload_digest, actual.size()) == 0;
+}
+
 } // namespace granit::detail
