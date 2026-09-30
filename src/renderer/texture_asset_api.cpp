@@ -108,10 +108,12 @@ extern "C" granit_result granit_renderer_select_texture_asset_variant(
   }
 }
 
-extern "C" granit_result granit_upload_batch_write_texture_asset_mips(
-    granit_renderer renderer, granit_upload_batch batch, granit_texture texture,
-    const void* manifest_data, uint64_t manifest_size, const void* payload_data,
-    uint64_t payload_size, uint32_t variant_index, uint32_t first_mip, uint32_t mip_count) {
+static granit_result
+write_texture_asset_mips_impl(granit_renderer renderer, granit_upload_batch batch,
+                              granit_texture texture, const void* manifest_data,
+                              uint64_t manifest_size, const void* payload_data,
+                              uint64_t payload_size, uint32_t variant_index, uint32_t first_mip,
+                              uint32_t mip_count, bool variant_payload) {
   if (renderer == GRANIT_NULL_HANDLE || batch == GRANIT_NULL_HANDLE ||
       texture == GRANIT_NULL_HANDLE)
     return GRANIT_ERROR_INVALID_HANDLE;
@@ -128,7 +130,11 @@ extern "C" granit_result granit_upload_batch_write_texture_asset_mips(
       return GRANIT_ERROR_INVALID_ARGUMENT;
     const auto payload =
         std::span{static_cast<const std::byte*>(payload_data), static_cast<size_t>(payload_size)};
-    if (!granit::detail::validate_texture_asset_payload(asset, variant_index, payload))
+    const auto valid_payload =
+        variant_payload
+            ? granit::detail::validate_texture_asset_variant_payload(asset, variant_index, payload)
+            : granit::detail::validate_texture_asset_payload(asset, variant_index, payload);
+    if (!valid_payload)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     const auto& variant = asset.variants[variant_index];
     uint64_t staged_bytes = 0;
@@ -137,6 +143,9 @@ extern "C" granit_result granit_upload_batch_write_texture_asset_mips(
       const auto& source = asset.subresources[variant.first_subresource + index];
       if (source.mip_level < first_mip || source.mip_level >= first_mip + mip_count)
         continue;
+      if (variant_payload && (source.data_offset > payload.size() ||
+                              source.data_size > payload.size() - source.data_offset))
+        return GRANIT_ERROR_INVALID_ARGUMENT;
       if (source.data_size > UINT64_MAX - staged_bytes)
         return GRANIT_ERROR_INVALID_ARGUMENT;
       staged_bytes += source.data_size;
@@ -168,9 +177,10 @@ extern "C" granit_result granit_upload_batch_write_texture_asset_mips(
                                                UINT32_C(0),      UINT32_C(0),
                                                UINT32_C(0),      width,
                                                height,           depth};
+      const auto payload_offset =
+          variant_payload ? source.data_offset : variant.payload_offset + source.data_offset;
       const auto write_result = granit_upload_batch_write_texture(
-          renderer, batch, texture,
-          payload.data() + static_cast<size_t>(variant.payload_offset + source.data_offset),
+          renderer, batch, texture, payload.data() + static_cast<size_t>(payload_offset),
           source.data_size, &layout, &region);
       if (write_result != GRANIT_SUCCESS) {
         static_cast<void>(granit_upload_batch_reset(renderer, batch));
@@ -183,4 +193,22 @@ extern "C" granit_result granit_upload_batch_write_texture_asset_mips(
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
+}
+
+extern "C" granit_result granit_upload_batch_write_texture_asset_mips(
+    granit_renderer renderer, granit_upload_batch batch, granit_texture texture,
+    const void* manifest_data, uint64_t manifest_size, const void* payload_data,
+    uint64_t payload_size, uint32_t variant_index, uint32_t first_mip, uint32_t mip_count) {
+  return write_texture_asset_mips_impl(renderer, batch, texture, manifest_data, manifest_size,
+                                       payload_data, payload_size, variant_index, first_mip,
+                                       mip_count, false);
+}
+
+extern "C" granit_result granit_upload_batch_write_texture_asset_variant_mips(
+    granit_renderer renderer, granit_upload_batch batch, granit_texture texture,
+    const void* manifest_data, uint64_t manifest_size, const void* payload_data,
+    uint64_t payload_size, uint32_t variant_index, uint32_t first_mip, uint32_t mip_count) {
+  return write_texture_asset_mips_impl(renderer, batch, texture, manifest_data, manifest_size,
+                                       payload_data, payload_size, variant_index, first_mip,
+                                       mip_count, true);
 }

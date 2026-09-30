@@ -68,6 +68,60 @@ std::vector<std::byte> make_manifest() {
   return bytes;
 }
 
+std::vector<std::byte> make_two_variant_manifest() {
+  constexpr size_t header_size = 80;
+  constexpr size_t variant_size = 72;
+  constexpr size_t subresource_size = 40;
+  std::vector<std::byte> bytes(header_size + 2 * variant_size + 2 * subresource_size);
+  constexpr std::array magic{std::byte{'G'}, std::byte{'R'}, std::byte{'N'}, std::byte{'T'},
+                             std::byte{'E'}, std::byte{'X'}, std::byte{'A'}, std::byte{0}};
+  std::ranges::copy(magic, bytes.begin());
+  write_u32(bytes, 8, 1);
+  write_u32(bytes, 12, header_size);
+  write_u32(bytes, 16, 4);
+  write_u32(bytes, 20, 4);
+  write_u32(bytes, 24, 1);
+  write_u32(bytes, 28, 1);
+  write_u32(bytes, 32, 1);
+  write_u32(bytes, 36, GRANIT_TEXTURE_DIMENSION_2D);
+  write_u32(bytes, 40, 2);
+  write_u32(bytes, 44, 2);
+  bytes[48] = std::byte{1};
+
+  constexpr std::array<uint8_t, 32> zero_digest{0xf5, 0xa5, 0xfd, 0x42, 0xd1, 0x6a, 0x20, 0x30,
+                                                0x27, 0x98, 0xef, 0x6e, 0xd3, 0x09, 0x97, 0x9b,
+                                                0x43, 0x00, 0x3d, 0x23, 0x20, 0xd9, 0xf0, 0xe8,
+                                                0xea, 0x98, 0x31, 0xa9, 0x27, 0x59, 0xfb, 0x4b};
+  constexpr std::array<uint8_t, 32> one_digest{0x7c, 0x89, 0x75, 0xe1, 0xe6, 0x0a, 0x5c, 0x83,
+                                               0x37, 0xf2, 0x8e, 0xdf, 0x8c, 0x33, 0xc3, 0xb1,
+                                               0x80, 0x36, 0x0b, 0x72, 0x79, 0x64, 0x4a, 0x9b,
+                                               0xc1, 0xaf, 0x3c, 0x51, 0xe6, 0x22, 0x0b, 0xf5};
+  for (uint32_t index = 0; index < 2; ++index) {
+    const auto offset = header_size + index * variant_size;
+    write_u32(bytes, offset, GRANIT_TEXTURE_FORMAT_RGBA8_SRGB);
+    write_u32(bytes, offset + 4,
+              GRANIT_TEXTURE_USAGE_SAMPLED_BIT | GRANIT_TEXTURE_USAGE_TRANSFER_DESTINATION_BIT);
+    write_u32(bytes, offset + 8, index);
+    write_u32(bytes, offset + 12, 1);
+    write_u64(bytes, offset + 16, index * 64);
+    write_u64(bytes, offset + 24, 64);
+    const auto& digest = index == 0 ? zero_digest : one_digest;
+    for (size_t digest_index = 0; digest_index < digest.size(); ++digest_index)
+      bytes[offset + 32 + digest_index] = static_cast<std::byte>(digest[digest_index]);
+  }
+  const auto subresource_table = header_size + 2 * variant_size;
+  for (uint32_t index = 0; index < 2; ++index) {
+    const auto offset = subresource_table + index * subresource_size;
+    write_u32(bytes, offset, 0);
+    write_u32(bytes, offset + 4, 0);
+    write_u64(bytes, offset + 8, 0);
+    write_u64(bytes, offset + 16, 64);
+    write_u32(bytes, offset + 24, 16);
+    write_u32(bytes, offset + 28, 4);
+  }
+  return bytes;
+}
+
 bool unavailable(granit::result value) {
   return value == granit::result::backend_unavailable ||
          value == granit::result::incompatible_driver ||
@@ -161,6 +215,50 @@ TEST_CASE("Texture Asset逐Mip接口复用Upload Batch", "[texture_asset][upload
   REQUIRE(granit::write_texture_asset_mips(batch, texture.ref(), manifest, payload, 0, 0, 1) ==
           granit::result::success);
   CHECK(batch.submit() == granit::result::success);
+}
+
+TEST_CASE("Texture Asset变体接口以局部负载上传非零偏移变体",
+          "[texture_asset][upload][variant_payload]") {
+  granit::renderer renderer;
+  const auto initialized = renderer.initialize();
+  if (unavailable(initialized)) {
+    WARN("当前环境没有可用 Renderer，跳过真实变体上传测试");
+    return;
+  }
+  REQUIRE(initialized == granit::result::success);
+
+  const auto manifest = make_two_variant_manifest();
+  std::array<std::byte, 128> payload{};
+  std::ranges::fill(std::span{payload}.subspan(64), std::byte{1});
+
+  granit::texture texture;
+  REQUIRE(texture.initialize(renderer, {.format = granit::texture_format::rgba8_srgb,
+                                        .usage = granit::texture_usage::sampled |
+                                                 granit::texture_usage::transfer_destination |
+                                                 granit::texture_usage::transfer_source,
+                                        .width = 4,
+                                        .height = 4}) == granit::result::success);
+  granit::upload_batch batch;
+  REQUIRE(batch.initialize(renderer) == granit::result::success);
+  REQUIRE(granit::write_texture_asset_mips(batch, texture.ref(), manifest, payload, 1, 0, 1) ==
+          granit::result::success);
+  REQUIRE(batch.reset() == granit::result::success);
+  CHECK(granit::write_texture_asset_variant_mips(batch, texture.ref(), manifest,
+                                                 std::span{payload}.subspan(65), 1, 0,
+                                                 1) == granit::result::invalid_argument);
+  CHECK(granit::write_texture_asset_variant_mips(batch, texture.ref(), manifest,
+                                                 std::span{payload}.subspan(64, 64), 1, 0,
+                                                 1) == granit::result::success);
+  REQUIRE(batch.reset() == granit::result::success);
+  payload[64] = std::byte{2};
+  CHECK(granit::write_texture_asset_variant_mips(batch, texture.ref(), manifest,
+                                                 std::span{payload}.subspan(64), 1, 0,
+                                                 1) == granit::result::invalid_argument);
+  payload[64] = std::byte{1};
+  REQUIRE(granit::write_texture_asset_variant_mips(batch, texture.ref(), manifest,
+                                                   std::span{payload}.subspan(64), 1, 0,
+                                                   1) == granit::result::success);
+  REQUIRE(batch.submit() == granit::result::success);
 }
 
 TEST_CASE("Texture Asset逐Mip接口在复制前执行背压和摘要校验",

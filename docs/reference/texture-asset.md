@@ -16,6 +16,12 @@ Texture Asset Manifest 是 Granit 用于检查和选择 GPU 纹理变体的后�
   格式能力和调用方 feature 条件的变体；没有兼容变体时返回 `GRANIT_ERROR_UNSUPPORTED`。
 - `granit_upload_batch_write_texture_asset_mips` 校验所选变体负载的 SHA-256，并把指定 mip 范围原子
   加入一个空 Upload Batch。Batch 容量不足返回 `GRANIT_ERROR_NOT_READY`，不会留下部分操作。
+- `granit_upload_batch_write_texture_asset_variant_mips` 使用所选变体起点作为 Payload 基址；调用方只需
+  提供完整变体的局部负载，Granit 校验完整变体摘要并按子资源的相对 `Data Offset` 读取。
+
+两个上传入口的语义不同：旧入口要求 Payload 覆盖 Manifest 中的原始 `Payload Offset`，新入口要求
+`payload_size` 恰好等于所选变体的 `Payload Size`。新入口不支持只提供部分 Mip 的局部负载；两者都在
+返回成功后不再引用调用方内存。
 
 调用方根据检查结果创建格式、尺寸、层数和 mip 数一致的 Texture。完成一个 mip 范围入队后，使用
 现有同步或异步 Batch 提交、轮询和取消接口。正式资源何时替换旧资源仍由上游资产系统决定。
