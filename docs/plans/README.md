@@ -9,8 +9,9 @@
 
 ## 当前计划
 
-- [S-80：0.43.0 Gneiss PBR 兼容性审计](S-80-0.43.0-gneiss-pbr-compatibility.md)——核对 Gneiss 五项 PBR 需求与
-  Granit v0.42.0 已发布契约，不重复实现已完成能力。
+- [S-81：0.44.0 独立纹理变体上传](S-81-0.44.0-texture-variant-upload.md)——承接 Gneiss
+  `UPSTREAM-044` 的 U44-01，支持以所选变体起点为基址上传完整变体。
+
 - [S-77：0.42.0 Model Viewer 架构收敛](S-77-0.42.0-model-viewer-convergence.md)——拆分共享 glTF
   渲染支持，收敛加载操作、Viewer Document、Renderer 与调度边界，删除重叠状态和转发层。
 - [S-78：0.42.0 Model Viewer Linux 与 Emscripten 可靠性](S-78-0.42.0-model-viewer-platform-reliability.md)
@@ -19,6 +20,9 @@
   重叠的 ImGui 综合 Sample，以 `08_sdl_imgui` 讲解外部 SDL Window 集成，并归位自动验收。
 
 ## 最近完成
+
+- [S-80：0.43.0 Gneiss PBR 兼容性审计](S-80-0.43.0-gneiss-pbr-compatibility.md)——修复 Vulkan
+  MaterialConstants 阶段可见性和 Demote 设备特性契约，并发布 `v0.43.0`。
 
 - [S-76：0.41.0 标准 PBR 材质正确性](S-76-0.41.0-pbr-material-correctness.md)——补齐标准
   PBR 的反射实例、Alpha、双面、逐贴图输入、顶点色与透明 HDR 阶段，并完成跨后端发布前验收。

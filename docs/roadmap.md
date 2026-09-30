@@ -29,6 +29,14 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段通过可运行�
 
 ## 当前计划
 
+### v0.44.0：独立纹理变体上传
+
+**状态：规划中，P0。**
+
+[v0.44.0](versions/v0.44.0.md) 通过 [S-81](plans/S-81-0.44.0-texture-variant-upload.md) 承接 Gneiss
+`UPSTREAM-044` 的 U44-01，补齐非零偏移纹理变体的局部负载上传。预算、驻留、VFS、任务调度和
+RID 生命周期仍由 Gneiss 负责。
+
 ### v0.43.0：Gneiss PBR 兼容性审计
 
 **状态：已发布，P1。**
