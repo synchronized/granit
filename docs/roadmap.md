@@ -10,8 +10,8 @@
 ## 当前阶段
 
 Granit 已形成桌面 Vulkan、浏览器 WebGPU、C11 ABI、C++20 RAII、Window、RenderPipeline 与
-AssetTools 的完整闭环。当前仍处于 0.x，v0.44.0 已发布。下一版本暂不锁定；继续根据 Gneiss
-驻留集成和其他消费者的真实证据决定是否需要新的 Granit 公共能力。
+AssetTools 的完整闭环。当前仍处于 0.x，v0.44.0 已发布。下一阶段通过少量跨后端教程验证已有
+公共接口和真实缺口；Gneiss 驻留集成仍作为独立消费者证据输入。
 
 | 能力域 | 状态 | 当前边界 |
 |---|---|---|
@@ -29,9 +29,14 @@ AssetTools 的完整闭环。当前仍处于 0.x，v0.44.0 已发布。下一版
 
 ## 当前计划
 
-暂无已锁定的 Granit 版本计划。Gneiss `UPSTREAM-044` 的后续设备能力快照、变体选择、CPU
-负载生命周期和预算回收属于 Gneiss；只有出现可复用且由 Granit 负责的契约缺口，才建立新的
-Granit 计划。
+### v0.45.0：教程能力矩阵与图形特性探针
+
+**状态：规划中，P1。**
+
+[v0.45.0](versions/v0.45.0.md) 通过
+[S-82](plans/S-82-0.45.0-tutorial-capability-matrix.md) 参考 bgfx 单项示例，新增粒子、透明和
+能力查询探针，验证现有公共 API 并分类真实缺口。Gneiss `UPSTREAM-044` 的设备能力快照、变体
+选择、CPU 负载生命周期和预算回收仍由 Gneiss 负责。
 
 ## 最近完成
 
