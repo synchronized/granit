@@ -82,12 +82,25 @@ async function validateVisualScene(browser, address, ratio) {
     await page.goto(
       `http://127.0.0.1:${address.port}/granit_tutorial_08_sdl_imgui.html?validation=1`,
     );
-    await page.waitForFunction(
-      () =>
-        Module.runtimeReady === true &&
-        typeof Module._granit_tutorial_08_rendered_frames === "function" &&
-        Module._granit_tutorial_08_rendered_frames() >= 30,
-    );
+    try {
+      await page.waitForFunction(
+        () =>
+          Module.runtimeReady === true &&
+          typeof Module._granit_tutorial_08_rendered_frames === "function" &&
+          Module._granit_tutorial_08_rendered_frames() >= 30,
+      );
+    } catch (error) {
+      const state = await page.evaluate(() => ({
+        runtimeReady: Module.runtimeReady === true,
+        hasFrameCounter: typeof Module._granit_tutorial_08_rendered_frames === "function",
+        renderedFrames: typeof Module._granit_tutorial_08_rendered_frames === "function"
+          ? Module._granit_tutorial_08_rendered_frames()
+          : null,
+      }));
+      throw new Error(
+        `${error.message}; state=${JSON.stringify(state)}; errors=${errors.join("\\n")}`,
+      );
+    }
     const canvas = page.locator("#canvas");
     const artifact = path.join(outputDirectory, "validation");
     fs.mkdirSync(artifact, { recursive: true });
