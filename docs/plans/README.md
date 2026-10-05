@@ -9,8 +9,12 @@
 
 ## 当前计划
 
+暂无已锁定的 Granit 实施计划。
+
+## 最近完成
+
 - [S-81：0.44.0 独立纹理变体上传](S-81-0.44.0-texture-variant-upload.md)——承接 Gneiss
-  `UPSTREAM-044` 的 U44-01，支持以所选变体起点为基址上传完整变体。
+  `UPSTREAM-044` 的 U44-01，支持以所选变体起点为基址上传完整变体，并发布 `v0.44.0`。
 
 - [S-77：0.42.0 Model Viewer 架构收敛](S-77-0.42.0-model-viewer-convergence.md)——拆分共享 glTF
   渲染支持，收敛加载操作、Viewer Document、Renderer 与调度边界，删除重叠状态和转发层。

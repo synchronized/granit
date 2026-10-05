@@ -21,6 +21,7 @@
 
 ## 稳定化与跨平台
 
+- [2026-09-30 Granit v0.44.0 发布验收](2026-09-30-v0.44.0-release-acceptance.md)
 - [2026-09-30 S-81 独立纹理变体上传验收](2026-09-30-s81-texture-variant-upload.md)
 - [2026-09-30 S-80 Vulkan 契约修复验收](2026-09-30-s80-vulkan-contract-fixes.md)
 - [2026-09-29 S-79 ImGui Integration 教程归位验收](2026-09-29-s79-imgui-integration-layout-acceptance.md)
