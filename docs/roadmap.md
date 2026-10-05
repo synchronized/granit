@@ -10,8 +10,8 @@
 ## 当前阶段
 
 Granit 已形成桌面 Vulkan、浏览器 WebGPU、C11 ABI、C++20 RAII、Window、RenderPipeline 与
-AssetTools 的完整闭环。当前仍处于 0.x，下一阶段通过可运行、跨后端的特性教程验证现有接口，
-再根据效果实现中的真实证据决定新的公共能力。
+AssetTools 的完整闭环。当前仍处于 0.x，v0.44.0 已发布。下一版本暂不锁定；继续根据 Gneiss
+驻留集成和其他消费者的真实证据决定是否需要新的 Granit 公共能力。
 
 | 能力域 | 状态 | 当前边界 |
 |---|---|---|
@@ -29,9 +29,15 @@ AssetTools 的完整闭环。当前仍处于 0.x，下一阶段通过可运行�
 
 ## 当前计划
 
+暂无已锁定的 Granit 版本计划。Gneiss `UPSTREAM-044` 的后续设备能力快照、变体选择、CPU
+负载生命周期和预算回收属于 Gneiss；只有出现可复用且由 Granit 负责的契约缺口，才建立新的
+Granit 计划。
+
+## 最近完成
+
 ### v0.44.0：独立纹理变体上传
 
-**状态：规划中，P0。**
+**状态：已发布。**
 
 [v0.44.0](versions/v0.44.0.md) 通过 [S-81](plans/S-81-0.44.0-texture-variant-upload.md) 承接 Gneiss
 `UPSTREAM-044` 的 U44-01，补齐非零偏移纹理变体的局部负载上传。预算、驻留、VFS、任务调度和
@@ -44,8 +50,6 @@ RID 生命周期仍由 Gneiss 负责。
 [v0.43.0](versions/v0.43.0.md) 通过 [S-80](plans/S-80-0.43.0-gneiss-pbr-compatibility.md) 核对 Gneiss
 `UPSTREAM-043` 与 Granit v0.42.0 已发布的五项 PBR 契约。默认不新增公共 API；只有确认属于 Granit 的
 通用缺口才实施最小修复。
-
-## 最近完成
 
 ### v0.42.0：Model Viewer 架构与跨平台收敛
 
