@@ -3,9 +3,10 @@
 
 # Granit 特性教程
 
-教程通过八个可运行程序介绍 Granit 的主要渲染路径、单项图形特性和第三方宿主集成。每个程序都能
-独立阅读，不要求按多个近似项目逐章复制代码。完整应用和集成展示位于
-[Samples 指南](../guides/examples.md)，接口细节以 [Reference](../README.md#接口参考) 为准。
+教程通过八个可运行程序介绍 Granit 的主要渲染路径、单项图形特性和第三方宿主集成。v0.45.0 将
+继续增加三个能力探针；每个程序都能独立阅读，不要求按多个近似项目逐章复制代码。完整应用和
+集成展示位于 [Samples 指南](../guides/examples.md)，接口细节以 [Reference](../README.md#接口参考)
+为准。当前覆盖与缺口分类见[能力矩阵](capability-matrix.md)。
 
 | 教程 | 主要内容 | 运行结果 | 源码 |
 |---|---|---|---|
@@ -17,6 +18,9 @@
 | [06：GPU Marching Cubes](06-marching-cubes.md) | Compute、Transient Buffer、Atomic、Indirect Draw | GPU 生成的动态 Metaballs 网格 | [06_marching_cubes](../../examples/tutorials/06_marching_cubes) |
 | [07：Deferred Rendering](07-deferred.md) | MRT、G-buffer、中间纹理采样、多 Pass、Resize | 多点光源照亮的实例场景与 G-buffer 调试视图 | [07_deferred](../../examples/tutorials/07_deferred) |
 | [08：SDL3 + ImGui](08-sdl-imgui.md) | 外部 SDL Window、ImGui Platform Backend、Surface、Canvas | SDL3 宿主中的跨后端 ImGui 面板 | [08_sdl_imgui](../../examples/tutorials/08_sdl_imgui) |
+| 09：Particles | 动态 Storage Buffer、粒子几何、透明混合 | S-82B 已实现，待跨平台验收 | [09_particles](../../examples/tutorials/09_particles) |
+| 10：Transparency | Opaque、Mask、Blend、对象级排序 | S-82C 已实现，待跨平台验收 | [10_transparency](../../examples/tutorials/10_transparency) |
+| 11：Capabilities | Format、Usage、Sampler、Mip 和 Renderer limits | S-82D 已实现，待跨平台验收 | [11_capabilities](../../examples/tutorials/11_capabilities) |
 
 前七个渲染教程复用仓库私有的 `examples/common/application`。它只处理 Window、Renderer 异步初始化、
 Surface、Swapchain、事件循环、Resize、Acquire 与 Present；Shader、资源、命令录制和场景仍留在
