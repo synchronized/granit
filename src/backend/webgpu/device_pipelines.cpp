@@ -470,7 +470,9 @@ granit_result create_render_pipeline_common(webgpu_instance_handle instance,
       WGPUCreateRenderPipelineAsyncCallbackInfo callback =
           WGPU_CREATE_RENDER_PIPELINE_ASYNC_CALLBACK_INFO_INIT;
 #if defined(__EMSCRIPTEN__)
-      callback.mode = WGPUCallbackMode_WaitAnyOnly;
+      // Emdawnwebgpu 在浏览器事件循环中交付异步回调。WaitAnyOnly 事件依赖
+      // InstanceWaitAny 管理生命周期，Instance 销毁/回调竞争时会被标记为 Shutdown。
+      callback.mode = WGPUCallbackMode_AllowSpontaneous;
 #else
       callback.mode = WGPUCallbackMode_AllowSpontaneous;
 #endif
@@ -596,7 +598,8 @@ granit_result create_compute_pipeline_common(webgpu_instance_handle instance,
       WGPUCreateComputePipelineAsyncCallbackInfo callback =
           WGPU_CREATE_COMPUTE_PIPELINE_ASYNC_CALLBACK_INFO_INIT;
 #if defined(__EMSCRIPTEN__)
-      callback.mode = WGPUCallbackMode_WaitAnyOnly;
+      // 与渲染管线相同，浏览器端必须让 Emdawnwebgpu 通过事件循环交付回调。
+      callback.mode = WGPUCallbackMode_AllowSpontaneous;
 #else
       callback.mode = WGPUCallbackMode_AllowSpontaneous;
 #endif
@@ -668,12 +671,8 @@ granit_result poll_pipeline_warmup(webgpu_instance_handle instance,
   const auto operation = found->second->pipeline_warmups.find(warmup);
   if (operation == found->second->pipeline_warmups.end())
     return GRANIT_ERROR_INVALID_HANDLE;
-#if defined(__EMSCRIPTEN__)
-  if (operation->second->result.load(std::memory_order_acquire) == GRANIT_ERROR_NOT_READY) {
-    WGPUFutureWaitInfo wait_info{operation->second->future, WGPU_FALSE};
-    static_cast<void>(wgpuInstanceWaitAny(found->second->instance, 1, &wait_info, 0));
-  }
-#endif
+  // Emscripten 的 AllowSpontaneous 回调由浏览器事件循环完成，不能在此处再走
+  // WaitAnyOnly 的同步 Future 路径；回调只负责发布 result 原子状态。
   return operation->second->result.load(std::memory_order_acquire);
 }
 
