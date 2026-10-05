@@ -36,7 +36,7 @@ if (git status --porcelain) {
 }
 
 $versionContent = Get-Content -Raw -Encoding UTF8 cmake/granit_version.cmake
-if ($versionContent -match '(?m)^set\(GRANIT_PROJECT_VERSION "(\d+\.\d+\.\d+)"\)$') {
+if ($versionContent -match '(?m)^set\(GRANIT_PROJECT_VERSION "(\d+\.\d+\.\d+)"\)\r?$') {
   $currentVersion = $Matches[1]
 } else {
   throw '无法从 cmake/granit_version.cmake 读取当前版本'
