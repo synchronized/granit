@@ -254,7 +254,7 @@ granit_result read_buffer(webgpu_instance_handle instance, webgpu_buffer buffer,
   wgpuInstanceAddRef(request.instance);
   wgpuBufferAddRef(request.buffer);
 #if defined(__EMSCRIPTEN__)
-  const WGPUBufferMapCallbackInfo callback{nullptr, WGPUCallbackMode_AllowSpontaneous, receive_map,
+  const WGPUBufferMapCallbackInfo callback{nullptr, WGPUCallbackMode_AllowProcessEvents, receive_map,
                                            &request, nullptr};
 #else
   const WGPUBufferMapCallbackInfo callback{nullptr, WGPUCallbackMode_WaitAnyOnly, receive_map,
@@ -265,10 +265,11 @@ granit_result read_buffer(webgpu_instance_handle instance, webgpu_buffer buffer,
                          static_cast<std::size_t>(size), callback);
 #if defined(__EMSCRIPTEN__)
   static_cast<void>(future);
-  // 浏览器端只能由事件循环交付 AllowSpontaneous 回调；Asyncify 让出执行权，避免
-  // 在主线程上调用 WaitAny 导致 Emdawnwebgpu 取消外部 Instance 事件。
-  for (std::uint32_t attempt = 0; !request.completed && attempt < 10000; ++attempt)
+  // 浏览器端让出主线程后显式处理 Instance 事件，避免在主线程上调用 WaitAny。
+  for (std::uint32_t attempt = 0; !request.completed && attempt < 10000; ++attempt) {
     emscripten_sleep(1);
+    wgpuInstanceProcessEvents(request.instance);
+  }
   if (!request.completed) {
     wgpuBufferUnmap(record.buffer);
     return GRANIT_ERROR_NOT_READY;
@@ -358,7 +359,7 @@ granit_result begin_readback(webgpu_instance_handle instance, webgpu_buffer buff
     return GRANIT_ERROR_OUT_OF_MEMORY;
   }
 #if defined(__EMSCRIPTEN__)
-  constexpr auto callback_mode = WGPUCallbackMode_AllowSpontaneous;
+  constexpr auto callback_mode = WGPUCallbackMode_AllowProcessEvents;
 #else
   constexpr auto callback_mode = WGPUCallbackMode_AllowProcessEvents;
 #endif
@@ -385,11 +386,7 @@ granit_result poll_readback(webgpu_instance_handle instance, webgpu_readback rea
     record = operation->second;
     native = found->second->instance;
   }
-#if !defined(__EMSCRIPTEN__)
   wgpuInstanceProcessEvents(native);
-#else
-  static_cast<void>(native);
-#endif
   const auto state = record->state.load(std::memory_order_acquire);
   return state == 2 ? GRANIT_SUCCESS : state == 3 ? GRANIT_ERROR_INTERNAL : GRANIT_ERROR_NOT_READY;
 }
