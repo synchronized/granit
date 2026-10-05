@@ -9,10 +9,12 @@
 
 ## 当前计划
 
-- [S-82：0.45.0 教程能力矩阵与图形特性探针](S-82-0.45.0-tutorial-capability-matrix.md)——参考 bgfx
-  单项示例验证 Granit 已有能力和真实缺口，默认不新增公共 API。
+暂无已锁定的 Granit 实施计划。
 
 ## 最近完成
+
+- [S-82：0.45.0 教程能力矩阵与图形特性探针](S-82-0.45.0-tutorial-capability-matrix.md)——参考 bgfx
+  单项示例验证 Granit 已有能力和真实缺口，并发布 `v0.45.0`。
 
 - [S-81：0.44.0 独立纹理变体上传](S-81-0.44.0-texture-variant-upload.md)——承接 Gneiss
   `UPSTREAM-044` 的 U44-01，支持以所选变体起点为基址上传完整变体，并发布 `v0.44.0`。
