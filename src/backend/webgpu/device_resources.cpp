@@ -18,16 +18,23 @@
 
 #include <webgpu/webgpu.h>
 
+#if defined(__EMSCRIPTEN__)
+#include <emscripten/emscripten.h>
+#endif
+
 namespace {
 
 using granit::detail::webgpu_device_state;
 using namespace granit::detail::webgpu_native;
 
+#if !defined(__EMSCRIPTEN__)
 constexpr std::uint64_t request_timeout_ns = UINT64_C(10000000000);
+#endif
 
 struct map_request {
   const webgpu_host_api* host{};
   WGPUMapAsyncStatus status{};
+  bool completed{};
 };
 
 struct readback_map_request {
@@ -51,6 +58,7 @@ void emit_dawn_message(const webgpu_host_api* host, WGPUStringView message) noex
 void receive_map(WGPUMapAsyncStatus status, WGPUStringView message, void* data, void*) noexcept {
   auto& request = *static_cast<map_request*>(data);
   request.status = status;
+  request.completed = true;
   if (status != WGPUMapAsyncStatus_Success)
     emit_dawn_message(request.host, message);
 }
@@ -230,11 +238,27 @@ granit_result read_buffer(webgpu_instance_handle instance, webgpu_buffer buffer,
   }
 
   map_request request{&found->second->host};
+#if defined(__EMSCRIPTEN__)
+  const WGPUBufferMapCallbackInfo callback{nullptr, WGPUCallbackMode_AllowSpontaneous, receive_map,
+                                           &request, nullptr};
+#else
   const WGPUBufferMapCallbackInfo callback{nullptr, WGPUCallbackMode_WaitAnyOnly, receive_map,
                                            &request, nullptr};
+#endif
   const auto future =
       wgpuBufferMapAsync(record.buffer, WGPUMapMode_Read, static_cast<std::size_t>(offset),
                          static_cast<std::size_t>(size), callback);
+#if defined(__EMSCRIPTEN__)
+  static_cast<void>(future);
+  // 浏览器端只能由事件循环交付 AllowSpontaneous 回调；Asyncify 让出执行权，避免
+  // 在主线程上调用 WaitAny 导致 Emdawnwebgpu 取消外部 Instance 事件。
+  for (std::uint32_t attempt = 0; !request.completed && attempt < 10000; ++attempt)
+    emscripten_sleep(1);
+  if (!request.completed) {
+    wgpuBufferUnmap(record.buffer);
+    return GRANIT_ERROR_NOT_READY;
+  }
+#else
   WGPUFutureWaitInfo wait_info{future, WGPU_FALSE};
   const auto wait_status =
       wgpuInstanceWaitAny(found->second->instance, 1, &wait_info, request_timeout_ns);
@@ -242,6 +266,7 @@ granit_result read_buffer(webgpu_instance_handle instance, webgpu_buffer buffer,
     wgpuBufferUnmap(record.buffer);
     return GRANIT_ERROR_NOT_READY;
   }
+#endif
   if (request.status != WGPUMapAsyncStatus_Success) {
     wgpuBufferUnmap(record.buffer);
     return GRANIT_ERROR_INTERNAL;
@@ -332,7 +357,11 @@ granit_result poll_readback(webgpu_instance_handle instance, webgpu_readback rea
     record = operation->second;
     native = found->second->instance;
   }
+#if !defined(__EMSCRIPTEN__)
   wgpuInstanceProcessEvents(native);
+#else
+  static_cast<void>(native);
+#endif
   const auto state = record->state.load(std::memory_order_acquire);
   return state == 2 ? GRANIT_SUCCESS : state == 3 ? GRANIT_ERROR_INTERNAL : GRANIT_ERROR_NOT_READY;
 }
