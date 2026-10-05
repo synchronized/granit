@@ -33,6 +33,7 @@ constexpr std::uint64_t request_timeout_ns = UINT64_C(10000000000);
 
 struct map_request {
   const webgpu_host_api* host{};
+  WGPUInstance instance{};
   WGPUMapAsyncStatus status{};
   bool completed{};
 };
@@ -40,6 +41,7 @@ struct map_request {
 struct readback_map_request {
   std::shared_ptr<webgpu_device_state::readback_record> readback;
   const webgpu_host_api* host{};
+  WGPUInstance instance{};
 };
 
 void emit_dawn_message(const webgpu_host_api* host, WGPUStringView message) noexcept {
@@ -61,6 +63,8 @@ void receive_map(WGPUMapAsyncStatus status, WGPUStringView message, void* data, 
   request.completed = true;
   if (status != WGPUMapAsyncStatus_Success)
     emit_dawn_message(request.host, message);
+  if (request.instance != nullptr)
+    wgpuInstanceRelease(request.instance);
 }
 
 void receive_readback_map(WGPUMapAsyncStatus status, WGPUStringView message, void* data,
@@ -70,6 +74,8 @@ void receive_readback_map(WGPUMapAsyncStatus status, WGPUStringView message, voi
   if (status != WGPUMapAsyncStatus_Success) {
     emit_dawn_message(request->host, message);
     readback.state.store(3, std::memory_order_release);
+    if (request->instance != nullptr)
+      wgpuInstanceRelease(request->instance);
     return;
   }
   const auto* mapped =
@@ -77,11 +83,15 @@ void receive_readback_map(WGPUMapAsyncStatus status, WGPUStringView message, voi
                                     static_cast<std::size_t>(readback.size));
   if (mapped == nullptr) {
     readback.state.store(3, std::memory_order_release);
+    if (request->instance != nullptr)
+      wgpuInstanceRelease(request->instance);
     return;
   }
   std::memcpy(readback.bytes.data(), mapped, static_cast<std::size_t>(readback.size));
   wgpuBufferUnmap(readback.buffer);
   readback.state.store(2, std::memory_order_release);
+  if (request->instance != nullptr)
+    wgpuInstanceRelease(request->instance);
 }
 
 granit_result create_buffer(webgpu_instance_handle instance, const webgpu_buffer_desc* desc,
@@ -237,7 +247,8 @@ granit_result read_buffer(webgpu_instance_handle instance, webgpu_buffer buffer,
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
 
-  map_request request{&found->second->host};
+  map_request request{&found->second->host, found->second->instance};
+  wgpuInstanceAddRef(request.instance);
 #if defined(__EMSCRIPTEN__)
   const WGPUBufferMapCallbackInfo callback{nullptr, WGPUCallbackMode_AllowSpontaneous, receive_map,
                                            &request, nullptr};
@@ -323,8 +334,21 @@ granit_result begin_readback(webgpu_instance_handle instance, webgpu_buffer buff
     found->second->readbacks.emplace(handle, record);
     *readback = handle;
   }
-  auto* request = new (std::nothrow) readback_map_request{record, host};
+  WGPUInstance native_instance{};
+  {
+    const std::scoped_lock lock{instances_mutex};
+    const auto found = instances.find(instance);
+    if (found == instances.end()) {
+      static_cast<void>(destroy_readback(instance, *readback));
+      *readback = 0;
+      return GRANIT_ERROR_INVALID_HANDLE;
+    }
+    native_instance = found->second->instance;
+  }
+  wgpuInstanceAddRef(native_instance);
+  auto* request = new (std::nothrow) readback_map_request{record, host, native_instance};
   if (request == nullptr) {
+    wgpuInstanceRelease(native_instance);
     static_cast<void>(destroy_readback(instance, *readback));
     *readback = 0;
     return GRANIT_ERROR_OUT_OF_MEMORY;
