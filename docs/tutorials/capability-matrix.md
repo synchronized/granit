@@ -17,9 +17,9 @@
 | Compute、Atomic、Transient Buffer、Indirect Draw | `06_marching_cubes` | 已有 GPU 生成几何路径 |
 | MRT、中间纹理、多 Pass、Resize | `07_deferred` | 已有 Deferred 路径 |
 | 外部 Window、SDL3、ImGui、Canvas | `08_sdl_imgui` | 已有宿主集成边界 |
-| 动态几何、透明粒子、容量变化 | `09_particles` | S-82B 待实现 |
-| Opaque、Mask、Blend、对象级透明排序 | `10_transparency` | S-82C 待实现 |
-| 格式、Usage、Sampler、Mip、Indirect 能力查询 | `11_capabilities` | S-82D 待实现 |
+| 动态几何、透明粒子、容量变化 | `09_particles` | S-82B 已实现，待跨平台验收 |
+| Opaque、Mask、Blend、对象级透明排序 | `10_transparency` | S-82C 已实现，待跨平台验收 |
+| 格式、Usage、Sampler、Mip、Indirect 能力查询 | `11_capabilities` | S-82D 已实现，待跨平台验收 |
 
 ## 当前缺口候选
 
