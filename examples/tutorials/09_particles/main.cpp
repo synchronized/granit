@@ -151,6 +151,7 @@ private:
     if (result.ok()) {
       int count = static_cast<int>(particle_count_);
       ImGui::SliderInt("Particles", &count, 1, static_cast<int>(maximum_particles));
+      particle_count_ = static_cast<std::uint32_t>(count);
       ImGui::Checkbox("Animate", &animate_);
       ImGui::Text("Storage elements: %u", particle_count_);
       result = runtime_.end_frame();
