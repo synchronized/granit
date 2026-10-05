@@ -49,6 +49,12 @@ private:
           granit::example::assets::asset_location::bundled("tutorials/02_pbr_assets/Suzanne.gltf"));
     }
     if (!model_asset_.ready()) {
+      if (!asset_wait_logged_) {
+        std::cerr << "GRANIT_DIAGNOSTIC:Tutorial 02 asset wait status="
+                  << static_cast<int>(model_asset_.status()) << " diagnostic="
+                  << model_asset_.diagnostic() << '\n';
+        asset_wait_logged_ = true;
+      }
       if (model_asset_.status() == granit::example::assets::asset_status::failed ||
           model_asset_.status() == granit::example::assets::asset_status::cancelled) {
         std::cerr << "Failed to load Suzanne model: " << model_asset_.diagnostic() << '\n';
@@ -56,6 +62,8 @@ private:
       }
       return granit::result::not_ready;
     }
+
+    asset_wait_logged_ = false;
 
     last_operation_ = "loading Suzanne glTF";
     auto result = initialize_model();
@@ -241,6 +249,7 @@ private:
   float model_roughness_{1.0F};
   bool auto_orbit_{true};
   bool smoke_test_{};
+  bool asset_wait_logged_{};
   std::uint32_t pointer_events_{};
   granit::result shutdown_reason_{granit::result::success};
   const char* last_operation_{"starting"};

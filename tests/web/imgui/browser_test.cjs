@@ -73,11 +73,16 @@ async function validateVisualScene(browser, address, ratio) {
   });
   const page = await context.newPage();
   const errors = [];
+  const events = [];
   let completed = false;
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => {
     if (message.type() === "error") errors.push(message.text());
   });
+  page.on("crash", () => events.push("page crashed"));
+  page.on("close", () => events.push("page closed"));
+  page.on("requestfailed", (request) =>
+    events.push(`request failed: ${request.url()} - ${request.failure()?.errorText ?? "unknown"}`));
   try {
     await page.goto(
       `http://127.0.0.1:${address.port}/granit_tutorial_08_sdl_imgui.html?validation=1`,
@@ -90,15 +95,21 @@ async function validateVisualScene(browser, address, ratio) {
           Module._granit_tutorial_08_rendered_frames() >= 30,
       );
     } catch (error) {
-      const state = await page.evaluate(() => ({
-        runtimeReady: Module.runtimeReady === true,
-        hasFrameCounter: typeof Module._granit_tutorial_08_rendered_frames === "function",
-        renderedFrames: typeof Module._granit_tutorial_08_rendered_frames === "function"
-          ? Module._granit_tutorial_08_rendered_frames()
-          : null,
-      }));
+      let state;
+      try {
+        state = await page.evaluate(() => ({
+          runtimeReady: Module.runtimeReady === true,
+          hasFrameCounter: typeof Module._granit_tutorial_08_rendered_frames === "function",
+          renderedFrames: typeof Module._granit_tutorial_08_rendered_frames === "function"
+            ? Module._granit_tutorial_08_rendered_frames()
+            : null,
+        }));
+      } catch (diagnosticError) {
+        state = { evaluation: diagnosticError.message };
+      }
       throw new Error(
-        `${error.message}; state=${JSON.stringify(state)}; errors=${errors.join("\\n")}`,
+        `${error.message}; state=${JSON.stringify(state)}; events=${events.join(" | ")}; ` +
+        `errors=${errors.join("\\n")}`,
       );
     }
     const canvas = page.locator("#canvas");
