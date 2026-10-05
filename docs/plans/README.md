@@ -9,7 +9,8 @@
 
 ## 当前计划
 
-暂无已锁定的 Granit 实施计划。
+- [S-82：0.45.0 教程能力矩阵与图形特性探针](S-82-0.45.0-tutorial-capability-matrix.md)——参考 bgfx
+  单项示例验证 Granit 已有能力和真实缺口，默认不新增公共 API。
 
 ## 最近完成
 
