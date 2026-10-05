@@ -11,6 +11,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <limits>
 #include <memory>
@@ -295,6 +296,14 @@ void receive_device_async(WGPURequestDeviceStatus status, WGPUDevice device, WGP
   const auto accepted = context->ticket.invoke([state = context->state, status, device, message] {
     if (status != WGPURequestDeviceStatus_Success || device == nullptr) {
       emit_dawn_message(&state->host, message);
+      char diagnostic[96]{};
+      const auto length = std::snprintf(
+        diagnostic, sizeof(diagnostic), "Emscripten WebGPU device callback status=%d",
+          static_cast<int>(status));
+      if (length > 0)
+        emit(state->host, GRANIT_DIAGNOSTIC_SEVERITY_ERROR, diagnostic,
+             static_cast<std::uint32_t>(
+                 (std::min)(length, static_cast<int>(sizeof(diagnostic) - 1))));
       state->lifecycle.mark_failed(GRANIT_ERROR_INITIALIZATION_FAILED);
       if (device != nullptr)
         wgpuDeviceRelease(device);
@@ -343,6 +352,14 @@ void receive_adapter_async(WGPURequestAdapterStatus status, WGPUAdapter adapter,
   const auto accepted = context->ticket.invoke([state = context->state, status, adapter, message] {
     if (status != WGPURequestAdapterStatus_Success || adapter == nullptr) {
       emit_dawn_message(&state->host, message);
+      char diagnostic[96]{};
+      const auto length = std::snprintf(
+        diagnostic, sizeof(diagnostic), "Emscripten WebGPU adapter callback status=%d",
+          static_cast<int>(status));
+      if (length > 0)
+        emit(state->host, GRANIT_DIAGNOSTIC_SEVERITY_ERROR, diagnostic,
+             static_cast<std::uint32_t>(
+                 (std::min)(length, static_cast<int>(sizeof(diagnostic) - 1))));
       state->lifecycle.mark_failed(GRANIT_ERROR_NO_SUITABLE_DEVICE);
       if (adapter != nullptr)
         wgpuAdapterRelease(adapter);
