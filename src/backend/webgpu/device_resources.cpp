@@ -34,6 +34,7 @@ constexpr std::uint64_t request_timeout_ns = UINT64_C(10000000000);
 struct map_request {
   const webgpu_host_api* host{};
   WGPUInstance instance{};
+  WGPUBuffer buffer{};
   WGPUMapAsyncStatus status{};
   bool completed{};
 };
@@ -65,6 +66,8 @@ void receive_map(WGPUMapAsyncStatus status, WGPUStringView message, void* data, 
     emit_dawn_message(request.host, message);
   if (request.instance != nullptr)
     wgpuInstanceRelease(request.instance);
+  if (request.buffer != nullptr)
+    wgpuBufferRelease(request.buffer);
 }
 
 void receive_readback_map(WGPUMapAsyncStatus status, WGPUStringView message, void* data,
@@ -247,8 +250,9 @@ granit_result read_buffer(webgpu_instance_handle instance, webgpu_buffer buffer,
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
 
-  map_request request{&found->second->host, found->second->instance};
+  map_request request{&found->second->host, found->second->instance, record.buffer};
   wgpuInstanceAddRef(request.instance);
+  wgpuBufferAddRef(request.buffer);
 #if defined(__EMSCRIPTEN__)
   const WGPUBufferMapCallbackInfo callback{nullptr, WGPUCallbackMode_AllowSpontaneous, receive_map,
                                            &request, nullptr};
