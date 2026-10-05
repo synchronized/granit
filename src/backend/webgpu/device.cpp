@@ -661,6 +661,9 @@ void destroy_backend(webgpu_instance_handle instance) noexcept {
   }
 
   const auto host = state->host;
+  constexpr char destroying_message[] = "Dawn WebGPU backend destroy started";
+  emit(host, GRANIT_DIAGNOSTIC_SEVERITY_INFO, destroying_message,
+       sizeof(destroying_message) - 1);
   release_resources(*state);
   state->~webgpu_device_state();
   deallocate(host, state);
