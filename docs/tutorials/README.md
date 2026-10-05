@@ -18,6 +18,7 @@
 | [06：GPU Marching Cubes](06-marching-cubes.md) | Compute、Transient Buffer、Atomic、Indirect Draw | GPU 生成的动态 Metaballs 网格 | [06_marching_cubes](../../examples/tutorials/06_marching_cubes) |
 | [07：Deferred Rendering](07-deferred.md) | MRT、G-buffer、中间纹理采样、多 Pass、Resize | 多点光源照亮的实例场景与 G-buffer 调试视图 | [07_deferred](../../examples/tutorials/07_deferred) |
 | [08：SDL3 + ImGui](08-sdl-imgui.md) | 外部 SDL Window、ImGui Platform Backend、Surface、Canvas | SDL3 宿主中的跨后端 ImGui 面板 | [08_sdl_imgui](../../examples/tutorials/08_sdl_imgui) |
+| 09：Particles | 动态 Storage Buffer、粒子几何、透明混合 | S-82B 实施中 | [09_particles](../../examples/tutorials/09_particles) |
 
 前七个渲染教程复用仓库私有的 `examples/common/application`。它只处理 Window、Renderer 异步初始化、
 Surface、Swapchain、事件循环、Resize、Acquire 与 Present；Shader、资源、命令录制和场景仍留在
