@@ -56,6 +56,7 @@ function validateModelViewerPixels(png) {
 
 function startServer() {
   const requestedPaths = new Set();
+  const missingPaths = new Set();
   let externalBufferAvailable = true;
   const server = http.createServer((request, response) => {
     const requestPath = new URL(request.url, "http://127.0.0.1").pathname;
@@ -72,6 +73,7 @@ function startServer() {
     }
     fs.readFile(filePath, (error, content) => {
       if (error) {
+        missingPaths.add(requestPath);
         response.writeHead(404).end();
         return;
       }
@@ -88,6 +90,7 @@ function startServer() {
       resolve({
         server,
         requestedPaths,
+        missingPaths,
         rejectExternalBuffer() {
           externalBufferAvailable = false;
         },
@@ -97,7 +100,7 @@ function startServer() {
 }
 
 async function main() {
-  const { server, requestedPaths, rejectExternalBuffer } = await startServer();
+  const { server, requestedPaths, missingPaths, rejectExternalBuffer } = await startServer();
   const address = server.address();
   const browserArguments = ["--enable-unsafe-webgpu", "--no-sandbox"];
   if (process.platform !== "win32") {
@@ -114,10 +117,20 @@ async function main() {
   });
   const page = await browser.newPage();
   const browserMessages = [];
+  const browserEvents = [];
   page.on("console", (message) => browserMessages.push(`${message.type()}: ${message.text()}`));
   page.on("pageerror", (error) => browserMessages.push(`pageerror: ${error.message}`));
+  page.on("requestfailed", (request) =>
+    browserEvents.push(
+      `requestfailed: ${request.url()} (${request.failure()?.errorText ?? "unknown"})`,
+    ),
+  );
+  page.on("crash", () => browserEvents.push("page:crash"));
+  page.on("close", () => browserEvents.push("page:close"));
 
   try {
+    console.log(`Chrome: ${browser.version()}`);
+    console.log(`User-Agent: ${await page.evaluate(() => navigator.userAgent)}`);
     await page.goto(`http://127.0.0.1:${address.port}/${entryName}${modelQuery}`, {
       waitUntil: "load",
     });
@@ -507,6 +520,8 @@ async function main() {
     await failurePage.close();
     console.log("浏览器 WebGPU 外部 Buffer 缺失诊断验证通过");
   } catch (error) {
+    console.error(`HTTP 404 paths: ${JSON.stringify([...missingPaths])}`);
+    console.error(`Browser events: ${JSON.stringify(browserEvents)}`);
     console.error(browserMessages.join("\n"));
     throw error;
   } finally {
