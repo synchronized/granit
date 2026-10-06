@@ -50,7 +50,7 @@ private:
     }
     if (!model_asset_.ready()) {
       if (!asset_wait_logged_) {
-        std::cerr << "GRANIT_DIAGNOSTIC:Tutorial 02 asset wait status="
+        std::cout << "GRANIT_DIAGNOSTIC:Tutorial 02 asset wait status="
                   << static_cast<int>(model_asset_.status()) << " diagnostic="
                   << model_asset_.diagnostic() << '\n';
         asset_wait_logged_ = true;
