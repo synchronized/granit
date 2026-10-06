@@ -20,6 +20,7 @@ struct vulkan_loader_status {
  *
  * 默认按 system -> bundled 顺序尝试。可通过 GRANIT_VULKAN_RUNTIME 选择 system、bundled、
  * auto 或 none，并通过 GRANIT_VULKAN_LOADER_PATH 指定开发/诊断用 Loader 路径。
+ * GRANIT_VULKAN_VALIDATION_PATH 由 instance 层用于定位应用私有验证层。
  */
 [[nodiscard]] vulkan_loader_status initialize_vulkan_loader() noexcept;
 

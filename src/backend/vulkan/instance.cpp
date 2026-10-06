@@ -8,6 +8,7 @@
 #include "core/diagnostic_sink.h"
 
 #include <cstring>
+#include <cstdlib>
 #include <new>
 #include <string>
 #include <utility>
@@ -21,6 +22,65 @@ namespace granit::detail {
 namespace {
 
 constexpr const char* validation_layer_name = "VK_LAYER_KHRONOS_validation";
+
+enum class validation_mode { default_behavior, off, auto_select, on };
+
+std::string environment_value(const char* name) noexcept {
+  try {
+#if defined(_WIN32)
+    char* value = nullptr;
+    std::size_t length = 0;
+    if (_dupenv_s(&value, &length, name) != 0 || value == nullptr)
+      return {};
+    std::string result{value, length};
+    free(value);
+    return result;
+#else
+    const auto* value = std::getenv(name);
+    return value == nullptr ? std::string{} : std::string{value};
+#endif
+  } catch (...) {
+    return {};
+  }
+}
+
+validation_mode configured_validation_mode() noexcept {
+  const auto value = environment_value("GRANIT_VULKAN_VALIDATION");
+  if (value == "off")
+    return validation_mode::off;
+  if (value == "auto")
+    return validation_mode::auto_select;
+  if (value == "on")
+    return validation_mode::on;
+  return validation_mode::default_behavior;
+}
+
+void configure_validation_layer_path() noexcept {
+  const auto path = environment_value("GRANIT_VULKAN_VALIDATION_PATH");
+  if (path.empty())
+    return;
+#if defined(_WIN32)
+  _putenv_s("VK_LAYER_PATH", path.c_str());
+#else
+  setenv("VK_LAYER_PATH", path.c_str(), 1);
+#endif
+}
+
+struct validation_configuration {
+  bool enabled{};
+  bool required{};
+};
+
+validation_configuration resolve_validation_configuration(bool requested) noexcept {
+  const auto mode = configured_validation_mode();
+  if (mode == validation_mode::off)
+    return {};
+  if (mode == validation_mode::on)
+    return {.enabled = true, .required = true};
+  if (mode == validation_mode::auto_select)
+    return {.enabled = requested, .required = false};
+  return {.enabled = requested, .required = requested};
+}
 
 VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
     VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT type,
@@ -146,12 +206,23 @@ granit_result vulkan_instance::initialize(const vulkan_instance_desc& desc) {
   }
 
   try {
-    if (desc.enable_validation && !validation_support_available()) {
+    configure_validation_layer_path();
+    const auto validation = resolve_validation_configuration(desc.enable_validation);
+    const auto validation_available =
+        !validation.enabled || validation_support_available();
+    if (validation.enabled && !validation_available && validation.required) {
       return GRANIT_ERROR_UNSUPPORTED;
     }
+    if (validation.enabled && !validation_available && !validation.required) {
+      const auto& diagnostics = desc.diagnostics != nullptr ? *desc.diagnostics
+                                                            : default_diagnostic_sink();
+      diagnostics.emit(diagnostic_severity::warning, diagnostic_category::validation,
+                       "Vulkan validation layer unavailable; continuing without validation");
+    }
+    const auto enable_validation = validation.enabled && validation_available;
 
     std::vector<const char*> extensions;
-    if (desc.enable_validation) {
+    if (enable_validation) {
       extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
     if (desc.surface_types != 0 && !instance_extension_available(VK_KHR_SURFACE_EXTENSION_NAME))
@@ -204,7 +275,7 @@ granit_result vulkan_instance::initialize(const vulkan_instance_desc& desc) {
     VkInstanceCreateInfo create_info{};
     create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     create_info.pApplicationInfo = &application_info;
-    if (desc.enable_validation) {
+    if (enable_validation) {
       create_info.enabledLayerCount = 1;
       create_info.ppEnabledLayerNames = layers;
       create_info.pNext = &debug_create_info;
@@ -219,7 +290,7 @@ granit_result vulkan_instance::initialize(const vulkan_instance_desc& desc) {
     }
 
     volk::volkLoadInstanceTable(&functions_, instance_);
-    if (desc.enable_validation) {
+    if (enable_validation) {
       if (functions_.vkCreateDebugUtilsMessengerEXT == nullptr) {
         reset();
         return GRANIT_ERROR_INITIALIZATION_FAILED;
