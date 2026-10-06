@@ -40,11 +40,21 @@ add_test(
     -P "${CMAKE_CURRENT_SOURCE_DIR}/check_prepare_release.cmake"
 )
 
+add_test(
+  NAME granit.packaging.vulkan_runtime_bundle
+  COMMAND
+    "${CMAKE_COMMAND}"
+    "-DGRANIT_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
+    "-DGRANIT_TEST_BINARY_DIR=${GRANIT_TEST_BINARY_DIR}/packaging"
+    -P "${CMAKE_CURRENT_SOURCE_DIR}/check_vulkan_runtime_bundle.cmake"
+)
+
 set_property(
   TEST
     granit.packaging.build_tree
     granit.packaging.release_version
     granit.packaging.release_version_mismatch
     granit.packaging.prepare_release
+    granit.packaging.vulkan_runtime_bundle
   APPEND PROPERTY LABELS package release
 )
