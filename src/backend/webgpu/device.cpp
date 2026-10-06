@@ -216,6 +216,11 @@ void release_resources(webgpu_device_state& state) noexcept {
   }
   if (state.instance != nullptr) {
     wgpuInstanceRelease(state.instance);
+#if defined(__EMSCRIPTEN__)
+    // 保留的 owner 引用与 create_backend 中的 AddRef 配对，确保异步回调
+    // 完成前 Instance 不会因其他路径的 Release 提前注销。
+    wgpuInstanceRelease(state.instance);
+#endif
   }
 }
 
@@ -490,8 +495,10 @@ granit_result create_backend(const webgpu_host_api* host,
     deallocate(*host, memory);
     return GRANIT_ERROR_INITIALIZATION_FAILED;
   }
-
 #if defined(__EMSCRIPTEN__)
+  // Emscripten 的 adapter/device/readback 回调跨越浏览器事件循环，额外持有
+  // 一份 owner 引用用于隔离异步路径的 Release，统一在 release_resources 中释放。
+  wgpuInstanceAddRef(state->instance);
   wgpuInstanceAddRef(state->instance);
   auto* adapter_context = new (std::nothrow)
       async_init_context{state->callback_lifetime.ticket(), state, state->instance};
@@ -505,6 +512,7 @@ granit_result create_backend(const webgpu_host_api* host,
   const auto register_result = register_instance(state, out_instance);
   if (register_result != GRANIT_SUCCESS) {
     delete adapter_context;
+    wgpuInstanceRelease(state->instance);
     release_resources(*state);
     state->~webgpu_device_state();
     deallocate(*host, memory);
