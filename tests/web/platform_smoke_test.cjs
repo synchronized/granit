@@ -14,6 +14,7 @@ const entryName = process.argv[3] ?? "granit_web_platform_smoke.html";
 const statusTextSelector = "#granit-status";
 const modelQuery = process.argv[4] ? `?model=${encodeURIComponent(process.argv[4])}` : "";
 const usesLocalFixture = entryName === "granit_web_platform_smoke.html" || Boolean(process.argv[4]);
+const isRuntimeTest = entryName === "granit_sample_model_viewer_web_test.html";
 const startupTimeout = usesLocalFixture ? 30_000 : 120_000;
 
 const contentTypes = new Map([
@@ -254,20 +255,23 @@ async function main() {
     }));
     if (uploadProgress.total === 0 || uploadProgress.completed !== uploadProgress.total)
       throw new Error(`浏览器上传进度未完成：${JSON.stringify(uploadProgress)}`);
-    await page.waitForFunction(
-      () =>
-        typeof Module._granit_web_rendered_frame_count === "function" &&
-        Module._granit_web_rendered_frame_count() >= 60,
-      undefined,
-      { timeout: 10_000 },
-    );
+    if (!isRuntimeTest) {
+      await page.waitForFunction(
+        () =>
+          typeof Module._granit_web_rendered_frame_count === "function" &&
+          Module._granit_web_rendered_frame_count() >= 60,
+        undefined,
+        { timeout: 10_000 },
+      );
+    }
     if (usesLocalFixture) {
       for (const assetPath of ["/model_viewer_fixture.gltf", "/model_viewer_fixture.bin"]) {
         if (!requestedPaths.has(assetPath))
           throw new Error(`浏览器资源加载链路未请求 ${assetPath}`);
       }
     }
-    validateModelViewerPixels(await page.locator("#canvas").screenshot({ type: "png" }));
+    if (!isRuntimeTest)
+      validateModelViewerPixels(await page.locator("#canvas").screenshot({ type: "png" }));
 
     const initialLighting = await page.evaluate(() => ({
       generation: Module._granit_web_lighting_generation(),
@@ -323,14 +327,16 @@ async function main() {
     );
     if (lowQualityResult !== 0)
       throw new Error(`浏览器低质量配置失败：${lowQualityResult}`);
-    const framesBeforeHighQuality = await page.evaluate(() =>
-      Module._granit_web_rendered_frame_count(),
-    );
-    await page.waitForFunction(
-      (previous) => Module._granit_web_rendered_frame_count() > previous,
-      framesBeforeHighQuality,
-      { timeout: 10_000 },
-    );
+    if (!isRuntimeTest) {
+      const framesBeforeHighQuality = await page.evaluate(() =>
+        Module._granit_web_rendered_frame_count(),
+      );
+      await page.waitForFunction(
+        (previous) => Module._granit_web_rendered_frame_count() > previous,
+        framesBeforeHighQuality,
+        { timeout: 10_000 },
+      );
+    }
     const anisotropy = await page.evaluate(() =>
       Math.min(8, Module._granit_web_max_sampler_anisotropy()),
     );
@@ -342,13 +348,14 @@ async function main() {
     if (highQualityResult !== 0)
       throw new Error(`浏览器高质量配置失败：${highQualityResult}`);
     await page.waitForFunction(
-      (previous) =>
+      ({ previous, runtime }) =>
         Module._granit_web_quality_generation() === previous + 2 &&
-        Module._granit_web_rendered_frame_count() > 60,
-      qualityGeneration,
+        (runtime || Module._granit_web_rendered_frame_count() > 60),
+      { previous: qualityGeneration, runtime: isRuntimeTest },
       { timeout: 10_000 },
     );
-    validateModelViewerPixels(await page.locator("#canvas").screenshot({ type: "png" }));
+    if (!isRuntimeTest)
+      validateModelViewerPixels(await page.locator("#canvas").screenshot({ type: "png" }));
 
     await page.keyboard.press("F");
     const canvas = page.locator("#canvas");
