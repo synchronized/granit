@@ -10,8 +10,8 @@
 ## 当前阶段
 
 Granit 已形成桌面 Vulkan、浏览器 WebGPU、C11 ABI、C++20 RAII、Window、RenderPipeline 与
-AssetTools 的完整闭环。当前仍处于 0.x，v0.45.0 已发布。下一版本暂不锁定；继续等待 Gneiss
-驻留和材质集成中的新跨后端契约证据，只有确认属于 Granit 的通用缺口才建立新计划。
+AssetTools 的完整闭环。当前仍处于 0.x，v0.46.0 已发布。下一版本聚焦 Vulkan Loader 的应用私有
+分发、自动选择和开发期 Validation Layer，不改变 Vulkan 驱动由平台提供的边界。
 
 | 能力域 | 状态 | 当前边界 |
 |---|---|---|
@@ -29,7 +29,9 @@ AssetTools 的完整闭环。当前仍处于 0.x，v0.45.0 已发布。下一版
 
 ## 当前计划
 
-暂无已锁定的 Granit 版本计划。下一版本等待新的跨后端契约证据。
+[v0.47.0](versions/v0.47.0.md) 当前由 [S-83](plans/S-83-0.47.0-vulkan-runtime-bundle.md)
+承接：提供 Windows/Linux Vulkan Runtime Bundle、system/bundled/auto Loader 选择、Validation
+Layer Bundle 和完整性/许可证验收。v0.47.0 不分发厂商驱动、ICD 或 Vulkan SDK。
 
 ## 最近完成
 

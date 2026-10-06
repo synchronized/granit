@@ -9,7 +9,8 @@
 
 ## 当前计划
 
-暂无已锁定的 Granit 实施计划。
+- [S-83：0.47.0 Vulkan Runtime Bundle](S-83-0.47.0-vulkan-runtime-bundle.md)——提供 Windows/Linux
+  Vulkan Loader Bundle、system/bundled/auto 选择、Debug Validation Layer Bundle 和发布验收。
 
 ## 最近完成
 
