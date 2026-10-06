@@ -399,5 +399,5 @@ jobs:
             LICENSES/Vulkan-ValidationLayers-LICENSE.txt \
             LICENSES/Vulkan-Headers-LICENSE.md \
             vulkan-runtime.json; do
-            tar -tf "$RUNNER_TEMP/granit-vulkan-runtime-linux-x64.tar" | grep -Fx "$path" >/dev/null
+            tar -tf "$RUNNER_TEMP/granit-vulkan-runtime-linux-x64.tar" | sed 's#^\./##' | grep -Fx "$path" >/dev/null
           done
