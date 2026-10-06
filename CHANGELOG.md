@@ -8,6 +8,18 @@
 
 ## Unreleased
 
+## 0.47.0 - 2026-10-06
+
+### 新增
+
+- Vulkan Loader 支持 `system`、`bundled`、`auto` 和 `none` 运行时选择，并支持显式 Loader 路径。
+- 增加独立的 Windows/Linux Vulkan Runtime Bundle 构建、许可证、manifest 和 SHA-256 校验流程。
+- 增加 `GRANIT_VULKAN_VALIDATION=off/auto/on` 与私有 Validation Layer 路径配置，不改变公共 ABI。
+
+### 修复
+
+- 验证层缺失时，`auto` 模式会降级为无验证层并发出诊断；`on` 模式会明确返回不支持。
+
 ## 0.46.0 - 2026-10-06
 
 ## 0.45.0 - 2026-10-05
