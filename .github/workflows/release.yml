@@ -343,8 +343,12 @@ jobs:
         shell: bash
         run: |
           rm dist/release-manifest.json
-          gh release create "$RELEASE_TAG" dist/* --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" --title "Granit ${RELEASE_TAG#v}" --generate-notes
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" dist/* --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$RELEASE_TAG" dist/* --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" --title "Granit ${RELEASE_TAG#v}" --generate-notes
+          fi
 
   verify-public-release:
     needs: publish
@@ -370,11 +374,31 @@ jobs:
             test -s "dist/$name"
           done
           test "$(find dist -maxdepth 1 -type f -name 'granit-*' | wc -l)" -eq 4
-          for archive in dist/granit-*.tar.gz; do
+          for archive in dist/granit-*-shared.tar.gz; do
             test "$(tar -tzf "$archive" | cut -d/ -f1 | sort -u | wc -l)" -eq 1
           done
-          for archive in dist/granit-*.zip; do
+          for archive in dist/granit-*-shared.zip; do
             test "$(unzip -Z1 "$archive" | tr '\\' '/' | cut -d/ -f1 | sort -u | wc -l)" -eq 1
           done
+          runtime_zip=dist/granit-vulkan-runtime-windows-x64.zip
+          for path in \
+            bin/vulkan-1.dll \
+            validation/VkLayer_khronos_validation.dll \
+            validation/VkLayer_khronos_validation.json \
+            LICENSES/Vulkan-Loader-LICENSE.txt \
+            LICENSES/Vulkan-ValidationLayers-LICENSE.txt \
+            LICENSES/Vulkan-Headers-LICENSE.md \
+            vulkan-runtime.json; do
+            unzip -Z1 "$runtime_zip" | tr '\\' '/' | grep -Fx "$path" >/dev/null
+          done
           zstd -q -d -f dist/granit-vulkan-runtime-linux-x64.tar.zst -o "$RUNNER_TEMP/granit-vulkan-runtime-linux-x64.tar"
-          test "$(tar -tf "$RUNNER_TEMP/granit-vulkan-runtime-linux-x64.tar" | cut -d/ -f1 | sort -u | wc -l)" -eq 1
+          for path in \
+            ./bin/vulkan-1.dll \
+            ./validation/libVkLayer_khronos_validation.so \
+            ./validation/VkLayer_khronos_validation.json \
+            ./LICENSES/Vulkan-Loader-LICENSE.txt \
+            ./LICENSES/Vulkan-ValidationLayers-LICENSE.txt \
+            ./LICENSES/Vulkan-Headers-LICENSE.md \
+            ./vulkan-runtime.json; do
+            tar -tf "$RUNNER_TEMP/granit-vulkan-runtime-linux-x64.tar" | grep -Fx "$path" >/dev/null
+          done
