@@ -45,7 +45,7 @@ struct map_request {
 
 struct readback_map_request {
   std::shared_ptr<webgpu_device_state::readback_record> readback;
-  const webgpu_host_api* host{};
+  webgpu_host_api host{};
   WGPUInstance instance{};
 };
 
@@ -79,7 +79,7 @@ void receive_readback_map(WGPUMapAsyncStatus status, WGPUStringView message, voi
   std::unique_ptr<readback_map_request> request{static_cast<readback_map_request*>(data)};
   auto& readback = *request->readback;
   if (status != WGPUMapAsyncStatus_Success) {
-    emit_dawn_message(request->host, message);
+    emit_dawn_message(&request->host, message);
     readback.state.store(3, std::memory_order_release);
     if (request->instance != nullptr)
       wgpuInstanceRelease(request->instance);
@@ -367,7 +367,7 @@ granit_result begin_readback(webgpu_instance_handle instance, webgpu_buffer buff
     native_instance = found->second->instance;
   }
   wgpuInstanceAddRef(native_instance);
-  auto* request = new (std::nothrow) readback_map_request{record, host, native_instance};
+  auto* request = new (std::nothrow) readback_map_request{record, *host, native_instance};
   if (request == nullptr) {
     wgpuInstanceRelease(native_instance);
     static_cast<void>(destroy_readback(instance, *readback));
