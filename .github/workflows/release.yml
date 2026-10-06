@@ -21,6 +21,9 @@ concurrency:
 
 env:
   RELEASE_TAG: ${{ inputs.tag }}
+  VULKAN_LOADER_REF: a9e72c66d5cb79911eb9a9063bf4016dd0a3a123
+  VULKAN_HEADERS_REF: 8864cdc896bbc2a9b6eb36b3218fc9ef57908d77
+  VULKAN_VALIDATION_REF: b9d4f9ead8d97c1bb0d174ea07d8aed8273818a5
   SCCACHE_GHA_ENABLED: "true"
   CCACHE_DIR: ${{ github.workspace }}/.cache/ccache
   CCACHE_BASEDIR: ${{ github.workspace }}
@@ -189,8 +192,96 @@ jobs:
         shell: bash
         run: ccache --show-stats
 
+  windows-vulkan-runtime:
+    needs: validate
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-msvc
+        with:
+          arch: x64
+      - name: 构建锁定的 Khronos Runtime
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $source = "$env:RUNNER_TEMP/granit-vulkan-runtime-source"
+          $headers = "$source/headers"
+          $loader = "$source/loader"
+          $validation = "$source/validation"
+          git clone --filter=blob:none https://github.com/KhronosGroup/Vulkan-Headers.git $headers
+          git -C $headers checkout --detach $env:VULKAN_HEADERS_REF
+          git clone --filter=blob:none https://github.com/KhronosGroup/Vulkan-Loader.git $loader
+          git -C $loader checkout --detach $env:VULKAN_LOADER_REF
+          git clone --filter=blob:none https://github.com/KhronosGroup/Vulkan-ValidationLayers.git $validation
+          git -C $validation checkout --detach $env:VULKAN_VALIDATION_REF
+          cmake -S $headers -B "$source/headers-build" -G Ninja -DCMAKE_BUILD_TYPE=Release "-DCMAKE_INSTALL_PREFIX=$source/headers-install"
+          cmake --build "$source/headers-build" --target install
+          cmake -S $loader -B "$source/loader-build" -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF -DUPDATE_DEPS=OFF "-DVULKAN_HEADERS_INSTALL_DIR=$source/headers-install" "-DCMAKE_INSTALL_PREFIX=$source/loader-install"
+          cmake --build "$source/loader-build" --target install
+          cmake -S $validation -B "$source/validation-build" -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF -DBUILD_WERROR=OFF "-DCMAKE_INSTALL_PREFIX=$source/validation-install"
+          cmake --build "$source/validation-build" --target install
+          $stage = "$PWD/stage/granit-vulkan-runtime-windows-x64"
+          New-Item -ItemType Directory -Force "$stage/bin", "$stage/validation", "$stage/LICENSES" | Out-Null
+          Copy-Item "$source/loader-install/bin/vulkan-1.dll" "$stage/bin/"
+          Copy-Item "$source/validation-install/bin/VkLayer_khronos_validation.dll" "$stage/validation/"
+          Copy-Item "$source/validation-install/bin/VkLayer_khronos_validation.json" "$stage/validation/"
+          Copy-Item "$loader/LICENSE.txt" "$stage/LICENSES/Vulkan-Loader-LICENSE.txt"
+          Copy-Item "$validation/LICENSE.txt" "$stage/LICENSES/Vulkan-ValidationLayers-LICENSE.txt"
+          Copy-Item "$headers/LICENSE.txt" "$stage/LICENSES/Vulkan-Headers-LICENSE.txt"
+          cmake -DSTAGE="$stage" -DOUTPUT="$PWD/granit-vulkan-runtime-windows-x64.zip" -DCOMPONENT=runtime -DPLATFORM=windows -DARCH=x64 -DLOADER_VERSION=1.4.350 -DVALIDATION_VERSION=1.4.350.0 '-DLOADER_FILES:STRING=bin/vulkan-1.dll' '-DVALIDATION_FILES:STRING=validation/VkLayer_khronos_validation.dll;validation/VkLayer_khronos_validation.json' '-DLICENSE_FILES:STRING=LICENSES/Vulkan-Loader-LICENSE.txt;LICENSES/Vulkan-ValidationLayers-LICENSE.txt;LICENSES/Vulkan-Headers-LICENSE.txt' -P cmake/vulkan/package_vulkan_runtime.cmake
+      - uses: actions/upload-artifact@v6
+        with:
+          name: granit-vulkan-runtime-windows-x64
+          path: granit-vulkan-runtime-windows-x64.zip
+          if-no-files-found: error
+
+  linux-vulkan-runtime:
+    needs: validate
+    runs-on: ubuntu-24.04
+    container:
+      image: >-
+        ghcr.io/synchronized/granit-ci@sha256:6a2d0aba3b2464838958a4259d3a343106205eb35df9f4ad24d060bf98739015
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: 构建锁定的 Khronos Runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          source="$RUNNER_TEMP/granit-vulkan-runtime-source"
+          git clone --filter=blob:none https://github.com/KhronosGroup/Vulkan-Headers.git "$source/headers"
+          git -C "$source/headers" checkout --detach "$VULKAN_HEADERS_REF"
+          git clone --filter=blob:none https://github.com/KhronosGroup/Vulkan-Loader.git "$source/loader"
+          git -C "$source/loader" checkout --detach "$VULKAN_LOADER_REF"
+          git clone --filter=blob:none https://github.com/KhronosGroup/Vulkan-ValidationLayers.git "$source/validation"
+          git -C "$source/validation" checkout --detach "$VULKAN_VALIDATION_REF"
+          cmake -S "$source/headers" -B "$source/headers-build" -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$source/headers-install"
+          cmake --build "$source/headers-build" --target install
+          cmake -S "$source/loader" -B "$source/loader-build" -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF -DUPDATE_DEPS=OFF -DVULKAN_HEADERS_INSTALL_DIR="$source/headers-install" -DCMAKE_INSTALL_PREFIX="$source/loader-install"
+          cmake --build "$source/loader-build" --target install
+          cmake -S "$source/validation" -B "$source/validation-build" -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF -DBUILD_WERROR=OFF -DCMAKE_INSTALL_PREFIX="$source/validation-install"
+          cmake --build "$source/validation-build" --target install
+          stage="$PWD/stage/granit-vulkan-runtime-linux-x64"
+          install -d "$stage/lib" "$stage/validation" "$stage/LICENSES"
+          cp "$source/loader-install/lib/libvulkan.so.1" "$stage/lib/"
+          cp "$source/validation-install/lib/libVkLayer_khronos_validation.so" "$stage/validation/"
+          cp "$source/validation-install/share/vulkan/explicit_layer.d/VkLayer_khronos_validation.json" "$stage/validation/"
+          cp "$source/loader/LICENSE.txt" "$stage/LICENSES/Vulkan-Loader-LICENSE.txt"
+          cp "$source/validation/LICENSE.txt" "$stage/LICENSES/Vulkan-ValidationLayers-LICENSE.txt"
+          cp "$source/headers/LICENSE.txt" "$stage/LICENSES/Vulkan-Headers-LICENSE.txt"
+          cmake -DSTAGE="$stage" -DOUTPUT="$PWD/granit-vulkan-runtime-linux-x64.tar" -DCOMPONENT=runtime -DPLATFORM=linux -DARCH=x64 -DLOADER_VERSION=1.4.350 -DVALIDATION_VERSION=1.4.350.0 '-DLOADER_FILES:STRING=lib/libvulkan.so.1' '-DVALIDATION_FILES:STRING=validation/libVkLayer_khronos_validation.so;validation/VkLayer_khronos_validation.json' '-DLICENSE_FILES:STRING=LICENSES/Vulkan-Loader-LICENSE.txt;LICENSES/Vulkan-ValidationLayers-LICENSE.txt;LICENSES/Vulkan-Headers-LICENSE.txt' -DARCHIVE_FORMAT=gnutar -P cmake/vulkan/package_vulkan_runtime.cmake
+          zstd -q -f "$PWD/granit-vulkan-runtime-linux-x64.tar" -o "$PWD/granit-vulkan-runtime-linux-x64.tar.zst"
+          rm "$PWD/granit-vulkan-runtime-linux-x64.tar"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: granit-vulkan-runtime-linux-x64
+          path: granit-vulkan-runtime-linux-x64.tar.zst
+          if-no-files-found: error
+
   checksums:
-    needs: [windows-package, linux-package]
+    needs: [windows-package, linux-package, windows-vulkan-runtime, linux-vulkan-runtime]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/download-artifact@v7
@@ -239,10 +330,12 @@ jobs:
           version="${RELEASE_TAG#v}"
           for name in \
             "granit-$version-linux-x64-shared.tar.gz" \
-            "granit-$version-windows-x64-shared.zip"; do
+            "granit-$version-windows-x64-shared.zip" \
+            "granit-vulkan-runtime-linux-x64.tar.zst" \
+            "granit-vulkan-runtime-windows-x64.zip"; do
             test -s "dist/$name"
           done
-          test "$(find dist -maxdepth 1 -type f -name 'granit-*' | wc -l)" -eq 2
+          test "$(find dist -maxdepth 1 -type f -name 'granit-*' | wc -l)" -eq 4
       - name: 创建 GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -270,13 +363,17 @@ jobs:
           version="${RELEASE_TAG#v}"
           for name in \
             "granit-$version-linux-x64-shared.tar.gz" \
-            "granit-$version-windows-x64-shared.zip"; do
+            "granit-$version-windows-x64-shared.zip" \
+            "granit-vulkan-runtime-linux-x64.tar.zst" \
+            "granit-vulkan-runtime-windows-x64.zip"; do
             test -s "dist/$name"
           done
-          test "$(find dist -maxdepth 1 -type f -name 'granit-*' | wc -l)" -eq 2
+          test "$(find dist -maxdepth 1 -type f -name 'granit-*' | wc -l)" -eq 4
           for archive in dist/granit-*.tar.gz; do
             test "$(tar -tzf "$archive" | cut -d/ -f1 | sort -u | wc -l)" -eq 1
           done
           for archive in dist/granit-*.zip; do
             test "$(unzip -Z1 "$archive" | tr '\\' '/' | cut -d/ -f1 | sort -u | wc -l)" -eq 1
           done
+          zstd -q -d -f dist/granit-vulkan-runtime-linux-x64.tar.zst -o "$RUNNER_TEMP/granit-vulkan-runtime-linux-x64.tar"
+          test "$(tar -tf "$RUNNER_TEMP/granit-vulkan-runtime-linux-x64.tar" | cut -d/ -f1 | sort -u | wc -l)" -eq 1
