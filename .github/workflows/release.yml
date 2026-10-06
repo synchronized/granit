@@ -42,12 +42,7 @@ jobs:
           test "$GITHUB_REF" = "refs/heads/main"
           remote_tag="$(git ls-remote --tags origin "refs/tags/$RELEASE_TAG")"
           if [[ -n "$remote_tag" ]]; then
-            if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-              echo "标签 $RELEASE_TAG 已存在，将更新已有 Release 资产"
-            else
-              echo "标签 $RELEASE_TAG 已存在但 Release 不存在" >&2
-              exit 1
-            fi
+            echo "标签 $RELEASE_TAG 已存在，将按幂等发布流程更新或创建 Release"
           fi
       - name: 校验标签与项目版本
         run: >-
