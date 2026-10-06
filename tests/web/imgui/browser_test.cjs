@@ -5,6 +5,7 @@ const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
 const { decodePng, pixelAt } = require("../png.cjs");
+const { browser_args } = require("../browser_args.cjs");
 const { chromium } = require("playwright-core");
 
 const outputDirectory = path.resolve(process.argv[2] ?? "build/emscripten-release/web");
@@ -73,21 +74,45 @@ async function validateVisualScene(browser, address, ratio) {
   });
   const page = await context.newPage();
   const errors = [];
+  const events = [];
   let completed = false;
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => {
     if (message.type() === "error") errors.push(message.text());
   });
+  page.on("crash", () => events.push("page crashed"));
+  page.on("close", () => events.push("page closed"));
+  page.on("requestfailed", (request) =>
+    events.push(`request failed: ${request.url()} - ${request.failure()?.errorText ?? "unknown"}`));
   try {
     await page.goto(
       `http://127.0.0.1:${address.port}/granit_tutorial_08_sdl_imgui.html?validation=1`,
     );
-    await page.waitForFunction(
-      () =>
-        Module.runtimeReady === true &&
-        typeof Module._granit_tutorial_08_rendered_frames === "function" &&
-        Module._granit_tutorial_08_rendered_frames() >= 30,
-    );
+    try {
+      await page.waitForFunction(
+        () =>
+          Module.runtimeReady === true &&
+          typeof Module._granit_tutorial_08_rendered_frames === "function" &&
+          Module._granit_tutorial_08_rendered_frames() >= 30,
+      );
+    } catch (error) {
+      let state;
+      try {
+        state = await page.evaluate(() => ({
+          runtimeReady: Module.runtimeReady === true,
+          hasFrameCounter: typeof Module._granit_tutorial_08_rendered_frames === "function",
+          renderedFrames: typeof Module._granit_tutorial_08_rendered_frames === "function"
+            ? Module._granit_tutorial_08_rendered_frames()
+            : null,
+        }));
+      } catch (diagnosticError) {
+        state = { evaluation: diagnosticError.message };
+      }
+      throw new Error(
+        `${error.message}; state=${JSON.stringify(state)}; events=${events.join(" | ")}; ` +
+        `errors=${errors.join("\\n")}`,
+      );
+    }
     const canvas = page.locator("#canvas");
     const artifact = path.join(outputDirectory, "validation");
     fs.mkdirSync(artifact, { recursive: true });
@@ -116,7 +141,7 @@ async function main() {
   const browser = await chromium.launch({
     executablePath: chromePath,
     headless: process.env.GRANIT_BROWSER_HEADLESS !== "0",
-    args: ["--enable-unsafe-webgpu", "--enable-features=Vulkan,UseSkiaRenderer"],
+    args: browser_args(),
   });
   const visualSessions = [];
   try {

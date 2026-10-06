@@ -114,7 +114,7 @@ jobs:
           - name: platform-smoke
             script: test
             arguments: ../../build/emscripten-release/web
-            expect_software_fallback: "1"
+            expect_software_fallback: "0"
           - name: model-viewer
             script: test
             arguments: >-

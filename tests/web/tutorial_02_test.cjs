@@ -4,6 +4,7 @@
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
+const { browser_args } = require("./browser_args.cjs");
 const { chromium } = require("playwright-core");
 
 const outputDirectory = path.resolve(process.argv[2] ?? "build/emscripten-release/web");
@@ -45,7 +46,7 @@ async function main() {
   const browser = await chromium.launch({
     executablePath: chromePath,
     headless: process.env.GRANIT_BROWSER_HEADLESS !== "0",
-    args: ["--enable-unsafe-webgpu", "--no-sandbox"],
+    args: browser_args(),
   });
   const page = await browser.newPage({ viewport: { width: 640, height: 480 } });
   const errors = [];

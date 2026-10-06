@@ -4,6 +4,7 @@
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
+const { browser_args } = require("./browser_args.cjs");
 const { chromium } = require("playwright-core");
 
 const outputDirectory = path.resolve(process.argv[2] ?? "build/emscripten-release/web");
@@ -41,14 +42,10 @@ async function main() {
     server.listen(0, "127.0.0.1", resolve);
   });
   const address = server.address();
-  const arguments = ["--enable-unsafe-webgpu", "--no-sandbox"];
-  if (process.platform !== "win32") {
-    arguments.push("--enable-features=Vulkan", "--use-angle=vulkan", "--disable-vulkan-surface");
-  }
   const browser = await chromium.launch({
     executablePath: chromePath,
     headless: process.env.GRANIT_BROWSER_HEADLESS !== "0",
-    args: arguments,
+    args: browser_args(),
   });
   const page = await browser.newPage({ viewport: { width: 640, height: 360 } });
   const errors = [];

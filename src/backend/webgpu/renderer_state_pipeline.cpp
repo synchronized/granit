@@ -33,6 +33,13 @@ private:
   webgpu_pipeline_warmup warmup_{};
 };
 
+#if defined(__EMSCRIPTEN__)
+class completed_webgpu_pipeline_warmup final : public backend_pipeline_warmup_completion {
+public:
+  [[nodiscard]] granit_result poll() noexcept override { return GRANIT_SUCCESS; }
+};
+#endif
+
 } // namespace
 
 std::unique_ptr<backend_compute_pipeline_resource>
@@ -53,6 +60,23 @@ granit_result webgpu_renderer_state::warmup_compute_pipeline_async(
     std::unique_ptr<backend_pipeline_warmup_completion>& completion) noexcept {
   if (!capabilities_initialized_)
     return GRANIT_ERROR_UNSUPPORTED;
+#if defined(__EMSCRIPTEN__)
+  // Emdawnwebgpu 的异步 Pipeline 回调可能错误地报告外部 Instance 已失效。
+  // 浏览器端预热改为同步创建并立即释放，仍通过非阻塞完成对象对上层报告结果。
+  auto pipeline = allocate_compute_pipeline();
+  if (!pipeline)
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  const auto result = create_compute_pipeline(*pipeline, native_pipeline_layout(layout),
+                                              native_shader(shader));
+  if (result != GRANIT_SUCCESS)
+    return result;
+  try {
+    completion = std::make_unique<completed_webgpu_pipeline_warmup>();
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
+#else
   webgpu_pipeline_warmup warmup{};
   const auto result =
       begin_compute_pipeline_warmup(native_pipeline_layout(layout), native_shader(shader), warmup);
@@ -65,6 +89,7 @@ granit_result webgpu_renderer_state::warmup_compute_pipeline_async(
     static_cast<void>(device_.destroy_pipeline_warmup(warmup));
     return GRANIT_ERROR_OUT_OF_MEMORY;
   }
+#endif
 }
 
 std::unique_ptr<backend_pipeline_layout_resource>
@@ -118,6 +143,21 @@ granit_result webgpu_renderer_state::warmup_graphics_pipeline_async(
     std::unique_ptr<backend_pipeline_warmup_completion>& completion) noexcept {
   if (!capabilities_initialized_)
     return GRANIT_ERROR_UNSUPPORTED;
+#if defined(__EMSCRIPTEN__)
+  // 同步创建用于验证 Shader、布局和目标格式，避免浏览器异步回调持有 Instance。
+  auto pipeline = allocate_graphics_pipeline();
+  if (!pipeline)
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  const auto result = create_graphics_pipeline(info, *pipeline);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  try {
+    completion = std::make_unique<completed_webgpu_pipeline_warmup>();
+    return GRANIT_SUCCESS;
+  } catch (const std::bad_alloc&) {
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
+#else
   const granit_color_blend_state default_blend = GRANIT_COLOR_BLEND_STATE_INIT;
   webgpu_pipeline_warmup warmup{};
   const auto result = begin_graphics_pipeline_warmup(
@@ -133,6 +173,7 @@ granit_result webgpu_renderer_state::warmup_graphics_pipeline_async(
     static_cast<void>(device_.destroy_pipeline_warmup(warmup));
     return GRANIT_ERROR_OUT_OF_MEMORY;
   }
+#endif
 }
 
 } // namespace granit::detail

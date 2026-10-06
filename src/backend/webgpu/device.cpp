@@ -11,6 +11,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <limits>
 #include <memory>
@@ -103,6 +104,9 @@ WGPUStatus present_surface(WGPUSurface surface) noexcept {
   return wgpuSurfacePresent(surface);
 #endif
 }
+
+void emit(const webgpu_host_api& host, granit_diagnostic_severity severity, const char* message,
+          std::uint32_t message_length) noexcept;
 
 void release_resources(webgpu_device_state& state) noexcept {
   state.callback_lifetime.invalidate();
@@ -214,7 +218,14 @@ void release_resources(webgpu_device_state& state) noexcept {
     wgpuAdapterRelease(state.adapter);
   }
   if (state.instance != nullptr) {
+    constexpr char message[] = "WebGPU releasing backend Instance owner references";
+    emit(state.host, GRANIT_DIAGNOSTIC_SEVERITY_INFO, message, sizeof(message) - 1);
     wgpuInstanceRelease(state.instance);
+#if defined(__EMSCRIPTEN__)
+    // 保留的 owner 引用与 create_backend 中的 AddRef 配对，确保异步回调
+    // 完成前 Instance 不会因其他路径的 Release 提前注销。
+    wgpuInstanceRelease(state.instance);
+#endif
   }
 }
 
@@ -288,13 +299,26 @@ void receive_device(WGPURequestDeviceStatus status, WGPUDevice device, WGPUStrin
 #endif
 
 #if defined(__EMSCRIPTEN__)
+struct async_init_context {
+  granit::detail::backend_callback_ticket ticket;
+  webgpu_device_state* state{};
+  WGPUInstance instance{};
+};
+
 void receive_device_async(WGPURequestDeviceStatus status, WGPUDevice device, WGPUStringView message,
                           void* data, void*) noexcept {
-  const std::unique_ptr<webgpu_callback_context> context{
-      static_cast<webgpu_callback_context*>(data)};
+  const std::unique_ptr<async_init_context> context{static_cast<async_init_context*>(data)};
   const auto accepted = context->ticket.invoke([state = context->state, status, device, message] {
     if (status != WGPURequestDeviceStatus_Success || device == nullptr) {
       emit_dawn_message(&state->host, message);
+      char diagnostic[96]{};
+      const auto length = std::snprintf(
+        diagnostic, sizeof(diagnostic), "Emscripten WebGPU device callback status=%d",
+          static_cast<int>(status));
+      if (length > 0)
+        emit(state->host, GRANIT_DIAGNOSTIC_SEVERITY_ERROR, diagnostic,
+             static_cast<std::uint32_t>(
+                 (std::min)(length, static_cast<int>(sizeof(diagnostic) - 1))));
       state->lifecycle.mark_failed(GRANIT_ERROR_INITIALIZATION_FAILED);
       if (device != nullptr)
         wgpuDeviceRelease(device);
@@ -334,15 +358,30 @@ void receive_device_async(WGPURequestDeviceStatus status, WGPUDevice device, WGP
   });
   if (!accepted && device != nullptr)
     wgpuDeviceRelease(device);
+  if (context->instance != nullptr) {
+    constexpr char diagnostic[] = "WebGPU releasing device initialization Instance reference";
+    emit(context->state->host, GRANIT_DIAGNOSTIC_SEVERITY_INFO, diagnostic,
+         sizeof(diagnostic) - 1);
+    wgpuInstanceRelease(context->instance);
+  }
 }
 
 void receive_adapter_async(WGPURequestAdapterStatus status, WGPUAdapter adapter,
                            WGPUStringView message, void* data, void*) noexcept {
-  const std::unique_ptr<webgpu_callback_context> context{
-      static_cast<webgpu_callback_context*>(data)};
-  const auto accepted = context->ticket.invoke([state = context->state, status, adapter, message] {
+  const std::unique_ptr<async_init_context> context{static_cast<async_init_context*>(data)};
+  const auto instance = context->instance;
+  const auto accepted = context->ticket.invoke([state = context->state, instance, status, adapter,
+                                                message] {
     if (status != WGPURequestAdapterStatus_Success || adapter == nullptr) {
       emit_dawn_message(&state->host, message);
+      char diagnostic[96]{};
+      const auto length = std::snprintf(
+        diagnostic, sizeof(diagnostic), "Emscripten WebGPU adapter callback status=%d",
+          static_cast<int>(status));
+      if (length > 0)
+        emit(state->host, GRANIT_DIAGNOSTIC_SEVERITY_ERROR, diagnostic,
+             static_cast<std::uint32_t>(
+                 (std::min)(length, static_cast<int>(sizeof(diagnostic) - 1))));
       state->lifecycle.mark_failed(GRANIT_ERROR_NO_SUITABLE_DEVICE);
       if (adapter != nullptr)
         wgpuAdapterRelease(adapter);
@@ -366,9 +405,11 @@ void receive_adapter_async(WGPURequestAdapterStatus status, WGPUAdapter adapter,
     descriptor.deviceLostCallbackInfo.userdata1 = &state->device_lost_callback;
     descriptor.uncapturedErrorCallbackInfo.callback = receive_uncaptured_error;
     descriptor.uncapturedErrorCallbackInfo.userdata1 = &state->uncaptured_error_callback;
-    auto* device_context =
-        new (std::nothrow) webgpu_callback_context{state->callback_lifetime.ticket(), state};
+    wgpuInstanceAddRef(instance);
+    auto* device_context = new (std::nothrow)
+        async_init_context{state->callback_lifetime.ticket(), state, instance};
     if (device_context == nullptr) {
+      wgpuInstanceRelease(instance);
       state->lifecycle.mark_failed(GRANIT_ERROR_OUT_OF_MEMORY);
       return;
     }
@@ -380,6 +421,12 @@ void receive_adapter_async(WGPURequestAdapterStatus status, WGPUAdapter adapter,
   });
   if (!accepted && adapter != nullptr)
     wgpuAdapterRelease(adapter);
+  if (context->instance != nullptr) {
+    constexpr char diagnostic[] = "WebGPU releasing adapter initialization Instance reference";
+    emit(context->state->host, GRANIT_DIAGNOSTIC_SEVERITY_INFO, diagnostic,
+         sizeof(diagnostic) - 1);
+    wgpuInstanceRelease(context->instance);
+  }
 }
 #endif
 
@@ -461,11 +508,15 @@ granit_result create_backend(const webgpu_host_api* host,
     deallocate(*host, memory);
     return GRANIT_ERROR_INITIALIZATION_FAILED;
   }
-
 #if defined(__EMSCRIPTEN__)
-  auto* adapter_context =
-      new (std::nothrow) webgpu_callback_context{state->callback_lifetime.ticket(), state};
+  // Emscripten 的 adapter/device/readback 回调跨越浏览器事件循环，额外持有
+  // 一份 owner 引用用于隔离异步路径的 Release，统一在 release_resources 中释放。
+  wgpuInstanceAddRef(state->instance);
+  wgpuInstanceAddRef(state->instance);
+  auto* adapter_context = new (std::nothrow)
+      async_init_context{state->callback_lifetime.ticket(), state, state->instance};
   if (adapter_context == nullptr) {
+    wgpuInstanceRelease(state->instance);
     release_resources(*state);
     state->~webgpu_device_state();
     deallocate(*host, memory);
@@ -474,6 +525,7 @@ granit_result create_backend(const webgpu_host_api* host,
   const auto register_result = register_instance(state, out_instance);
   if (register_result != GRANIT_SUCCESS) {
     delete adapter_context;
+    wgpuInstanceRelease(state->instance);
     release_resources(*state);
     state->~webgpu_device_state();
     deallocate(*host, memory);
@@ -644,6 +696,9 @@ void destroy_backend(webgpu_instance_handle instance) noexcept {
   }
 
   const auto host = state->host;
+  constexpr char destroying_message[] = "Dawn WebGPU backend destroy started";
+  emit(host, GRANIT_DIAGNOSTIC_SEVERITY_INFO, destroying_message,
+       sizeof(destroying_message) - 1);
   release_resources(*state);
   state->~webgpu_device_state();
   deallocate(host, state);
