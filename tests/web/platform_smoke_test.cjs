@@ -5,6 +5,7 @@ const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
 const { decodePng, pixelAt } = require("./png.cjs");
+const { browser_args } = require("./browser_args.cjs");
 const { chromium } = require("playwright-core");
 
 const outputDirectory = path.resolve(process.argv[2] ?? "build/emscripten-release/web");
@@ -102,24 +103,10 @@ function startServer() {
 async function main() {
   const { server, requestedPaths, missingPaths, rejectExternalBuffer } = await startServer();
   const address = server.address();
-  const browserArguments = [
-    "--enable-unsafe-webgpu",
-    "--no-sandbox",
-    "--ignore-gpu-blocklist",
-  ];
-  if (process.platform !== "win32") {
-    browserArguments.push(
-      "--use-angle=swiftshader",
-      "--enable-unsafe-swiftshader",
-      "--enable-gpu",
-      "--enable-features=Vulkan",
-      "--use-vulkan=swiftshader",
-    );
-  }
   const browser = await chromium.launch({
     executablePath: chromePath,
     headless: process.env.GRANIT_BROWSER_HEADLESS !== "0",
-    args: browserArguments,
+    args: browser_args(),
   });
   const page = await browser.newPage();
   const browserMessages = [];
