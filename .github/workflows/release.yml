@@ -272,6 +272,7 @@ jobs:
           cp "$source/validation/LICENSE.txt" "$stage/LICENSES/Vulkan-ValidationLayers-LICENSE.txt"
           cp "$source/headers/LICENSE.md" "$stage/LICENSES/Vulkan-Headers-LICENSE.md"
           cmake -DSTAGE="$stage" -DOUTPUT="$PWD/granit-vulkan-runtime-linux-x64.tar" -DCOMPONENT=runtime -DPLATFORM=linux -DARCH=x64 -DLOADER_VERSION=1.4.350 -DVALIDATION_VERSION=1.4.350.0 '-DLOADER_FILES:STRING=lib/libvulkan.so.1' '-DVALIDATION_FILES:STRING=validation/libVkLayer_khronos_validation.so;validation/VkLayer_khronos_validation.json' '-DLICENSE_FILES:STRING=LICENSES/Vulkan-Loader-LICENSE.txt;LICENSES/Vulkan-ValidationLayers-LICENSE.txt;LICENSES/Vulkan-Headers-LICENSE.md' -DARCHIVE_FORMAT=gnutar -P cmake/vulkan/package_vulkan_runtime.cmake
+          command -v zstd >/dev/null || (apt-get update -qq && apt-get install -y -qq zstd)
           zstd -q -f "$PWD/granit-vulkan-runtime-linux-x64.tar" -o "$PWD/granit-vulkan-runtime-linux-x64.tar.zst"
           rm "$PWD/granit-vulkan-runtime-linux-x64.tar"
       - uses: actions/upload-artifact@v6
