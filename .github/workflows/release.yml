@@ -227,8 +227,8 @@ jobs:
           Copy-Item "$source/validation-install/bin/VkLayer_khronos_validation.json" "$stage/validation/"
           Copy-Item "$loader/LICENSE.txt" "$stage/LICENSES/Vulkan-Loader-LICENSE.txt"
           Copy-Item "$validation/LICENSE.txt" "$stage/LICENSES/Vulkan-ValidationLayers-LICENSE.txt"
-          Copy-Item "$headers/LICENSE.txt" "$stage/LICENSES/Vulkan-Headers-LICENSE.txt"
-          cmake -DSTAGE="$stage" -DOUTPUT="$PWD/granit-vulkan-runtime-windows-x64.zip" -DCOMPONENT=runtime -DPLATFORM=windows -DARCH=x64 -DLOADER_VERSION=1.4.350 -DVALIDATION_VERSION=1.4.350.0 '-DLOADER_FILES:STRING=bin/vulkan-1.dll' '-DVALIDATION_FILES:STRING=validation/VkLayer_khronos_validation.dll;validation/VkLayer_khronos_validation.json' '-DLICENSE_FILES:STRING=LICENSES/Vulkan-Loader-LICENSE.txt;LICENSES/Vulkan-ValidationLayers-LICENSE.txt;LICENSES/Vulkan-Headers-LICENSE.txt' -P cmake/vulkan/package_vulkan_runtime.cmake
+          Copy-Item "$headers/LICENSE.md" "$stage/LICENSES/Vulkan-Headers-LICENSE.md"
+          cmake -DSTAGE="$stage" -DOUTPUT="$PWD/granit-vulkan-runtime-windows-x64.zip" -DCOMPONENT=runtime -DPLATFORM=windows -DARCH=x64 -DLOADER_VERSION=1.4.350 -DVALIDATION_VERSION=1.4.350.0 '-DLOADER_FILES:STRING=bin/vulkan-1.dll' '-DVALIDATION_FILES:STRING=validation/VkLayer_khronos_validation.dll;validation/VkLayer_khronos_validation.json' '-DLICENSE_FILES:STRING=LICENSES/Vulkan-Loader-LICENSE.txt;LICENSES/Vulkan-ValidationLayers-LICENSE.txt;LICENSES/Vulkan-Headers-LICENSE.md' -P cmake/vulkan/package_vulkan_runtime.cmake
       - uses: actions/upload-artifact@v6
         with:
           name: granit-vulkan-runtime-windows-x64
@@ -270,8 +270,8 @@ jobs:
           cp "$source/validation-install/share/vulkan/explicit_layer.d/VkLayer_khronos_validation.json" "$stage/validation/"
           cp "$source/loader/LICENSE.txt" "$stage/LICENSES/Vulkan-Loader-LICENSE.txt"
           cp "$source/validation/LICENSE.txt" "$stage/LICENSES/Vulkan-ValidationLayers-LICENSE.txt"
-          cp "$source/headers/LICENSE.txt" "$stage/LICENSES/Vulkan-Headers-LICENSE.txt"
-          cmake -DSTAGE="$stage" -DOUTPUT="$PWD/granit-vulkan-runtime-linux-x64.tar" -DCOMPONENT=runtime -DPLATFORM=linux -DARCH=x64 -DLOADER_VERSION=1.4.350 -DVALIDATION_VERSION=1.4.350.0 '-DLOADER_FILES:STRING=lib/libvulkan.so.1' '-DVALIDATION_FILES:STRING=validation/libVkLayer_khronos_validation.so;validation/VkLayer_khronos_validation.json' '-DLICENSE_FILES:STRING=LICENSES/Vulkan-Loader-LICENSE.txt;LICENSES/Vulkan-ValidationLayers-LICENSE.txt;LICENSES/Vulkan-Headers-LICENSE.txt' -DARCHIVE_FORMAT=gnutar -P cmake/vulkan/package_vulkan_runtime.cmake
+          cp "$source/headers/LICENSE.md" "$stage/LICENSES/Vulkan-Headers-LICENSE.md"
+          cmake -DSTAGE="$stage" -DOUTPUT="$PWD/granit-vulkan-runtime-linux-x64.tar" -DCOMPONENT=runtime -DPLATFORM=linux -DARCH=x64 -DLOADER_VERSION=1.4.350 -DVALIDATION_VERSION=1.4.350.0 '-DLOADER_FILES:STRING=lib/libvulkan.so.1' '-DVALIDATION_FILES:STRING=validation/libVkLayer_khronos_validation.so;validation/VkLayer_khronos_validation.json' '-DLICENSE_FILES:STRING=LICENSES/Vulkan-Loader-LICENSE.txt;LICENSES/Vulkan-ValidationLayers-LICENSE.txt;LICENSES/Vulkan-Headers-LICENSE.md' -DARCHIVE_FORMAT=gnutar -P cmake/vulkan/package_vulkan_runtime.cmake
           zstd -q -f "$PWD/granit-vulkan-runtime-linux-x64.tar" -o "$PWD/granit-vulkan-runtime-linux-x64.tar.zst"
           rm "$PWD/granit-vulkan-runtime-linux-x64.tar"
       - uses: actions/upload-artifact@v6
