@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+cmake_minimum_required(VERSION 3.23)
+
 foreach(required STAGE MANIFEST)
   if(NOT DEFINED ${required} OR "${${required}}" STREQUAL "")
     message(FATAL_ERROR "缺少 ${required}")
