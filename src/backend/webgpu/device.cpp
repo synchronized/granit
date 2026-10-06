@@ -105,6 +105,9 @@ WGPUStatus present_surface(WGPUSurface surface) noexcept {
 #endif
 }
 
+void emit(const webgpu_host_api& host, granit_diagnostic_severity severity, const char* message,
+          std::uint32_t message_length) noexcept;
+
 void release_resources(webgpu_device_state& state) noexcept {
   state.callback_lifetime.invalidate();
   for (const auto& [handle, swapchain] : state.swapchains) {
@@ -215,6 +218,8 @@ void release_resources(webgpu_device_state& state) noexcept {
     wgpuAdapterRelease(state.adapter);
   }
   if (state.instance != nullptr) {
+    constexpr char message[] = "WebGPU releasing backend Instance owner references";
+    emit(state.host, GRANIT_DIAGNOSTIC_SEVERITY_INFO, message, sizeof(message) - 1);
     wgpuInstanceRelease(state.instance);
 #if defined(__EMSCRIPTEN__)
     // 保留的 owner 引用与 create_backend 中的 AddRef 配对，确保异步回调
@@ -353,8 +358,12 @@ void receive_device_async(WGPURequestDeviceStatus status, WGPUDevice device, WGP
   });
   if (!accepted && device != nullptr)
     wgpuDeviceRelease(device);
-  if (context->instance != nullptr)
+  if (context->instance != nullptr) {
+    constexpr char diagnostic[] = "WebGPU releasing device initialization Instance reference";
+    emit(context->state->host, GRANIT_DIAGNOSTIC_SEVERITY_INFO, diagnostic,
+         sizeof(diagnostic) - 1);
     wgpuInstanceRelease(context->instance);
+  }
 }
 
 void receive_adapter_async(WGPURequestAdapterStatus status, WGPUAdapter adapter,
@@ -412,8 +421,12 @@ void receive_adapter_async(WGPURequestAdapterStatus status, WGPUAdapter adapter,
   });
   if (!accepted && adapter != nullptr)
     wgpuAdapterRelease(adapter);
-  if (context->instance != nullptr)
+  if (context->instance != nullptr) {
+    constexpr char diagnostic[] = "WebGPU releasing adapter initialization Instance reference";
+    emit(context->state->host, GRANIT_DIAGNOSTIC_SEVERITY_INFO, diagnostic,
+         sizeof(diagnostic) - 1);
     wgpuInstanceRelease(context->instance);
+  }
 }
 #endif
 
