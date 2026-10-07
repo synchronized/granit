@@ -32,10 +32,10 @@ using granit::detail::vulkan_instance;
 using granit::detail::vulkan_memory_allocator;
 using granit::detail::vulkan_memory_location;
 
+#if defined(GRANIT_BINDLESS_SPIRV) && defined(GRANIT_BINDGROUP_SPIRV)
 constexpr std::uint32_t image_width = 1;
 constexpr std::uint32_t image_height = 1;
 
-#if defined(GRANIT_BINDLESS_SPIRV) && defined(GRANIT_BINDGROUP_SPIRV)
 std::vector<std::byte> read_spirv(const char* path) {
   std::ifstream stream{path, std::ios::binary};
   const std::vector<char> bytes{std::istreambuf_iterator<char>{stream}, {}};
