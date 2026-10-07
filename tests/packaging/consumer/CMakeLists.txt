@@ -117,3 +117,53 @@ foreach(
     )
   endif()
 endforeach()
+
+add_test(NAME granit_runtime_none_c_consumer COMMAND granit_c_consumer)
+add_test(NAME granit_runtime_none_cpp_consumer COMMAND granit_cpp_consumer)
+add_test(NAME granit_runtime_explicit_missing_c_consumer COMMAND granit_c_consumer)
+add_test(NAME granit_runtime_explicit_missing_cpp_consumer COMMAND granit_cpp_consumer)
+set_tests_properties(
+  granit_runtime_none_c_consumer
+  granit_runtime_none_cpp_consumer
+  PROPERTIES ENVIRONMENT_MODIFICATION "GRANIT_VULKAN_RUNTIME=set:none"
+)
+set_tests_properties(
+  granit_runtime_explicit_missing_c_consumer
+  granit_runtime_explicit_missing_cpp_consumer
+  PROPERTIES ENVIRONMENT_MODIFICATION
+             "GRANIT_VULKAN_LOADER_PATH=set:__granit_missing_loader__"
+)
+if(WIN32)
+  set_property(
+    TEST
+      granit_runtime_none_c_consumer
+      granit_runtime_none_cpp_consumer
+      granit_runtime_explicit_missing_c_consumer
+      granit_runtime_explicit_missing_cpp_consumer
+    APPEND
+    PROPERTY ENVIRONMENT_MODIFICATION
+             "PATH=path_list_prepend:$<TARGET_FILE_DIR:granit::granit>"
+  )
+elseif(APPLE)
+  set_property(
+    TEST
+      granit_runtime_none_c_consumer
+      granit_runtime_none_cpp_consumer
+      granit_runtime_explicit_missing_c_consumer
+      granit_runtime_explicit_missing_cpp_consumer
+    APPEND
+    PROPERTY ENVIRONMENT_MODIFICATION
+             "DYLD_LIBRARY_PATH=path_list_prepend:$<TARGET_FILE_DIR:granit::granit>"
+  )
+else()
+  set_property(
+    TEST
+      granit_runtime_none_c_consumer
+      granit_runtime_none_cpp_consumer
+      granit_runtime_explicit_missing_c_consumer
+      granit_runtime_explicit_missing_cpp_consumer
+    APPEND
+    PROPERTY ENVIRONMENT_MODIFICATION
+             "LD_LIBRARY_PATH=path_list_prepend:$<TARGET_FILE_DIR:granit::granit>"
+  )
+endif()
