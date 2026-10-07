@@ -10,6 +10,18 @@
 
 ## 0.54.0 - 2026-10-08
 
+### 验证
+
+- 增加仅供 Vulkan 后端内部使用的 sampled texture/sampler Descriptor Indexing 实验，验证索引采样、
+  显式 Shader/Pipeline 变体和 GPU 完成点后的资源槽位回收。
+- 完成传统 Bind Group 与 Bindless descriptor 更新基线；当前数据未证明 Bindless 有稳定收益，
+  因此传统 Bind Group 继续是默认路径。
+
+### 边界
+
+- 不新增公共 Bindless ABI，不改变 WebGPU/Emscripten 的 Bind Group 模型；Linux/Lavapipe 的重复
+  基准和真实大规模端到端对照留待后续版本。
+
 ## 0.53.0 - 2026-10-07
 
 ### 新增
