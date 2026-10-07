@@ -15,9 +15,10 @@ constexpr std::uint32_t sampled_texture_binding = 0;
 constexpr std::uint32_t sampler_binding = 1;
 } // namespace
 
-granit_result vulkan_bindless_descriptor_table::initialize(
-    const vulkan_device& device, std::uint32_t sampled_texture_capacity,
-    std::uint32_t sampler_capacity) noexcept {
+granit_result
+vulkan_bindless_descriptor_table::initialize(const vulkan_device& device,
+                                             std::uint32_t sampled_texture_capacity,
+                                             std::uint32_t sampler_capacity) noexcept {
   if (valid() || !device.valid() || !device.bindless_descriptor_indexing_supported() ||
       sampled_texture_capacity == 0 || sampler_capacity == 0 ||
       sampled_texture_capacity > device.properties().limits.maxDescriptorSetSampledImages ||
@@ -28,15 +29,14 @@ granit_result vulkan_bindless_descriptor_table::initialize(
   const auto partially_bound = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT;
   const auto variable_count = VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT;
   const std::array<VkDescriptorSetLayoutBinding, 2> bindings{
-      VkDescriptorSetLayoutBinding{sampled_texture_binding, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                                    sampled_texture_capacity,
-                                    VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
-                                    nullptr},
+      VkDescriptorSetLayoutBinding{
+          sampled_texture_binding, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, sampled_texture_capacity,
+          VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT, nullptr},
       VkDescriptorSetLayoutBinding{sampler_binding, VK_DESCRIPTOR_TYPE_SAMPLER, sampler_capacity,
                                    VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
                                    nullptr}};
   const std::array<VkDescriptorBindingFlags, 2> binding_flags{partially_bound,
-                                                               partially_bound | variable_count};
+                                                              partially_bound | variable_count};
   VkDescriptorSetLayoutBindingFlagsCreateInfo flags_info{};
   flags_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
   flags_info.bindingCount = static_cast<std::uint32_t>(binding_flags.size());
@@ -59,8 +59,8 @@ granit_result vulkan_bindless_descriptor_table::initialize(
   pool_info.maxSets = 1;
   pool_info.poolSizeCount = static_cast<std::uint32_t>(pool_sizes.size());
   pool_info.pPoolSizes = pool_sizes.data();
-  result = map_vulkan_result(
-      device.functions().vkCreateDescriptorPool(device.native_handle(), &pool_info, nullptr, &pool_));
+  result = map_vulkan_result(device.functions().vkCreateDescriptorPool(
+      device.native_handle(), &pool_info, nullptr, &pool_));
   if (result != GRANIT_SUCCESS) {
     destroy(device);
     return result;
@@ -77,9 +77,8 @@ granit_result vulkan_bindless_descriptor_table::initialize(
   allocate_info.descriptorPool = pool_;
   allocate_info.descriptorSetCount = 1;
   allocate_info.pSetLayouts = &layout_;
-  result = map_vulkan_result(
-      device.functions().vkAllocateDescriptorSets(device.native_handle(), &allocate_info,
-                                                  &descriptor_set_));
+  result = map_vulkan_result(device.functions().vkAllocateDescriptorSets(
+      device.native_handle(), &allocate_info, &descriptor_set_));
   if (result != GRANIT_SUCCESS) {
     destroy(device);
     return result;
@@ -126,8 +125,7 @@ granit_result vulkan_bindless_descriptor_table::update_sampled_texture(
 granit_result vulkan_bindless_descriptor_table::update_sampler(const vulkan_device& device,
                                                                std::uint32_t index,
                                                                VkSampler sampler) noexcept {
-  if (!valid() || !device.valid() || sampler == VK_NULL_HANDLE ||
-      index >= sampler_capacity_)
+  if (!valid() || !device.valid() || sampler == VK_NULL_HANDLE || index >= sampler_capacity_)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const VkDescriptorImageInfo image{sampler, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_UNDEFINED};
   VkWriteDescriptorSet write{};

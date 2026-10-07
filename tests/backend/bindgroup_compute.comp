@@ -1,0 +1,12 @@
+#version 450
+
+layout(set = 0, binding = 0) uniform texture2D texture_value;
+layout(set = 0, binding = 1) uniform sampler sampler_value;
+layout(set = 1, binding = 0, rgba8) uniform writeonly image2D output_image;
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+void main() {
+  const vec4 color = texture(sampler2D(texture_value, sampler_value), vec2(0.5));
+  imageStore(output_image, ivec2(0), color);
+}
