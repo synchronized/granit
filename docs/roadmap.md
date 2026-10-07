@@ -10,8 +10,8 @@
 ## 当前阶段
 
 Granit 已形成桌面 Vulkan、浏览器 WebGPU、C11 ABI、C++20 RAII、Window、RenderPipeline 与
-AssetTools 的完整闭环。当前仍处于 0.x，v0.48.0 已发布。下一版本聚焦现有异步回读契约、跨后端
-生命周期验证和结构化诊断，不改变 Vulkan 驱动由平台提供的边界。
+AssetTools 的完整闭环。当前仍处于 0.x，v0.49.0 已发布。下一版本继续以真实 Consumer、跨后端
+验证和可诊断性为优先，不改变 Vulkan 驱动由平台提供的边界。
 
 | 能力域 | 状态 | 当前边界 |
 |---|---|---|
@@ -29,12 +29,19 @@ AssetTools 的完整闭环。当前仍处于 0.x，v0.48.0 已发布。下一版
 
 ## 当前计划
 
-[v0.49.0](versions/v0.49.0.md) 当前由
-[S-85](plans/S-85-0.49.0-readback-contract-and-diagnostics.md) 承接：审计 `map`、`readback_batch` 和
-`async_operation` 的契约，补齐 Vulkan/WebGPU 生命周期验收和结构化诊断。v0.49.0 不新增平行
-`map_async` 公共接口，也不承接 Gneiss 的 SVT/纹理驻留职责。
+v0.49.0 已完成 S-85：审计 `map`、`readback_batch` 和 `async_operation` 的契约，修复回读容量边界，
+补齐 Reference，并通过 Vulkan/WebGPU 相关 CI 验收。v0.49.0 不新增平行 `map_async` 公共接口，
+也不承接 Gneiss 的 SVT/纹理驻留职责。
 
 ## 最近完成
+
+### v0.49.0：异步回读契约与诊断
+
+**状态：已发布。**
+
+[v0.49.0](versions/v0.49.0.md) 通过
+[S-85](plans/S-85-0.49.0-readback-contract-and-diagnostics.md) 修复非零结果的空回读缓冲区边界，
+补充 Readback Batch Reference，并完成 Windows/Linux/Emscripten 回归。
 
 ### v0.48.0：Runtime Consumer 与图形能力验证
 

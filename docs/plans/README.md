@@ -9,10 +9,12 @@
 
 ## 当前计划
 
-- [S-85：0.49.0 异步回读契约与诊断](S-85-0.49.0-readback-contract-and-diagnostics.md)——审计并验证
-  现有 `readback`/`async_operation` 契约，补齐跨后端诊断和最小回读夹具。
+暂无已确认的下一版本计划；下一版本将基于 v0.49.0 的 Consumer 和跨后端证据重新规划。
 
 ## 最近完成
+
+- [S-85：0.49.0 异步回读契约与诊断](S-85-0.49.0-readback-contract-and-diagnostics.md)——修复非零结果的
+  空回读缓冲区边界，补齐 Readback Batch Reference，并完成 Windows/Linux/Emscripten 验收。
 
 - [S-84：0.48.0 Runtime Consumer 与图形能力验证](S-84-0.48.0-runtime-consumer-and-capability-verification.md)——
   完成 Runtime Bundle 的真实应用接入、干净环境诊断和现有 Tutorial 能力矩阵验收，并发布 `v0.48.0`。
