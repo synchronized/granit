@@ -152,9 +152,9 @@ jobs:
           set -euo pipefail
           runtime_dir="$RUNNER_TEMP/granit-vulkan-runtime"
           mkdir -p "$runtime_dir"
-          if ! command -v curl >/dev/null; then
+          if ! command -v curl >/dev/null || ! command -v zstd >/dev/null; then
             apt-get update -qq
-            apt-get install -y -qq curl
+            apt-get install -y -qq curl zstd
           fi
           curl -fsSL \
             https://github.com/synchronized/granit/releases/download/v0.47.0/granit-vulkan-runtime-linux-x64.tar.zst \
