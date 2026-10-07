@@ -26,10 +26,10 @@
 
 1. [构建与安装](guides/build.md)
 2. [Renderer](reference/renderer.md)
-3. [API/ABI 稳定候选清单](reference/api-abi-stability.md)
+3. [公共 API 稳定等级](reference/api-stability.md)
 4. [资源类型](reference/resource-types.md)
-4. [Command Recorder](reference/command-recorder.md)
-5. [Frame 与命令录制分层](concepts/frame-and-command-lifecycle.md)
+5. [Command Recorder](reference/command-recorder.md)
+6. [Frame 与命令录制分层](concepts/frame-and-command-lifecycle.md)
 6. [Frame Context](reference/frame-context.md)
 7. [线程安全](reference/thread-safety.md)
 
