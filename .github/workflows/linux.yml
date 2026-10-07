@@ -146,6 +146,24 @@ jobs:
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           cmake --build "build/consumer/${{ steps.preset.outputs.name }}"
           ctest --test-dir "build/consumer/${{ steps.preset.outputs.name }}" --output-on-failure
+      - name: 使用已发布 Runtime Bundle 运行 Consumer
+        shell: bash
+        run: |
+          set -euo pipefail
+          runtime_dir="$RUNNER_TEMP/granit-vulkan-runtime"
+          mkdir -p "$runtime_dir"
+          curl -fsSL \
+            https://github.com/synchronized/granit/releases/download/v0.47.0/granit-vulkan-runtime-linux-x64.tar.zst \
+            -o "$RUNNER_TEMP/granit-vulkan-runtime-linux-x64.tar.zst"
+          zstd -q -d "$RUNNER_TEMP/granit-vulkan-runtime-linux-x64.tar.zst" \
+            -o "$RUNNER_TEMP/granit-vulkan-runtime-linux-x64.tar"
+          tar -xf "$RUNNER_TEMP/granit-vulkan-runtime-linux-x64.tar" -C "$runtime_dir"
+          cmake \
+            -DGRANIT_CONSUMER_BINARY_DIR="$PWD/build/consumer/${{ steps.preset.outputs.name }}" \
+            -DGRANIT_INSTALL_PREFIX="$PWD/build/install/${{ steps.preset.outputs.name }}" \
+            -DGRANIT_RUNTIME_ROOT="$runtime_dir" \
+            -DGRANIT_RUNTIME_LOADER="$runtime_dir/lib/libvulkan.so.1" \
+            -P tests/packaging/run_vulkan_runtime_consumer.cmake
       - name: 输出编译缓存统计
         if: always()
         shell: bash

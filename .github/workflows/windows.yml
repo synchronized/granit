@@ -123,3 +123,19 @@ jobs:
             }
           }
           ctest --test-dir $consumer --output-on-failure
+      - name: 使用已发布 Runtime Bundle 运行 Consumer
+        shell: pwsh
+        run: |
+          $runtimeDir = Join-Path $env:RUNNER_TEMP 'granit-vulkan-runtime'
+          $archive = Join-Path $env:RUNNER_TEMP 'granit-vulkan-runtime-windows-x64.zip'
+          New-Item -ItemType Directory -Force -Path $runtimeDir | Out-Null
+          Invoke-WebRequest `
+            -Uri 'https://github.com/synchronized/granit/releases/download/v0.47.0/granit-vulkan-runtime-windows-x64.zip' `
+            -OutFile $archive
+          Expand-Archive -Path $archive -DestinationPath $runtimeDir -Force
+          cmake `
+            -DGRANIT_CONSUMER_BINARY_DIR="$consumer" `
+            -DGRANIT_INSTALL_PREFIX="$prefix" `
+            -DGRANIT_RUNTIME_ROOT="$runtimeDir" `
+            -DGRANIT_RUNTIME_LOADER="$runtimeDir/bin/vulkan-1.dll" `
+            -P tests/packaging/run_vulkan_runtime_consumer.cmake
