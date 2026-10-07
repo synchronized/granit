@@ -16,6 +16,7 @@
 
 ## 已发布版本
 
+- [v0.53.0：Bindless 能力探针与 Resource Table 原型](v0.53.0.md)
 - [v0.52.0：真实绑定压力与 Resource Table 闸门](v0.52.0.md)
 - [v0.51.0：RenderPipeline 契约与真实 Consumer](v0.51.0.md)
 

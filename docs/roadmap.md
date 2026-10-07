@@ -10,7 +10,8 @@
 ## 当前阶段
 
 Granit 已形成桌面 Vulkan、浏览器 WebGPU、C11 ABI、C++20 RAII、Window、RenderPipeline 与
-AssetTools 的完整闭环。当前仍处于 0.x，v0.52.0 已发布。下一阶段进入 v0.53.0，先验证
+AssetTools 的完整闭环。当前仍处于 0.x，v0.53.0 已发布。下一阶段应基于
+Resource Table 和能力探针的实际证据，继续推进
 Bindless 的索引契约和 Vulkan 实验路径，不直接冻结公共 API。
 不改变 Vulkan 驱动由平台提供的边界。
 
@@ -50,6 +51,14 @@ Bindless 是主要瓶颈，因此传统 Bind Group 保持默认路径；最终�
 [S-88 记录](records/2026-10-07-s88-binding-pressure-baseline.md)。
 
 ## 最近完成
+
+### v0.53.0：Bindless 能力探针与 Resource Table 原型
+
+**状态：已发布。**
+
+[v0.53.0](versions/v0.53.0.md) 通过 [S-89](plans/S-89-0.53.0-bindless-probe-and-resource-table.md)
+完成 CPU Resource Table、后端无关能力位和 `12_bindless_probe`。真实 Vulkan Descriptor 数组采样
+延期，等待资源索引写入、Shader/Pipeline 变体和 GPU 生命周期契约稳定；传统 Bind Group 仍是默认路径。
 
 ### v0.51.0：RenderPipeline 契约与真实 Consumer
 
