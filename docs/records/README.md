@@ -23,6 +23,7 @@
 
 - [2026-10-08 Granit v0.54.0 发布验收](2026-10-08-v0.54.0-release-acceptance.md)
 - [2026-10-08 S-91A Bindless Descriptor 压力基线](2026-10-08-s91a-bindless-pressure-baseline.md)
+- [2026-10-08 S-91B Bindless 跨平台能力矩阵](2026-10-08-s91b-bindless-platform-matrix.md)
 - [2026-10-08 S-91C Bindless 与传统路径 GPU 时间戳基线](2026-10-08-s91c-bindless-gpu-timing.md)
 - [2026-10-08 S-90A Vulkan Bindless sampled texture/sampler 验收](2026-10-08-s90a-vulkan-bindless-sampling.md)
 - [2026-10-08 S-90B Bindless 生命周期与传统 Bind Group 基线](2026-10-08-s90b-bindless-lifecycle-baseline.md)

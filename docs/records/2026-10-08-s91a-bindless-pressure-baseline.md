@@ -11,7 +11,8 @@
 
 ## 验证结果
 
-Windows Clang Debug + Vulkan Validation 下，同一 Vulkan 进程重复运行 3 次，均通过 2400 个断言。
+Windows Clang Debug + Vulkan Validation 下，同一 Vulkan 进程重复运行 3 次，均通过 2400 个断言；
+加入容量耗尽断言后专项测试通过 2419 个断言。
 每轮使用 16 次压力迭代；Bindless 每次以批量 descriptor writes 更新，传统路径对同一数量的
 逻辑槽位逐次更新单一 Bind Group。
 

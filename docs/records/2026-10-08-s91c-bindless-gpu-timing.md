@@ -27,13 +27,14 @@ Windows Clang Debug + Vulkan Validation 下，同一 Vulkan 进程重复运行 4
 - 时间戳查询池将设备 tick 换算为纳秒，结果顺序和非负时长均通过检查；
 - Vulkan Validation 未报告 descriptor、pipeline layout、同步、query 或资源生命周期错误；
 - 原有输出图像 readback 仍为绿色像素，说明 GPU 写入路径未被计时插桩破坏；
-- 本机设备上，单 dispatch 的 GPU 时间处于相同数量级，不能据此宣称 Bindless 有稳定 GPU 收益。
+- 本机设备上，单 dispatch 的 GPU 时间处于相同数量级，不能据此宣称 Bindless 有稳定 GPU 收益；
+- 512 槽位资源表填满后，继续注册 texture/sampler 均返回 `GRANIT_ERROR_OUT_OF_MEMORY`。
 
 ## 限制与结论
 
 本轮仍使用单个 1×1 纹理、单个 sampler、单个 workgroup，且不同逻辑槽位复用相同底层资源。
 它补齐了真实 queue/GPU timestamp 证据，但还不是多材质、多纹理内容或高占用场景的端到端结论。
-S-91B 的 Linux/Lavapipe 与不支持设备矩阵、以及更大真实资源占用数据仍需完成。
+Linux 的实验 Shader 工具链边界和不支持设备回退已记录；更大真实资源占用数据仍不是本版本结论。
 
 ## 验证命令
 

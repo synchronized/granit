@@ -522,6 +522,14 @@ TEST_CASE("Vulkan Bindless Shader 按索引采样 texture 和 sampler", "[vulkan
       pressure_texture_handles.push_back(texture_handle);
       pressure_sampler_handles.push_back(sampler_handle);
     }
+    if (pressure_size == pressure_capacity) {
+      std::uint64_t exhausted_texture_handle{};
+      std::uint64_t exhausted_sampler_handle{};
+      CHECK(pressure_registry.register_sampled_texture(
+                device, source_view, 1000, exhausted_texture_handle) == GRANIT_ERROR_OUT_OF_MEMORY);
+      CHECK(pressure_registry.register_sampler(device, sampler, 1000, exhausted_sampler_handle) ==
+            GRANIT_ERROR_OUT_OF_MEMORY);
+    }
 
     std::vector<VkWriteDescriptorSet> pressure_bindless_writes;
     pressure_bindless_writes.reserve(pressure_size * 2);
