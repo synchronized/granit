@@ -10,8 +10,8 @@
 ## 当前阶段
 
 Granit 已形成桌面 Vulkan、浏览器 WebGPU、C11 ABI、C++20 RAII、Window、RenderPipeline 与
-AssetTools 的完整闭环。当前仍处于 0.x，v0.47.0 已发布。下一版本聚焦 Runtime Bundle 的真实
-应用接入、干净环境诊断和现有图形能力验证，不改变 Vulkan 驱动由平台提供的边界。
+AssetTools 的完整闭环。当前仍处于 0.x，v0.48.0 已发布。下一版本聚焦现有异步回读契约、跨后端
+生命周期验证和结构化诊断，不改变 Vulkan 驱动由平台提供的边界。
 
 | 能力域 | 状态 | 当前边界 |
 |---|---|---|
@@ -29,12 +29,20 @@ AssetTools 的完整闭环。当前仍处于 0.x，v0.47.0 已发布。下一版
 
 ## 当前计划
 
-[v0.48.0](versions/v0.48.0.md) 当前由
-[S-84](plans/S-84-0.48.0-runtime-consumer-and-capability-verification.md) 承接：完成安装 Consumer、
-Runtime Bundle 部署指南、Loader/Validation 诊断和 `09_particles`、`10_transparency`、
-`11_capabilities` 的跨后端验收。v0.48.0 不分发厂商驱动、ICD 或 Vulkan SDK。
+[v0.49.0](versions/v0.49.0.md) 当前由
+[S-85](plans/S-85-0.49.0-readback-contract-and-diagnostics.md) 承接：审计 `map`、`readback_batch` 和
+`async_operation` 的契约，补齐 Vulkan/WebGPU 生命周期验收和结构化诊断。v0.49.0 不新增平行
+`map_async` 公共接口，也不承接 Gneiss 的 SVT/纹理驻留职责。
 
 ## 最近完成
+
+### v0.48.0：Runtime Consumer 与图形能力验证
+
+**状态：已发布。**
+
+[v0.48.0](versions/v0.48.0.md) 通过
+[S-84](plans/S-84-0.48.0-runtime-consumer-and-capability-verification.md) 完成 Runtime Bundle 的真实
+Consumer 接入、跨平台部署诊断和现有 Tutorial 能力验收。
 
 ### v0.47.0：Vulkan Runtime Bundle 与验证层交付
 
