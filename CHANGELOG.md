@@ -10,6 +10,19 @@
 
 ## 0.55.0 - 2026-10-08
 
+### 验证
+
+- 增加 Vulkan 内部 Bindless Descriptor 的 8/64/512 逻辑槽位压力、批量更新、延迟回收和容量耗尽验证；
+- 增加 Bindless 与传统 Bind Group 的真实 compute dispatch GPU timestamp 对照和 readback 校验；
+- Linux CI 显式执行 Bindless 专项并在缺少 `glslc` 时明确 skip；Windows/Linux SDK、Vulkan Runtime、
+  Emscripten browser smoke 和安装 Consumer 全部通过。
+
+### 边界
+
+- 传统 Bind Group 继续是默认路径，WebGPU/Emscripten 不模拟 Vulkan Bindless；
+- 不新增公共 Bindless ABI，不进入 Descriptor Buffer、SVT/纹理驻留或 Vulkan 公共接口；
+- 当前 GPU 时间结果没有跨平台稳定收益证据，Bindless 继续留在 Vulkan 内部实验范围。
+
 ## 0.54.0 - 2026-10-08
 
 ### 验证

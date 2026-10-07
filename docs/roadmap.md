@@ -10,8 +10,8 @@
 ## 当前阶段
 
 Granit 已形成桌面 Vulkan、浏览器 WebGPU、C11 ABI、C++20 RAII、Window、RenderPipeline 与
-AssetTools 的完整闭环。当前仍处于 0.x，v0.54.0 已发布。下一阶段进入 v0.55.0 的 Bindless
-真实压力与边界复评，不直接冻结公共 API。
+AssetTools 的完整闭环。当前仍处于 0.x，v0.55.0 已发布。Bindless 继续作为 Vulkan 内部实验，
+下一阶段不直接冻结公共 Bindless API。
 不改变 Vulkan 驱动由平台提供的边界。
 
 | 能力域 | 状态 | 当前边界 |
@@ -30,9 +30,9 @@ AssetTools 的完整闭环。当前仍处于 0.x，v0.54.0 已发布。下一阶
 
 ## 当前计划
 
-[v0.55.0](versions/v0.55.0.md) 当前由
-[S-91](plans/S-91-0.55.0-bindless-pressure-and-boundary.md) 承接：补齐真实多材质/多纹理、
-Linux/Lavapipe、GPU/资源占用和传统 Bind Group 对照，WebGPU 继续回退。
+[v0.55.0](versions/v0.55.0.md) 已由
+[S-91](plans/S-91-0.55.0-bindless-pressure-and-boundary.md) 完成：保留 Vulkan 内部 Bindless
+实验、传统 Bind Group 默认路径和 WebGPU 回退，不新增公共 Bindless ABI。
 
 [v0.54.0](versions/v0.54.0.md) 已由
 [S-90](plans/S-90-0.54.0-vulkan-bindless-admission.md) 完成：验证内部 Vulkan Descriptor Indexing、
@@ -61,6 +61,13 @@ Bindless 是主要瓶颈，因此传统 Bind Group 保持默认路径；最终�
 完成内部 sampled texture/sampler Descriptor Indexing、显式 Shader/Pipeline 变体、GPU 完成点后的
 安全回收和传统 Bind Group 对照。当前数据未证明 Bindless 有稳定收益，因此传统 Bind Group 仍是
 默认路径；公共 Bindless ABI 和 Linux/Lavapipe 大规模端到端对照留待后续版本。
+
+### v0.55.0：Bindless 真实压力与边界复评
+
+**状态：已发布。**
+
+完成 Descriptor/CPU 压力、GPU timestamp、生命周期、容量耗尽和平台回退验证；当前数据未证明
+Bindless 有跨平台稳定收益，因此传统 Bind Group 继续默认，公共 Bindless ABI 不进入后续 API。
 
 ### v0.53.0：Bindless 能力探针与 Resource Table 原型
 
