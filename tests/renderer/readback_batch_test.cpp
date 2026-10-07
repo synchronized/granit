@@ -65,6 +65,16 @@ TEST_CASE("Readback Batch 异步返回 Buffer 内容", "[readback_batch][buffer]
   REQUIRE(granit::copy_readback_result(operation, 0, actual, size) == granit::result::success);
   CHECK(size == actual.size());
   CHECK(actual == expected);
+
+  std::array<std::byte, 1> too_small{};
+  size = too_small.size();
+  CHECK(granit::copy_readback_result(operation, 0, too_small, size) ==
+        granit::result::invalid_argument);
+  CHECK(size == expected.size());
+
+  size = 0;
+  CHECK(granit::copy_readback_result(operation, 0, {}, size) == granit::result::invalid_argument);
+  CHECK(size == expected.size());
 }
 
 TEST_CASE("Readback Batch 拒绝空提交与无效句柄", "[readback_batch][contract]") {

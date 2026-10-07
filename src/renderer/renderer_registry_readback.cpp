@@ -313,7 +313,8 @@ granit_result renderer_registry::copy_readback_result(granit_renderer renderer,
   const auto capacity = size;
   size = info.required_size;
   if (data == nullptr)
-    return capacity == 0 ? GRANIT_SUCCESS : GRANIT_ERROR_INVALID_ARGUMENT;
+    return info.required_size == 0 && capacity == 0 ? GRANIT_SUCCESS
+                                                    : GRANIT_ERROR_INVALID_ARGUMENT;
   if (capacity < info.required_size)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   std::shared_ptr<async_operation_record> record;
