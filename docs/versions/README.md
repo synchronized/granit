@@ -12,7 +12,7 @@
 
 ## 当前版本
 
-[v0.53.0：Bindless 能力探针与 Resource Table 原型](v0.53.0.md)
+[v0.54.0：Vulkan Bindless 准入验证](v0.54.0.md)
 
 ## 已发布版本
 
