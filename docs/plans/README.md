@@ -9,7 +9,8 @@
 
 ## 当前计划
 
-暂无已确认的下一版本计划；下一版本将基于 v0.49.0 的 Consumer 和跨后端证据重新规划。
+- [S-86：0.50.0 公共 API/ABI 稳定候选审计](S-86-0.50.0-api-abi-stability-candidate.md)——审计
+  component 稳定等级、布局/符号、Consumer 和兼容边界。
 
 ## 最近完成
 

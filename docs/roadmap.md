@@ -10,8 +10,8 @@
 ## 当前阶段
 
 Granit 已形成桌面 Vulkan、浏览器 WebGPU、C11 ABI、C++20 RAII、Window、RenderPipeline 与
-AssetTools 的完整闭环。当前仍处于 0.x，v0.49.0 已发布。下一版本继续以真实 Consumer、跨后端
-验证和可诊断性为优先，不改变 Vulkan 驱动由平台提供的边界。
+AssetTools 的完整闭环。当前仍处于 0.x，v0.49.0 已发布。下一版本聚焦公共 API/ABI 稳定候选、
+Consumer 和兼容性证据，不改变 Vulkan 驱动由平台提供的边界。
 
 | 能力域 | 状态 | 当前边界 |
 |---|---|---|
@@ -29,9 +29,10 @@ AssetTools 的完整闭环。当前仍处于 0.x，v0.49.0 已发布。下一版
 
 ## 当前计划
 
-v0.49.0 已完成 S-85：审计 `map`、`readback_batch` 和 `async_operation` 的契约，修复回读容量边界，
-补齐 Reference，并通过 Vulkan/WebGPU 相关 CI 验收。v0.49.0 不新增平行 `map_async` 公共接口，
-也不承接 Gneiss 的 SVT/纹理驻留职责。
+[v0.50.0](versions/v0.50.0.md) 当前由
+[S-86](plans/S-86-0.50.0-api-abi-stability-candidate.md) 承接：审计 component 稳定等级、C ABI
+布局、导出符号、C++ wrapper 和安装 Consumer。v0.50.0 不冻结整个 0.x ABI，也不承接 Gneiss 的
+SVT/纹理驻留职责。
 
 ## 最近完成
 
