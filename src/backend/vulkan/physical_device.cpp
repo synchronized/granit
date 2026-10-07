@@ -163,9 +163,12 @@ granit_result select_physical_device(const volk::VolkInstanceTable& functions, V
 
       VkPhysicalDeviceVulkan13Features features{};
       features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+      VkPhysicalDeviceVulkan12Features features12{};
+      features12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+      features12.pNext = &features;
       VkPhysicalDeviceFeatures2 features2{};
       features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-      features2.pNext = &features;
+      features2.pNext = &features12;
       functions.vkGetPhysicalDeviceFeatures2(devices[index], &features2);
 
       const auto graphics_queue = find_graphics_queue(functions, devices[index]);
@@ -196,6 +199,12 @@ granit_result select_physical_device(const volk::VolkInstanceTable& functions, V
           .maintenance4 = features.maintenance4 == VK_TRUE,
           .shader_demote_to_helper_invocation =
               features.shaderDemoteToHelperInvocation == VK_TRUE,
+          .bindless_descriptor_indexing =
+              features12.descriptorIndexing == VK_TRUE &&
+              features12.runtimeDescriptorArray == VK_TRUE &&
+              features12.shaderSampledImageArrayNonUniformIndexing == VK_TRUE &&
+              features12.descriptorBindingPartiallyBound == VK_TRUE &&
+              features12.descriptorBindingVariableDescriptorCount == VK_TRUE,
           .supports_requested_surfaces = supports_requested_surfaces,
           .supports_swapchain = supports_swapchain,
       };
@@ -214,6 +223,7 @@ granit_result select_physical_device(const volk::VolkInstanceTable& functions, V
         selected.fill_mode_non_solid = features2.features.fillModeNonSolid == VK_TRUE;
         selected.shader_demote_to_helper_invocation =
             features.shaderDemoteToHelperInvocation == VK_TRUE;
+        selected.bindless_descriptor_indexing = candidate.bindless_descriptor_indexing;
       }
     }
     return found ? GRANIT_SUCCESS : GRANIT_ERROR_NO_SUITABLE_DEVICE;

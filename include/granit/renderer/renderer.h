@@ -60,6 +60,8 @@ typedef uint64_t granit_renderer_feature_flags;
 #define GRANIT_RENDERER_FEATURE_PIPELINE_WARMUP_BIT (UINT64_C(1) << 2)
 /** 后端保证 Pipeline 预热的单次事件推进不会执行同步编译。 */
 #define GRANIT_RENDERER_FEATURE_NON_BLOCKING_PIPELINE_WARMUP_BIT (UINT64_C(1) << 3)
+/** 设备支持 S-89 Bindless 实验所需的 Descriptor Indexing 能力；不表示默认启用。 */
+#define GRANIT_RENDERER_FEATURE_BINDLESS_DESCRIPTOR_INDEXING_BIT (UINT64_C(1) << 4)
 
 /** Renderer 对应设备的公开限制快照。 */
 typedef struct granit_renderer_limits {

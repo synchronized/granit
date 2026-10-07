@@ -52,6 +52,9 @@ public:
   [[nodiscard]] bool shader_demote_to_helper_invocation_supported() const noexcept {
     return shader_demote_to_helper_invocation_supported_;
   }
+  [[nodiscard]] bool bindless_descriptor_indexing_supported() const noexcept {
+    return bindless_descriptor_indexing_supported_;
+  }
 
 private:
   VkPhysicalDevice physical_device_{VK_NULL_HANDLE};
@@ -63,6 +66,7 @@ private:
   bool sampler_anisotropy_supported_{};
   bool fill_mode_non_solid_supported_{};
   bool shader_demote_to_helper_invocation_supported_{};
+  bool bindless_descriptor_indexing_supported_{};
 };
 
 [[nodiscard]] bool physical_device_supports_linear_blit(const vulkan_instance& instance,

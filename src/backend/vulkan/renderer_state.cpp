@@ -81,7 +81,10 @@ granit_result vulkan_renderer_state::initialize(std::string_view application_nam
       .renderer_features = GRANIT_RENDERER_FEATURE_TIMESTAMP_QUERY_BIT |
                            GRANIT_RENDERER_FEATURE_ASYNC_READBACK_BIT |
                            GRANIT_RENDERER_FEATURE_PIPELINE_WARMUP_BIT |
-                           GRANIT_RENDERER_FEATURE_NON_BLOCKING_PIPELINE_WARMUP_BIT,
+                           GRANIT_RENDERER_FEATURE_NON_BLOCKING_PIPELINE_WARMUP_BIT |
+                           (device_.bindless_descriptor_indexing_supported()
+                                ? GRANIT_RENDERER_FEATURE_BINDLESS_DESCRIPTOR_INDEXING_BIT
+                                : UINT64_C(0)),
   };
 
   const auto allocator_result = memory_allocator_.initialize(instance_, device_);

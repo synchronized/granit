@@ -43,12 +43,14 @@ vulkan_device::vulkan_device(vulkan_device&& other) noexcept
       sampler_anisotropy_supported_(other.sampler_anisotropy_supported_),
       fill_mode_non_solid_supported_(other.fill_mode_non_solid_supported_),
       shader_demote_to_helper_invocation_supported_(
-          other.shader_demote_to_helper_invocation_supported_) {
+          other.shader_demote_to_helper_invocation_supported_),
+      bindless_descriptor_indexing_supported_(other.bindless_descriptor_indexing_supported_) {
   other.properties_ = {};
   other.functions_ = {};
   other.sampler_anisotropy_supported_ = false;
   other.fill_mode_non_solid_supported_ = false;
   other.shader_demote_to_helper_invocation_supported_ = false;
+  other.bindless_descriptor_indexing_supported_ = false;
 }
 
 vulkan_device& vulkan_device::operator=(vulkan_device&& other) noexcept {
@@ -66,11 +68,13 @@ vulkan_device& vulkan_device::operator=(vulkan_device&& other) noexcept {
   fill_mode_non_solid_supported_ = other.fill_mode_non_solid_supported_;
   shader_demote_to_helper_invocation_supported_ =
       other.shader_demote_to_helper_invocation_supported_;
+  bindless_descriptor_indexing_supported_ = other.bindless_descriptor_indexing_supported_;
   other.properties_ = {};
   other.functions_ = {};
   other.sampler_anisotropy_supported_ = false;
   other.fill_mode_non_solid_supported_ = false;
   other.shader_demote_to_helper_invocation_supported_ = false;
+  other.bindless_descriptor_indexing_supported_ = false;
   return *this;
 }
 
@@ -100,10 +104,21 @@ granit_result vulkan_device::initialize(const vulkan_instance& instance,
   features.dynamicRendering = VK_TRUE;
   features.maintenance4 = VK_TRUE;
   features.shaderDemoteToHelperInvocation = VK_TRUE;
+  VkPhysicalDeviceVulkan12Features features12{};
+  features12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+  features12.pNext = &features;
+  features12.descriptorIndexing = selected.bindless_descriptor_indexing ? VK_TRUE : VK_FALSE;
+  features12.runtimeDescriptorArray = selected.bindless_descriptor_indexing ? VK_TRUE : VK_FALSE;
+  features12.shaderSampledImageArrayNonUniformIndexing =
+      selected.bindless_descriptor_indexing ? VK_TRUE : VK_FALSE;
+  features12.descriptorBindingPartiallyBound =
+      selected.bindless_descriptor_indexing ? VK_TRUE : VK_FALSE;
+  features12.descriptorBindingVariableDescriptorCount =
+      selected.bindless_descriptor_indexing ? VK_TRUE : VK_FALSE;
 
   VkDeviceCreateInfo create_info{};
   create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-  create_info.pNext = &features;
+  create_info.pNext = &features12;
   create_info.queueCreateInfoCount = 1;
   create_info.pQueueCreateInfos = &queue_create_info;
   VkPhysicalDeviceFeatures core_features{};
@@ -129,6 +144,7 @@ granit_result vulkan_device::initialize(const vulkan_instance& instance,
   fill_mode_non_solid_supported_ = selected.fill_mode_non_solid;
   shader_demote_to_helper_invocation_supported_ =
       selected.shader_demote_to_helper_invocation;
+  bindless_descriptor_indexing_supported_ = selected.bindless_descriptor_indexing;
   graphics_queue_family_ = selected.graphics_queue_family;
   volk::volkLoadDeviceTable(&functions_, device_);
   if (functions_.vkGetDeviceQueue == nullptr || functions_.vkDestroyDevice == nullptr ||

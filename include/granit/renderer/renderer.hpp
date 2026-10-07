@@ -75,6 +75,9 @@ struct renderer_limits {
   [[nodiscard]] constexpr bool supports_non_blocking_pipeline_warmup() const noexcept {
     return (supported_features & GRANIT_RENDERER_FEATURE_NON_BLOCKING_PIPELINE_WARMUP_BIT) != 0;
   }
+  [[nodiscard]] constexpr bool supports_bindless_descriptor_indexing() const noexcept {
+    return (supported_features & GRANIT_RENDERER_FEATURE_BINDLESS_DESCRIPTOR_INDEXING_BIT) != 0;
+  }
 };
 
 enum class shader_feature : std::uint64_t {
