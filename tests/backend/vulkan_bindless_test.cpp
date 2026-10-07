@@ -7,6 +7,7 @@
 #include "backend/vulkan/instance.h"
 #include "backend/vulkan/loader.h"
 #include "backend/vulkan/memory_allocator.h"
+#include "backend/vulkan/timestamp_query.h"
 
 #include <array>
 #include <chrono>
@@ -31,6 +32,7 @@ using granit::detail::vulkan_image_allocation;
 using granit::detail::vulkan_instance;
 using granit::detail::vulkan_memory_allocator;
 using granit::detail::vulkan_memory_location;
+using granit::detail::vulkan_timestamp_query_pool;
 
 #if defined(GRANIT_BINDLESS_SPIRV) && defined(GRANIT_BINDGROUP_SPIRV)
 constexpr std::uint32_t image_width = 1;
@@ -301,7 +303,10 @@ TEST_CASE("Vulkan Bindless Shader 按索引采样 texture 和 sampler", "[vulkan
 
   vulkan_command_recorder recorder;
   REQUIRE(recorder.initialize(device) == GRANIT_SUCCESS);
+  vulkan_timestamp_query_pool timestamps;
+  REQUIRE(timestamps.initialize(device, 4) == GRANIT_SUCCESS);
   REQUIRE(recorder.begin(device) == GRANIT_SUCCESS);
+  REQUIRE(timestamps.reset(device, recorder.native_handle(), 0, 2) == GRANIT_SUCCESS);
   const VkClearColorValue clear_color{{0.0F, 1.0F, 0.0F, 1.0F}};
   const std::array<VkImageMemoryBarrier2, 2> begin_barriers{
       VkImageMemoryBarrier2{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
@@ -360,7 +365,11 @@ TEST_CASE("Vulkan Bindless Shader 按索引采样 texture 和 sampler", "[vulkan
   device.functions().vkCmdBindDescriptorSets(
       recorder.native_handle(), VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0,
       static_cast<std::uint32_t>(descriptor_sets.size()), descriptor_sets.data(), 0, nullptr);
+  REQUIRE(timestamps.write(device, recorder.native_handle(), VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                           0) == GRANIT_SUCCESS);
   device.functions().vkCmdDispatch(recorder.native_handle(), 1, 1, 1);
+  REQUIRE(timestamps.write(device, recorder.native_handle(), VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                           1) == GRANIT_SUCCESS);
   const VkImageMemoryBarrier2 output_barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
                                              nullptr,
                                              VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
@@ -412,6 +421,76 @@ TEST_CASE("Vulkan Bindless Shader 按索引采样 texture 和 sampler", "[vulkan
                            1) == GRANIT_SUCCESS);
   REQUIRE(device.functions().vkWaitForFences(device.native_handle(), 1, &fence, VK_TRUE,
                                              UINT64_MAX) == VK_SUCCESS);
+  std::array<std::uint64_t, 2> bindless_gpu_ns{};
+  REQUIRE(timestamps.read_nanoseconds(device, 0, bindless_gpu_ns, true) == GRANIT_SUCCESS);
+  CHECK(bindless_gpu_ns[1] >= bindless_gpu_ns[0]);
+
+  vulkan_command_recorder traditional_recorder;
+  REQUIRE(traditional_recorder.initialize(device) == GRANIT_SUCCESS);
+  REQUIRE(traditional_recorder.begin(device) == GRANIT_SUCCESS);
+  REQUIRE(timestamps.reset(device, traditional_recorder.native_handle(), 2, 2) == GRANIT_SUCCESS);
+  const VkImageMemoryBarrier2 traditional_begin_barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+                                                        nullptr,
+                                                        VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                                                        VK_ACCESS_2_TRANSFER_READ_BIT,
+                                                        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                                                        VK_ACCESS_2_SHADER_WRITE_BIT,
+                                                        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                                        VK_IMAGE_LAYOUT_GENERAL,
+                                                        VK_QUEUE_FAMILY_IGNORED,
+                                                        VK_QUEUE_FAMILY_IGNORED,
+                                                        output_image.image,
+                                                        {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
+  VkDependencyInfo traditional_begin_dependency{};
+  traditional_begin_dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+  traditional_begin_dependency.imageMemoryBarrierCount = 1;
+  traditional_begin_dependency.pImageMemoryBarriers = &traditional_begin_barrier;
+  device.functions().vkCmdPipelineBarrier2(traditional_recorder.native_handle(),
+                                           &traditional_begin_dependency);
+  device.functions().vkCmdBindPipeline(traditional_recorder.native_handle(),
+                                       VK_PIPELINE_BIND_POINT_COMPUTE, traditional_pipeline);
+  const std::array<VkDescriptorSet, 2> traditional_descriptor_sets{traditional_set, output_set};
+  device.functions().vkCmdBindDescriptorSets(
+      traditional_recorder.native_handle(), VK_PIPELINE_BIND_POINT_COMPUTE,
+      traditional_pipeline_layout, 0,
+      static_cast<std::uint32_t>(traditional_descriptor_sets.size()),
+      traditional_descriptor_sets.data(), 0, nullptr);
+  REQUIRE(timestamps.write(device, traditional_recorder.native_handle(),
+                           VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, 2) == GRANIT_SUCCESS);
+  device.functions().vkCmdDispatch(traditional_recorder.native_handle(), 1, 1, 1);
+  REQUIRE(timestamps.write(device, traditional_recorder.native_handle(),
+                           VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, 3) == GRANIT_SUCCESS);
+  const VkImageMemoryBarrier2 traditional_end_barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+                                                      nullptr,
+                                                      VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                                                      VK_ACCESS_2_SHADER_WRITE_BIT,
+                                                      VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                                                      VK_ACCESS_2_TRANSFER_READ_BIT,
+                                                      VK_IMAGE_LAYOUT_GENERAL,
+                                                      VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                                      VK_QUEUE_FAMILY_IGNORED,
+                                                      VK_QUEUE_FAMILY_IGNORED,
+                                                      output_image.image,
+                                                      {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
+  VkDependencyInfo traditional_end_dependency{};
+  traditional_end_dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+  traditional_end_dependency.imageMemoryBarrierCount = 1;
+  traditional_end_dependency.pImageMemoryBarriers = &traditional_end_barrier;
+  device.functions().vkCmdPipelineBarrier2(traditional_recorder.native_handle(),
+                                           &traditional_end_dependency);
+  REQUIRE(traditional_recorder.end(device) == GRANIT_SUCCESS);
+  REQUIRE(device.functions().vkResetFences(device.native_handle(), 1, &fence) == VK_SUCCESS);
+  command_info.commandBuffer = traditional_recorder.native_handle();
+  REQUIRE(device.functions().vkQueueSubmit2(device.graphics_queue(), 1, &submit_info, fence) ==
+          VK_SUCCESS);
+  REQUIRE(device.functions().vkWaitForFences(device.native_handle(), 1, &fence, VK_TRUE,
+                                             UINT64_MAX) == VK_SUCCESS);
+  std::array<std::uint64_t, 2> traditional_gpu_ns{};
+  REQUIRE(timestamps.read_nanoseconds(device, 2, traditional_gpu_ns, true) == GRANIT_SUCCESS);
+  CHECK(traditional_gpu_ns[1] >= traditional_gpu_ns[0]);
+  std::cout << "bindless_gpu_dispatch_ns=" << (bindless_gpu_ns[1] - bindless_gpu_ns[0])
+            << ",traditional_gpu_dispatch_ns=" << (traditional_gpu_ns[1] - traditional_gpu_ns[0])
+            << '\n';
   registry.collect(1);
   std::uint64_t recycled_texture_handle{};
   REQUIRE(registry.register_sampled_texture(device, source_view, 3, recycled_texture_handle) ==
@@ -492,8 +571,10 @@ TEST_CASE("Vulkan Bindless Shader 按索引采样 texture 和 sampler", "[vulkan
     pressure_registry.collect(1);
   }
   pressure_registry.destroy(device);
+  timestamps.destroy(device);
   device.functions().vkDestroyFence(device.native_handle(), fence, nullptr);
   recorder.destroy(device);
+  traditional_recorder.destroy(device);
   REQUIRE(allocator.invalidate(readback, 0, 4) == GRANIT_SUCCESS);
   const auto* pixels = static_cast<const std::uint8_t*>(readback.mapped_data);
   CHECK(pixels[0] == 0);
