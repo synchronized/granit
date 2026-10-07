@@ -10,8 +10,8 @@
 ## 当前阶段
 
 Granit 已形成桌面 Vulkan、浏览器 WebGPU、C11 ABI、C++20 RAII、Window、RenderPipeline 与
-AssetTools 的完整闭环。当前仍处于 0.x，v0.50.0 已发布。下一版本聚焦 RenderPipeline 的真实
-Consumer、生命周期契约和跨后端稳定等级，不改变 Vulkan 驱动由平台提供的边界。
+AssetTools 的完整闭环。当前仍处于 0.x，v0.51.0 已完成本地验收，待发布。RenderPipeline 的
+稳定候选边界已明确，不改变 Vulkan 驱动由平台提供的边界。
 
 | 能力域 | 状态 | 当前边界 |
 |---|---|---|
@@ -29,10 +29,10 @@ Consumer、生命周期契约和跨后端稳定等级，不改变 Vulkan 驱动�
 
 ## 当前计划
 
-[v0.51.0](versions/v0.51.0.md) 当前由
-[S-87](plans/S-87-0.51.0-render-pipeline-contract-and-consumer.md) 承接：验证 RenderPipeline 的
-Material、Scene、Canvas、Text 和 Debug Draw 真实 Consumer 与跨后端生命周期。v0.51.0 不实现
-Bindless、Clustered Forward 或 Gneiss 的 SVT/纹理驻留职责。
+[v0.51.0](versions/v0.51.0.md) 已由
+[S-87](plans/S-87-0.51.0-render-pipeline-contract-and-consumer.md) 完成：验证 RenderPipeline 的
+Material、Scene、Canvas、Text 和 Debug Draw 真实 Consumer 与跨 Renderer 生命周期。v0.51.0 不
+实现 Bindless、Clustered Forward 或 Gneiss 的 SVT/纹理驻留职责。
 
 ## 最近完成
 

@@ -8,6 +8,20 @@
 
 ## Unreleased
 
+## 0.51.0 - 2026-10-07
+
+### 变更
+
+- 完成 RenderPipeline 的独立 Consumer、资源生命周期和跨 Renderer 契约验收；本版本不新增公共 ABI。
+- 明确 Material、Scene、Mesh、Canvas、Text Draw List、Debug Draw 和 Environment Map 的所有权、
+  错误与录制边界。
+
+### 验证
+
+- Windows Clang shared/static 的 RenderPipeline API、实际渲染、安装 Consumer、发布准备和
+  Vulkan Runtime Bundle 检查通过。
+- 继续保持 Bindless、Clustered Forward、SVT/纹理驻留和 Vulkan SDK/驱动分发在版本范围之外。
+
 ## 0.50.0 - 2026-10-07
 
 ### 变更
