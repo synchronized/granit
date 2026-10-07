@@ -8,6 +8,20 @@
 
 ## Unreleased
 
+## 0.48.0 - 2026-10-07
+
+### 新增
+
+- 增加 Runtime Bundle 部署指南，明确 Windows/Linux 目录布局、SHA-256 校验、Loader 选择和
+  Validation Layer 诊断。
+- 增加安装 SDK 的 C11/C++20 Consumer 失败模式测试，并在 Windows/Linux shared/static CI 中使用
+  已发布 Runtime Bundle 验证 Consumer 启动路径。
+
+### 验证
+
+- 收口 `09_particles`、`10_transparency` 和 `11_capabilities` 的现有能力回归，不新增公共 ABI。
+- 明确 Vulkan Loader/Validation Bundle 的部署边界，以及 SVT/纹理驻留职责继续由 Gneiss 管理。
+
 ## 0.47.0 - 2026-10-06
 
 ### 新增
