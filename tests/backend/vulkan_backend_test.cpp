@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
+#include "backend/vulkan/bindless_descriptor_table.h"
 #include "backend/vulkan/device.h"
 #include "backend/vulkan/frame_context.h"
 #include "backend/vulkan/instance.h"
@@ -20,6 +21,7 @@
 namespace {
 
 using granit::detail::format_supports_linear_blit;
+using granit::detail::vulkan_bindless_descriptor_table;
 using granit::detail::initialize_vulkan_loader;
 using granit::detail::is_better_candidate;
 using granit::detail::is_suitable;
@@ -234,6 +236,77 @@ TEST_CASE("创建带独立函数表的 Vulkan 逻辑设备", "[vulkan][device]")
   CHECK(moved.valid());
   moved.reset();
   CHECK_FALSE(moved.valid());
+}
+
+TEST_CASE("Vulkan Bindless Descriptor Table 创建并校验索引边界", "[vulkan][bindless]") {
+  const auto loader = initialize_vulkan_loader();
+  if (loader.result != GRANIT_SUCCESS)
+    SKIP("当前运行环境没有可用的 Vulkan 1.3 loader");
+
+  vulkan_instance instance;
+  REQUIRE(instance.initialize({.application_name = "granit-bindless-tests"}) == GRANIT_SUCCESS);
+  vulkan_device device;
+  const auto device_result = device.initialize(instance);
+  if (device_result == GRANIT_ERROR_NO_SUITABLE_DEVICE)
+    SKIP("当前运行环境没有满足 Granit Vulkan 1.3 要求的图形设备");
+  REQUIRE(device_result == GRANIT_SUCCESS);
+  if (!device.bindless_descriptor_indexing_supported())
+    SKIP("当前 Vulkan 设备不支持 Granit Bindless 前置特性");
+
+  vulkan_bindless_descriptor_table table;
+  REQUIRE(table.initialize(device, 4, 4) == GRANIT_SUCCESS);
+  REQUIRE(table.valid());
+  CHECK(table.layout() != VK_NULL_HANDLE);
+  CHECK(table.descriptor_set() != VK_NULL_HANDLE);
+
+  vulkan_memory_allocator allocator;
+  REQUIRE(allocator.initialize(instance, device) == GRANIT_SUCCESS);
+  VkImageCreateInfo image_info{};
+  image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+  image_info.imageType = VK_IMAGE_TYPE_2D;
+  image_info.format = VK_FORMAT_R8G8B8A8_UNORM;
+  image_info.extent = {1, 1, 1};
+  image_info.mipLevels = 1;
+  image_info.arrayLayers = 1;
+  image_info.samples = VK_SAMPLE_COUNT_1_BIT;
+  image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+  image_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+  image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  vulkan_image_allocation image;
+  REQUIRE(allocator.create_image(image_info, vulkan_memory_location::device, image) ==
+          GRANIT_SUCCESS);
+  VkImageViewCreateInfo view_info{};
+  view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+  view_info.image = image.image;
+  view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+  view_info.format = image_info.format;
+  view_info.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+  VkImageView view = VK_NULL_HANDLE;
+  REQUIRE(device.functions().vkCreateImageView(device.native_handle(), &view_info, nullptr, &view) ==
+          VK_SUCCESS);
+  VkSamplerCreateInfo sampler_info{};
+  sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+  sampler_info.magFilter = VK_FILTER_NEAREST;
+  sampler_info.minFilter = VK_FILTER_NEAREST;
+  sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+  sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+  sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+  sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+  sampler_info.maxLod = 1.0F;
+  VkSampler sampler = VK_NULL_HANDLE;
+  REQUIRE(device.functions().vkCreateSampler(device.native_handle(), &sampler_info, nullptr,
+                                             &sampler) == VK_SUCCESS);
+
+  CHECK(table.update_sampled_texture(device, 4, view) == GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(table.update_sampler(device, 4, sampler) == GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(table.update_sampled_texture(device, 0, view) == GRANIT_SUCCESS);
+  CHECK(table.update_sampler(device, 0, sampler) == GRANIT_SUCCESS);
+  table.destroy(device);
+  CHECK_FALSE(table.valid());
+  device.functions().vkDestroySampler(device.native_handle(), sampler, nullptr);
+  device.functions().vkDestroyImageView(device.native_handle(), view, nullptr);
+  allocator.destroy_image(image);
+  allocator.reset();
 }
 
 TEST_CASE("Vulkan 时间戳查询池保存设备时间单位并校验范围", "[vulkan][timestamp]") {

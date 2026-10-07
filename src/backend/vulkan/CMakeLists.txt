@@ -3,6 +3,7 @@
 
 target_sources(
   granit PRIVATE
+    bindless_descriptor_table.cpp
     device.cpp
     frame_context.cpp
     command_recorder.cpp
@@ -30,6 +31,7 @@ target_sources(
     renderer_state_utils.cpp
     renderer_factory.cpp
     $<TARGET_OBJECTS:granit_volk>
+    bindless_descriptor_table.h
     device.h
     frame_context.h
     command_recorder.h

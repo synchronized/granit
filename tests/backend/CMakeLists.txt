@@ -33,6 +33,7 @@ add_test(NAME granit.backend.resources COMMAND granit_backend_resources_test)
 add_executable(
   granit_vulkan_backend_test
   vulkan_backend_test.cpp
+  "${PROJECT_SOURCE_DIR}/src/backend/vulkan/bindless_descriptor_table.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/device.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/frame_context.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/instance.cpp"
