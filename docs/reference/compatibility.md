@@ -13,6 +13,10 @@ Granit 当前版本为 0.x，公共 API、C ABI、C++ 包装、CMake component �
 这些内容已经冻结。发生有意的 0.x 破坏性变更时，直接更新当前接口、测试基线、Changelog 和版本
 号；不保留旧入口、旧结构尺寸、兼容宏或转发层。需要使用者执行额外操作时再提供迁移指南。
 
+v0.50.0 将稳定候选定义为 component 范围，而不是整个 Granit 的全局承诺。Core、Math、Renderer
+和 Window 进入长期候选复核；RenderPipeline 保持观察候选；AssetTools 与第三方 Integration 保持
+实验性。该分级不改变当前 0.x 仍需重新编译 Consumer 的要求，也不承诺 C++ 二进制 ABI。
+
 历史符号和布局快照只用于发布审计与差异说明，不作为禁止当前版本删除或重塑 API 的兼容门禁。
 
 ## 接口等级
@@ -81,6 +85,13 @@ SDL3 类型仍不进入 Granit 公共头。共享包把 SDL3 作为运行时部�
 调用顺序变化，以及持久化格式转换。仅需重新配置和重新编译即可完成的兼容新增、内部重构和缺陷
 修复不单独创建迁移指南，由 Changelog 记录即可。API diff 和 ABI 基线用于评审与验证，不能替代
 Changelog 中对破坏性变化的说明。
+
+## C++ 包装迁移规则
+
+- C++ 包装的 move-only、RAII 和 `result` 语义必须继续通过公共 C API 实现，不建立平行资源状态；
+- 只改变实现、不改变 C API 契约时，优先保持源码兼容，但使用者仍应使用同一 v0.x 次版本重新编译；
+- 删除或重命名 C++ 入口时，必须在同一提交更新 C API 使用示例、Consumer、Reference 和 Changelog；
+- C++ 标准库、编译器和运行库 ABI 不由 Granit 跨动态库承诺，跨边界所有权仍由 C ABI 规则决定。
 
 ## 进入稳定版本的门槛
 
