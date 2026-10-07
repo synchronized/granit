@@ -9,7 +9,8 @@
 
 ## 当前计划
 
-暂无已确认的下一版本计划；下一版本将基于 v0.50.0 的稳定候选证据重新规划。
+- [S-87：0.51.0 RenderPipeline 契约与真实 Consumer](S-87-0.51.0-render-pipeline-contract-and-consumer.md)——验证
+  Material、Scene、Canvas、Text 和 Debug Draw 的真实复用边界与跨后端生命周期。
 
 ## 最近完成
 
