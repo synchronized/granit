@@ -10,8 +10,8 @@
 ## 当前阶段
 
 Granit 已形成桌面 Vulkan、浏览器 WebGPU、C11 ABI、C++20 RAII、Window、RenderPipeline 与
-AssetTools 的完整闭环。当前仍处于 0.x，v0.51.0 已完成本地验收，待发布。RenderPipeline 的
-稳定候选边界已明确，不改变 Vulkan 驱动由平台提供的边界。
+AssetTools 的完整闭环。当前仍处于 0.x，v0.51.0 已发布。下一版本先补齐真实绑定压力证据，
+不改变 Vulkan 驱动由平台提供的边界。
 
 | 能力域 | 状态 | 当前边界 |
 |---|---|---|
@@ -29,12 +29,20 @@ AssetTools 的完整闭环。当前仍处于 0.x，v0.51.0 已完成本地验收
 
 ## 当前计划
 
-[v0.51.0](versions/v0.51.0.md) 已由
-[S-87](plans/S-87-0.51.0-render-pipeline-contract-and-consumer.md) 完成：验证 RenderPipeline 的
-Material、Scene、Canvas、Text 和 Debug Draw 真实 Consumer 与跨 Renderer 生命周期。v0.51.0 不
-实现 Bindless、Clustered Forward 或 Gneiss 的 SVT/纹理驻留职责。
+[v0.52.0](versions/v0.52.0.md) 当前由
+[S-88](plans/S-88-0.52.0-binding-pressure-and-resource-table-gate.md) 承接：补齐真实 Shader 采样
+绑定压力证据，再决定是否进入 Resource Table 原型。v0.52.0 不默认启用 Bindless，也不承接
+Gneiss 的 SVT/纹理驻留职责。
 
 ## 最近完成
+
+### v0.51.0：RenderPipeline 契约与真实 Consumer
+
+**状态：已发布。**
+
+[v0.51.0](versions/v0.51.0.md) 通过
+[S-87](plans/S-87-0.51.0-render-pipeline-contract-and-consumer.md) 完成 Consumer、生命周期和
+跨后端编译验收。
 
 ### v0.50.0：公共 API/ABI 稳定候选审计
 

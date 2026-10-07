@@ -9,10 +9,13 @@
 
 ## 当前计划
 
-- [S-87：0.51.0 RenderPipeline 契约与真实 Consumer](S-87-0.51.0-render-pipeline-contract-and-consumer.md)——验证
-  Material、Scene、Canvas、Text 和 Debug Draw 的真实复用边界与跨后端生命周期。
+- [S-88：0.52.0 真实绑定压力与 Resource Table 闸门](S-88-0.52.0-binding-pressure-and-resource-table-gate.md)——
+  补齐真实 Shader 采样压力证据，再决定是否进入 Resource Table 原型。
 
 ## 最近完成
+
+- [S-87：0.51.0 RenderPipeline 契约与真实 Consumer](S-87-0.51.0-render-pipeline-contract-and-consumer.md)——完成
+  Material、Scene、Canvas、Text 和 Debug Draw 的真实复用边界与跨后端生命周期验收，并发布 `v0.51.0`。
 
 - [S-86：0.50.0 公共 API/ABI 稳定候选审计](S-86-0.50.0-api-abi-stability-candidate.md)——完成 component
   稳定等级、布局/符号、Consumer、兼容策略和大型功能恢复条件复评，并发布 `v0.50.0`。

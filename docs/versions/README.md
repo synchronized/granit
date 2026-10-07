@@ -12,9 +12,11 @@
 
 ## 当前版本
 
-[v0.51.0：RenderPipeline 契约与真实 Consumer](v0.51.0.md)
+[v0.52.0：真实绑定压力与 Resource Table 闸门](v0.52.0.md)
 
 ## 已发布版本
+
+- [v0.51.0：RenderPipeline 契约与真实 Consumer](v0.51.0.md)
 
 - [v0.50.0：公共 API/ABI 稳定候选审计](v0.50.0.md)
 - [v0.49.0：异步回读契约与诊断](v0.49.0.md)
