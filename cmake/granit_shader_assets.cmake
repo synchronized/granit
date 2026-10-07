@@ -309,11 +309,14 @@ function(granit_prepare_test_shader_assets)
       "pbr.vertex/shadow_ibl_lights=${pbr_output}/pbr_shadow_ibl_lights.vert.grshaderobj"
       --object
       "pbr.fragment/untextured=${pbr_output}/pbr_shadow_ibl_lights_untextured.frag.grshaderobj"
+      --object
+      "pbr.fragment/textured=${pbr_output}/pbr_textured.frag.grshaderobj"
       --target all --output "${pbr_test_library}"
     DEPENDS
       granit_shader_fixture_tool
       "${pbr_output}/pbr_shadow_ibl_lights.vert.grshaderobj"
       "${pbr_output}/pbr_shadow_ibl_lights_untextured.frag.grshaderobj"
+      "${pbr_output}/pbr_textured.frag.grshaderobj"
     COMMENT "从测试 Shader Object 链接 PBR Shader Library"
     VERBATIM
   )

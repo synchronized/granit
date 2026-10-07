@@ -39,7 +39,9 @@ granit::tests::shader_asset_store& shader_assets() {
   static const bool loaded = store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} +
                                        "/pbr_shadow_ibl_lights.vert.grshaderobj") &&
                              store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} +
-                                       "/pbr_shadow_ibl_lights_untextured.frag.grshaderobj");
+                                       "/pbr_shadow_ibl_lights_untextured.frag.grshaderobj") &&
+                             store.add(std::string{GRANIT_PIPELINE_ASSET_DIR} +
+                                       "/pbr_textured.frag.grshaderobj");
   if (!loaded)
     std::abort();
   return store;
@@ -252,7 +254,8 @@ int main(int argc, char** argv) {
     const auto renderer_view = granit::renderer_ref::from_native(native_renderer);
     if ((workload_textures[index].initialize(renderer_view, texture_desc)).failed() ||
         (workload_texture_views[index].initialize(renderer_view,
-                                                  workload_textures[index].native_handle()))
+                                                  granit::texture_ref::from_native(
+                                                      workload_textures[index].native_handle())))
             .failed()) {
       std::cerr << "创建纹理组失败\n";
       return 1;
@@ -277,7 +280,7 @@ int main(int argc, char** argv) {
   material_desc.archive_size = archive.size();
   material_desc.shader_library = shader_library.native_handle();
 #ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
-  material_desc.initial_update_count = 3;
+  material_desc.initial_update_count = 0;
 #else
   material_desc.initial_update_count = 1;
 #endif
@@ -304,10 +307,27 @@ int main(int argc, char** argv) {
         granit_material_parameter_update{granit_material_parameter_id("base_color_texture", 18),
                                          GRANIT_MATERIAL_PARAMETER_TEXTURE_VIEW, 0, nullptr, 0,
                                          workload_texture_views[texture_group].native_handle()},
+        granit_material_parameter_update{
+            granit_material_parameter_id("metallic_roughness_texture", 26),
+            GRANIT_MATERIAL_PARAMETER_TEXTURE_VIEW,
+            0,
+            nullptr,
+            0,
+            workload_texture_views[texture_group].native_handle()},
+        granit_material_parameter_update{granit_material_parameter_id("normal_texture", 14),
+                                         GRANIT_MATERIAL_PARAMETER_TEXTURE_VIEW, 0, nullptr, 0,
+                                         workload_texture_views[texture_group].native_handle()},
+        granit_material_parameter_update{granit_material_parameter_id("occlusion_texture", 17),
+                                         GRANIT_MATERIAL_PARAMETER_TEXTURE_VIEW, 0, nullptr, 0,
+                                         workload_texture_views[texture_group].native_handle()},
+        granit_material_parameter_update{granit_material_parameter_id("emissive_texture", 16),
+                                         GRANIT_MATERIAL_PARAMETER_TEXTURE_VIEW, 0, nullptr, 0,
+                                         workload_texture_views[texture_group].native_handle()},
         granit_material_parameter_update{granit_material_parameter_id("pbr_sampler", 11),
                                          GRANIT_MATERIAL_PARAMETER_SAMPLER, 0, nullptr, 0,
                                          workload_sampler.native_handle()}};
     material_desc.initial_updates = updates.data();
+    material_desc.initial_update_count = static_cast<std::uint32_t>(updates.size());
 #else
     const granit_material_parameter_update update{granit_material_parameter_id("base_color", 10),
                                                   GRANIT_MATERIAL_PARAMETER_FLOAT4,
@@ -515,7 +535,8 @@ int main(int argc, char** argv) {
   };
   std::cout << std::fixed << std::setprecision(2) << "# revision=" << GRANIT_BENCHMARK_REVISION
             << ",compiler=" << GRANIT_BENCHMARK_COMPILER << ",system=" << GRANIT_BENCHMARK_SYSTEM
-            << ",link=" << GRANIT_BENCHMARK_LINK_MODE << '\n'
+            << ",link=" << GRANIT_BENCHMARK_LINK_MODE
+            << ",shader_sampling=pbr_textured,texture_bindings=5\n"
             << "schema,name,draws,materials,texture_groups,material_switches,"
                "texture_group_switches,material_bind_groups,pipeline_cache_entries,"
                "opaque_batches,point_lights,shadow_range,shadow_span,"
@@ -629,11 +650,13 @@ int main(int argc, char** argv) {
   }
   void* mapped = nullptr;
   result = readback.map(0, size * size * 4, &mapped);
+#ifndef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
   const auto* pixel = static_cast<const std::uint8_t*>(mapped) + (size / 2 * size + size / 2) * 4;
   const std::array<std::uint8_t, 3> center{result.ok() ? pixel[0] : std::uint8_t{0},
                                            result.ok() ? pixel[1] : std::uint8_t{0},
                                            result.ok() ? pixel[2] : std::uint8_t{0}};
   const bool rendered = center[0] != 0 || center[1] != 0 || center[2] != 0;
+#endif
   if (result.ok())
     result = readback.unmap();
 
@@ -648,11 +671,16 @@ int main(int argc, char** argv) {
   static_cast<void>(granit_mesh_destroy(native_renderer, mesh));
   static_cast<void>(granit_texture_view_destroy(native_renderer, output_view));
   static_cast<void>(granit_texture_destroy(native_renderer, output));
+#ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
+  if (result.failed()) {
+    std::cerr << "回读失败：" << static_cast<granit_result>(result) << '\n';
+    return 1;
+  }
+#else
   if (!rendered || result.failed()) {
     std::cerr << "中心像素未被自动渲染路径覆盖\n";
     return 1;
   }
-#ifndef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
   std::cout << "Render Pipeline 离屏渲染成功，中心像素：" << static_cast<int>(center[0]) << ", "
             << static_cast<int>(center[1]) << ", " << static_cast<int>(center[2]) << '\n';
 #endif

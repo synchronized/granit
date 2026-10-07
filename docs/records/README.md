@@ -21,6 +21,7 @@
 
 ## 稳定化与跨平台
 
+- [2026-10-07 S-88 真实绑定压力基线](2026-10-07-s88-binding-pressure-baseline.md)
 - [2026-10-07 S-87A RenderPipeline Consumer 基线](2026-10-07-s87-render-pipeline-consumer-baseline.md)
 - [2026-10-07 S-86 API/ABI 稳定候选验收](2026-10-07-s86-api-abi-stability-acceptance.md)
 - [2026-10-05 Granit v0.45.0 发布验收](2026-10-05-v0.45.0-release-acceptance.md)
