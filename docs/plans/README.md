@@ -9,6 +9,8 @@
 
 ## 当前计划
 
+- [S-89：0.53.0 Bindless 能力探针与 Resource Table 原型](S-89-0.53.0-bindless-probe-and-resource-table.md)——先验证后端无关索引契约和 Vulkan 实验路径，保持传统 Bind Group 回退。
+
 - [S-88：0.52.0 真实绑定压力与 Resource Table 闸门](S-88-0.52.0-binding-pressure-and-resource-table-gate.md)——
   补齐真实 Shader 采样压力证据，再决定是否进入 Resource Table 原型。
 

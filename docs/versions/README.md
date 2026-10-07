@@ -12,7 +12,7 @@
 
 ## 当前版本
 
-[v0.52.0：真实绑定压力与 Resource Table 闸门](v0.52.0.md)
+[v0.53.0：Bindless 能力探针与 Resource Table 原型](v0.53.0.md)
 
 ## 已发布版本
 
