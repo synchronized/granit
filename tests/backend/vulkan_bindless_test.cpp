@@ -417,6 +417,81 @@ TEST_CASE("Vulkan Bindless Shader 按索引采样 texture 和 sampler", "[vulkan
   REQUIRE(registry.register_sampled_texture(device, source_view, 3, recycled_texture_handle) ==
           GRANIT_SUCCESS);
   CHECK(static_cast<std::uint32_t>(recycled_texture_handle) == 1);
+
+  REQUIRE(registry.release(recycled_texture_handle,
+                           granit::internal::resource_table_type::texture_view,
+                           1) == GRANIT_SUCCESS);
+  registry.collect(1);
+  constexpr std::uint32_t pressure_capacity = 512;
+  vulkan_bindless_resource_registry pressure_registry{UINT64_C(0x534F01)};
+  REQUIRE(pressure_registry.initialize(device, pressure_capacity, pressure_capacity) ==
+          GRANIT_SUCCESS);
+  const std::array<std::uint32_t, 3> pressure_sizes{8, 64, 512};
+  constexpr std::uint32_t pressure_iterations = 16;
+  for (const auto pressure_size : pressure_sizes) {
+    std::vector<std::uint64_t> pressure_texture_handles;
+    std::vector<std::uint64_t> pressure_sampler_handles;
+    pressure_texture_handles.reserve(pressure_size);
+    pressure_sampler_handles.reserve(pressure_size);
+    for (std::uint32_t index = 0; index < pressure_size; ++index) {
+      std::uint64_t texture_handle{};
+      std::uint64_t sampler_handle{};
+      REQUIRE(pressure_registry.register_sampled_texture(device, source_view, index + 10,
+                                                         texture_handle) == GRANIT_SUCCESS);
+      REQUIRE(pressure_registry.register_sampler(device, sampler, index + 10, sampler_handle) ==
+              GRANIT_SUCCESS);
+      pressure_texture_handles.push_back(texture_handle);
+      pressure_sampler_handles.push_back(sampler_handle);
+    }
+
+    std::vector<VkWriteDescriptorSet> pressure_bindless_writes;
+    pressure_bindless_writes.reserve(pressure_size * 2);
+    for (std::uint32_t index = 0; index < pressure_size; ++index) {
+      pressure_bindless_writes.push_back(
+          {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, pressure_registry.descriptor_set(), 0,
+           static_cast<std::uint32_t>(pressure_texture_handles[index]), 1,
+           VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, &sampled_image, nullptr, nullptr});
+      pressure_bindless_writes.push_back(
+          {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, pressure_registry.descriptor_set(), 1,
+           static_cast<std::uint32_t>(pressure_sampler_handles[index]), 1,
+           VK_DESCRIPTOR_TYPE_SAMPLER, &sampled_sampler, nullptr, nullptr});
+    }
+    const auto pressure_start = std::chrono::steady_clock::now();
+    for (std::uint32_t iteration = 0; iteration < pressure_iterations; ++iteration) {
+      device.functions().vkUpdateDescriptorSets(
+          device.native_handle(), static_cast<std::uint32_t>(pressure_bindless_writes.size()),
+          pressure_bindless_writes.data(), 0, nullptr);
+    }
+    const auto bindless_pressure_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                                          std::chrono::steady_clock::now() - pressure_start)
+                                          .count();
+
+    const auto traditional_pressure_start = std::chrono::steady_clock::now();
+    for (std::uint32_t iteration = 0; iteration < pressure_iterations; ++iteration) {
+      for (std::uint32_t index = 0; index < pressure_size; ++index) {
+        device.functions().vkUpdateDescriptorSets(
+            device.native_handle(), static_cast<std::uint32_t>(traditional_writes.size()),
+            traditional_writes.data(), 0, nullptr);
+      }
+    }
+    const auto traditional_pressure_ns =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() -
+                                                             traditional_pressure_start)
+            .count();
+    std::cout << "bindless_pressure_materials=" << pressure_size
+              << ",bindless_batch_update_ns=" << bindless_pressure_ns
+              << ",traditional_bind_group_update_ns=" << traditional_pressure_ns
+              << ",iterations=" << pressure_iterations << '\n';
+
+    for (const auto handle : pressure_texture_handles)
+      REQUIRE(pressure_registry.release(handle, granit::internal::resource_table_type::texture_view,
+                                        1) == GRANIT_SUCCESS);
+    for (const auto handle : pressure_sampler_handles)
+      REQUIRE(pressure_registry.release(handle, granit::internal::resource_table_type::sampler,
+                                        1) == GRANIT_SUCCESS);
+    pressure_registry.collect(1);
+  }
+  pressure_registry.destroy(device);
   device.functions().vkDestroyFence(device.native_handle(), fence, nullptr);
   recorder.destroy(device);
   REQUIRE(allocator.invalidate(readback, 0, 4) == GRANIT_SUCCESS);
