@@ -30,9 +30,9 @@ Resource Table 和能力探针的实际证据，进入 v0.54.0 的 Vulkan Bindle
 
 ## 当前计划
 
-[v0.54.0](versions/v0.54.0.md) 当前由
-[S-90](plans/S-90-0.54.0-vulkan-bindless-admission.md) 承接：验证内部 Vulkan Descriptor Indexing、
-生命周期契约和传统 Bind Group 对照，WebGPU 继续回退。
+[v0.54.0](versions/v0.54.0.md) 已由
+[S-90](plans/S-90-0.54.0-vulkan-bindless-admission.md) 完成：验证内部 Vulkan Descriptor Indexing、
+生命周期契约和传统 Bind Group 对照，WebGPU 继续回退；公共 Bindless ABI 不进入本版本。
 
 [v0.52.0](versions/v0.52.0.md) 已由
 [S-88](plans/S-88-0.52.0-binding-pressure-and-resource-table-gate.md) 承接：补齐真实 Shader 采样
@@ -49,6 +49,14 @@ Bindless 是主要瓶颈，因此传统 Bind Group 保持默认路径；最终�
 [S-88 记录](records/2026-10-07-s88-binding-pressure-baseline.md)。
 
 ## 最近完成
+
+### v0.54.0：Vulkan Bindless 准入验证
+
+**状态：已发布。**
+
+完成内部 sampled texture/sampler Descriptor Indexing、显式 Shader/Pipeline 变体、GPU 完成点后的
+安全回收和传统 Bind Group 对照。当前数据未证明 Bindless 有稳定收益，因此传统 Bind Group 仍是
+默认路径；公共 Bindless ABI 和 Linux/Lavapipe 大规模端到端对照留待后续版本。
 
 ### v0.53.0：Bindless 能力探针与 Resource Table 原型
 

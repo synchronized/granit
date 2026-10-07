@@ -21,6 +21,7 @@
 
 ## 稳定化与跨平台
 
+- [2026-10-08 Granit v0.54.0 发布验收](2026-10-08-v0.54.0-release-acceptance.md)
 - [2026-10-08 S-90A Vulkan Bindless sampled texture/sampler 验收](2026-10-08-s90a-vulkan-bindless-sampling.md)
 - [2026-10-08 S-90B Bindless 生命周期与传统 Bind Group 基线](2026-10-08-s90b-bindless-lifecycle-baseline.md)
 - [2026-10-07 S-89A CPU Resource Table 验收](2026-10-07-s89a-resource-table-acceptance.md)

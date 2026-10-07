@@ -9,12 +9,13 @@
 
 ## 当前计划
 
-- [S-90：0.54.0 Vulkan Bindless 准入验证](S-90-0.54.0-vulkan-bindless-admission.md)——验证内部 Descriptor Indexing、资源生命周期和传统 Bind Group 对照，保持公共 API 不变。
-
 - [S-88：0.52.0 真实绑定压力与 Resource Table 闸门](S-88-0.52.0-binding-pressure-and-resource-table-gate.md)——
   补齐真实 Shader 采样压力证据，再决定是否进入 Resource Table 原型。
 
 ## 最近完成
+
+- [S-90：0.54.0 Vulkan Bindless 准入验证](S-90-0.54.0-vulkan-bindless-admission.md)——完成内部 Descriptor Indexing、
+  资源生命周期、显式 Shader/Pipeline 变体和传统 Bind Group 对照，保持公共 API 不变，并发布 `v0.54.0`。
 
 - [S-89：0.53.0 Bindless 能力探针与 Resource Table 原型](S-89-0.53.0-bindless-probe-and-resource-table.md)——完成 CPU
   Resource Table、能力探针和传统 Bind Group 回退，并发布 `v0.53.0`；真实 Vulkan Descriptor 数组采样延期。
