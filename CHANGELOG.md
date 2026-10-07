@@ -8,6 +8,19 @@
 
 ## Unreleased
 
+## 0.53.0 - 2026-10-07
+
+### 新增
+
+- 增加内部 CPU Resource Table 原型，验证索引 generation、类型、Renderer 归属、容量和延迟回收。
+- 增加后端无关 Descriptor Indexing 能力位和 `12_bindless_probe` 教程，明确显示传统 Bind Group
+  回退状态。
+
+### 边界
+
+- 本版本不启用默认 Bindless，不新增资源表公共 ABI；真实 Vulkan Descriptor 数组采样因资源索引、
+  Shader/Pipeline 变体契约尚未稳定而延期。
+
 ## 0.52.0 - 2026-10-07
 
 ### 验证

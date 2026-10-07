@@ -32,7 +32,8 @@ Bindless 的索引契约和 Vulkan 实验路径，不直接冻结公共 API。
 
 [v0.53.0](versions/v0.53.0.md) 当前由
 [S-89](plans/S-89-0.53.0-bindless-probe-and-resource-table.md) 承接：建立 CPU Resource Table、能力探针
-和 Vulkan 对照示例。传统 Bind Group 仍是默认路径，WebGPU 只提供明确 fallback。
+和 Vulkan 实验准入设计。真实 Descriptor 数组采样暂缓，传统 Bind Group 仍是默认路径，WebGPU 只
+提供明确 fallback。
 
 [v0.52.0](versions/v0.52.0.md) 已由
 [S-88](plans/S-88-0.52.0-binding-pressure-and-resource-table-gate.md) 承接：补齐真实 Shader 采样
