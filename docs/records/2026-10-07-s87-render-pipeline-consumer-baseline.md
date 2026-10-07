@@ -28,10 +28,12 @@ ctest --test-dir build/windows-clang-debug -R "granit\.(pipeline|packaging)" --o
 ```
 
 结果：7/7 通过，包括 `granit.pipeline.render`、`granit.pipeline.api`、安装 Consumer 构建树、
-发布版本检查、发布准备和 Runtime Bundle 检查。
+发布版本检查、发布准备和 Runtime Bundle 检查。随后在 Windows Clang Static Debug 构建树
+执行 `granit.documentation.links`、`granit.pipeline.render` 和 `granit.pipeline.api`，结果为 3/3
+通过。
 
 ## 当前差异
 
 现有安装 Consumer 尚未把 Canvas、Text Draw List 和 Debug Draw 组合到同一个实际输出帧中；这些
-能力已有独立 API/行为测试，下一阶段 S-87B 将补充它们与 RenderPipeline 的生命周期和录制边界
-验收，不在本记录中把未完成项标记为通过。
+能力已有 `granit.pipeline.api` 中的独立 API、跨 Renderer 和录制边界测试。S-87B 将以这些测试和
+现有集成渲染测试为证据，继续确认组合路径；本记录不把未完成的安装 Consumer 扩展标记为通过。
