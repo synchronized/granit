@@ -10,6 +10,13 @@
 
 ## 0.52.0 - 2026-10-07
 
+### 验证
+
+- 增加真实 `pbr_textured` 片元采样压力基线，覆盖 8/64/512 材质规模、五类纹理绑定和实际 Draw。
+- 传统 Bind Group 继续作为默认路径；基于本轮数据暂不启动 Resource Table/Bindless 原型，不新增公共 ABI。
+- Windows/Linux SDK、锁定 Vulkan Runtime Bundle、SHA-256 校验和公开 Release 资产复核全部通过；
+  Emscripten WebGPU 目标编译通过。
+
 ## 0.51.0 - 2026-10-07
 
 ### 变更

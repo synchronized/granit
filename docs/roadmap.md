@@ -10,7 +10,8 @@
 ## 当前阶段
 
 Granit 已形成桌面 Vulkan、浏览器 WebGPU、C11 ABI、C++20 RAII、Window、RenderPipeline 与
-AssetTools 的完整闭环。当前仍处于 0.x，v0.51.0 已发布。下一版本先补齐真实绑定压力证据，
+AssetTools 的完整闭环。当前仍处于 0.x，v0.52.0 已发布。下一阶段继续以真实产品负载评估资源
+绑定压力，不直接冻结 Bindless 或 Resource Table 公共 API。
 不改变 Vulkan 驱动由平台提供的边界。
 
 | 能力域 | 状态 | 当前边界 |
@@ -29,10 +30,19 @@ AssetTools 的完整闭环。当前仍处于 0.x，v0.51.0 已发布。下一版
 
 ## 当前计划
 
-[v0.52.0](versions/v0.52.0.md) 当前由
+[v0.52.0](versions/v0.52.0.md) 已由
 [S-88](plans/S-88-0.52.0-binding-pressure-and-resource-table-gate.md) 承接：补齐真实 Shader 采样
-绑定压力证据，再决定是否进入 Resource Table 原型。v0.52.0 不默认启用 Bindless，也不承接
-Gneiss 的 SVT/纹理驻留职责。
+绑定压力证据，并决定暂不进入 Resource Table 原型。v0.52.0 不默认启用 Bindless，也不承接
+Gneiss 的 SVT/纹理驻留职责。后续候选需由新的真实负载证据驱动。
+
+### v0.52.0：真实绑定压力与 Resource Table 闸门
+
+**状态：已发布。**
+
+[v0.52.0](versions/v0.52.0.md) 通过 [S-88](plans/S-88-0.52.0-binding-pressure-and-resource-table-gate.md)
+完成真实 `pbr_textured` 采样压力基线。8/64/512 材质规模数据尚不足以证明 Resource Table 或
+Bindless 是主要瓶颈，因此传统 Bind Group 保持默认路径；最终证据见
+[S-88 记录](records/2026-10-07-s88-binding-pressure-baseline.md)。
 
 ## 最近完成
 
