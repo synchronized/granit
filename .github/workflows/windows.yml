@@ -134,8 +134,8 @@ jobs:
             -OutFile $archive
           Expand-Archive -Path $archive -DestinationPath $runtimeDir -Force
           cmake `
-            -DGRANIT_CONSUMER_BINARY_DIR="$consumer" `
-            -DGRANIT_INSTALL_PREFIX="$prefix" `
-            -DGRANIT_RUNTIME_ROOT="$runtimeDir" `
-            -DGRANIT_RUNTIME_LOADER="$runtimeDir/bin/vulkan-1.dll" `
+            "-DGRANIT_CONSUMER_BINARY_DIR:PATH=$consumer" `
+            "-DGRANIT_INSTALL_PREFIX:PATH=$prefix" `
+            "-DGRANIT_RUNTIME_ROOT:PATH=$runtimeDir" `
+            "-DGRANIT_RUNTIME_LOADER:FILEPATH=$runtimeDir/bin/vulkan-1.dll" `
             -P tests/packaging/run_vulkan_runtime_consumer.cmake
