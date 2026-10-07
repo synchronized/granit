@@ -34,6 +34,7 @@ add_executable(
   upload_batch_test.cpp
   readback_batch_test.cpp
   pipeline_warmup_test.cpp
+  resource_table_test.cpp
 )
 if(GRANIT_HAS_XCB)
   target_sources(granit_renderer_test PRIVATE xcb_swapchain_test.cpp)
