@@ -45,7 +45,7 @@ if (git status --porcelain) {
 # 从唯一版本文件读取当前版本
 $versionFile = 'cmake/granit_version.cmake'
 $versionContent = Get-Content -Raw -Encoding UTF8 $versionFile
-if ($versionContent -match '(?m)^set\(GRANIT_PROJECT_VERSION "(\d+\.\d+\.\d+)"\)$') {
+if ($versionContent -match '(?m)^set\(GRANIT_PROJECT_VERSION "(\d+\.\d+\.\d+)"\)\r?$') {
   $oldVersion = $Matches[1]
 } else {
   Write-Host "错误: 无法从 $versionFile 读取当前版本" -ForegroundColor Red
