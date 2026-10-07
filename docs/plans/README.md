@@ -9,10 +9,13 @@
 
 ## 当前计划
 
-- [S-83：0.47.0 Vulkan Runtime Bundle](S-83-0.47.0-vulkan-runtime-bundle.md)——提供 Windows/Linux
-  Vulkan Loader Bundle、system/bundled/auto 选择、Debug Validation Layer Bundle 和发布验收。
+- [S-84：0.48.0 Runtime Consumer 与图形能力验证](S-84-0.48.0-runtime-consumer-and-capability-verification.md)——
+  完成 Runtime Bundle 的真实应用接入、干净环境诊断和现有 Tutorial 能力矩阵验收。
 
 ## 最近完成
+
+- [S-83：0.47.0 Vulkan Runtime Bundle](S-83-0.47.0-vulkan-runtime-bundle.md)——提供 Windows/Linux
+  Vulkan Loader Bundle、system/bundled/auto 选择、Debug Validation Layer Bundle 和公开发布验收。
 
 - [S-82：0.45.0 教程能力矩阵与图形特性探针](S-82-0.45.0-tutorial-capability-matrix.md)——参考 bgfx
   单项示例验证 Granit 已有能力和真实缺口，并发布 `v0.45.0`。
