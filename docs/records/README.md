@@ -21,6 +21,7 @@
 
 ## 稳定化与跨平台
 
+- [2026-10-08 S-90A Vulkan Bindless sampled texture/sampler 验收](2026-10-08-s90a-vulkan-bindless-sampling.md)
 - [2026-10-07 S-89A CPU Resource Table 验收](2026-10-07-s89a-resource-table-acceptance.md)
 - [2026-10-07 S-89B Bindless 能力探针验收](2026-10-07-s89b-bindless-probe-acceptance.md)
 - [2026-10-07 S-89C Vulkan Bindless 实验延期](2026-10-07-s89c-bindless-experiment-deferral.md)

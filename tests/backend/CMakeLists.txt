@@ -33,7 +33,9 @@ add_test(NAME granit.backend.resources COMMAND granit_backend_resources_test)
 add_executable(
   granit_vulkan_backend_test
   vulkan_backend_test.cpp
+  vulkan_bindless_test.cpp
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/bindless_descriptor_table.cpp"
+  "${PROJECT_SOURCE_DIR}/src/backend/vulkan/command_recorder.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/device.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/frame_context.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/instance.cpp"
@@ -48,6 +50,24 @@ add_executable(
   "${PROJECT_SOURCE_DIR}/src/core/diagnostic_sink.cpp"
   $<TARGET_OBJECTS:granit_volk>
 )
+find_program(GRANIT_GLSLC_EXECUTABLE NAMES glslc)
+if(GRANIT_GLSLC_EXECUTABLE)
+  set(GRANIT_BINDLESS_SPIRV "${CMAKE_CURRENT_BINARY_DIR}/bindless_compute.comp.spv")
+  add_custom_command(
+    OUTPUT "${GRANIT_BINDLESS_SPIRV}"
+    COMMAND "${GRANIT_GLSLC_EXECUTABLE}" --target-env=vulkan1.2
+            "${CMAKE_CURRENT_SOURCE_DIR}/bindless_compute.comp"
+            -o "${GRANIT_BINDLESS_SPIRV}"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/bindless_compute.comp"
+    COMMENT "编译 Vulkan Bindless 实验 Shader"
+    VERBATIM
+  )
+  add_custom_target(granit_vulkan_bindless_shader DEPENDS "${GRANIT_BINDLESS_SPIRV}")
+  add_dependencies(granit_vulkan_backend_test granit_vulkan_bindless_shader)
+  target_compile_definitions(
+    granit_vulkan_backend_test PRIVATE GRANIT_BINDLESS_SPIRV="${GRANIT_BINDLESS_SPIRV}"
+  )
+endif()
 target_include_directories(
   granit_vulkan_backend_test
   PRIVATE "${PROJECT_SOURCE_DIR}/src"

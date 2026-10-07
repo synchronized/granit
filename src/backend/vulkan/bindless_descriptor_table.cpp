@@ -29,10 +29,12 @@ granit_result vulkan_bindless_descriptor_table::initialize(
   const auto variable_count = VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT;
   const std::array<VkDescriptorSetLayoutBinding, 2> bindings{
       VkDescriptorSetLayoutBinding{sampled_texture_binding, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                                    sampled_texture_capacity, VK_SHADER_STAGE_FRAGMENT_BIT,
+                                    sampled_texture_capacity,
+                                    VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
                                     nullptr},
       VkDescriptorSetLayoutBinding{sampler_binding, VK_DESCRIPTOR_TYPE_SAMPLER, sampler_capacity,
-                                   VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}};
+                                   VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
+                                   nullptr}};
   const std::array<VkDescriptorBindingFlags, 2> binding_flags{partially_bound,
                                                                partially_bound | variable_count};
   VkDescriptorSetLayoutBindingFlagsCreateInfo flags_info{};
