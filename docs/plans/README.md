@@ -9,6 +9,9 @@
 
 ## 当前计划
 
+- [S-91：0.55.0 Bindless 真实压力与边界复评](S-91-0.55.0-bindless-pressure-and-boundary.md)——补齐多材质/多纹理、
+  Linux/Lavapipe、GPU/资源占用和跨平台回退证据，不预设公共 Bindless ABI。
+
 - [S-88：0.52.0 真实绑定压力与 Resource Table 闸门](S-88-0.52.0-binding-pressure-and-resource-table-gate.md)——
   补齐真实 Shader 采样压力证据，再决定是否进入 Resource Table 原型。
 
