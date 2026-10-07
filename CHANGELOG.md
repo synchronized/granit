@@ -8,9 +8,17 @@
 
 ## Unreleased
 
+## 0.50.0 - 2026-10-07
+
+### 变更
+
+- 明确 Core、Math、Renderer 和 Window 的长期候选范围；RenderPipeline 保持观察候选，AssetTools 和
+  第三方 Integration 保持实验性。
+- 明确 0.x component 兼容策略、C ABI 结构扩展规则和 C++ 包装迁移规则；本版本不冻结整个 ABI。
+
 ### 文档
 
-- 开始记录 v0.50.0 的 component 稳定等级、C ABI 兼容边界和 C++ 包装迁移规则。
+- 增加 API/ABI 稳定候选、兼容策略和稳定候选证据的统一索引。
 
 ## 0.49.0 - 2026-10-07
 

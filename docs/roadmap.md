@@ -10,8 +10,8 @@
 ## 当前阶段
 
 Granit 已形成桌面 Vulkan、浏览器 WebGPU、C11 ABI、C++20 RAII、Window、RenderPipeline 与
-AssetTools 的完整闭环。当前仍处于 0.x，v0.49.0 已发布。下一版本聚焦公共 API/ABI 稳定候选、
-Consumer 和兼容性证据，不改变 Vulkan 驱动由平台提供的边界。
+AssetTools 的完整闭环。当前仍处于 0.x，v0.50.0 已发布。下一版本将基于稳定候选证据、真实
+Consumer 和新的上游需求重新规划，不改变 Vulkan 驱动由平台提供的边界。
 
 | 能力域 | 状态 | 当前边界 |
 |---|---|---|
@@ -29,12 +29,18 @@ Consumer 和兼容性证据，不改变 Vulkan 驱动由平台提供的边界。
 
 ## 当前计划
 
-[v0.50.0](versions/v0.50.0.md) 当前由
-[S-86](plans/S-86-0.50.0-api-abi-stability-candidate.md) 承接：审计 component 稳定等级、C ABI
-布局、导出符号、C++ wrapper 和安装 Consumer。v0.50.0 不冻结整个 0.x ABI，也不承接 Gneiss 的
-SVT/纹理驻留职责。
+v0.50.0 已完成 S-86：审计 component 稳定等级、C ABI 布局、导出符号、C++ wrapper 和安装
+Consumer。v0.50.0 不冻结整个 0.x ABI，也不承接 Gneiss 的 SVT/纹理驻留职责。
 
 ## 最近完成
+
+### v0.50.0：公共 API/ABI 稳定候选审计
+
+**状态：已发布。**
+
+[v0.50.0](versions/v0.50.0.md) 通过
+[S-86](plans/S-86-0.50.0-api-abi-stability-candidate.md) 完成 component 分级、兼容策略、ABI
+门禁和大型功能恢复条件复评。
 
 ### v0.49.0：异步回读契约与诊断
 

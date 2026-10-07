@@ -21,6 +21,7 @@
 
 ## 稳定化与跨平台
 
+- [2026-10-07 S-86 API/ABI 稳定候选验收](2026-10-07-s86-api-abi-stability-acceptance.md)
 - [2026-10-05 Granit v0.45.0 发布验收](2026-10-05-v0.45.0-release-acceptance.md)
 - [2026-10-05 S-82 教程能力矩阵验收](2026-10-05-s82-tutorial-capability-acceptance.md)
 - [2026-09-30 Granit v0.44.0 发布验收](2026-09-30-v0.44.0-release-acceptance.md)

@@ -9,10 +9,12 @@
 
 ## 当前计划
 
-- [S-86：0.50.0 公共 API/ABI 稳定候选审计](S-86-0.50.0-api-abi-stability-candidate.md)——审计
-  component 稳定等级、布局/符号、Consumer 和兼容边界。
+暂无已确认的下一版本计划；下一版本将基于 v0.50.0 的稳定候选证据重新规划。
 
 ## 最近完成
+
+- [S-86：0.50.0 公共 API/ABI 稳定候选审计](S-86-0.50.0-api-abi-stability-candidate.md)——完成 component
+  稳定等级、布局/符号、Consumer、兼容策略和大型功能恢复条件复评，并发布 `v0.50.0`。
 
 - [S-85：0.49.0 异步回读契约与诊断](S-85-0.49.0-readback-contract-and-diagnostics.md)——修复非零结果的
   空回读缓冲区边界，补齐 Readback Batch Reference，并完成 Windows/Linux/Emscripten 验收。
