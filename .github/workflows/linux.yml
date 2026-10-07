@@ -220,6 +220,12 @@ jobs:
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           cmake --build --preset "${{ steps.preset.outputs.name }}"
+      - name: 运行 Vulkan Bindless 压力与时间戳基线
+        shell: bash
+        run: |
+          GRANIT_VULKAN_VALIDATION=on \
+            "build/${{ steps.preset.outputs.name }}/bin/granit_vulkan_backend_test" \
+            "[bindless]" --reporter compact
       - name: 运行 ImGui 转换与视觉测试
         shell: bash
         run: |
