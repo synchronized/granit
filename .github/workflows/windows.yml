@@ -126,6 +126,9 @@ jobs:
       - name: 使用已发布 Runtime Bundle 运行 Consumer
         shell: pwsh
         run: |
+          $preset = '${{ steps.preset.outputs.name }}'
+          $prefix = "$PWD/build/install/$preset"
+          $consumer = "$PWD/build/consumer/$preset"
           $runtimeDir = Join-Path $env:RUNNER_TEMP 'granit-vulkan-runtime'
           $archive = Join-Path $env:RUNNER_TEMP 'granit-vulkan-runtime-windows-x64.zip'
           New-Item -ItemType Directory -Force -Path $runtimeDir | Out-Null
