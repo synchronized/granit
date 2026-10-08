@@ -39,6 +39,7 @@ add_executable(
 
 add_library(granit_renderdoc_test_substitute SHARED renderdoc_test_substitute.cpp)
 set_target_properties(granit_renderdoc_test_substitute PROPERTIES PREFIX "")
+target_compile_features(granit_renderdoc_test_substitute PRIVATE cxx_std_20)
 granit_target_compile_warnings(granit_renderdoc_test_substitute)
 granit_target_output_directories(granit_renderdoc_test_substitute)
 if(GRANIT_HAS_XCB)
