@@ -43,6 +43,30 @@ inline void trace_resource_event(std::string_view operation, std::string_view ty
   }
 }
 
+inline void trace_command_event(std::string_view operation, granit_command_recorder recorder,
+                                granit_frame frame, std::uint64_t value, std::uint64_t count,
+                                granit_result result) noexcept {
+  try {
+    std::string payload;
+    payload.reserve(160);
+    payload += "\"operation\":\"";
+    payload += operation;
+    payload += "\",\"recorder\":";
+    payload += std::to_string(recorder);
+    payload += ",\"frame_id\":";
+    payload += std::to_string(frame);
+    payload += ",\"value\":";
+    payload += std::to_string(value);
+    payload += ",\"count\":";
+    payload += std::to_string(count);
+    payload += ",\"result\":";
+    payload += std::to_string(static_cast<std::uint32_t>(result));
+    frame_trace::instance().emit_event("command", payload);
+  } catch (...) {
+    // 诊断事件失败不得改变命令录制结果。
+  }
+}
+
 template <typename Resources, typename Resource, typename Metadata>
 void retain_resource(Resources& resources, const Resource& resource, Metadata& metadata) {
   for (const auto& retained : resources) {

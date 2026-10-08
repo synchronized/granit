@@ -33,6 +33,8 @@ granit_result renderer_registry::bind_graphics_pipeline(granit_renderer renderer
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto result =
       command->graphics->bind_graphics_pipeline(*command->native, *pipeline_record->native);
+  trace_command_event("bind_graphics_pipeline", recorder, command->active_frame, pipeline, 1,
+                      result);
   if (result == GRANIT_SUCCESS)
     retain_resource(command->retained_resources, pipeline_record, pipeline_record->metadata);
   return result;
@@ -90,6 +92,8 @@ renderer_registry::bind_graphics_groups(granit_renderer renderer, granit_command
   const auto result = command->graphics->bind_graphics_groups(
       *command->native, *layout_record->native, first_group, native_groups, dynamic_offsets,
       buffer_accesses, texture_accesses);
+  trace_command_event("bind_graphics_groups", recorder, command->active_frame, layout,
+                      bind_groups.size(), result);
   if (result == GRANIT_SUCCESS) {
     retain_resource(command->retained_resources, layout_record, layout_record->metadata);
     for (const auto& group : group_records)
@@ -119,6 +123,8 @@ granit_result renderer_registry::bind_compute_pipeline(granit_renderer renderer,
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto result =
       command->compute->bind_compute_pipeline(*command->native, *pipeline_record->native);
+  trace_command_event("bind_compute_pipeline", recorder, command->active_frame, pipeline, 1,
+                      result);
   if (result == GRANIT_SUCCESS)
     retain_resource(command->retained_resources, pipeline_record, pipeline_record->metadata);
   return result;
@@ -178,6 +184,8 @@ renderer_registry::bind_compute_groups(granit_renderer renderer, granit_command_
   const auto result = command->compute->bind_compute_groups(
       *command->native, *layout_record->native, first_group, native_groups, dynamic_offsets,
       buffer_accesses, texture_accesses);
+  trace_command_event("bind_compute_groups", recorder, command->active_frame, layout,
+                      bind_groups.size(), result);
   if (result == GRANIT_SUCCESS) {
     retain_resource(command->retained_resources, layout_record, layout_record->metadata);
     for (const auto& group : group_records)
@@ -196,7 +204,11 @@ granit_result renderer_registry::dispatch(granit_renderer renderer,
   if (!command->compute)
     return GRANIT_ERROR_UNSUPPORTED;
   std::lock_guard lock{command->mutex};
-  return command->compute->dispatch(*command->native, group_count_x, group_count_y, group_count_z);
+  const auto result =
+      command->compute->dispatch(*command->native, group_count_x, group_count_y, group_count_z);
+  trace_command_event("dispatch", recorder, command->active_frame, group_count_x,
+                      std::uint64_t{group_count_y} * group_count_z, result);
+  return result;
 }
 
 granit_result renderer_registry::dispatch_indirect(granit_renderer renderer,
@@ -316,8 +328,11 @@ granit_result renderer_registry::draw(granit_renderer renderer, granit_command_r
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard lock{command->mutex};
-  return command->graphics->draw(*command->native, nullptr, nullptr, vertex_count, instance_count,
-                                 first_vertex, first_instance);
+  const auto result = command->graphics->draw(*command->native, nullptr, nullptr, vertex_count,
+                                              instance_count, first_vertex, first_instance);
+  trace_command_event("draw", recorder, command->active_frame, vertex_count, instance_count,
+                      result);
+  return result;
 }
 
 granit_result renderer_registry::draw_indexed(granit_renderer renderer,
@@ -330,9 +345,12 @@ granit_result renderer_registry::draw_indexed(granit_renderer renderer,
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
   std::lock_guard lock{command->mutex};
-  return command->graphics->draw_indexed(*command->native, nullptr, nullptr, index_count,
-                                         instance_count, first_index, vertex_offset,
-                                         first_instance);
+  const auto result =
+      command->graphics->draw_indexed(*command->native, nullptr, nullptr, index_count,
+                                      instance_count, first_index, vertex_offset, first_instance);
+  trace_command_event("draw_indexed", recorder, command->active_frame, index_count, instance_count,
+                      result);
+  return result;
 }
 
 granit_result renderer_registry::draw_indirect(granit_renderer renderer,

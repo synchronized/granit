@@ -11,6 +11,8 @@
   `frame_id`；
 - Buffer、Texture、TextureView 和 Timestamp Query Pool 的创建/销毁写入 `resource` 事件，包含句柄、内部
   creation sequence、大小或数量和结果码；资源回收仍由原有 retirement 队列负责；
+- Pipeline 绑定、Bind Group（Descriptor）绑定、Draw 和 Dispatch 写入 `command` 事件，包含 recorder、
+  frame id、数量和结果码；
 - Timestamp 后端返回 `UNSUPPORTED` 时写入 `availability=unavailable`，用于明确区分“设备没有该能力”和
   “查询尚未完成”；
 - 事件只写入公共句柄数值和结果码，不写入 Vulkan、WebGPU 或平台对象；
@@ -25,5 +27,5 @@
 
 ## 未完成项
 
-Pipeline/Descriptor/Barrier 统计、Fence/retirement 事件的独立关联，以及 WebGPU Shader 编译事件和浏览器
-E2E 运行时验证仍待后续 S-92C/S-92D 实现。
+Barrier 统计、Fence/retirement 事件的独立关联，以及 WebGPU Shader 编译事件和浏览器 E2E 运行时验证仍待
+后续 S-92C/S-92D 实现。
