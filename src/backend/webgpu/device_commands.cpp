@@ -12,6 +12,7 @@
 #include <limits>
 #include <mutex>
 #include <new>
+#include <string_view>
 
 #include <webgpu/webgpu.h>
 
@@ -19,6 +20,8 @@ namespace {
 
 using granit::detail::webgpu_device_state;
 using namespace granit::detail::webgpu_native;
+
+WGPUStringView debug_label(std::string_view value) noexcept { return {value.data(), value.size()}; }
 
 bool valid_transfer_recorder(
     const webgpu_device_state::command_recorder_record& recorder) noexcept {
@@ -82,6 +85,7 @@ granit_result create_command_recorder(webgpu_instance_handle instance,
   if (const auto ready = require_ready(*found->second); ready != GRANIT_SUCCESS)
     return ready;
   WGPUCommandEncoderDescriptor descriptor = WGPU_COMMAND_ENCODER_DESCRIPTOR_INIT;
+  descriptor.label = debug_label("granit.command_recorder");
   const auto native = wgpuDeviceCreateCommandEncoder(found->second->device, &descriptor);
   if (native == nullptr)
     return GRANIT_ERROR_OUT_OF_MEMORY;
@@ -126,7 +130,11 @@ granit_result destroy_command_recorder(webgpu_instance_handle instance,
   if (recorder_found == found->second->command_recorders.end())
     return GRANIT_ERROR_INVALID_HANDLE;
   if (recorder_found->second.pass != nullptr)
+    wgpuRenderPassEncoderPopDebugGroup(recorder_found->second.pass);
+  if (recorder_found->second.pass != nullptr)
     wgpuRenderPassEncoderRelease(recorder_found->second.pass);
+  if (recorder_found->second.compute_pass != nullptr)
+    wgpuComputePassEncoderPopDebugGroup(recorder_found->second.compute_pass);
   if (recorder_found->second.compute_pass != nullptr)
     wgpuComputePassEncoderRelease(recorder_found->second.compute_pass);
   for (const auto buffer : recorder_found->second.temporary_buffers)
@@ -616,6 +624,7 @@ struct vertex_output {
       color.loadOp = WGPULoadOp_Clear;
       color.storeOp = WGPUStoreOp_Store;
       WGPURenderPassDescriptor pass_desc = WGPU_RENDER_PASS_DESCRIPTOR_INIT;
+      pass_desc.label = debug_label("granit.mipmap");
       pass_desc.colorAttachmentCount = 1;
       pass_desc.colorAttachments = &color;
       const auto pass = wgpuCommandEncoderBeginRenderPass(command->second.encoder, &pass_desc);
@@ -629,9 +638,11 @@ struct vertex_output {
         wgpuShaderModuleRelease(shader);
         return GRANIT_ERROR_INITIALIZATION_FAILED;
       }
+      wgpuRenderPassEncoderPushDebugGroup(pass, debug_label("granit.mipmap"));
       wgpuRenderPassEncoderSetPipeline(pass, pipeline);
       wgpuRenderPassEncoderSetBindGroup(pass, 0, bind_group, 0, nullptr);
       wgpuRenderPassEncoderDraw(pass, 3, 1, 0, 0);
+      wgpuRenderPassEncoderPopDebugGroup(pass);
       wgpuRenderPassEncoderEnd(pass);
       wgpuRenderPassEncoderRelease(pass);
       wgpuBindGroupRelease(bind_group);
@@ -768,12 +779,14 @@ granit_result recorder_begin_rendering(webgpu_instance_handle instance,
     depth_attachment.stencilReadOnly = true;
   }
   WGPURenderPassDescriptor descriptor = WGPU_RENDER_PASS_DESCRIPTOR_INIT;
+  descriptor.label = debug_label("granit.rendering");
   descriptor.colorAttachmentCount = native_colors.size();
   descriptor.colorAttachments = native_colors.empty() ? nullptr : native_colors.data();
   descriptor.depthStencilAttachment = depth_target == 0 ? nullptr : &depth_attachment;
   command->second.pass = wgpuCommandEncoderBeginRenderPass(command->second.encoder, &descriptor);
   if (command->second.pass == nullptr)
     return GRANIT_ERROR_INITIALIZATION_FAILED;
+  wgpuRenderPassEncoderPushDebugGroup(command->second.pass, debug_label("granit.rendering"));
   command->second.pipeline_bound = false;
   command->second.graphics_topology = 0;
   command->second.index_available = 0;
@@ -1096,6 +1109,7 @@ granit_result recorder_end_rendering(webgpu_instance_handle instance,
     return GRANIT_ERROR_INVALID_HANDLE;
   if (command->second.pass == nullptr || command->second.finished)
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  wgpuRenderPassEncoderPopDebugGroup(command->second.pass);
   wgpuRenderPassEncoderEnd(command->second.pass);
   wgpuRenderPassEncoderRelease(command->second.pass);
   command->second.pass = nullptr;
@@ -1121,6 +1135,7 @@ granit_result recorder_begin_compute(webgpu_instance_handle instance,
       command->second.compute_pass != nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   WGPUComputePassDescriptor descriptor = WGPU_COMPUTE_PASS_DESCRIPTOR_INIT;
+  descriptor.label = debug_label("granit.compute");
   command->second.compute_pass =
       wgpuCommandEncoderBeginComputePass(command->second.encoder, &descriptor);
   if (command->second.compute_pass == nullptr)
@@ -1145,6 +1160,7 @@ granit_result recorder_bind_compute_pipeline(webgpu_instance_handle instance,
     return GRANIT_ERROR_INVALID_HANDLE;
   if (command->second.finished || command->second.compute_pass == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  wgpuComputePassEncoderPushDebugGroup(command->second.compute_pass, debug_label("granit.compute"));
   wgpuComputePassEncoderSetPipeline(command->second.compute_pass, native->second.compute_pipeline);
   command->second.compute_pipeline_bound = true;
   return GRANIT_SUCCESS;
@@ -1264,6 +1280,7 @@ granit_result recorder_end_compute(webgpu_instance_handle instance,
     return GRANIT_ERROR_INVALID_HANDLE;
   if (command->second.finished || command->second.compute_pass == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  wgpuComputePassEncoderPopDebugGroup(command->second.compute_pass);
   wgpuComputePassEncoderEnd(command->second.compute_pass);
   wgpuComputePassEncoderRelease(command->second.compute_pass);
   command->second.compute_pass = nullptr;

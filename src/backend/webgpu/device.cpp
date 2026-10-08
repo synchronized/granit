@@ -5,6 +5,7 @@
 #include "backend/contracts/callback_lifetime.h"
 #include "backend/contracts/lifecycle.h"
 #include "backend/webgpu/device_state.h"
+#include "core/frame_trace.h"
 
 #include <algorithm>
 #include <array>
@@ -17,6 +18,7 @@
 #include <memory>
 #include <mutex>
 #include <new>
+#include <string_view>
 
 #include <webgpu/webgpu.h>
 
@@ -231,6 +233,14 @@ void release_resources(webgpu_device_state& state) noexcept {
 
 void emit(const webgpu_host_api& host, granit_diagnostic_severity severity, const char* message,
           std::uint32_t message_length) noexcept {
+  const auto trace_severity = severity == GRANIT_DIAGNOSTIC_SEVERITY_ERROR
+                                  ? granit::detail::diagnostic_severity::error
+                              : severity == GRANIT_DIAGNOSTIC_SEVERITY_WARNING
+                                  ? granit::detail::diagnostic_severity::warning
+                                  : granit::detail::diagnostic_severity::info;
+  granit::detail::frame_trace::instance().emit_diagnostic(
+      trace_severity, granit::detail::diagnostic_category::device,
+      std::string_view{message == nullptr ? "" : message, message == nullptr ? 0 : message_length});
   if (host.diagnostic_callback == nullptr) {
     return;
   }
@@ -312,9 +322,9 @@ void receive_device_async(WGPURequestDeviceStatus status, WGPUDevice device, WGP
     if (status != WGPURequestDeviceStatus_Success || device == nullptr) {
       emit_dawn_message(&state->host, message);
       char diagnostic[96]{};
-      const auto length = std::snprintf(
-        diagnostic, sizeof(diagnostic), "Emscripten WebGPU device callback status=%d",
-          static_cast<int>(status));
+      const auto length =
+          std::snprintf(diagnostic, sizeof(diagnostic),
+                        "Emscripten WebGPU device callback status=%d", static_cast<int>(status));
       if (length > 0)
         emit(state->host, GRANIT_DIAGNOSTIC_SEVERITY_ERROR, diagnostic,
              static_cast<std::uint32_t>(
@@ -360,8 +370,7 @@ void receive_device_async(WGPURequestDeviceStatus status, WGPUDevice device, WGP
     wgpuDeviceRelease(device);
   if (context->instance != nullptr) {
     constexpr char diagnostic[] = "WebGPU releasing device initialization Instance reference";
-    emit(context->state->host, GRANIT_DIAGNOSTIC_SEVERITY_INFO, diagnostic,
-         sizeof(diagnostic) - 1);
+    emit(context->state->host, GRANIT_DIAGNOSTIC_SEVERITY_INFO, diagnostic, sizeof(diagnostic) - 1);
     wgpuInstanceRelease(context->instance);
   }
 }
@@ -375,9 +384,9 @@ void receive_adapter_async(WGPURequestAdapterStatus status, WGPUAdapter adapter,
     if (status != WGPURequestAdapterStatus_Success || adapter == nullptr) {
       emit_dawn_message(&state->host, message);
       char diagnostic[96]{};
-      const auto length = std::snprintf(
-        diagnostic, sizeof(diagnostic), "Emscripten WebGPU adapter callback status=%d",
-          static_cast<int>(status));
+      const auto length =
+          std::snprintf(diagnostic, sizeof(diagnostic),
+                        "Emscripten WebGPU adapter callback status=%d", static_cast<int>(status));
       if (length > 0)
         emit(state->host, GRANIT_DIAGNOSTIC_SEVERITY_ERROR, diagnostic,
              static_cast<std::uint32_t>(
@@ -406,8 +415,8 @@ void receive_adapter_async(WGPURequestAdapterStatus status, WGPUAdapter adapter,
     descriptor.uncapturedErrorCallbackInfo.callback = receive_uncaptured_error;
     descriptor.uncapturedErrorCallbackInfo.userdata1 = &state->uncaptured_error_callback;
     wgpuInstanceAddRef(instance);
-    auto* device_context = new (std::nothrow)
-        async_init_context{state->callback_lifetime.ticket(), state, instance};
+    auto* device_context =
+        new (std::nothrow) async_init_context{state->callback_lifetime.ticket(), state, instance};
     if (device_context == nullptr) {
       wgpuInstanceRelease(instance);
       state->lifecycle.mark_failed(GRANIT_ERROR_OUT_OF_MEMORY);
@@ -423,8 +432,7 @@ void receive_adapter_async(WGPURequestAdapterStatus status, WGPUAdapter adapter,
     wgpuAdapterRelease(adapter);
   if (context->instance != nullptr) {
     constexpr char diagnostic[] = "WebGPU releasing adapter initialization Instance reference";
-    emit(context->state->host, GRANIT_DIAGNOSTIC_SEVERITY_INFO, diagnostic,
-         sizeof(diagnostic) - 1);
+    emit(context->state->host, GRANIT_DIAGNOSTIC_SEVERITY_INFO, diagnostic, sizeof(diagnostic) - 1);
     wgpuInstanceRelease(context->instance);
   }
 }
@@ -697,8 +705,7 @@ void destroy_backend(webgpu_instance_handle instance) noexcept {
 
   const auto host = state->host;
   constexpr char destroying_message[] = "Dawn WebGPU backend destroy started";
-  emit(host, GRANIT_DIAGNOSTIC_SEVERITY_INFO, destroying_message,
-       sizeof(destroying_message) - 1);
+  emit(host, GRANIT_DIAGNOSTIC_SEVERITY_INFO, destroying_message, sizeof(destroying_message) - 1);
   release_resources(*state);
   state->~webgpu_device_state();
   deallocate(host, state);
