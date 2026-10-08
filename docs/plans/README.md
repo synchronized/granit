@@ -9,13 +9,16 @@
 
 ## 当前计划
 
-- [S-91：0.55.0 Bindless 真实压力与边界复评](S-91-0.55.0-bindless-pressure-and-boundary.md)——补齐多材质/多纹理、
-  Linux/Lavapipe、GPU/资源占用和跨平台回退证据，不预设公共 Bindless ABI。
+- [S-92：0.56.0 帧诊断与 RenderDoc 协作](S-92-0.56.0-frame-diagnostics-and-renderdoc.md)——增加可选 RenderDoc
+  单帧捕获、Vulkan 标记和跨后端 Frame Trace，不引入 RenderDoc/Vulkan 公共依赖。
 
 - [S-88：0.52.0 真实绑定压力与 Resource Table 闸门](S-88-0.52.0-binding-pressure-and-resource-table-gate.md)——
   补齐真实 Shader 采样压力证据，再决定是否进入 Resource Table 原型。
 
 ## 最近完成
+
+- [S-91：0.55.0 Bindless 真实压力与边界复评](S-91-0.55.0-bindless-pressure-and-boundary.md)——完成
+  Descriptor/CPU 压力、GPU 时间戳、容量耗尽和跨平台回退证据，并发布 `v0.55.0`；不新增公共 Bindless ABI。
 
 - [S-90：0.54.0 Vulkan Bindless 准入验证](S-90-0.54.0-vulkan-bindless-admission.md)——完成内部 Descriptor Indexing、
   资源生命周期、显式 Shader/Pipeline 变体和传统 Bind Group 对照，保持公共 API 不变，并发布 `v0.54.0`。

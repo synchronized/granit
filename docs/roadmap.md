@@ -10,8 +10,8 @@
 ## 当前阶段
 
 Granit 已形成桌面 Vulkan、浏览器 WebGPU、C11 ABI、C++20 RAII、Window、RenderPipeline 与
-AssetTools 的完整闭环。当前仍处于 0.x，v0.55.0 已发布。Bindless 继续作为 Vulkan 内部实验，
-下一阶段不直接冻结公共 Bindless API。
+AssetTools 的完整闭环。当前仍处于 0.x，v0.55.0 已发布。下一阶段进入 v0.56.0 帧诊断与
+RenderDoc 协作，Bindless 继续作为 Vulkan 内部实验。
 不改变 Vulkan 驱动由平台提供的边界。
 
 | 能力域 | 状态 | 当前边界 |
@@ -29,6 +29,10 @@ AssetTools 的完整闭环。当前仍处于 0.x，v0.55.0 已发布。Bindless 
 各能力的准确使用方式和限制以 [Reference](README.md#api-与行为参考) 为准。
 
 ## 当前计划
+
+[v0.56.0](versions/v0.56.0.md) 当前由
+[S-92](plans/S-92-0.56.0-frame-diagnostics-and-renderdoc.md) 承接：增加可选 RenderDoc 捕获、
+Vulkan Debug Label 和跨后端 Frame Trace，不引入公共 RenderDoc/Vulkan 依赖。
 
 [v0.55.0](versions/v0.55.0.md) 已由
 [S-91](plans/S-91-0.55.0-bindless-pressure-and-boundary.md) 完成：保留 Vulkan 内部 Bindless
