@@ -56,6 +56,9 @@ granit_result renderer_registry::create_texture(granit_renderer renderer,
       throw;
     }
     texture = handle;
+    const auto creation_sequence = textures_.at(handle)->metadata.creation_sequence;
+    trace_resource_event("create", "texture", texture, creation_sequence, 0, GRANIT_NULL_HANDLE,
+                         GRANIT_SUCCESS);
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
@@ -294,6 +297,7 @@ granit_result renderer_registry::destroy_texture_view(granit_renderer renderer,
     texture_views_.erase(found);
     static_cast<void>(handles_.erase(view, resource_type::texture_view, owner->domain()));
   }
+  const auto creation_sequence = record->metadata.creation_sequence;
   const auto retirement = record->retirement;
   if (retirement) {
     retirement->retire_resource(record->metadata.last_use_serial.load(),
@@ -303,6 +307,8 @@ granit_result renderer_registry::destroy_texture_view(granit_renderer renderer,
   } else {
     record.reset();
   }
+  trace_resource_event("destroy", "texture_view", view, creation_sequence, 0, GRANIT_NULL_HANDLE,
+                       GRANIT_SUCCESS);
   return GRANIT_SUCCESS;
 }
 
@@ -351,6 +357,7 @@ granit_result renderer_registry::destroy_texture(granit_renderer renderer, grani
     write_child_lifecycle_diagnostic(diagnostics->diagnostics(), lifecycle_resource_type::texture,
                                      texture, lifecycle_resource_type::texture_view,
                                      lifecycle.summary(lifecycle_resource_type::texture_view));
+  const auto creation_sequence = record->metadata.creation_sequence;
   const auto retirement = record->retirement;
   for (auto& view : views) {
     if (retirement)
@@ -364,6 +371,8 @@ granit_result renderer_registry::destroy_texture(granit_renderer renderer, grani
   record.reset();
   if (retirement)
     static_cast<void>(retirement->collect_retired());
+  trace_resource_event("destroy", "texture", texture, creation_sequence, 0, GRANIT_NULL_HANDLE,
+                       GRANIT_SUCCESS);
   return GRANIT_SUCCESS;
 }
 

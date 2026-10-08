@@ -54,6 +54,9 @@ granit_result renderer_registry::create_buffer(granit_renderer renderer,
       throw;
     }
     buffer = handle;
+    const auto creation_sequence = buffers_.at(handle)->metadata.creation_sequence;
+    trace_resource_event("create", "buffer", buffer, creation_sequence, desc.size,
+                         GRANIT_NULL_HANDLE, GRANIT_SUCCESS);
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
@@ -221,6 +224,7 @@ granit_result renderer_registry::destroy_buffer(granit_renderer renderer, granit
       return erase_result;
     }
   }
+  const auto creation_sequence = record->metadata.creation_sequence;
   const auto retirement = record->retirement;
   const auto serial = record->metadata.last_use_serial.load();
   if (retirement) {
@@ -229,6 +233,8 @@ granit_result renderer_registry::destroy_buffer(granit_renderer renderer, granit
   } else {
     record.reset();
   }
+  trace_resource_event("destroy", "buffer", buffer, creation_sequence, 0, GRANIT_NULL_HANDLE,
+                       GRANIT_SUCCESS);
   return GRANIT_SUCCESS;
 }
 

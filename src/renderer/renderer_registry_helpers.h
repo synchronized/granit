@@ -5,13 +5,43 @@
 #define GRANIT_RENDERER_RENDERER_REGISTRY_HELPERS_H_
 
 #include <cstdint>
+#include <string>
+#include <string_view>
 
 #include <granit/renderer/texture.h>
 
 #include "backend/contracts/queue.h"
+#include "core/frame_trace.h"
 #include "core/texture_format.h"
 
 namespace granit::detail {
+
+inline void trace_resource_event(std::string_view operation, std::string_view type,
+                                 std::uint64_t handle, std::uint64_t creation_sequence,
+                                 std::uint64_t size, granit_frame frame,
+                                 granit_result result) noexcept {
+  try {
+    std::string payload;
+    payload.reserve(192);
+    payload += "\"operation\":\"";
+    payload += operation;
+    payload += "\",\"resource_type\":\"";
+    payload += type;
+    payload += "\",\"handle\":";
+    payload += std::to_string(handle);
+    payload += ",\"creation_sequence\":";
+    payload += std::to_string(creation_sequence);
+    payload += ",\"size\":";
+    payload += std::to_string(size);
+    payload += ",\"frame_id\":";
+    payload += std::to_string(frame);
+    payload += ",\"result\":";
+    payload += std::to_string(static_cast<std::uint32_t>(result));
+    frame_trace::instance().emit_event("resource", payload);
+  } catch (...) {
+    // 诊断事件失败不得改变资源 API 结果。
+  }
+}
 
 template <typename Resources, typename Resource, typename Metadata>
 void retain_resource(Resources& resources, const Resource& resource, Metadata& metadata) {

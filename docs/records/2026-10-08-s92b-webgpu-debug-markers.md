@@ -19,5 +19,5 @@
 
 ## 未完成项
 
-WebGPU `timestamp-query` 能力缺失的显式 `unavailable` 事件、Shader 编译诊断和浏览器 E2E 运行时
-验证仍待 S-92C/S-92D；这些验证不引入浏览器工具或 Dawn 私有依赖。
+WebGPU `timestamp-query` 的运行时能力缺失已由统一 Timestamp Trace 写入显式 `unavailable` 事件；Shader
+编译诊断和浏览器 E2E 运行时验证仍待 S-92D，这些验证不引入浏览器工具或 Dawn 私有依赖。

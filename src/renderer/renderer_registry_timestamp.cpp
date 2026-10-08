@@ -34,6 +34,8 @@ void trace_timestamp_event(const char* operation, granit_timestamp_query_pool po
     payload += std::to_string(count);
     payload += ",\"result\":";
     payload += std::to_string(static_cast<std::uint32_t>(result));
+    if (result == GRANIT_ERROR_UNSUPPORTED)
+      payload += ",\"availability\":\"unavailable\"";
     frame_trace::instance().emit_event("timestamp", payload);
   } catch (...) {
     // 诊断事件失败不得改变 Timestamp API 结果。
@@ -51,15 +53,21 @@ granit_result renderer_registry::create_timestamp_query_pool(granit_renderer ren
       return GRANIT_ERROR_INVALID_HANDLE;
     const auto& owner = interfaces->renderer;
     const auto& timestamps = interfaces->timestamps;
-    if (!timestamps)
+    if (!timestamps) {
+      trace_timestamp_event("create", GRANIT_NULL_HANDLE, 0, query_count, GRANIT_NULL_HANDLE,
+                            GRANIT_ERROR_UNSUPPORTED);
       return GRANIT_ERROR_UNSUPPORTED;
+    }
     auto record = std::make_shared<timestamp_query_pool_record>();
     record->owner = owner;
     record->timestamps = timestamps;
     record->retirement = interfaces->retirement;
     const auto result = timestamps->create_timestamp_query_pool(query_count, record->native);
-    if (result != GRANIT_SUCCESS)
+    if (result != GRANIT_SUCCESS) {
+      trace_timestamp_event("create", GRANIT_NULL_HANDLE, 0, query_count, GRANIT_NULL_HANDLE,
+                            result);
       return result;
+    }
     std::lock_guard lock{mutex_};
     const auto found = backend_renderers_.find(renderer);
     if (found == backend_renderers_.end() || found->second != owner)
@@ -77,7 +85,10 @@ granit_result renderer_registry::create_timestamp_query_pool(granit_renderer ren
       throw;
     }
     pool = handle;
+    const auto creation_sequence = timestamp_query_pools_.at(handle)->metadata.creation_sequence;
     trace_timestamp_event("create", pool, 0, query_count, GRANIT_NULL_HANDLE, GRANIT_SUCCESS);
+    trace_resource_event("create", "timestamp_query_pool", pool, creation_sequence, query_count,
+                         GRANIT_NULL_HANDLE, GRANIT_SUCCESS);
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
@@ -215,6 +226,7 @@ granit_result renderer_registry::destroy_timestamp_query_pool(granit_renderer re
     static_cast<void>(handles_.erase(pool, resource_type::timestamp_query_pool,
                                      found_renderer->second->domain()));
   }
+  const auto creation_sequence = record->metadata.creation_sequence;
   const auto retirement = record->retirement;
   const auto serial = record->metadata.last_use_serial.load();
   if (retirement) {
@@ -223,6 +235,8 @@ granit_result renderer_registry::destroy_timestamp_query_pool(granit_renderer re
   } else {
     record.reset();
   }
+  trace_resource_event("destroy", "timestamp_query_pool", pool, creation_sequence, 0,
+                       GRANIT_NULL_HANDLE, GRANIT_SUCCESS);
   return GRANIT_SUCCESS;
 }
 
@@ -233,8 +247,11 @@ granit_result renderer_registry::reset_timestamp_queries(granit_renderer rendere
   auto command = acquire_command_recorder(renderer, recorder);
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
-  if (!command->timestamps)
+  if (!command->timestamps) {
+    trace_timestamp_event("reset", pool, first, count, command->active_frame,
+                          GRANIT_ERROR_UNSUPPORTED);
     return GRANIT_ERROR_UNSUPPORTED;
+  }
   std::shared_ptr<timestamp_query_pool_record> query;
   {
     std::lock_guard lock{mutex_};
@@ -265,8 +282,10 @@ granit_result renderer_registry::write_timestamp(granit_renderer renderer,
   auto command = acquire_command_recorder(renderer, recorder);
   if (!command)
     return GRANIT_ERROR_INVALID_HANDLE;
-  if (!command->timestamps)
+  if (!command->timestamps) {
+    trace_timestamp_event("write", pool, index, 1, command->active_frame, GRANIT_ERROR_UNSUPPORTED);
     return GRANIT_ERROR_UNSUPPORTED;
+  }
   std::shared_ptr<timestamp_query_pool_record> query;
   {
     std::lock_guard lock{mutex_};
