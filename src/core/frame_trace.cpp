@@ -11,6 +11,8 @@
 namespace granit::detail {
 namespace {
 
+constexpr std::uint32_t trace_schema_version = 1;
+
 std::uint64_t timestamp_ns() noexcept {
   static const auto origin = std::chrono::steady_clock::now();
   const auto elapsed = std::chrono::steady_clock::now() - origin;
@@ -142,7 +144,9 @@ void frame_trace::append_event_locked(std::string_view kind,
   try {
     std::string line;
     line.reserve(kind.size() + payload_json.size() + 96);
-    line += "{\"sequence\":";
+    line += "{\"schema_version\":";
+    line += std::to_string(trace_schema_version);
+    line += ",\"sequence\":";
     line += std::to_string(++sequence_);
     line += ",\"timestamp_ns\":";
     line += std::to_string(timestamp_ns());
@@ -204,14 +208,21 @@ void frame_trace::flush() noexcept {
     return;
   try {
     std::ofstream output{path_, std::ios::binary | std::ios::trunc};
-    if (!output)
+    if (!output) {
+      ++flush_failures_;
       return;
+    }
     for (std::size_t index = 0; index < events_.size(); ++index)
       output << events_[(event_start_ + index) % events_.size()];
-    if (dropped_events_ != 0)
-      output << "{\"kind\":\"trace_summary\",\"dropped_events\":" << dropped_events_ << "}\n";
+    output << "{\"schema_version\":" << trace_schema_version << ",\"sequence\":" << ++sequence_
+           << ",\"timestamp_ns\":" << timestamp_ns()
+           << ",\"kind\":\"trace_summary\",\"dropped_events\":" << dropped_events_
+           << ",\"flush_failures\":" << flush_failures_ << "}\n";
+    if (!output)
+      ++flush_failures_;
   } catch (...) {
     // 文件系统错误不能破坏渲染路径。
+    ++flush_failures_;
   }
 }
 
@@ -231,6 +242,7 @@ void frame_trace::configure_for_testing(std::string path, std::uint64_t max_even
   events_.clear();
   event_start_ = 0;
   dropped_events_ = 0;
+  flush_failures_ = 0;
   sequence_ = 0;
 }
 
@@ -242,6 +254,7 @@ void frame_trace::reset_for_testing() noexcept {
   events_.clear();
   event_start_ = 0;
   dropped_events_ = 0;
+  flush_failures_ = 0;
   sequence_ = 0;
   max_events_ = 4096;
 }

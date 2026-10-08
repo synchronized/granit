@@ -49,6 +49,7 @@ private:
   std::size_t event_start_{};
   std::uint64_t max_events_{4096};
   std::uint64_t dropped_events_{};
+  std::uint64_t flush_failures_{};
   std::uint64_t sequence_{};
 };
 

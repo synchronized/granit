@@ -37,6 +37,7 @@ TEST_CASE("帧 Trace 输出诊断 JSONL 并转义消息", "[frame-trace]") {
   trace.flush();
 
   const auto content = read_file(path);
+  CHECK(content.find("\"schema_version\":1") != std::string::npos);
   CHECK(content.find("\"kind\":\"diagnostic\"") != std::string::npos);
   CHECK(content.find("\"severity_name\":\"warning\"") != std::string::npos);
   CHECK(content.find("quote=\\\"line\\n") != std::string::npos);
@@ -58,6 +59,7 @@ TEST_CASE("帧 Trace 超出容量时只保留最新事件并记录丢弃数", "[
   CHECK(content.find("\"kind\":\"second\"") != std::string::npos);
   CHECK(content.find("\"kind\":\"third\"") != std::string::npos);
   CHECK(content.find("\"dropped_events\":1") != std::string::npos);
+  CHECK(content.find("\"kind\":\"trace_summary\"") != std::string::npos);
   std::filesystem::remove(path);
   trace.reset_for_testing();
 }

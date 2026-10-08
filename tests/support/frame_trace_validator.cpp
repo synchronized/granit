@@ -18,7 +18,8 @@ public:
   bool parse() {
     if (!parse_object() || !skip_space() || position_ != input_.size())
       return false;
-    return keys_.contains("sequence") && keys_.contains("timestamp_ns") && keys_.contains("kind") &&
+    return keys_.contains("schema_version") && keys_.contains("sequence") &&
+           keys_.contains("timestamp_ns") && keys_.contains("kind") &&
            allowed_kinds_.contains(kind_);
   }
 
@@ -197,9 +198,9 @@ private:
   std::size_t position_{};
   std::set<std::string> keys_;
   std::string kind_;
-  const std::set<std::string> allowed_kinds_{"frame",         "pass",       "command",
-                                             "resource",      "sync",       "timestamp",
-                                             "gpu_timestamp", "diagnostic", "resource_stats"};
+  const std::set<std::string> allowed_kinds_{
+      "frame",     "pass",          "command",    "resource",       "sync",
+      "timestamp", "gpu_timestamp", "diagnostic", "resource_stats", "trace_summary"};
 };
 
 } // namespace
