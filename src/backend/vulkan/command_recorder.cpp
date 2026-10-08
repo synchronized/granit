@@ -11,6 +11,26 @@
 #include <vector>
 
 namespace granit::detail {
+namespace {
+
+void begin_debug_label(const vulkan_device& device, VkCommandBuffer command_buffer,
+                       const char* name) noexcept {
+  const auto function = device.instance_functions().vkCmdBeginDebugUtilsLabelEXT;
+  if (function == nullptr)
+    return;
+  VkDebugUtilsLabelEXT label{};
+  label.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
+  label.pLabelName = name;
+  function(command_buffer, &label);
+}
+
+void end_debug_label(const vulkan_device& device, VkCommandBuffer command_buffer) noexcept {
+  const auto function = device.instance_functions().vkCmdEndDebugUtilsLabelEXT;
+  if (function != nullptr)
+    function(command_buffer);
+}
+
+} // namespace
 
 granit_result vulkan_command_recorder::initialize(const vulkan_device& device) noexcept {
   if (pool_ != VK_NULL_HANDLE || !device.valid()) {
@@ -55,6 +75,7 @@ granit_result vulkan_command_recorder::begin(const vulkan_device& device) noexce
   const auto result = device.functions().vkBeginCommandBuffer(command_buffer_, &begin_info);
   if (result == VK_SUCCESS) {
     state_ = command_recorder_state::recording;
+    begin_debug_label(device, command_buffer_, "granit.command_recorder");
     graphics_pipeline_bound_ = false;
     compute_pipeline_bound_ = false;
     viewport_set_ = false;
@@ -70,6 +91,7 @@ granit_result vulkan_command_recorder::end(const vulkan_device& device) noexcept
   if (state_ != command_recorder_state::recording || inside_rendering_) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
+  end_debug_label(device, command_buffer_);
   const auto result = device.functions().vkEndCommandBuffer(command_buffer_);
   state_ =
       result == VK_SUCCESS ? command_recorder_state::executable : command_recorder_state::invalid;
@@ -603,6 +625,7 @@ granit_result vulkan_command_recorder::begin_rendering(
   info.pDepthAttachment = depth_attachment;
   info.pStencilAttachment = stencil_attachment;
   device.functions().vkCmdBeginRendering(command_buffer_, &info);
+  begin_debug_label(device, command_buffer_, "granit.rendering");
   inside_rendering_ = true;
   return GRANIT_SUCCESS;
 }
@@ -626,6 +649,7 @@ granit_result vulkan_command_recorder::end_rendering(const vulkan_device& device
   if (state_ != command_recorder_state::recording || !inside_rendering_) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
+  end_debug_label(device, command_buffer_);
   device.functions().vkCmdEndRendering(command_buffer_);
   inside_rendering_ = false;
   return GRANIT_SUCCESS;

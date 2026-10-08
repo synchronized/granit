@@ -39,13 +39,15 @@ vulkan_device::vulkan_device(vulkan_device&& other) noexcept
       device_(std::exchange(other.device_, VK_NULL_HANDLE)),
       graphics_queue_(std::exchange(other.graphics_queue_, VK_NULL_HANDLE)),
       graphics_queue_family_(std::exchange(other.graphics_queue_family_, 0)),
-      properties_(other.properties_), functions_(other.functions_),
+      properties_(other.properties_), instance_functions_(other.instance_functions_),
+      functions_(other.functions_),
       sampler_anisotropy_supported_(other.sampler_anisotropy_supported_),
       fill_mode_non_solid_supported_(other.fill_mode_non_solid_supported_),
       shader_demote_to_helper_invocation_supported_(
           other.shader_demote_to_helper_invocation_supported_),
       bindless_descriptor_indexing_supported_(other.bindless_descriptor_indexing_supported_) {
   other.properties_ = {};
+  other.instance_functions_ = nullptr;
   other.functions_ = {};
   other.sampler_anisotropy_supported_ = false;
   other.fill_mode_non_solid_supported_ = false;
@@ -63,6 +65,7 @@ vulkan_device& vulkan_device::operator=(vulkan_device&& other) noexcept {
   graphics_queue_ = std::exchange(other.graphics_queue_, VK_NULL_HANDLE);
   graphics_queue_family_ = std::exchange(other.graphics_queue_family_, 0);
   properties_ = other.properties_;
+  instance_functions_ = other.instance_functions_;
   functions_ = other.functions_;
   sampler_anisotropy_supported_ = other.sampler_anisotropy_supported_;
   fill_mode_non_solid_supported_ = other.fill_mode_non_solid_supported_;
@@ -70,6 +73,7 @@ vulkan_device& vulkan_device::operator=(vulkan_device&& other) noexcept {
       other.shader_demote_to_helper_invocation_supported_;
   bindless_descriptor_indexing_supported_ = other.bindless_descriptor_indexing_supported_;
   other.properties_ = {};
+  other.instance_functions_ = nullptr;
   other.functions_ = {};
   other.sampler_anisotropy_supported_ = false;
   other.fill_mode_non_solid_supported_ = false;
@@ -140,10 +144,10 @@ granit_result vulkan_device::initialize(const vulkan_instance& instance,
 
   physical_device_ = selected.handle;
   properties_ = selected.properties;
+  instance_functions_ = &instance.functions();
   sampler_anisotropy_supported_ = selected.sampler_anisotropy;
   fill_mode_non_solid_supported_ = selected.fill_mode_non_solid;
-  shader_demote_to_helper_invocation_supported_ =
-      selected.shader_demote_to_helper_invocation;
+  shader_demote_to_helper_invocation_supported_ = selected.shader_demote_to_helper_invocation;
   bindless_descriptor_indexing_supported_ = selected.bindless_descriptor_indexing;
   graphics_queue_family_ = selected.graphics_queue_family;
   volk::volkLoadDeviceTable(&functions_, device_);
@@ -206,6 +210,7 @@ void vulkan_device::reset() noexcept {
   graphics_queue_ = VK_NULL_HANDLE;
   graphics_queue_family_ = 0;
   properties_ = {};
+  instance_functions_ = nullptr;
   functions_ = {};
   sampler_anisotropy_supported_ = false;
   fill_mode_non_solid_supported_ = false;

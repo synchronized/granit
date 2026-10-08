@@ -43,6 +43,9 @@ public:
     return properties_;
   }
   [[nodiscard]] const volk::VolkDeviceTable& functions() const noexcept { return functions_; }
+  [[nodiscard]] const volk::VolkInstanceTable& instance_functions() const noexcept {
+    return *instance_functions_;
+  }
   [[nodiscard]] bool sampler_anisotropy_supported() const noexcept {
     return sampler_anisotropy_supported_;
   }
@@ -62,6 +65,7 @@ private:
   VkQueue graphics_queue_{VK_NULL_HANDLE};
   std::uint32_t graphics_queue_family_{};
   VkPhysicalDeviceProperties properties_{};
+  const volk::VolkInstanceTable* instance_functions_{};
   volk::VolkDeviceTable functions_{};
   bool sampler_anisotropy_supported_{};
   bool fill_mode_non_solid_supported_{};
