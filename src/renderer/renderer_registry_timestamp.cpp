@@ -6,11 +6,39 @@
 
 #include "renderer/renderer_registry_helpers.h"
 
+#include "core/frame_trace.h"
+
 #include <algorithm>
 #include <new>
+#include <string>
 #include <utility>
 
 namespace granit::detail {
+namespace {
+
+void trace_timestamp_event(const char* operation, granit_timestamp_query_pool pool,
+                           std::uint32_t index, std::uint32_t count,
+                           granit_result result) noexcept {
+  try {
+    std::string payload;
+    payload.reserve(160);
+    payload += "\"operation\":\"";
+    payload += operation;
+    payload += "\",\"pool\":";
+    payload += std::to_string(pool);
+    payload += ",\"index\":";
+    payload += std::to_string(index);
+    payload += ",\"count\":";
+    payload += std::to_string(count);
+    payload += ",\"result\":";
+    payload += std::to_string(static_cast<std::uint32_t>(result));
+    frame_trace::instance().emit_event("timestamp", payload);
+  } catch (...) {
+    // 诊断事件失败不得改变 Timestamp API 结果。
+  }
+}
+
+} // namespace
 
 granit_result renderer_registry::create_timestamp_query_pool(granit_renderer renderer,
                                                              std::uint32_t query_count,
@@ -47,6 +75,7 @@ granit_result renderer_registry::create_timestamp_query_pool(granit_renderer ren
       throw;
     }
     pool = handle;
+    trace_timestamp_event("create", pool, 0, query_count, GRANIT_SUCCESS);
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
@@ -73,7 +102,11 @@ granit_result renderer_registry::get_timestamp_query_results(granit_renderer ren
     record = found->second;
   }
   std::lock_guard lock{record->mutex};
-  return record->timestamps->read_timestamp_query_results(*record->native, first, nanoseconds);
+  const auto result =
+      record->timestamps->read_timestamp_query_results(*record->native, first, nanoseconds);
+  trace_timestamp_event("read", pool, first, static_cast<std::uint32_t>(nanoseconds.size()),
+                        result);
+  return result;
 }
 
 granit_result renderer_registry::get_timestamp_query_results_async(
@@ -84,7 +117,8 @@ granit_result renderer_registry::get_timestamp_query_results_async(
     std::lock_guard lock{mutex_};
     const auto owner = backend_renderers_.find(renderer);
     if (owner == backend_renderers_.end() ||
-        handles_.find(pool, resource_type::timestamp_query_pool, owner->second->domain()) == nullptr)
+        handles_.find(pool, resource_type::timestamp_query_pool, owner->second->domain()) ==
+            nullptr)
       return GRANIT_ERROR_INVALID_HANDLE;
     const auto found = timestamp_query_pools_.find(pool);
     if (found == timestamp_query_pools_.end() || found->second->owner != owner->second)
@@ -113,8 +147,8 @@ granit_result renderer_registry::get_timestamp_query_results_async(
       if (result != GRANIT_ERROR_NOT_READY)
         state->complete(result);
     };
-    return register_async_operation(renderer, std::move(state), operation, poll,
-                                    std::move(payload), async_operation_kind::timestamp_results);
+    return register_async_operation(renderer, std::move(state), operation, poll, std::move(payload),
+                                    async_operation_kind::timestamp_results);
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
   } catch (...) {
@@ -123,8 +157,8 @@ granit_result renderer_registry::get_timestamp_query_results_async(
 }
 
 granit_result renderer_registry::copy_timestamp_query_results(
-    granit_renderer renderer, granit_timestamp_query_pool pool,
-    granit_async_operation operation, std::span<std::uint64_t> nanoseconds) {
+    granit_renderer renderer, granit_timestamp_query_pool pool, granit_async_operation operation,
+    std::span<std::uint64_t> nanoseconds) {
   std::shared_ptr<async_operation_record> async;
   std::shared_ptr<timestamp_query_pool_record> query;
   {
@@ -134,8 +168,8 @@ granit_result renderer_registry::copy_timestamp_query_results(
       return GRANIT_ERROR_INVALID_HANDLE;
     const auto query_found = timestamp_query_pools_.find(pool);
     const auto operation_found = async_operations_.find(operation);
-    if (query_found == timestamp_query_pools_.end() ||
-        operation_found == async_operations_.end() || query_found->second->owner != owner->second ||
+    if (query_found == timestamp_query_pools_.end() || operation_found == async_operations_.end() ||
+        query_found->second->owner != owner->second ||
         operation_found->second->owner != owner->second)
       return GRANIT_ERROR_INVALID_HANDLE;
     query = query_found->second;
@@ -215,6 +249,7 @@ granit_result renderer_registry::reset_timestamp_queries(granit_renderer rendere
   std::lock_guard query_lock{query->mutex};
   const auto result =
       command->timestamps->reset_timestamp_queries(*command->native, *query->native, first, count);
+  trace_timestamp_event("reset", pool, first, count, result);
   if (result == GRANIT_SUCCESS)
     retain_resource(command->retained_resources, query, query->metadata);
   return result;
@@ -246,6 +281,7 @@ granit_result renderer_registry::write_timestamp(granit_renderer renderer,
   std::lock_guard query_lock{query->mutex};
   const auto result =
       command->timestamps->write_timestamp(*command->native, *query->native, stage, index);
+  trace_timestamp_event("write", pool, index, 1, result);
   if (result == GRANIT_SUCCESS)
     retain_resource(command->retained_resources, query, query->metadata);
   return result;

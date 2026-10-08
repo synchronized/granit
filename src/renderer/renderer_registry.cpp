@@ -6,6 +6,7 @@
 
 #include "backend/contracts/diagnostics.h"
 #include "core/diagnostic_sink.h"
+#include "core/frame_trace.h"
 #include "core/texture_format.h"
 #include "renderer/renderer_registry_helpers.h"
 
@@ -18,6 +19,47 @@
 #include <vector>
 
 namespace granit::detail {
+namespace {
+
+void trace_resource_stats(const granit_renderer_resource_stats& stats) noexcept {
+  try {
+    std::string payload;
+    payload.reserve(512);
+    payload += "\"buffer_count\":";
+    payload += std::to_string(stats.buffer_count);
+    payload += ",\"texture_count\":";
+    payload += std::to_string(stats.texture_count);
+    payload += ",\"texture_view_count\":";
+    payload += std::to_string(stats.texture_view_count);
+    payload += ",\"sampler_count\":";
+    payload += std::to_string(stats.sampler_count);
+    payload += ",\"shader_count\":";
+    payload += std::to_string(stats.shader_count);
+    payload += ",\"bind_group_count\":";
+    payload += std::to_string(stats.bind_group_count);
+    payload += ",\"pipeline_count\":";
+    payload += std::to_string(stats.graphics_pipeline_count + stats.compute_pipeline_count);
+    payload += ",\"command_recorder_count\":";
+    payload += std::to_string(stats.command_recorder_count);
+    payload += ",\"frame_count\":";
+    payload += std::to_string(stats.frame_count);
+    payload += ",\"timestamp_query_pool_count\":";
+    payload += std::to_string(stats.timestamp_query_pool_count);
+    payload += ",\"upload_batch_count\":";
+    payload += std::to_string(stats.upload_batch_count);
+    payload += ",\"readback_batch_count\":";
+    payload += std::to_string(stats.readback_batch_count);
+    payload += ",\"total_live_count\":";
+    payload += std::to_string(stats.total_live_count);
+    payload += ",\"pending_retirement_count\":";
+    payload += std::to_string(stats.pending_retirement_count);
+    frame_trace::instance().emit_event("resource_stats", payload);
+  } catch (...) {
+    // 诊断统计失败不得影响资源查询。
+  }
+}
+
+} // namespace
 
 renderer_registry& renderer_registry::instance() {
   static renderer_registry registry;
@@ -213,6 +255,7 @@ granit_result renderer_registry::get_resource_stats(granit_renderer renderer,
     retirement = interfaces == backend_interfaces_.end() ? nullptr : interfaces->second->retirement;
   }
   stats.pending_retirement_count = retirement ? retirement->pending_retirement_count() : 0;
+  trace_resource_stats(stats);
   return GRANIT_SUCCESS;
 }
 

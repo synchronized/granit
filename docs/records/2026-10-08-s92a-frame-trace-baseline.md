@@ -15,11 +15,13 @@
 - 通过 `GRANIT_FRAME_TRACE_MAX_EVENTS` 设置固定容量，默认 4096 条；
 - 超出容量时保留最新事件，并在输出末尾记录 `dropped_events`；
 - 诊断 sink 自动写入 `diagnostic` 事件，消息中的 JSON 特殊字符会转义；
+- Renderer Registry 的资源统计写入 `resource_stats` 事件，跨后端 Timestamp registry 操作写入
+  `timestamp` 事件，包含操作、查询池句柄、索引、数量和结果码；
 - 进程退出时自动 flush，文件系统失败不会影响渲染和原有诊断回调；
 - 测试专用配置入口只存在于内部实现，未进入安装头文件或 C ABI。
 
 当前事件字段包含 `sequence`、`timestamp_ns`、`kind` 以及事件 payload。Frame、Pass、Resource、Sync
-和 GPU Timestamp 的统一关联留给 S-92C，避免在首版基础设施中重复建立运行时状态。
+的统一关联仍留给 S-92C；本阶段只记录现有 registry 出口，避免重复建立运行时状态。
 
 ## 验证
 
@@ -28,6 +30,8 @@
 - `cmake --build build/windows-clang-debug --target granit_lifecycle_validation_test -j 4`：通过；
 - `ctest --test-dir build/windows-clang-debug -R '^granit\\.core\\.lifecycle_validation$' --output-on-failure`：通过；
 - 设置 `GRANIT_FRAME_TRACE` 后运行核心生命周期测试（排除 Frame Trace 自身的环境隔离用例）：通过，进程退出后生成 JSONL。
+- 设置 `GRANIT_FRAME_TRACE` 运行 `granit_renderer_test.exe`：通过，实际生成 7 条 `resource_stats` 和 4 条
+  `timestamp` 事件。
 
 ## 限制与后续
 
