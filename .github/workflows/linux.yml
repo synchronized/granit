@@ -118,15 +118,28 @@ jobs:
           set -euo pipefail
           build="build/${{ steps.preset.outputs.name }}"
           mkdir -p "$build/diagnostics"
-          GRANIT_FRAME_TRACE="$PWD/$build/diagnostics/frame-trace.jsonl" \
+          trace="$PWD/$build/diagnostics/frame-trace.jsonl"
+          log="$PWD/$build/diagnostics/resource-test.log"
+          set +e
+          GRANIT_FRAME_TRACE="$trace" \
             GRANIT_FRAME_TRACE_MAX_EVENTS=512 \
             xvfb-run -a ctest --test-dir "$build" \
-              -R '^granit\.renderer\.resources$' --output-on-failure
+              -R '^granit\.renderer\.resources$' --output-on-failure 2>&1 | tee "$log"
+          test_exit=${PIPESTATUS[0]}
+          set -e
+          cat > "$build/diagnostics/metadata.txt" <<EOF
+          commit=${{ github.sha }}
+          preset=${{ steps.preset.outputs.name }}
+          trace=$trace
+          test_exit=$test_exit
+          generated_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          EOF
+          exit "$test_exit"
       - name: 上传渲染 Fixture 失败诊断
         if: failure()
         uses: actions/upload-artifact@v6
         with:
-          name: s12-fixture-linux-${{ matrix.compiler }}-${{ matrix.linkage }}
+          name: s93-diagnostics-linux-${{ matrix.compiler }}-${{ matrix.linkage }}
           path: |
             build/${{ steps.preset.outputs.name }}/test-artifacts
             build/${{ steps.preset.outputs.name }}/diagnostics

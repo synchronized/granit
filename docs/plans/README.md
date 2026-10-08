@@ -9,6 +9,9 @@
 
 ## 当前计划
 
+- [S-93：0.57.0 诊断硬化与跨后端回归](S-93-0.57.0-diagnostics-hardening-and-regression.md)——固化 Frame Trace
+  语义、后端命令回归、统一 CI 诊断附件和 RenderDoc 手动验收，不新增公共 ABI。
+
 - [S-92：0.56.0 帧诊断与 RenderDoc 协作](S-92-0.56.0-frame-diagnostics-and-renderdoc.md)——增加可选 RenderDoc
   单帧捕获、Vulkan 标记和跨后端 Frame Trace，不引入 RenderDoc/Vulkan 公共依赖。
 
