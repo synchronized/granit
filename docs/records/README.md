@@ -23,6 +23,7 @@
 
 - [2026-10-08 Granit v0.55.0 发布验收](2026-10-08-v0.55.0-release-acceptance.md)
 - [2026-10-09 Granit v0.56.0 发布验收](2026-10-09-v0.56.0-release-acceptance.md)
+- [2026-10-09 Granit v0.57.0 发布验收](2026-10-09-v0.57.0-release-acceptance.md)
 - [2026-10-08 S-92A Frame Trace 基础设施](2026-10-08-s92a-frame-trace-baseline.md)
 - [2026-10-08 S-92B Vulkan Debug Label 基线](2026-10-08-s92b-vulkan-debug-label-baseline.md)
 - [2026-10-08 S-92B RenderDoc 桥接](2026-10-08-s92b-renderdoc-bridge-baseline.md)
