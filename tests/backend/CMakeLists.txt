@@ -49,6 +49,7 @@ add_executable(
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/timestamp_query.cpp"
   "${PROJECT_SOURCE_DIR}/src/backend/vulkan/vma_implementation.cpp"
   "${PROJECT_SOURCE_DIR}/src/core/diagnostic_sink.cpp"
+  "${PROJECT_SOURCE_DIR}/src/core/frame_trace.cpp"
   $<TARGET_OBJECTS:granit_volk>
 )
 find_program(GRANIT_GLSLC_EXECUTABLE NAMES glslc)
