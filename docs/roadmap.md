@@ -32,7 +32,7 @@ RenderDoc 协作，Bindless 继续作为 Vulkan 内部实验。
 
 [v0.56.0](versions/v0.56.0.md) 当前由
 [S-92](plans/S-92-0.56.0-frame-diagnostics-and-renderdoc.md) 承接：增加可选 RenderDoc 捕获、
-Vulkan Debug Label 和跨后端 Frame Trace，不引入公共 RenderDoc/Vulkan 依赖。
+Vulkan/WebGPU Debug Label 和跨后端 Frame Trace，不引入公共 RenderDoc/Vulkan/Dawn 依赖。
 
 [v0.55.0](versions/v0.55.0.md) 已由
 [S-91](plans/S-91-0.55.0-bindless-pressure-and-boundary.md) 完成：保留 Vulkan 内部 Bindless
