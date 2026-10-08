@@ -8,6 +8,21 @@
 
 ## Unreleased
 
+## 0.57.0 - 2026-10-09
+
+### 改进
+
+- 固化内部 Frame Trace schema、丢事件/flush 失败摘要和事件顺序校验；
+- 增加 Frame Trace 校验器契约测试，覆盖有效、截断、未知 schema 和乱序序列；
+- 统一 Linux/Windows CI 失败诊断附件，保存 Trace、资源测试日志和运行元数据；
+- 保留 WebGPU tutorial-06 多帧、时间戳和命令缓冲有效性门禁，并补充 RenderDoc 手动验收清单。
+
+### 边界
+
+- 不新增公共诊断、Frame Trace、RenderDoc、Vulkan、Dawn 或 Bindless ABI；
+- RenderDoc 仍是用户安装的可选开发工具，不随 SDK 或 Runtime Bundle 发布；
+- Windows Vulkan 硬件上的实际 RenderDoc capture 未在本次托管环境完成，需后续手动补验。
+
 ## 0.56.0 - 2026-10-09
 
 ### 新增

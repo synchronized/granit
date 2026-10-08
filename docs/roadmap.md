@@ -10,8 +10,8 @@
 ## 当前阶段
 
 Granit 已形成桌面 Vulkan、浏览器 WebGPU、C11 ABI、C++20 RAII、Window、RenderPipeline 与
-AssetTools 的完整闭环。当前仍处于 0.x，v0.56.0 已发布，v0.57.0 正在规划为诊断硬化与跨后端
-回归阶段。Bindless 继续作为 Vulkan 内部实验。
+AssetTools 的完整闭环。当前仍处于 0.x，v0.57.0 已发布，下一阶段待规划。Bindless 继续作为
+Vulkan 内部实验。
 不改变 Vulkan 驱动由平台提供的边界。
 
 | 能力域 | 状态 | 当前边界 |
@@ -30,8 +30,8 @@ AssetTools 的完整闭环。当前仍处于 0.x，v0.56.0 已发布，v0.57.0 �
 
 ## 当前计划
 
-[v0.57.0](versions/v0.57.0.md) 由 [S-93](plans/S-93-0.57.0-diagnostics-hardening-and-regression.md)
-规划：固化 Frame Trace 语义、后端命令回归、统一 CI 诊断附件和 RenderDoc 手动验收，不新增公共 ABI。
+[v0.57.0](versions/v0.57.0.md) 已由 [S-93](plans/S-93-0.57.0-diagnostics-hardening-and-regression.md)
+完成：固化 Frame Trace 语义、后端命令回归、统一 CI 诊断附件和 RenderDoc 手动验收边界，不新增公共 ABI。
 
 [v0.56.0](versions/v0.56.0.md) 已由
 [S-92](plans/S-92-0.56.0-frame-diagnostics-and-renderdoc.md) 完成：增加可选 RenderDoc 捕获、
