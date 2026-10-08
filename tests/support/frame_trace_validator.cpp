@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <cctype>
+#include <charconv>
 #include <cstdint>
 #include <fstream>
 #include <iostream>
@@ -18,10 +19,13 @@ public:
   bool parse() {
     if (!parse_object() || !skip_space() || position_ != input_.size())
       return false;
-    return keys_.contains("schema_version") && keys_.contains("sequence") &&
-           keys_.contains("timestamp_ns") && keys_.contains("kind") &&
-           allowed_kinds_.contains(kind_);
+    return schema_version_ == 1 && has_schema_version_ && has_sequence_ && has_timestamp_ns_ &&
+           keys_.contains("kind") && allowed_kinds_.contains(kind_);
   }
+
+  std::uint64_t sequence() const noexcept { return sequence_; }
+
+  std::uint64_t timestamp_ns() const noexcept { return timestamp_ns_; }
 
 private:
   bool skip_space() noexcept {
@@ -76,7 +80,7 @@ private:
     return false;
   }
 
-  bool parse_number() noexcept {
+  bool parse_number(std::uint64_t* integer = nullptr) noexcept {
     skip_space();
     const auto start = position_;
     if (position_ < input_.size() && input_[position_] == '-')
@@ -109,7 +113,18 @@ private:
              std::isdigit(static_cast<unsigned char>(input_[position_])) != 0)
         ++position_;
     }
-    return position_ > start;
+    if (position_ == start)
+      return false;
+    if (integer != nullptr) {
+      if (input_[start] == '-' ||
+          input_.substr(start, position_ - start).find_first_of(".eE") != std::string_view::npos)
+        return false;
+      const auto result =
+          std::from_chars(input_.data() + start, input_.data() + position_, *integer);
+      if (result.ec != std::errc{} || result.ptr != input_.data() + position_)
+        return false;
+    }
+    return true;
   }
 
   bool parse_literal() noexcept {
@@ -161,6 +176,18 @@ private:
       if (key == "kind") {
         if (!parse_string(&kind_))
           return false;
+      } else if (key == "schema_version") {
+        if (!parse_number(&schema_version_))
+          return false;
+        has_schema_version_ = true;
+      } else if (key == "sequence") {
+        if (!parse_number(&sequence_))
+          return false;
+        has_sequence_ = true;
+      } else if (key == "timestamp_ns") {
+        if (!parse_number(&timestamp_ns_))
+          return false;
+        has_timestamp_ns_ = true;
       } else if (!parse_value()) {
         return false;
       }
@@ -198,6 +225,12 @@ private:
   std::size_t position_{};
   std::set<std::string> keys_;
   std::string kind_;
+  std::uint64_t schema_version_{};
+  std::uint64_t sequence_{};
+  std::uint64_t timestamp_ns_{};
+  bool has_schema_version_{};
+  bool has_sequence_{};
+  bool has_timestamp_ns_{};
   const std::set<std::string> allowed_kinds_{
       "frame",     "pass",          "command",    "resource",       "sync",
       "timestamp", "gpu_timestamp", "diagnostic", "resource_stats", "trace_summary"};
@@ -217,12 +250,19 @@ int main(int argc, char** argv) {
   }
   std::string line;
   std::uint64_t line_number = 0;
+  std::uint64_t previous_sequence = 0;
+  std::uint64_t previous_timestamp_ns = 0;
   while (std::getline(input, line)) {
     ++line_number;
-    if (line.empty() || !json_object_parser{line}.parse()) {
+    json_object_parser parser{line};
+    if (line.empty() || !parser.parse() ||
+        (line_number > 1 && parser.sequence() <= previous_sequence) ||
+        (line_number > 1 && parser.timestamp_ns() < previous_timestamp_ns)) {
       std::cerr << "Trace 第 " << line_number << " 行无效\n";
       return 1;
     }
+    previous_sequence = parser.sequence();
+    previous_timestamp_ns = parser.timestamp_ns();
   }
   if (line_number == 0) {
     std::cerr << "Trace 为空\n";
