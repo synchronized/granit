@@ -86,6 +86,12 @@ struct webgpu_device_state {
     webgpu_shader shader;
   };
   struct command_recorder_record {
+    struct timestamp_range {
+      webgpu_timestamp_query_pool pool;
+      std::uint32_t first;
+      std::uint32_t count;
+    };
+
     WGPUCommandEncoder encoder;
     WGPURenderPassEncoder pass;
     WGPUComputePassEncoder compute_pass;
@@ -96,7 +102,7 @@ struct webgpu_device_state {
     std::uint64_t index_available;
     std::uint32_t index_element_size;
     std::vector<WGPUBuffer> temporary_buffers;
-    std::vector<webgpu_timestamp_query_pool> timestamp_pools;
+    std::vector<timestamp_range> timestamp_ranges;
   };
   struct timestamp_query_record {
     WGPUQuerySet query_set{};

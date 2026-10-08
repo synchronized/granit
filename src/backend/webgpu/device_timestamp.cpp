@@ -75,8 +75,9 @@ granit_result create_timestamp_query_pool(webgpu_instance_handle instance,
   if (query_set == nullptr)
     return GRANIT_ERROR_OUT_OF_MEMORY;
   const auto size = static_cast<std::uint64_t>(query_count) * sizeof(std::uint64_t);
+  const auto resolve_size = static_cast<std::uint64_t>(query_count) * 256;
   WGPUBufferDescriptor resolve_desc = WGPU_BUFFER_DESCRIPTOR_INIT;
-  resolve_desc.size = size;
+  resolve_desc.size = resolve_size;
   resolve_desc.usage = WGPUBufferUsage_QueryResolve | WGPUBufferUsage_CopySrc;
   const auto resolve_buffer = wgpuDeviceCreateBuffer(state.device, &resolve_desc);
   WGPUBufferDescriptor read_desc = WGPU_BUFFER_DESCRIPTOR_INIT;
@@ -146,9 +147,15 @@ granit_result recorder_reset_timestamp_queries(webgpu_instance_handle instance,
   if (query->second->map_state.load(std::memory_order_acquire) == 1)
     return GRANIT_ERROR_NOT_READY;
   query->second->map_state.store(0, std::memory_order_release);
-  if (std::find(command->second.timestamp_pools.begin(), command->second.timestamp_pools.end(),
-                pool) == command->second.timestamp_pools.end())
-    command->second.timestamp_pools.push_back(pool);
+  const auto range =
+      std::find_if(command->second.timestamp_ranges.begin(), command->second.timestamp_ranges.end(),
+                   [pool](const auto& value) { return value.pool == pool; });
+  if (range == command->second.timestamp_ranges.end())
+    command->second.timestamp_ranges.push_back({pool, first, count});
+  else {
+    range->first = first;
+    range->count = count;
+  }
   return GRANIT_SUCCESS;
 }
 
@@ -171,9 +178,10 @@ granit_result recorder_write_timestamp(webgpu_instance_handle instance,
       command->second.compute_pass != nullptr || query_index >= query->second->count)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   wgpuCommandEncoderWriteTimestamp(command->second.encoder, query->second->query_set, query_index);
-  if (std::find(command->second.timestamp_pools.begin(), command->second.timestamp_pools.end(),
-                pool) == command->second.timestamp_pools.end())
-    command->second.timestamp_pools.push_back(pool);
+  if (std::find_if(command->second.timestamp_ranges.begin(), command->second.timestamp_ranges.end(),
+                   [pool](const auto& value) { return value.pool == pool; }) ==
+      command->second.timestamp_ranges.end())
+    command->second.timestamp_ranges.push_back({pool, 0, query->second->count});
   return GRANIT_SUCCESS;
 }
 

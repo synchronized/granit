@@ -102,7 +102,7 @@ granit_result create_command_recorder(webgpu_instance_handle instance,
                                                      .index_available = 0,
                                                      .index_element_size = 0,
                                                      .temporary_buffers = {},
-                                                     .timestamp_pools = {}};
+                                                     .timestamp_ranges = {}};
     if (!found->second->command_recorders.emplace(handle, record).second) {
       wgpuCommandEncoderRelease(native);
       return GRANIT_ERROR_INTERNAL;
@@ -1355,16 +1355,19 @@ granit_result finish_command_recorder(webgpu_instance_handle instance,
   if (recorder_found->second.finished || recorder_found->second.pass != nullptr ||
       recorder_found->second.compute_pass != nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  for (const auto pool : recorder_found->second.timestamp_pools) {
-    const auto query = state.timestamp_queries.find(pool);
+  for (const auto& range : recorder_found->second.timestamp_ranges) {
+    const auto query = state.timestamp_queries.find(range.pool);
     if (query == state.timestamp_queries.end())
       return GRANIT_ERROR_INVALID_HANDLE;
-    const auto size = static_cast<std::uint64_t>(query->second->count) * sizeof(std::uint64_t);
-    wgpuCommandEncoderResolveQuerySet(recorder_found->second.encoder, query->second->query_set, 0,
-                                      query->second->count, query->second->resolve_buffer, 0);
+    const auto read_offset = static_cast<std::uint64_t>(range.first) * sizeof(std::uint64_t);
+    const auto resolve_offset = static_cast<std::uint64_t>(range.first) * 256;
+    const auto size = static_cast<std::uint64_t>(range.count) * sizeof(std::uint64_t);
+    wgpuCommandEncoderResolveQuerySet(recorder_found->second.encoder, query->second->query_set,
+                                      range.first, range.count, query->second->resolve_buffer,
+                                      resolve_offset);
     wgpuCommandEncoderCopyBufferToBuffer(recorder_found->second.encoder,
-                                         query->second->resolve_buffer, 0,
-                                         query->second->read_buffer, 0, size);
+                                         query->second->resolve_buffer, resolve_offset,
+                                         query->second->read_buffer, read_offset, size);
   }
   WGPUCommandBufferDescriptor descriptor = WGPU_COMMAND_BUFFER_DESCRIPTOR_INIT;
   const auto native = wgpuCommandEncoderFinish(recorder_found->second.encoder, &descriptor);
