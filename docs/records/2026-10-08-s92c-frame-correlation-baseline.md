@@ -13,6 +13,8 @@
   creation sequence、大小或数量和结果码；资源回收仍由原有 retirement 队列负责；
 - Pipeline 绑定、Bind Group（Descriptor）绑定、Draw 和 Dispatch 写入 `command` 事件，包含 recorder、
   frame id、数量和结果码；
+- WebGPU Pipeline/Shader 异步诊断进入统一 `diagnostic` 事件；无法安全归属异步回调的事件明确使用
+  `frame_id=0`，不伪造当前帧；
 - Timestamp 后端返回 `UNSUPPORTED` 时写入 `availability=unavailable`，用于明确区分“设备没有该能力”和
   “查询尚未完成”；
 - 事件只写入公共句柄数值和结果码，不写入 Vulkan、WebGPU 或平台对象；

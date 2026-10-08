@@ -7,6 +7,8 @@
 
 - Vulkan Command Recorder 在命令缓冲开始/结束时写入 `granit.command_recorder` label；
 - Dynamic Rendering 开始/结束时写入 `granit.rendering` label；
+- 现有 Vulkan 对象命名入口覆盖 Buffer、Image、Image View、Sampler、Shader、Descriptor、Pipeline、
+  Command Buffer 和 Timestamp Query Pool；Pipeline/Pass 与 Command Recorder 使用稳定命名；
 - 通过所属 Vulkan instance 的函数表读取 Debug Utils 命令，扩展或函数不可用时自动 no-op；
 - `vulkan_device` 只保存 instance 函数表的非拥有引用，instance 生命周期仍由上层 Renderer State 管理；
 - 公共 C/C++ API、安装头文件和 ABI 没有变化。
@@ -21,5 +23,5 @@
 
 ## 未完成项
 
-本记录不代表 RenderDoc 桥接已经完成。动态加载、捕获触发和对象/Pass/Pipeline 命名统一仍在 S-92B
-后续阶段实现；RenderDoc 缺失时的 no-op 要继续保持为验收条件。
+RenderDoc 动态加载和捕获触发另见 [S-92B RenderDoc 桥接](2026-10-08-s92b-renderdoc-bridge-baseline.md)；
+RenderDoc 缺失时的 no-op 仍是验收条件。

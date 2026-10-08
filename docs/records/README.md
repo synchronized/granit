@@ -25,6 +25,7 @@
 - [2026-10-08 S-92A Frame Trace 基础设施](2026-10-08-s92a-frame-trace-baseline.md)
 - [2026-10-08 S-92B Vulkan Debug Label 基线](2026-10-08-s92b-vulkan-debug-label-baseline.md)
 - [2026-10-08 S-92B RenderDoc 桥接](2026-10-08-s92b-renderdoc-bridge-baseline.md)
+- [2026-10-08 S-92D 应用与 CI 基线](2026-10-08-s92d-application-ci-baseline.md)
 - [2026-10-08 S-92B WebGPU 调试标记](2026-10-08-s92b-webgpu-debug-markers.md)
 - [2026-10-08 S-92C Frame Context 关联基线](2026-10-08-s92c-frame-correlation-baseline.md)
 - [2026-10-08 Granit v0.54.0 发布验收](2026-10-08-v0.54.0-release-acceptance.md)

@@ -22,6 +22,11 @@ endif()
 
 add_subdirectory(asset_tools)
 add_subdirectory(support)
+
+add_executable(granit_frame_trace_validator support/frame_trace_validator.cpp)
+target_compile_features(granit_frame_trace_validator PRIVATE cxx_std_20)
+granit_target_compile_warnings(granit_frame_trace_validator)
+granit_target_output_directories(granit_frame_trace_validator)
 add_subdirectory(contracts/headers)
 add_subdirectory(contracts/behavior)
 add_subdirectory(backend)

@@ -60,6 +60,19 @@ granit::result parse_options(std::span<const std::string_view> arguments, option
         candidate.profile_output_path = arguments[++index];
         if (candidate.profile_output_path.empty())
           return granit::result::invalid_argument;
+      } else if (argument == "--frame-trace" && index + 1 < arguments.size()) {
+        candidate.frame_trace_path = arguments[++index];
+        if (candidate.frame_trace_path.empty())
+          return granit::result::invalid_argument;
+      } else if (argument.starts_with("--renderdoc=")) {
+        candidate.renderdoc_mode = std::string{argument.substr(12)};
+        if (candidate.renderdoc_mode != "off" && candidate.renderdoc_mode != "trigger" &&
+            !candidate.renderdoc_mode.starts_with("frame:"))
+          return granit::result::invalid_argument;
+      } else if (argument == "--renderdoc-path" && index + 1 < arguments.size()) {
+        candidate.renderdoc_path = arguments[++index];
+        if (candidate.renderdoc_path.empty())
+          return granit::result::invalid_argument;
       } else {
         constexpr std::string_view presentation_prefix = "--present-mode=";
         if (!argument.starts_with(presentation_prefix) ||

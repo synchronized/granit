@@ -67,6 +67,7 @@
 - [运行浏览器 WebGPU 平台 Smoke](guides/webgpu-browser-example.md)
 - [异步回读与 Pipeline 预热](guides/async-readback-and-pipeline-warmup.md)
 - [纹理同步回读](guides/texture-readback.md)
+- [Frame Trace 诊断](guides/frame-trace.md)
 
 ## 教程
 

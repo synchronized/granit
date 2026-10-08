@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/test-artifacts")
+
 add_executable(granit_pipeline_render_test integration/render_pipeline_test.cpp)
 add_dependencies(
   granit_pipeline_render_test
@@ -25,6 +27,13 @@ target_sources(
 granit_target_compile_warnings(granit_pipeline_render_test)
 granit_target_output_directories(granit_pipeline_render_test)
 add_test(NAME granit.pipeline.render COMMAND granit_pipeline_render_test)
+set_tests_properties(
+  granit.pipeline.render
+  PROPERTIES ENVIRONMENT
+             "GRANIT_FRAME_TRACE=${CMAKE_BINARY_DIR}/test-artifacts/pipeline-frame-trace.jsonl"
+             ENVIRONMENT_MODIFICATION
+             "GRANIT_FRAME_TRACE_MAX_EVENTS=set:2048"
+)
 set_property(TEST granit.pipeline.render APPEND PROPERTY LABELS gpu integration)
 
 add_executable(

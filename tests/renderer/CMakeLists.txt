@@ -36,6 +36,11 @@ add_executable(
   pipeline_warmup_test.cpp
   resource_table_test.cpp
 )
+
+add_library(granit_renderdoc_test_substitute SHARED renderdoc_test_substitute.cpp)
+set_target_properties(granit_renderdoc_test_substitute PROPERTIES PREFIX "")
+granit_target_compile_warnings(granit_renderdoc_test_substitute)
+granit_target_output_directories(granit_renderdoc_test_substitute)
 if(GRANIT_HAS_XCB)
   target_sources(granit_renderer_test PRIVATE xcb_swapchain_test.cpp)
   target_include_directories(granit_renderer_test SYSTEM PRIVATE "${GRANIT_XCB_INCLUDE_DIR}")
@@ -80,6 +85,23 @@ add_dependencies(granit_renderer_test granit_shader_fixture_objects)
 granit_target_compile_warnings(granit_renderer_test)
 granit_target_output_directories(granit_renderer_test)
 add_test(NAME granit.renderer.resources COMMAND granit_renderer_test)
+
+add_test(
+  NAME granit.renderer.renderdoc_bridge
+  COMMAND
+    "${CMAKE_COMMAND}"
+    "-DGRANIT_RENDERER_TEST=$<TARGET_FILE:granit_renderer_test>"
+    "-DGRANIT_GRANIT_DIR=$<TARGET_FILE_DIR:granit>"
+    "-DGRANIT_SUBSTITUTE=$<TARGET_FILE:granit_renderdoc_test_substitute>"
+    "-DGRANIT_OUTPUT_DIR=${CMAKE_CURRENT_BINARY_DIR}/renderdoc-bridge"
+    "-DGRANIT_TRACE_VALIDATOR=${PROJECT_SOURCE_DIR}/tests/cmake/check_frame_trace.cmake"
+    "-DGRANIT_TRACE_VALIDATOR_BINARY=$<TARGET_FILE:granit_frame_trace_validator>"
+    -P "${PROJECT_SOURCE_DIR}/tests/cmake/check_renderdoc_bridge.cmake"
+)
+set_tests_properties(
+  granit.renderer.renderdoc_bridge
+  PROPERTIES DEPENDS granit.renderer.resources
+)
 add_test(
   NAME granit.renderer.lifecycle_diagnostic
   COMMAND granit_renderer_test "[renderer][lifecycle]"

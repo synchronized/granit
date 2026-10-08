@@ -17,8 +17,10 @@
 - `cmake --build build/windows-clang-debug --target granit -j 4`：通过；
 - 设置 `GRANIT_RENDERDOC=trigger`，在无 RenderDoc DLL 的 Windows 环境运行 Renderer 测试：通过；
 - 同时开启 Frame Trace：生成 141 条合法 JSONL 记录，并记录 RenderDoc 不可用诊断。
+- 构建内部 RenderDoc 测试替身，使用 `GRANIT_RENDERDOC_PATH` 注入 Renderer 测试并验证
+  `TriggerCapture` 收到调用；Frame Trace JSONL 最小 schema 校验通过，且不依赖 RenderDoc 安装。
 
 ## 未完成项
 
 当前桥接只实现安全的 TriggerCapture 路径，尚未提供 RenderDoc 捕获标题、Start/EndFrameCapture
-窗口句柄绑定或测试替身；这些能力必须继续保持可选，不能成为构建和 CI 依赖。
+窗口句柄绑定；这些能力必须继续保持可选，不能成为构建和 CI 依赖。

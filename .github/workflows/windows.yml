@@ -71,12 +71,24 @@ jobs:
           # 托管 Windows Runner 没有 Vulkan ICD；GPU 与平台运行测试由 Linux 矩阵覆盖。
           ctest --preset '${{ steps.preset.outputs.name }}' `
             -LE '^(gpu|platform)$' -E '^granit\.example\.'
+      - name: 失败时重跑资源测试并生成 Frame Trace
+        if: failure()
+        shell: pwsh
+        run: |
+          $build = "build/${{ steps.preset.outputs.name }}"
+          $traceDir = "$build/diagnostics"
+          New-Item -ItemType Directory -Force -Path $traceDir | Out-Null
+          $env:GRANIT_FRAME_TRACE = (Join-Path $PWD "$traceDir/frame-trace.jsonl")
+          $env:GRANIT_FRAME_TRACE_MAX_EVENTS = '512'
+          ctest --test-dir $build -R '^granit\.renderer\.resources$' --output-on-failure
       - name: 上传渲染 Fixture 失败诊断
         if: failure()
         uses: actions/upload-artifact@v6
         with:
           name: s12-fixture-windows-${{ matrix.linkage }}
-          path: build/${{ steps.preset.outputs.name }}/test-artifacts
+          path: |
+            build/${{ steps.preset.outputs.name }}/test-artifacts
+            build/${{ steps.preset.outputs.name }}/diagnostics
           if-no-files-found: ignore
       - name: 安装并审计包
         shell: pwsh

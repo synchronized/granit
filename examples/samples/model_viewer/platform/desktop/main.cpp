@@ -16,7 +16,9 @@ void print_usage() {
                "[--environment <文件.grenv>] "
                "[--backend=auto|vulkan] "
                "[--validation] [--smoke-test] [--no-ui] "
-               "[--present-mode=fifo|immediate] [--profile-output <文件.json>]\n";
+               "[--present-mode=fifo|immediate] [--profile-output <文件.json>] "
+               "[--frame-trace <文件.jsonl>] [--renderdoc=off|trigger|frame:N] "
+               "[--renderdoc-path <文件>]\n";
 }
 
 } // namespace

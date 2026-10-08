@@ -4,6 +4,7 @@
 #include "backend/webgpu/device.h"
 #include "backend/webgpu/device_state.h"
 #include "backend/webgpu/device_utils.h"
+#include "core/frame_trace.h"
 
 #include <algorithm>
 #include <atomic>
@@ -34,6 +35,14 @@ struct pipeline_warmup_request {
 
 void emit(const webgpu_host_api& host, granit_diagnostic_severity severity, const char* message,
           std::uint32_t message_length) noexcept {
+  const auto trace_severity = severity == GRANIT_DIAGNOSTIC_SEVERITY_ERROR
+                                  ? granit::detail::diagnostic_severity::error
+                              : severity == GRANIT_DIAGNOSTIC_SEVERITY_WARNING
+                                  ? granit::detail::diagnostic_severity::warning
+                                  : granit::detail::diagnostic_severity::info;
+  granit::detail::frame_trace::instance().emit_diagnostic(
+      trace_severity, granit::detail::diagnostic_category::device,
+      std::string_view{message == nullptr ? "" : message, message == nullptr ? 0 : message_length});
   if (host.diagnostic_callback == nullptr)
     return;
   try {
@@ -490,8 +499,7 @@ granit_result create_render_pipeline_common(webgpu_instance_handle instance,
   const auto native = wgpuDeviceCreateRenderPipeline(state.device, &descriptor);
   if (native == nullptr) {
     char diagnostic[256]{};
-    const auto first_format =
-        desc->color_target_count == 0 ? 0U : desc->color_targets[0].format;
+    const auto first_format = desc->color_target_count == 0 ? 0U : desc->color_targets[0].format;
     const auto first_blend =
         desc->color_target_count == 0 ? 0U : desc->color_targets[0].blend_enabled;
     const auto length = std::snprintf(
@@ -501,8 +509,9 @@ granit_result create_render_pipeline_common(webgpu_instance_handle instance,
         desc->color_target_count, first_format, first_blend, desc->depth_stencil_format,
         desc->topology, desc->sample_count);
     if (length > 0)
-      emit(state.host, GRANIT_DIAGNOSTIC_SEVERITY_ERROR, diagnostic,
-           static_cast<std::uint32_t>((std::min)(length, static_cast<int>(sizeof(diagnostic) - 1))));
+      emit(
+          state.host, GRANIT_DIAGNOSTIC_SEVERITY_ERROR, diagnostic,
+          static_cast<std::uint32_t>((std::min)(length, static_cast<int>(sizeof(diagnostic) - 1))));
     return GRANIT_ERROR_INITIALIZATION_FAILED;
   }
   const auto handle = next_handle<webgpu_render_pipeline>(next_render_pipeline);

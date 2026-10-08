@@ -111,12 +111,25 @@ jobs:
             exit 1
           }
           xvfb-run -a ctest --preset "${{ steps.preset.outputs.name }}"
+      - name: 失败时重跑资源测试并生成 Frame Trace
+        if: failure()
+        shell: bash
+        run: |
+          set -euo pipefail
+          build="build/${{ steps.preset.outputs.name }}"
+          mkdir -p "$build/diagnostics"
+          GRANIT_FRAME_TRACE="$PWD/$build/diagnostics/frame-trace.jsonl" \
+            GRANIT_FRAME_TRACE_MAX_EVENTS=512 \
+            xvfb-run -a ctest --test-dir "$build" \
+              -R '^granit\.renderer\.resources$' --output-on-failure
       - name: 上传渲染 Fixture 失败诊断
         if: failure()
         uses: actions/upload-artifact@v6
         with:
           name: s12-fixture-linux-${{ matrix.compiler }}-${{ matrix.linkage }}
-          path: build/${{ steps.preset.outputs.name }}/test-artifacts
+          path: |
+            build/${{ steps.preset.outputs.name }}/test-artifacts
+            build/${{ steps.preset.outputs.name }}/diagnostics
           if-no-files-found: ignore
       - name: 安装并验证独立 C 和 C++ Consumer
         shell: bash

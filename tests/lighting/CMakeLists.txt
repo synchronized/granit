@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/test-artifacts")
+
 add_executable(
   granit_lighting_pbr_render_test
   integration/pbr_render_test.cpp
@@ -22,6 +24,13 @@ target_compile_definitions(
 granit_target_compile_warnings(granit_lighting_pbr_render_test)
 granit_target_output_directories(granit_lighting_pbr_render_test)
 add_test(NAME granit.lighting.pbr_render COMMAND granit_lighting_pbr_render_test)
+set_tests_properties(
+  granit.lighting.pbr_render
+  PROPERTIES ENVIRONMENT
+             "GRANIT_FRAME_TRACE=${CMAKE_BINARY_DIR}/test-artifacts/pbr-frame-trace.jsonl"
+             ENVIRONMENT_MODIFICATION
+             "GRANIT_FRAME_TRACE_MAX_EVENTS=set:2048"
+)
 set_property(TEST granit.lighting.pbr_render APPEND PROPERTY LABELS gpu integration)
 
 add_executable(

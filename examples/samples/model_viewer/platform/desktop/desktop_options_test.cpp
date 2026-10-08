@@ -9,12 +9,21 @@
 
 TEST_CASE("模型查看器桌面参数显式选择 Vulkan 后端", "[tutorial][model-viewer][desktop]") {
   using namespace granit::example::model_viewer::desktop;
-  const std::array arguments{
-      std::string_view{"--backend=vulkan"},  std::string_view{"--asset"},
-      std::string_view{"FlightHelmet.gltf"}, std::string_view{"--environment"},
-      std::string_view{"studio.grenv"},      std::string_view{"--validation"},
-      std::string_view{"--no-ui"},           std::string_view{"--present-mode=immediate"},
-      std::string_view{"--profile-output"},  std::string_view{"profile.json"}};
+  const std::array arguments{std::string_view{"--backend=vulkan"},
+                             std::string_view{"--asset"},
+                             std::string_view{"FlightHelmet.gltf"},
+                             std::string_view{"--environment"},
+                             std::string_view{"studio.grenv"},
+                             std::string_view{"--validation"},
+                             std::string_view{"--no-ui"},
+                             std::string_view{"--present-mode=immediate"},
+                             std::string_view{"--profile-output"},
+                             std::string_view{"profile.json"},
+                             std::string_view{"--frame-trace"},
+                             std::string_view{"frame.jsonl"},
+                             std::string_view{"--renderdoc=frame:3"},
+                             std::string_view{"--renderdoc-path"},
+                             std::string_view{"renderdoc.dll"}};
   options parsed;
   REQUIRE(parse_options(arguments, parsed) == granit::result::success);
   CHECK(parsed.backend == granit::renderer_backend::vulkan);
@@ -25,6 +34,9 @@ TEST_CASE("模型查看器桌面参数显式选择 Vulkan 后端", "[tutorial][m
   CHECK_FALSE(parsed.show_ui);
   CHECK(parsed.presentation == granit::present_mode::immediate);
   CHECK(parsed.profile_output_path == "profile.json");
+  CHECK(parsed.frame_trace_path == "frame.jsonl");
+  CHECK(parsed.renderdoc_mode == "frame:3");
+  CHECK(parsed.renderdoc_path == "renderdoc.dll");
 }
 
 TEST_CASE("模型查看器桌面参数拒绝未知呈现模式和空性能路径", "[tutorial][model-viewer][desktop]") {
@@ -36,6 +48,9 @@ TEST_CASE("模型查看器桌面参数拒绝未知呈现模式和空性能路径
   const std::array empty_output{std::string_view{"--asset"}, std::string_view{"model.glb"},
                                 std::string_view{"--profile-output"}, std::string_view{}};
   CHECK(parse_options(empty_output, parsed) == granit::result::invalid_argument);
+  const std::array invalid_renderdoc{std::string_view{"--asset"}, std::string_view{"model.glb"},
+                                     std::string_view{"--renderdoc=invalid"}};
+  CHECK(parse_options(invalid_renderdoc, parsed) == granit::result::invalid_argument);
   const std::array empty_environment{std::string_view{"--asset"}, std::string_view{"model.glb"},
                                      std::string_view{"--environment"}, std::string_view{}};
   CHECK(parse_options(empty_environment, parsed) == granit::result::invalid_argument);
