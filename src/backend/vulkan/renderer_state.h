@@ -43,6 +43,7 @@
 #include "backend/vulkan/instance.h"
 #include "backend/vulkan/memory_allocator.h"
 #include "backend/vulkan/readback_context.h"
+#include "backend/vulkan/renderdoc_bridge.h"
 #include "backend/vulkan/swapchain.h"
 #include "backend/vulkan/upload_context.h"
 #include "core/device_status.h"
@@ -501,6 +502,7 @@ private:
   std::condition_variable upload_available_;
   std::mutex readback_mutex_;
   std::condition_variable readback_available_;
+  renderdoc_bridge renderdoc_;
   vulkan_instance instance_;
   vulkan_device device_;
   vulkan_memory_allocator memory_allocator_;

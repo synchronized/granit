@@ -343,6 +343,7 @@ granit_result vulkan_renderer_state::present_swapchain_frame(backend_swapchain_r
   auto& slot = frame_slots_[slot_index];
   if (!slot.awaiting_present)
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  renderdoc_.notify_frame_boundary();
   const auto presented = swapchain.present(device_, device_.graphics_queue(), image_index,
                                            swapchain.render_finished(image_index));
   slot.awaiting_present = false;

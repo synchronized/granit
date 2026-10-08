@@ -31,6 +31,7 @@ target_sources(
     renderer_state_transfer.cpp
     renderer_state_utils.cpp
     renderer_factory.cpp
+    renderdoc_bridge.cpp
     $<TARGET_OBJECTS:granit_volk>
     bindless_descriptor_table.h
     bindless_resource_registry.h
@@ -50,6 +51,7 @@ target_sources(
     upload_context.h
     renderer_state.h
     renderer_state_utils.h
+    renderdoc_bridge.h
 )
 
 target_include_directories(

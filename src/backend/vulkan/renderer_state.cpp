@@ -54,6 +54,7 @@ granit_result vulkan_renderer_state::initialize(std::string_view application_nam
                                                 void* diagnostic_user_data) {
   validation_enabled_ = enable_validation;
   diagnostics_.configure(diagnostic_callback, diagnostic_user_data);
+  renderdoc_.initialize(diagnostics_);
   const auto instance_result = instance_.initialize({.application_name = application_name,
                                                      .enable_validation = enable_validation,
                                                      .surface_types = surface_types,
@@ -67,6 +68,7 @@ granit_result vulkan_renderer_state::initialize(std::string_view application_nam
     instance_.reset();
     return device_result;
   }
+  renderdoc_.trigger_initial_capture();
   const auto& limits = device_.properties().limits;
   capabilities_ = {
       .uniform_buffer_offset_alignment = limits.minUniformBufferOffsetAlignment,
