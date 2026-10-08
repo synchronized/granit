@@ -59,9 +59,12 @@ async function main() {
   // 截图把视口之外的区域补成透明像素，进而误判中心像素。
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
   const errors = [];
+  const diagnostics = [];
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => {
     const text = message.text();
+    if (message.type() === "warning")
+      diagnostics.push(text);
     if (message.type() === "error" ||
         (message.type() === "warning" && /is invalid|too small|validation/i.test(text))) {
       errors.push(text);
@@ -103,7 +106,7 @@ async function main() {
         };
       }, readinessExports);
       throw new Error(
-        `${error.message}; state=${JSON.stringify(state)}; page=${errors.join(" | ")}`,
+        `${error.message}; state=${JSON.stringify(state)}; page=${[...errors, ...diagnostics].join(" | ")}`,
       );
     }
 
