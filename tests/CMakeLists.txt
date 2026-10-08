@@ -27,6 +27,15 @@ add_executable(granit_frame_trace_validator support/frame_trace_validator.cpp)
 target_compile_features(granit_frame_trace_validator PRIVATE cxx_std_20)
 granit_target_compile_warnings(granit_frame_trace_validator)
 granit_target_output_directories(granit_frame_trace_validator)
+add_test(
+  NAME granit.core.frame_trace_validator
+  COMMAND
+    "${CMAKE_COMMAND}"
+    "-DGRANIT_TRACE_VALIDATOR_BINARY=$<TARGET_FILE:granit_frame_trace_validator>"
+    "-DGRANIT_OUTPUT_DIR=${CMAKE_CURRENT_BINARY_DIR}/frame-trace-validator"
+    -P "${PROJECT_SOURCE_DIR}/tests/cmake/check_frame_trace_validator.cmake"
+)
+set_property(TEST granit.core.frame_trace_validator APPEND PROPERTY LABELS unit diagnostics)
 add_subdirectory(contracts/headers)
 add_subdirectory(contracts/behavior)
 add_subdirectory(backend)
