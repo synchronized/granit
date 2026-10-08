@@ -8,6 +8,21 @@
 
 ## Unreleased
 
+## 0.56.0 - 2026-10-09
+
+### 新增
+
+- 增加默认关闭的内部 Frame Trace，关联帧上下文、命令、资源生命周期、时间戳和诊断事件；
+- 增加 Vulkan Debug Label、对象命名和可选 RenderDoc 动态桥接，不引入公共 RenderDoc/Vulkan/Dawn 依赖；
+- 增加 WebGPU Debug Group、错误诊断和能力缺失记录；
+- 增加 Model Viewer 诊断参数、RenderDoc 测试替身、Frame Trace 校验器和 CI 失败附件路径。
+
+### 边界
+
+- Frame Trace 是 0.x 开发期 JSONL 格式，不属于公共 ABI，也不承诺跨版本持久化兼容；
+- RenderDoc 仅作为开发期可选工具，不随 Granit SDK 或 Runtime Bundle 发布；
+- WebGPU 不模拟 RenderDoc 捕获，Bindless 继续是 Vulkan 内部实验，传统 Bind Group 和 WebGPU 回退保持不变。
+
 ## 0.55.0 - 2026-10-08
 
 ### 验证

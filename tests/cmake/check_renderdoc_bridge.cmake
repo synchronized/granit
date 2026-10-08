@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
-if(NOT DEFINED GRANIT_RENDERER_TEST OR NOT DEFINED GRANIT_GRANIT_DIR OR
+if(NOT DEFINED GRANIT_RENDERDOC_TEST OR NOT DEFINED GRANIT_GRANIT_DIR OR
    NOT DEFINED GRANIT_SUBSTITUTE OR NOT DEFINED GRANIT_OUTPUT_DIR OR
    NOT DEFINED GRANIT_TRACE_VALIDATOR OR NOT DEFINED GRANIT_TRACE_VALIDATOR_BINARY)
   message(FATAL_ERROR "RenderDoc bridge test requires renderer, Granit, substitute and output paths")
@@ -26,7 +26,7 @@ execute_process(
           "GRANIT_RENDERDOC_SUBSTITUTE_MARKER=${marker}"
           "GRANIT_FRAME_TRACE=${trace}"
           "PATH=${runtime_path}"
-          "${GRANIT_RENDERER_TEST}"
+          "${GRANIT_RENDERDOC_TEST}"
   RESULT_VARIABLE result
   OUTPUT_VARIABLE output
   ERROR_VARIABLE error

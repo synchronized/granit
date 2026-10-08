@@ -42,6 +42,21 @@ set_target_properties(granit_renderdoc_test_substitute PROPERTIES PREFIX "")
 target_compile_features(granit_renderdoc_test_substitute PRIVATE cxx_std_20)
 granit_target_compile_warnings(granit_renderdoc_test_substitute)
 granit_target_output_directories(granit_renderdoc_test_substitute)
+
+add_executable(
+  granit_renderdoc_bridge_test
+  renderdoc_bridge_test.cpp
+  "${PROJECT_SOURCE_DIR}/src/backend/vulkan/renderdoc_bridge.cpp"
+  "${PROJECT_SOURCE_DIR}/src/core/diagnostic_sink.cpp"
+  "${PROJECT_SOURCE_DIR}/src/core/frame_trace.cpp"
+)
+target_include_directories(
+  granit_renderdoc_bridge_test
+  PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/include"
+)
+target_compile_features(granit_renderdoc_bridge_test PRIVATE cxx_std_20)
+granit_target_compile_warnings(granit_renderdoc_bridge_test)
+granit_target_output_directories(granit_renderdoc_bridge_test)
 if(GRANIT_HAS_XCB)
   target_sources(granit_renderer_test PRIVATE xcb_swapchain_test.cpp)
   target_include_directories(granit_renderer_test SYSTEM PRIVATE "${GRANIT_XCB_INCLUDE_DIR}")
@@ -91,17 +106,13 @@ add_test(
   NAME granit.renderer.renderdoc_bridge
   COMMAND
     "${CMAKE_COMMAND}"
-    "-DGRANIT_RENDERER_TEST=$<TARGET_FILE:granit_renderer_test>"
+    "-DGRANIT_RENDERDOC_TEST=$<TARGET_FILE:granit_renderdoc_bridge_test>"
     "-DGRANIT_GRANIT_DIR=$<TARGET_FILE_DIR:granit>"
     "-DGRANIT_SUBSTITUTE=$<TARGET_FILE:granit_renderdoc_test_substitute>"
     "-DGRANIT_OUTPUT_DIR=${CMAKE_CURRENT_BINARY_DIR}/renderdoc-bridge"
     "-DGRANIT_TRACE_VALIDATOR=${PROJECT_SOURCE_DIR}/tests/cmake/check_frame_trace.cmake"
     "-DGRANIT_TRACE_VALIDATOR_BINARY=$<TARGET_FILE:granit_frame_trace_validator>"
     -P "${PROJECT_SOURCE_DIR}/tests/cmake/check_renderdoc_bridge.cmake"
-)
-set_tests_properties(
-  granit.renderer.renderdoc_bridge
-  PROPERTIES DEPENDS granit.renderer.resources
 )
 add_test(
   NAME granit.renderer.lifecycle_diagnostic
