@@ -1140,6 +1140,7 @@ granit_result recorder_begin_compute(webgpu_instance_handle instance,
       wgpuCommandEncoderBeginComputePass(command->second.encoder, &descriptor);
   if (command->second.compute_pass == nullptr)
     return GRANIT_ERROR_INITIALIZATION_FAILED;
+  wgpuComputePassEncoderPushDebugGroup(command->second.compute_pass, debug_label("granit.compute"));
   command->second.compute_pipeline_bound = false;
   return GRANIT_SUCCESS;
 }
@@ -1160,7 +1161,6 @@ granit_result recorder_bind_compute_pipeline(webgpu_instance_handle instance,
     return GRANIT_ERROR_INVALID_HANDLE;
   if (command->second.finished || command->second.compute_pass == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  wgpuComputePassEncoderPushDebugGroup(command->second.compute_pass, debug_label("granit.compute"));
   wgpuComputePassEncoderSetPipeline(command->second.compute_pass, native->second.compute_pipeline);
   command->second.compute_pipeline_bound = true;
   return GRANIT_SUCCESS;
