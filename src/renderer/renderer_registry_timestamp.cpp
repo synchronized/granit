@@ -17,14 +17,16 @@ namespace granit::detail {
 namespace {
 
 void trace_timestamp_event(const char* operation, granit_timestamp_query_pool pool,
-                           std::uint32_t index, std::uint32_t count,
+                           std::uint32_t index, std::uint32_t count, granit_frame frame,
                            granit_result result) noexcept {
   try {
     std::string payload;
     payload.reserve(160);
     payload += "\"operation\":\"";
     payload += operation;
-    payload += "\",\"pool\":";
+    payload += "\",\"frame_id\":";
+    payload += std::to_string(frame);
+    payload += ",\"pool\":";
     payload += std::to_string(pool);
     payload += ",\"index\":";
     payload += std::to_string(index);
@@ -75,7 +77,7 @@ granit_result renderer_registry::create_timestamp_query_pool(granit_renderer ren
       throw;
     }
     pool = handle;
-    trace_timestamp_event("create", pool, 0, query_count, GRANIT_SUCCESS);
+    trace_timestamp_event("create", pool, 0, query_count, GRANIT_NULL_HANDLE, GRANIT_SUCCESS);
     return GRANIT_SUCCESS;
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
@@ -105,7 +107,7 @@ granit_result renderer_registry::get_timestamp_query_results(granit_renderer ren
   const auto result =
       record->timestamps->read_timestamp_query_results(*record->native, first, nanoseconds);
   trace_timestamp_event("read", pool, first, static_cast<std::uint32_t>(nanoseconds.size()),
-                        result);
+                        GRANIT_NULL_HANDLE, result);
   return result;
 }
 
@@ -249,7 +251,7 @@ granit_result renderer_registry::reset_timestamp_queries(granit_renderer rendere
   std::lock_guard query_lock{query->mutex};
   const auto result =
       command->timestamps->reset_timestamp_queries(*command->native, *query->native, first, count);
-  trace_timestamp_event("reset", pool, first, count, result);
+  trace_timestamp_event("reset", pool, first, count, command->active_frame, result);
   if (result == GRANIT_SUCCESS)
     retain_resource(command->retained_resources, query, query->metadata);
   return result;
@@ -281,7 +283,7 @@ granit_result renderer_registry::write_timestamp(granit_renderer renderer,
   std::lock_guard query_lock{query->mutex};
   const auto result =
       command->timestamps->write_timestamp(*command->native, *query->native, stage, index);
-  trace_timestamp_event("write", pool, index, 1, result);
+  trace_timestamp_event("write", pool, index, 1, command->active_frame, result);
   if (result == GRANIT_SUCCESS)
     retain_resource(command->retained_resources, query, query->metadata);
   return result;

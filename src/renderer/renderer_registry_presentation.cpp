@@ -5,14 +5,35 @@
 #include "renderer/renderer_registry_records.h"
 
 #include "backend/contracts/diagnostics.h"
+#include "core/frame_trace.h"
 #include "renderer/renderer_registry_helpers.h"
 
 #include <algorithm>
 #include <new>
+#include <string>
 #include <utility>
 #include <vector>
 
 namespace granit::detail {
+namespace {
+
+void trace_present_event(const char* phase, granit_frame frame, granit_result result) noexcept {
+  try {
+    std::string payload;
+    payload.reserve(128);
+    payload += "\"frame_id\":";
+    payload += std::to_string(frame);
+    payload += ",\"phase\":\"";
+    payload += phase;
+    payload += "\",\"result\":";
+    payload += std::to_string(static_cast<std::uint32_t>(result));
+    frame_trace::instance().emit_event("frame", payload);
+  } catch (...) {
+    // 帧诊断失败不得改变呈现结果。
+  }
+}
+
+} // namespace
 
 granit_result renderer_registry::create_surface(granit_renderer renderer,
                                                 const granit_surface_desc& desc,
@@ -588,6 +609,7 @@ granit_result renderer_registry::present_swapchain_frame(granit_renderer rendere
     std::lock_guard lock{mutex_};
     record->swapchain->surface_lost = true;
   }
+  trace_present_event("present", frame, result);
   std::vector<std::shared_ptr<texture_view_record>> expired_views;
   std::vector<std::shared_ptr<texture_record>> expired_textures;
   {

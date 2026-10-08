@@ -6,10 +6,35 @@
 
 #include "renderer/renderer_registry_helpers.h"
 
+#include "core/frame_trace.h"
+
 #include <new>
+#include <string>
 #include <utility>
 
 namespace granit::detail {
+namespace {
+
+void trace_frame_event(const char* phase, granit_frame frame, granit_command_recorder recorder,
+                       granit_result result) noexcept {
+  try {
+    std::string payload;
+    payload.reserve(160);
+    payload += "\"frame_id\":";
+    payload += std::to_string(frame);
+    payload += ",\"phase\":\"";
+    payload += phase;
+    payload += "\",\"recorder\":";
+    payload += std::to_string(recorder);
+    payload += ",\"result\":";
+    payload += std::to_string(static_cast<std::uint32_t>(result));
+    frame_trace::instance().emit_event("frame", payload);
+  } catch (...) {
+    // 帧诊断失败不得改变提交结果。
+  }
+}
+
+} // namespace
 
 granit_result renderer_registry::create_command_recorder(granit_renderer renderer,
                                                          granit_command_recorder& recorder) {
@@ -265,10 +290,15 @@ granit_result renderer_registry::begin_frame_context(granit_renderer renderer,
   const auto begin_result = begin_command_recorder(renderer, slot.recorder);
   if (begin_result != GRANIT_SUCCESS)
     return begin_result;
+  if (const auto command = acquire_command_recorder(renderer, slot.recorder)) {
+    std::lock_guard command_lock{command->mutex};
+    command->active_frame = frame;
+  }
   slot.frame = frame;
   slot.state = frame_context_slot_state::recording;
   recorder = slot.recorder;
   frame_slot = static_cast<std::uint32_t>(slot_index);
+  trace_frame_event("begin", frame, recorder, GRANIT_SUCCESS);
   return GRANIT_SUCCESS;
 }
 
@@ -400,7 +430,12 @@ granit_result renderer_registry::submit_frame_context(granit_renderer renderer,
   const auto submit_result = submit_command_recorder_frame(renderer, slot->recorder, frame);
   if (submit_result != GRANIT_SUCCESS)
     return submit_result;
+  if (const auto command = acquire_command_recorder(renderer, slot->recorder)) {
+    std::lock_guard command_lock{command->mutex};
+    command->active_frame = GRANIT_NULL_HANDLE;
+  }
   slot->state = frame_context_slot_state::submitted;
+  trace_frame_event("submit", frame, slot->recorder, submit_result);
   return GRANIT_SUCCESS;
 }
 
@@ -437,11 +472,13 @@ granit_result renderer_registry::abort_frame_context(granit_renderer renderer,
   command->retained_resources.clear();
   const auto result = command->commands->create_command_recorder(*command->native);
   if (result == GRANIT_SUCCESS) {
+    command->active_frame = GRANIT_NULL_HANDLE;
     slot->frame = GRANIT_NULL_HANDLE;
     slot->state = frame_context_slot_state::idle;
     for (auto& page : slot->transient_pages)
       page.offset = 0;
   }
+  trace_frame_event("abort", frame, slot->recorder, result);
   return result;
 }
 

@@ -156,6 +156,7 @@ struct renderer_registry::command_recorder_record {
   std::unique_ptr<backend_command_recorder_resource> native;
   std::mutex mutex;
   std::vector<retained_resource> retained_resources;
+  granit_frame active_frame{GRANIT_NULL_HANDLE};
   bool owned_by_frame_context{};
 };
 enum class renderer_registry::frame_context_slot_state { idle, recording, submitted };
