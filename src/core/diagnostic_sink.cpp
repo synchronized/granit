@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "core/diagnostic_sink.h"
+#include "core/frame_trace.h"
 
 #include <cstdio>
 #include <limits>
@@ -29,6 +30,7 @@ const char* category_name(diagnostic_category category) noexcept {
 
 void diagnostic_sink::emit(diagnostic_severity severity, diagnostic_category category,
                            std::string_view message) const noexcept {
+  frame_trace::instance().emit_diagnostic(severity, category, message);
   if (callback_ != nullptr && message.size() <= std::numeric_limits<std::uint32_t>::max()) {
     try {
       callback_(static_cast<granit_diagnostic_severity>(severity),

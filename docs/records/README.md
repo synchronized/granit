@@ -22,6 +22,7 @@
 ## 稳定化与跨平台
 
 - [2026-10-08 Granit v0.55.0 发布验收](2026-10-08-v0.55.0-release-acceptance.md)
+- [2026-10-08 S-92A Frame Trace 基础设施](2026-10-08-s92a-frame-trace-baseline.md)
 - [2026-10-08 Granit v0.54.0 发布验收](2026-10-08-v0.54.0-release-acceptance.md)
 - [2026-10-08 S-91A Bindless Descriptor 压力基线](2026-10-08-s91a-bindless-pressure-baseline.md)
 - [2026-10-08 S-91B Bindless 跨平台能力矩阵](2026-10-08-s91b-bindless-platform-matrix.md)

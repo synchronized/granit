@@ -98,8 +98,10 @@ add_test(NAME granit.core.resource_validation COMMAND granit_resource_validation
 add_executable(
   granit_lifecycle_validation_test
   diagnostic_sink_test.cpp
+  frame_trace_test.cpp
   lifecycle_validation_test.cpp
   "${PROJECT_SOURCE_DIR}/src/core/diagnostic_sink.cpp"
+  "${PROJECT_SOURCE_DIR}/src/core/frame_trace.cpp"
   "${PROJECT_SOURCE_DIR}/src/core/lifecycle_validation.cpp"
 )
 target_include_directories(

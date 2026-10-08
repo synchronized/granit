@@ -52,6 +52,7 @@ target_sources(
     core/shared_handle_table.h
     core/async_operation_state.h
     core/diagnostic_sink.h
+    core/frame_trace.h
     core/lifecycle_validation.h
     core/resource_validation.h
     core/texture_format.h
@@ -71,6 +72,7 @@ target_sources(
     core/handle_table.cpp
     core/async_operation_state.cpp
     core/diagnostic_sink.cpp
+    core/frame_trace.cpp
     core/lifecycle_validation.cpp
     core/retirement_queue.cpp
     core/resource_validation.cpp
