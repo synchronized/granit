@@ -5,10 +5,10 @@
 #define GRANIT_CORE_FRAME_TRACE_H_
 
 #include <cstdint>
-#include <deque>
 #include <mutex>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "core/diagnostic_sink.h"
 
@@ -45,7 +45,8 @@ private:
   bool configured_{};
   bool enabled_{};
   std::string path_;
-  std::deque<std::string> events_;
+  std::vector<std::string> events_;
+  std::size_t event_start_{};
   std::uint64_t max_events_{4096};
   std::uint64_t dropped_events_{};
   std::uint64_t sequence_{};

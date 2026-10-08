@@ -151,11 +151,17 @@ void frame_trace::append_event_locked(std::string_view kind,
     line += ",";
     line += payload_json;
     line += "}\n";
-    if (events_.size() >= max_events_) {
-      events_.pop_front();
-      ++dropped_events_;
+    const auto capacity = static_cast<std::size_t>(
+        std::min<std::uint64_t>(max_events_, std::numeric_limits<std::size_t>::max()));
+    if (capacity == 0)
+      return;
+    if (events_.size() < capacity) {
+      events_.push_back(std::move(line));
+      return;
     }
-    events_.push_back(std::move(line));
+    events_[event_start_] = std::move(line);
+    event_start_ = (event_start_ + 1) % capacity;
+    ++dropped_events_;
   } catch (...) {
     ++dropped_events_;
   }
@@ -200,8 +206,8 @@ void frame_trace::flush() noexcept {
     std::ofstream output{path_, std::ios::binary | std::ios::trunc};
     if (!output)
       return;
-    for (const auto& event : events_)
-      output << event;
+    for (std::size_t index = 0; index < events_.size(); ++index)
+      output << events_[(event_start_ + index) % events_.size()];
     if (dropped_events_ != 0)
       output << "{\"kind\":\"trace_summary\",\"dropped_events\":" << dropped_events_ << "}\n";
   } catch (...) {
@@ -223,6 +229,7 @@ void frame_trace::configure_for_testing(std::string path, std::uint64_t max_even
   path_ = std::move(path);
   max_events_ = max_events == 0 ? 1 : max_events;
   events_.clear();
+  event_start_ = 0;
   dropped_events_ = 0;
   sequence_ = 0;
 }
@@ -233,6 +240,7 @@ void frame_trace::reset_for_testing() noexcept {
   enabled_ = false;
   path_.clear();
   events_.clear();
+  event_start_ = 0;
   dropped_events_ = 0;
   sequence_ = 0;
   max_events_ = 4096;
