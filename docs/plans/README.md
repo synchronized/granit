@@ -9,6 +9,9 @@
 
 ## 当前计划
 
+- [S-94：0.58.0 后端诊断闭环与硬件捕获](S-94-0.58.0-backend-diagnostics-and-capture.md)——补齐 WebGPU/Vulkan
+  诊断回归，固化 Windows Vulkan 硬件的 RenderDoc CLI 捕获和跨平台 no-op 证据，不新增公共 ABI。
+
 - [S-93：0.57.0 诊断硬化与跨后端回归](S-93-0.57.0-diagnostics-hardening-and-regression.md)——固化 Frame Trace
   语义、后端命令回归、统一 CI 诊断附件和 RenderDoc 手动验收，不新增公共 ABI。
 
