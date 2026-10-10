@@ -129,14 +129,18 @@ granit_result destroy_command_recorder(webgpu_instance_handle instance,
   const auto recorder_found = found->second->command_recorders.find(recorder);
   if (recorder_found == found->second->command_recorders.end())
     return GRANIT_ERROR_INVALID_HANDLE;
-  if (recorder_found->second.pass != nullptr)
+  if (recorder_found->second.pass != nullptr) {
     wgpuRenderPassEncoderPopDebugGroup(recorder_found->second.pass);
-  if (recorder_found->second.pass != nullptr)
+    // 异常销毁也必须结束 Pass，否则 Dawn 会把未结束的 Pass 作为命令缓冲错误保留。
+    wgpuRenderPassEncoderEnd(recorder_found->second.pass);
     wgpuRenderPassEncoderRelease(recorder_found->second.pass);
-  if (recorder_found->second.compute_pass != nullptr)
+  }
+  if (recorder_found->second.compute_pass != nullptr) {
     wgpuComputePassEncoderPopDebugGroup(recorder_found->second.compute_pass);
-  if (recorder_found->second.compute_pass != nullptr)
+    // 与 Render Pass 相同，销毁路径不能跳过 End。
+    wgpuComputePassEncoderEnd(recorder_found->second.compute_pass);
     wgpuComputePassEncoderRelease(recorder_found->second.compute_pass);
+  }
   for (const auto buffer : recorder_found->second.temporary_buffers)
     wgpuBufferRelease(buffer);
   wgpuCommandEncoderRelease(recorder_found->second.encoder);
