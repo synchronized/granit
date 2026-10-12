@@ -34,6 +34,20 @@ Windows Vulkan 硬件验收时，先启动 RenderDoc，再运行 Model Viewer：
 4. 关闭 RenderDoc 或指定不存在的 `--renderdoc-path`，确认程序仍能正常启动和渲染，并在
    Frame Trace 中记录不可用诊断，而不是让 Renderer 初始化失败。
 
+也可以使用 RenderDoc CLI 在不打开 GUI 的情况下保存 `.rdc`：
+
+```powershell
+renderdoccmd.exe capture --wait-for-exit `
+  --capture-file .\diagnostics\granit-capture.rdc `
+  --opt-api-validation `
+  .\granit_sample_model_viewer.exe --asset .\Suzanne.gltf `
+  --backend=vulkan --validation --smoke-test --no-ui --renderdoc=trigger
+```
+
+验收时检查输出目录生成 `granit-capture_frameN.rdc`，并用 Frame Trace validator 校验同一次
+运行的 JSONL。`--capture-file` 使用文件模板，RenderDoc 会追加帧号；`.rdc` 只作为本地诊断
+产物，不提交到仓库。
+
 RenderDoc 不属于 Granit 的构建、安装或 Runtime Bundle 依赖。Linux 无 RenderDoc 环境只验收
 动态探测和 no-op 路径；Emscripten/WebGPU 不提供 RenderDoc 捕获，使用浏览器门禁和 Frame Trace
 进行等价诊断。
