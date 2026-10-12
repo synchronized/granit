@@ -148,6 +148,8 @@ TEST_CASE("Renderer 公开查询 Shader 能力", "[renderer][shader-capabilities
   CHECK(capabilities.backend == GRANIT_RENDERER_BACKEND_VULKAN);
   CHECK(capabilities.profile == GRANIT_SHADER_PROFILE_PORTABLE);
   CHECK(capabilities.supported_features == 0);
+  CHECK(capabilities.binding_model == GRANIT_SHADER_BINDING_MODEL_EXPLICIT_BINDINGS ||
+        capabilities.binding_model == GRANIT_SHADER_BINDING_MODEL_RESOURCE_TABLE);
 
   REQUIRE(granit_renderer_destroy(renderer) == GRANIT_SUCCESS);
   CHECK(granit_renderer_get_shader_capabilities(renderer, &capabilities) ==
@@ -172,6 +174,11 @@ TEST_CASE("Renderer 按设备能力选择 Shader 变体", "[renderer][shader-var
   invalid.required_features = GRANIT_SHADER_FEATURE_ALL_BITS << 1;
   CHECK(granit_renderer_select_shader_variant(GRANIT_NULL_HANDLE, &invalid, 1, &selected) ==
         GRANIT_ERROR_INVALID_ARGUMENT);
+  invalid = GRANIT_SHADER_VARIANT_REQUIREMENT_INIT;
+  invalid.backend = GRANIT_RENDERER_BACKEND_VULKAN;
+  invalid.binding_model = GRANIT_SHADER_BINDING_MODEL_RESOURCE_TABLE + 1;
+  CHECK(granit_renderer_select_shader_variant(GRANIT_NULL_HANDLE, &invalid, 1, &selected) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
 
   granit_renderer_desc desc = GRANIT_RENDERER_DESC_INIT;
   desc.backend = GRANIT_RENDERER_BACKEND_VULKAN;
@@ -184,16 +191,20 @@ TEST_CASE("Renderer 按设备能力选择 Shader 变体", "[renderer][shader-var
   std::array variants{
       granit_shader_variant_requirement{sizeof(granit_shader_variant_requirement),
                                         GRANIT_RENDERER_BACKEND_WEBGPU,
-                                        GRANIT_SHADER_PROFILE_PORTABLE, 100, 0},
+                                        GRANIT_SHADER_PROFILE_PORTABLE, 100, 0,
+                                        GRANIT_SHADER_BINDING_MODEL_AUTO},
       granit_shader_variant_requirement{
           sizeof(granit_shader_variant_requirement), GRANIT_RENDERER_BACKEND_VULKAN,
-          GRANIT_SHADER_PROFILE_PORTABLE, 20, GRANIT_SHADER_FEATURE_FLOAT16_BIT},
+          GRANIT_SHADER_PROFILE_PORTABLE, 20, GRANIT_SHADER_FEATURE_FLOAT16_BIT,
+          GRANIT_SHADER_BINDING_MODEL_AUTO},
       granit_shader_variant_requirement{sizeof(granit_shader_variant_requirement),
                                         GRANIT_RENDERER_BACKEND_VULKAN,
-                                        GRANIT_SHADER_PROFILE_PORTABLE, 10, 0},
+                                        GRANIT_SHADER_PROFILE_PORTABLE, 10, 0,
+                                        GRANIT_SHADER_BINDING_MODEL_AUTO},
       granit_shader_variant_requirement{sizeof(granit_shader_variant_requirement),
                                         GRANIT_RENDERER_BACKEND_VULKAN,
-                                        GRANIT_SHADER_PROFILE_PORTABLE, 5, 0},
+                                        GRANIT_SHADER_PROFILE_PORTABLE, 5, 0,
+                                        GRANIT_SHADER_BINDING_MODEL_AUTO},
   };
   REQUIRE(granit_renderer_select_shader_variant(renderer, variants.data(),
                                                 static_cast<std::uint32_t>(variants.size()),

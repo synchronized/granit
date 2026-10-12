@@ -147,6 +147,12 @@ renderer_registry::get_shader_capabilities(granit_renderer renderer,
   capabilities.profile = backend_capabilities.shader_profile;
   capabilities.reserved = 0;
   capabilities.supported_features = backend_capabilities.shader_features;
+  capabilities.binding_model =
+      state->backend() == GRANIT_RENDERER_BACKEND_VULKAN &&
+              (backend_capabilities.renderer_features &
+               GRANIT_RENDERER_FEATURE_BINDLESS_DESCRIPTOR_INDEXING_BIT) != 0
+          ? GRANIT_SHADER_BINDING_MODEL_RESOURCE_TABLE
+          : GRANIT_SHADER_BINDING_MODEL_EXPLICIT_BINDINGS;
   return GRANIT_SUCCESS;
 }
 
@@ -163,8 +169,16 @@ granit_result renderer_registry::select_shader_variant(
   std::uint32_t best_priority = 0;
   for (std::size_t index = 0; index < variants.size(); ++index) {
     const auto& variant = variants[index];
+    const auto binding_model =
+        backend == GRANIT_RENDERER_BACKEND_VULKAN &&
+                (capabilities.renderer_features &
+                 GRANIT_RENDERER_FEATURE_BINDLESS_DESCRIPTOR_INDEXING_BIT) != 0
+            ? GRANIT_SHADER_BINDING_MODEL_RESOURCE_TABLE
+            : GRANIT_SHADER_BINDING_MODEL_EXPLICIT_BINDINGS;
     if (variant.backend != backend || variant.profile != capabilities.shader_profile ||
-        (variant.required_features & ~capabilities.shader_features) != 0)
+        (variant.required_features & ~capabilities.shader_features) != 0 ||
+        (variant.binding_model != GRANIT_SHADER_BINDING_MODEL_AUTO &&
+         variant.binding_model != binding_model))
       continue;
     if (!found || variant.priority > best_priority) {
       found = true;

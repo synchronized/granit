@@ -89,7 +89,8 @@ granit_renderer_select_shader_variant(granit_renderer renderer,
         (variant.backend != GRANIT_RENDERER_BACKEND_VULKAN &&
          variant.backend != GRANIT_RENDERER_BACKEND_WEBGPU) ||
         variant.profile != GRANIT_SHADER_PROFILE_PORTABLE ||
-        (variant.required_features & ~GRANIT_SHADER_FEATURE_ALL_BITS) != 0)
+        (variant.required_features & ~GRANIT_SHADER_FEATURE_ALL_BITS) != 0 ||
+        variant.binding_model > GRANIT_SHADER_BINDING_MODEL_RESOURCE_TABLE)
       return GRANIT_ERROR_INVALID_ARGUMENT;
   }
   if (renderer == GRANIT_NULL_HANDLE)

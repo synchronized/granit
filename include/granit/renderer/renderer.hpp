@@ -89,6 +89,7 @@ struct renderer_shader_capabilities {
   renderer_backend backend{renderer_backend::automatic};
   shader_profile profile{shader_profile::portable};
   std::uint64_t supported_features{};
+  granit_shader_binding_model binding_model{GRANIT_SHADER_BINDING_MODEL_AUTO};
 
   [[nodiscard]] constexpr bool supports(shader_feature feature) const noexcept {
     const auto bit = static_cast<std::uint64_t>(feature);
@@ -101,6 +102,7 @@ struct shader_variant_requirement {
   shader_profile profile{shader_profile::portable};
   std::uint32_t priority{};
   std::uint64_t required_features{};
+  granit_shader_binding_model binding_model{GRANIT_SHADER_BINDING_MODEL_AUTO};
 };
 
 struct renderer_resource_stats {
@@ -269,6 +271,7 @@ public:
         .backend = static_cast<renderer_backend>(native.backend),
         .profile = static_cast<shader_profile>(native.profile),
         .supported_features = native.supported_features,
+        .binding_model = native.binding_model,
     };
     return result::success;
   }
@@ -285,7 +288,8 @@ public:
                           .backend = static_cast<granit_renderer_backend>(variant.backend),
                           .profile = static_cast<granit_shader_profile>(variant.profile),
                           .priority = variant.priority,
-                          .required_features = variant.required_features});
+                          .required_features = variant.required_features,
+                          .binding_model = variant.binding_model});
       }
     } catch (...) {
       return {result::out_of_memory, UINT32_MAX};

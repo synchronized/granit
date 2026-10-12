@@ -30,6 +30,12 @@ typedef uint32_t granit_shader_backend_flags;
 typedef uint32_t granit_shader_profile;
 #define GRANIT_SHADER_PROFILE_PORTABLE UINT32_C(1)
 
+/** Shader 使用的资源绑定模型。AUTO 允许运行时选择可用模型。 */
+typedef uint32_t granit_shader_binding_model;
+#define GRANIT_SHADER_BINDING_MODEL_AUTO UINT32_C(0)
+#define GRANIT_SHADER_BINDING_MODEL_EXPLICIT_BINDINGS UINT32_C(1)
+#define GRANIT_SHADER_BINDING_MODEL_RESOURCE_TABLE UINT32_C(2)
+
 /** 标识一项 Shader 资产，供 Shader Library 查找。 */
 typedef granit_asset_content_id granit_shader_content_id;
 /** 标识完整 Shader 构建输入，用于缓存失效。 */
