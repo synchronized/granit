@@ -7,6 +7,7 @@
 #include <granit/core/result.h>
 #include <granit/renderer/buffer.h>
 #include <granit/renderer/pipeline.h>
+#include <granit/renderer/resource_table.h>
 
 #include <memory>
 #include <span>
@@ -31,7 +32,9 @@ public:
   material_gpu_instance& operator=(const material_gpu_instance&) = delete;
 
   [[nodiscard]] granit_result initialize(granit_renderer renderer, granit_bind_group_layout layout,
-                                         const material_metadata& metadata);
+                                         const material_metadata& metadata,
+                                         granit_resource_table resource_table =
+                                             GRANIT_NULL_HANDLE);
   [[nodiscard]] granit_result reset() noexcept;
   [[nodiscard]] metadata_error set(parameter_id id, parameter_type type,
                                    std::span<const std::byte> value);
@@ -62,6 +65,7 @@ private:
 
   granit_renderer renderer_ = GRANIT_NULL_HANDLE;
   granit_bind_group_layout layout_ = GRANIT_NULL_HANDLE;
+  granit_resource_table resource_table_ = GRANIT_NULL_HANDLE;
   granit_buffer uniform_buffer_ = GRANIT_NULL_HANDLE;
   granit_bind_group bind_group_ = GRANIT_NULL_HANDLE;
   std::unique_ptr<material_instance_data> data_;

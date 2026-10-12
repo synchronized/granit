@@ -14,7 +14,8 @@ material_gpu_instance::~material_gpu_instance() { static_cast<void>(reset()); }
 
 granit_result material_gpu_instance::initialize(granit_renderer renderer,
                                                 granit_bind_group_layout layout,
-                                                const material_metadata& metadata) {
+                                                const material_metadata& metadata,
+                                                granit_resource_table resource_table) {
   if (renderer_ != GRANIT_NULL_HANDLE || renderer == GRANIT_NULL_HANDLE ||
       layout == GRANIT_NULL_HANDLE) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
@@ -43,6 +44,7 @@ granit_result material_gpu_instance::initialize(granit_renderer renderer,
 
     renderer_ = renderer;
     layout_ = layout;
+    resource_table_ = resource_table;
     uniform_buffer_ = buffer;
     data_ = std::move(data);
     resources_ = std::move(resources);
@@ -68,6 +70,7 @@ granit_result material_gpu_instance::reset() noexcept {
   }
   renderer_ = GRANIT_NULL_HANDLE;
   layout_ = GRANIT_NULL_HANDLE;
+  resource_table_ = GRANIT_NULL_HANDLE;
   uniform_buffer_ = GRANIT_NULL_HANDLE;
   bind_group_ = GRANIT_NULL_HANDLE;
   data_.reset();
@@ -129,6 +132,34 @@ granit_result material_gpu_instance::flush() {
     return GRANIT_ERROR_NOT_READY;
   }
 
+  if (resource_table_ != GRANIT_NULL_HANDLE) {
+    std::vector<granit_resource_table_update_desc> updates;
+    try {
+      updates.reserve(resources_.size());
+      for (const auto& binding : resources_) {
+        const auto type = binding.type == parameter_type::texture_view
+                              ? GRANIT_RESOURCE_TABLE_RESOURCE_SAMPLED_TEXTURE_VIEW
+                              : GRANIT_RESOURCE_TABLE_RESOURCE_SAMPLER;
+        updates.push_back({.type = type,
+                           .slot = binding.binding,
+                           .resource = binding.resource,
+                           .offset = 0,
+                           .size = 0});
+      }
+    } catch (const std::bad_alloc&) {
+      return GRANIT_ERROR_OUT_OF_MEMORY;
+    }
+    if (updates.empty()) {
+      resources_dirty_ = false;
+      return GRANIT_SUCCESS;
+    }
+    const auto result = granit_resource_table_update_batch(
+        renderer_, resource_table_, updates.data(), static_cast<std::uint32_t>(updates.size()));
+    if (result == GRANIT_SUCCESS)
+      resources_dirty_ = false;
+    return result;
+  }
+
   std::vector<granit_bind_group_entry> entries;
   try {
     entries.reserve(resources_.size() + (uniform_buffer_ == GRANIT_NULL_HANDLE ? 0U : 1U));
@@ -173,6 +204,8 @@ granit_result material_gpu_instance::create_bind_group(std::span<const resource_
   bind_group = GRANIT_NULL_HANDLE;
   if (renderer_ == GRANIT_NULL_HANDLE || data_ == nullptr)
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (resource_table_ != GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_UNSUPPORTED;
 
   const auto dirty = data_->dirty();
   if (!dirty.empty()) {
@@ -287,6 +320,7 @@ void material_gpu_instance::swap(material_gpu_instance& other) noexcept {
   using std::swap;
   swap(renderer_, other.renderer_);
   swap(layout_, other.layout_);
+  swap(resource_table_, other.resource_table_);
   swap(uniform_buffer_, other.uniform_buffer_);
   swap(bind_group_, other.bind_group_);
   swap(data_, other.data_);

@@ -148,8 +148,10 @@ TEST_CASE("Renderer 公开查询 Shader 能力", "[renderer][shader-capabilities
   CHECK(capabilities.backend == GRANIT_RENDERER_BACKEND_VULKAN);
   CHECK(capabilities.profile == GRANIT_SHADER_PROFILE_PORTABLE);
   CHECK(capabilities.supported_features == 0);
-  CHECK(capabilities.binding_model == GRANIT_SHADER_BINDING_MODEL_EXPLICIT_BINDINGS ||
-        capabilities.binding_model == GRANIT_SHADER_BINDING_MODEL_RESOURCE_TABLE);
+  const bool has_supported_binding_model =
+      capabilities.binding_model == GRANIT_SHADER_BINDING_MODEL_EXPLICIT_BINDINGS ||
+      capabilities.binding_model == GRANIT_SHADER_BINDING_MODEL_RESOURCE_TABLE;
+  CHECK(has_supported_binding_model);
 
   REQUIRE(granit_renderer_destroy(renderer) == GRANIT_SUCCESS);
   CHECK(granit_renderer_get_shader_capabilities(renderer, &capabilities) ==

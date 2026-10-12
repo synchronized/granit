@@ -48,13 +48,24 @@ material_template_gpu::~material_template_gpu() { static_cast<void>(reset()); }
 granit_result
 material_template_gpu::initialize(granit_renderer renderer, const material_package& package,
                                   std::span<const granit_bind_group_layout> additional_layouts,
-                                  granit_shader_library shader_library) {
+                                  granit_shader_library shader_library,
+                                  granit_resource_table resource_table) {
   std::lock_guard lock{mutex_};
+  const bool uses_resource_table = package.binding_model() == package_binding_model::resource_table;
   if (renderer_ != GRANIT_NULL_HANDLE || renderer == GRANIT_NULL_HANDLE ||
-      package.binding_model() != package_binding_model::bind_group ||
-      package.required_renderer_features() != 0 || additional_layouts.size() > 6 ||
+      (uses_resource_table != (resource_table != GRANIT_NULL_HANDLE)) ||
+      (!uses_resource_table && package.binding_model() != package_binding_model::bind_group) ||
+      package.required_renderer_features() !=
+          (uses_resource_table ? package_feature_bindless_resource_table : 0) ||
+      additional_layouts.size() > 6 ||
       std::ranges::find(additional_layouts, GRANIT_NULL_HANDLE) != additional_layouts.end()) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  if (uses_resource_table) {
+    granit_resource_table_capabilities capabilities = GRANIT_RESOURCE_TABLE_CAPABILITIES_INIT;
+    const auto result = granit_renderer_get_resource_table_capabilities(renderer, &capabilities);
+    if (result != GRANIT_SUCCESS || capabilities.support != GRANIT_RESOURCE_TABLE_SUPPORT_NATIVE)
+      return result == GRANIT_SUCCESS ? GRANIT_ERROR_UNSUPPORTED : result;
   }
 
   std::vector<granit_bind_group_layout_entry> material_entries;
@@ -67,11 +78,11 @@ material_template_gpu::initialize(granit_renderer renderer, const material_packa
            GRANIT_TEXTURE_FORMAT_UNDEFINED, 0});
     }
     for (const auto& parameter : package.metadata().parameters()) {
-      if (parameter.type == parameter_type::texture_view) {
+      if (parameter.type == parameter_type::texture_view && !uses_resource_table) {
         material_entries.push_back({parameter.binding, GRANIT_BINDING_TYPE_SAMPLED_TEXTURE, 1,
                                     GRANIT_SHADER_STAGE_FRAGMENT_BIT,
                                     GRANIT_TEXTURE_FORMAT_UNDEFINED, 0});
-      } else if (parameter.type == parameter_type::sampler) {
+      } else if (parameter.type == parameter_type::sampler && !uses_resource_table) {
         material_entries.push_back(
             {parameter.binding, GRANIT_BINDING_TYPE_SAMPLER, 1, GRANIT_SHADER_STAGE_FRAGMENT_BIT,
              GRANIT_TEXTURE_FORMAT_UNDEFINED, 0});
@@ -116,6 +127,7 @@ material_template_gpu::initialize(granit_renderer renderer, const material_packa
   granit_pipeline_layout_desc pipeline_desc = GRANIT_PIPELINE_LAYOUT_DESC_INIT;
   pipeline_desc.bind_group_layout_count = static_cast<std::uint32_t>(layouts.size());
   pipeline_desc.bind_group_layouts = layouts.data();
+  pipeline_desc.resource_table = resource_table;
   granit_pipeline_layout pipeline_layout = GRANIT_NULL_HANDLE;
   result = granit_pipeline_layout_create(renderer, &pipeline_desc, &pipeline_layout);
   if (result != GRANIT_SUCCESS) {
@@ -148,6 +160,7 @@ material_template_gpu::initialize(granit_renderer renderer, const material_packa
   frame_layout_ = frame_layout;
   material_layout_ = material_layout;
   pipeline_layout_ = pipeline_layout;
+  resource_table_ = resource_table;
   shader_library_ = shader_library;
   library_reference_shader_ = library_reference_shader;
   return GRANIT_SUCCESS;
@@ -188,6 +201,7 @@ granit_result material_template_gpu::reset() noexcept {
   frame_layout_ = GRANIT_NULL_HANDLE;
   material_layout_ = GRANIT_NULL_HANDLE;
   pipeline_layout_ = GRANIT_NULL_HANDLE;
+  resource_table_ = GRANIT_NULL_HANDLE;
   shader_library_ = GRANIT_NULL_HANDLE;
   library_reference_shader_ = GRANIT_NULL_HANDLE;
   return first_error;
