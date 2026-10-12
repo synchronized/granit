@@ -16,18 +16,21 @@ int main() {
   constexpr std::uint32_t value_count = 16;
   constexpr std::uint64_t buffer_size = value_count * sizeof(std::uint32_t);
   granit::renderer renderer;
+  const char* operation = "renderer.initialize";
   auto result =
       renderer.initialize({.application_name = "Granit Compute", .enable_validation = true});
 
   granit::buffer storage;
   granit::buffer readback;
   if (result.ok()) {
+    operation = "storage.initialize";
     result = storage.initialize(
         renderer, {.size = buffer_size,
                    .usage = granit::buffer_usage::storage | granit::buffer_usage::transfer_source,
                    .location = granit::memory_location::device});
   }
   if (result.ok()) {
+    operation = "readback.initialize";
     result = readback.initialize(renderer, {.size = buffer_size,
                                             .usage = granit::buffer_usage::transfer_destination,
                                             .location = granit::memory_location::readback});
@@ -38,56 +41,83 @@ int main() {
                                                     .visibility =
                                                         granit::shader_stage_flags::compute};
   granit::bind_group_layout group_layout;
-  if (result.ok())
+  if (result.ok()) {
+    operation = "group_layout.initialize";
     result = group_layout.initialize(renderer, std::span{&declaration, 1});
+  }
   const std::array group_layouts{group_layout.ref()};
   granit::pipeline_layout pipeline_layout;
-  if (result.ok())
+  if (result.ok()) {
+    operation = "pipeline_layout.initialize";
     result = pipeline_layout.initialize(renderer, group_layouts);
+  }
   const granit::bind_group_entry entry{
       .binding = 0, .resource = storage.ref(), .size = buffer_size};
   granit::bind_group group;
   if (result.ok()) {
+    operation = "group.initialize";
     result = group.initialize(renderer, group_layout, std::span{&entry, 1});
   }
 
   granit::shader shader;
-  if (result.ok())
+  if (result.ok()) {
+    operation = "shader.initialize";
     result = granit::tests::load_shader_asset(
         renderer.native_handle(), std::string{GRANIT_SMOKE_ASSET_DIR} + "/compute.comp.grshaderobj",
         shader);
+  }
   granit::compute_pipeline pipeline;
   if (result.ok()) {
+    operation = "pipeline.initialize";
     result = pipeline.initialize(renderer,
                                  {.layout = pipeline_layout.ref(), .compute_shader = shader.ref()});
   }
 
   granit::command_recorder recorder;
-  if (result.ok())
+  if (result.ok()) {
+    operation = "recorder.initialize";
     result = recorder.initialize(renderer);
-  if (result.ok())
+  }
+  if (result.ok()) {
+    operation = "recorder.begin";
     result = recorder.begin();
-  if (result.ok())
+  }
+  if (result.ok()) {
+    operation = "bind_compute_pipeline";
     result = recorder.bind_compute_pipeline(pipeline);
-  if (result.ok())
+  }
+  if (result.ok()) {
+    operation = "bind_compute_group";
     result = recorder.bind_compute_group(pipeline_layout, 0, group);
-  if (result.ok())
+  }
+  if (result.ok()) {
+    operation = "dispatch";
     result = recorder.dispatch(value_count);
+  }
   const granit::buffer_copy_region copy{
       .source_offset = 0, .destination_offset = 0, .size = buffer_size};
   if (result.ok()) {
+    operation = "copy_buffer";
     result = recorder.copy_buffer(storage.ref(), readback.ref(), std::span{&copy, 1});
   }
-  if (result.ok())
+  if (result.ok()) {
+    operation = "recorder.end";
     result = recorder.end();
-  if (result.ok())
+  }
+  if (result.ok()) {
+    operation = "recorder.submit";
     result = recorder.submit();
-  if (result.ok())
+  }
+  if (result.ok()) {
+    operation = "recorder.reset";
     result = recorder.reset();
+  }
 
   void* mapped = nullptr;
-  if (result.ok())
+  if (result.ok()) {
+    operation = "readback.map";
     result = readback.map(0, buffer_size, &mapped);
+  }
   bool values_match = true;
   if (result.ok()) {
     const auto* values = static_cast<const std::uint32_t*>(mapped);
@@ -99,11 +129,13 @@ int main() {
         values_match = false;
       }
     }
+    operation = "readback.unmap";
     result = readback.unmap();
   }
   if (result.failed() || !values_match) {
     if (result.failed())
-      std::cerr << "Compute GPU 测试失败：" << granit::result_message(result) << '\n';
+      std::cerr << "Compute GPU 测试失败（" << operation << "）："
+                << granit::result_message(result) << '\n';
     return 1;
   }
   return 0;
