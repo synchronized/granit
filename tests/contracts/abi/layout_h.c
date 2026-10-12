@@ -115,7 +115,11 @@ GRANIT_ABI_ASSERT(granit_abi_bind_group_entry_resource,
 GRANIT_ABI_ASSERT(granit_abi_bind_group_desc_size, sizeof(granit_bind_group_desc) == 32);
 GRANIT_ABI_ASSERT(granit_abi_bind_group_desc_entries,
                   offsetof(granit_bind_group_desc, entries) == 16);
-GRANIT_ABI_ASSERT(granit_abi_pipeline_layout_desc_size, sizeof(granit_pipeline_layout_desc) == 24);
+GRANIT_ABI_ASSERT(granit_abi_pipeline_layout_desc_size, sizeof(granit_pipeline_layout_desc) == 32);
+GRANIT_ABI_ASSERT(granit_abi_pipeline_layout_desc_v1_size,
+                  GRANIT_PIPELINE_LAYOUT_DESC_VERSION_1_SIZE == 24);
+GRANIT_ABI_ASSERT(granit_abi_pipeline_layout_desc_v2_size,
+                  GRANIT_PIPELINE_LAYOUT_DESC_VERSION_2_SIZE == 32);
 GRANIT_ABI_ASSERT(granit_abi_pipeline_layout_desc_layouts,
                   offsetof(granit_pipeline_layout_desc, bind_group_layouts) == 8);
 GRANIT_ABI_ASSERT(granit_abi_vertex_attribute_size, sizeof(granit_vertex_attribute) == 16);
