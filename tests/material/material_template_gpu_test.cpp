@@ -7,6 +7,7 @@
 
 #include <granit/renderer/pipeline.hpp>
 #include <granit/renderer/renderer.hpp>
+#include <granit/renderer/resource_table.hpp>
 
 #include <catch2/catch_all.hpp>
 
@@ -48,9 +49,15 @@ std::string load_text(const char* name) {
 granit::material::material_package
 build_package(granit::material::package_binding_groups binding_groups =
                   granit::material::package_binding_group_frame |
-                  granit::material::package_binding_group_material) {
+                  granit::material::package_binding_group_material,
+              granit::material::package_binding_model binding_model =
+                  granit::material::package_binding_model::bind_group) {
   using namespace granit::material;
   material_package_desc desc;
+  desc.binding_model = binding_model;
+  desc.required_renderer_features = binding_model == package_binding_model::resource_table
+                                        ? package_feature_bindless_resource_table
+                                        : 0;
   desc.metadata.constant_buffer_size = 16;
   desc.metadata.parameters = {
       {.name = "color", .type = parameter_type::float4, .default_value = {}},
@@ -165,6 +172,33 @@ TEST_CASE("材质模板延迟创建并复用 Graphics Pipeline") {
   missing.variant += 1;
   CHECK(material.acquire_pipeline(missing, reused) == GRANIT_ERROR_NOT_READY);
   CHECK(reused == GRANIT_NULL_HANDLE);
+  CHECK(material.reset() == GRANIT_SUCCESS);
+}
+
+TEST_CASE("Resource Table 材质模板在原生后端要求显式表") {
+  granit::renderer renderer;
+  const auto initialized = renderer.initialize({.application_name = "granit-material-resource-table"});
+  if (environment_unavailable(initialized))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(initialized == granit::result::success);
+
+  granit::resource_table_capabilities capabilities;
+  REQUIRE(granit::get_resource_table_capabilities(renderer, capabilities) ==
+          granit::result::success);
+  if (capabilities.support != granit::resource_table_support::native)
+    SKIP("当前后端只提供 Resource Table 回退");
+
+  granit::resource_table table;
+  REQUIRE(table.initialize(renderer,
+                           {.resource_types = GRANIT_RESOURCE_TABLE_RESOURCE_SAMPLER_BIT,
+                            .sampler_capacity = 1}) == granit::result::success);
+  const auto package = build_package(
+      granit::material::package_binding_group_frame |
+          granit::material::package_binding_group_material,
+      granit::material::package_binding_model::resource_table);
+  granit::material::material_template_gpu material;
+  CHECK(material.initialize(renderer.native_handle(), package, {}, GRANIT_NULL_HANDLE,
+                             table.native_handle()) == GRANIT_SUCCESS);
   CHECK(material.reset() == GRANIT_SUCCESS);
 }
 
