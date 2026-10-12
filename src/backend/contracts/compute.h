@@ -32,6 +32,13 @@ public:
                       std::span<const std::uint32_t> dynamic_offsets,
                       std::span<const backend_buffer_access> buffer_accesses,
                       std::span<const backend_texture_access> texture_accesses) = 0;
+  [[nodiscard]] virtual granit_result
+  bind_compute_resource_table(backend_command_recorder_resource&,
+                              backend_pipeline_layout_resource&,
+                              std::uint32_t,
+                              backend_resource_table_resource&) {
+    return GRANIT_ERROR_UNSUPPORTED;
+  }
   [[nodiscard]] virtual granit_result dispatch(backend_command_recorder_resource& recorder,
                                                std::uint32_t group_count_x,
                                                std::uint32_t group_count_y,

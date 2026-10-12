@@ -367,6 +367,17 @@ granit_result vulkan_command_recorder::bind_graphics_groups(
   return GRANIT_SUCCESS;
 }
 
+granit_result vulkan_command_recorder::bind_graphics_resource_table(
+    const vulkan_device& device, VkPipelineLayout layout, std::uint32_t group_index,
+    VkDescriptorSet resource_table) {
+  if (state_ != command_recorder_state::recording || layout == VK_NULL_HANDLE ||
+      resource_table == VK_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  device.functions().vkCmdBindDescriptorSets(command_buffer_, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                             layout, group_index, 1, &resource_table, 0, nullptr);
+  return GRANIT_SUCCESS;
+}
+
 granit_result vulkan_command_recorder::bind_compute_pipeline(const vulkan_device& device,
                                                              VkPipeline pipeline) noexcept {
   if (state_ != command_recorder_state::recording || inside_rendering_ ||
@@ -393,6 +404,17 @@ granit_result vulkan_command_recorder::bind_compute_groups(
       command_buffer_, VK_PIPELINE_BIND_POINT_COMPUTE, layout, first_group,
       static_cast<std::uint32_t>(bind_groups.size()), bind_groups.data(),
       static_cast<std::uint32_t>(dynamic_offsets.size()), dynamic_offsets.data());
+  return GRANIT_SUCCESS;
+}
+
+granit_result vulkan_command_recorder::bind_compute_resource_table(
+    const vulkan_device& device, VkPipelineLayout layout, std::uint32_t group_index,
+    VkDescriptorSet resource_table) {
+  if (state_ != command_recorder_state::recording || inside_rendering_ ||
+      layout == VK_NULL_HANDLE || resource_table == VK_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  device.functions().vkCmdBindDescriptorSets(command_buffer_, VK_PIPELINE_BIND_POINT_COMPUTE,
+                                             layout, group_index, 1, &resource_table, 0, nullptr);
   return GRANIT_SUCCESS;
 }
 

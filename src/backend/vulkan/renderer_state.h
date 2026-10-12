@@ -238,11 +238,13 @@ public:
   void destroy_native_bind_group(VkDescriptorPool pool) noexcept;
   [[nodiscard]] granit_result create_native_pipeline_layout(
       std::span<backend_bind_group_layout_resource* const> bind_group_layouts,
+      backend_resource_table_resource* resource_table,
       backend_pipeline_layout_resource& layout) noexcept;
   [[nodiscard]] granit_result
   create_pipeline_layout(std::span<backend_bind_group_layout_resource* const> bind_group_layouts,
+                         backend_resource_table_resource* resource_table,
                          backend_pipeline_layout_resource& layout) noexcept override {
-    return create_native_pipeline_layout(bind_group_layouts, layout);
+    return create_native_pipeline_layout(bind_group_layouts, resource_table, layout);
   }
   void destroy_native_pipeline_layout(VkPipelineLayout layout) noexcept;
   [[nodiscard]] granit_result create_native_graphics_pipeline(
@@ -315,6 +317,11 @@ public:
                        std::span<const backend_buffer_access> buffer_accesses,
                        std::span<const backend_texture_access> texture_accesses) override;
   [[nodiscard]] granit_result
+  bind_graphics_resource_table(backend_command_recorder_resource& recorder,
+                               backend_pipeline_layout_resource& layout,
+                               std::uint32_t group_index,
+                               backend_resource_table_resource& resource_table) override;
+  [[nodiscard]] granit_result
   bind_compute_pipeline(backend_command_recorder_resource& recorder,
                         backend_compute_pipeline_resource& pipeline) noexcept override;
   [[nodiscard]] granit_result
@@ -324,6 +331,11 @@ public:
                       std::span<const std::uint32_t> dynamic_offsets,
                       std::span<const backend_buffer_access> buffer_accesses,
                       std::span<const backend_texture_access> texture_accesses) override;
+  [[nodiscard]] granit_result
+  bind_compute_resource_table(backend_command_recorder_resource& recorder,
+                              backend_pipeline_layout_resource& layout,
+                              std::uint32_t group_index,
+                              backend_resource_table_resource& resource_table) override;
   [[nodiscard]] granit_result dispatch(backend_command_recorder_resource& recorder,
                                        std::uint32_t group_count_x, std::uint32_t group_count_y,
                                        std::uint32_t group_count_z) noexcept override;

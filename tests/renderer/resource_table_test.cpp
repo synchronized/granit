@@ -6,6 +6,7 @@
 #include <array>
 #include <catch2/catch_all.hpp>
 #include <granit/renderer/renderer.hpp>
+#include <granit/renderer/pipeline.hpp>
 #include <granit/renderer/resource_table.hpp>
 #include <granit/renderer/sampler.hpp>
 
@@ -126,4 +127,25 @@ TEST_CASE("公共 Resource Table 批量更新失败时不部分写入",
                                     .slot = 2,
                                     .resource = sampler.native_handle()}};
   CHECK(table.update_batch(updates) == granit::result::invalid_argument);
+}
+
+TEST_CASE("Pipeline Layout 可以声明 Resource Table", "[resource_table][pipeline]") {
+  granit::renderer renderer;
+  const auto result = renderer.initialize({.application_name = "granit-resource-table-layout"});
+  if (result == granit::result::backend_unavailable ||
+      result == granit::result::incompatible_driver ||
+      result == granit::result::no_suitable_device)
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(result == granit::result::success);
+
+  granit::resource_table table;
+  REQUIRE(table.initialize(renderer, {.resource_types = GRANIT_RESOURCE_TABLE_RESOURCE_SAMPLER_BIT,
+                                      .sampler_capacity = 1}) == granit::result::success);
+  granit::pipeline_layout layout;
+  const auto layout_result = layout.initialize(renderer.ref(), {}, table.ref());
+  if (layout_result == granit::result::unsupported)
+    SKIP("当前后端不支持将 Resource Table 接入 Pipeline Layout");
+  REQUIRE(layout_result == granit::result::success);
+  REQUIRE(layout.reset() == granit::result::success);
+  REQUIRE(table.reset() == granit::result::success);
 }

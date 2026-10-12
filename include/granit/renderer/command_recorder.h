@@ -194,11 +194,19 @@ GRANIT_API granit_result granit_command_recorder_bind_graphics_pipeline(
 GRANIT_API granit_result granit_command_recorder_bind_graphics_groups(
     granit_renderer renderer, granit_command_recorder recorder, granit_pipeline_layout layout,
     const granit_bind_groups_desc* desc);
+/** 将 Pipeline Layout 末尾声明的 Resource Table 绑定到图形管线。 */
+GRANIT_API granit_result granit_command_recorder_bind_graphics_resource_table(
+    granit_renderer renderer, granit_command_recorder recorder, granit_pipeline_layout layout,
+    granit_resource_table resource_table);
 GRANIT_API granit_result granit_command_recorder_bind_compute_pipeline(
     granit_renderer renderer, granit_command_recorder recorder, granit_compute_pipeline pipeline);
 GRANIT_API granit_result granit_command_recorder_bind_compute_groups(
     granit_renderer renderer, granit_command_recorder recorder, granit_pipeline_layout layout,
     const granit_bind_groups_desc* desc);
+/** 将 Pipeline Layout 末尾声明的 Resource Table 绑定到计算管线。 */
+GRANIT_API granit_result granit_command_recorder_bind_compute_resource_table(
+    granit_renderer renderer, granit_command_recorder recorder, granit_pipeline_layout layout,
+    granit_resource_table resource_table);
 GRANIT_API granit_result granit_command_recorder_dispatch(granit_renderer renderer,
                                                           granit_command_recorder recorder,
                                                           uint32_t group_count_x,

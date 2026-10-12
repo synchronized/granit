@@ -122,6 +122,7 @@ vulkan_renderer_state::allocate_compute_pipeline_resource() {
 
 granit_result vulkan_renderer_state::create_native_pipeline_layout(
     std::span<backend_bind_group_layout_resource* const> bind_group_layouts,
+    backend_resource_table_resource* resource_table,
     backend_pipeline_layout_resource& layout_resource) noexcept {
   if (device_lost())
     return GRANIT_ERROR_DEVICE_LOST;
@@ -133,6 +134,12 @@ granit_result vulkan_renderer_state::create_native_pipeline_layout(
         return GRANIT_ERROR_INVALID_ARGUMENT;
       native_layouts.push_back(
           static_cast<vulkan_bind_group_layout_resource&>(*bind_group_layout).native());
+    }
+    if (resource_table != nullptr) {
+      const auto* table = dynamic_cast<vulkan_resource_table_resource*>(resource_table);
+      if (table == nullptr || table->layout() == VK_NULL_HANDLE)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      native_layouts.push_back(table->layout());
     }
     auto& layout = static_cast<vulkan_pipeline_layout_resource&>(layout_resource).native();
     VkPipelineLayoutCreateInfo info{};

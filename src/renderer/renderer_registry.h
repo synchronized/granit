@@ -231,6 +231,7 @@ public:
   [[nodiscard]] granit_result
   create_pipeline_layout(granit_renderer renderer,
                          std::span<const granit_bind_group_layout> bind_group_layouts,
+                         granit_resource_table resource_table,
                          granit_pipeline_layout& layout);
   [[nodiscard]] granit_result destroy_pipeline_layout(granit_renderer renderer,
                                                       granit_pipeline_layout layout);
@@ -314,6 +315,10 @@ public:
                                                    std::uint32_t first_group,
                                                    std::span<const granit_bind_group> bind_groups,
                                                    std::span<const std::uint32_t> dynamic_offsets);
+  [[nodiscard]] granit_result bind_graphics_resource_table(granit_renderer renderer,
+                                                            granit_command_recorder recorder,
+                                                            granit_pipeline_layout layout,
+                                                            granit_resource_table table);
   [[nodiscard]] granit_result bind_compute_pipeline(granit_renderer renderer,
                                                     granit_command_recorder recorder,
                                                     granit_compute_pipeline pipeline);
@@ -323,6 +328,10 @@ public:
                                                   std::uint32_t first_group,
                                                   std::span<const granit_bind_group> bind_groups,
                                                   std::span<const std::uint32_t> dynamic_offsets);
+  [[nodiscard]] granit_result bind_compute_resource_table(granit_renderer renderer,
+                                                           granit_command_recorder recorder,
+                                                           granit_pipeline_layout layout,
+                                                           granit_resource_table table);
   [[nodiscard]] granit_result dispatch(granit_renderer renderer, granit_command_recorder recorder,
                                        std::uint32_t group_count_x, std::uint32_t group_count_y,
                                        std::uint32_t group_count_z);

@@ -127,8 +127,12 @@ extern "C" granit_result granit_pipeline_layout_create(granit_renderer renderer,
       desc->reserved != 0 || desc->bind_group_layout_count > 8 ||
       (desc->bind_group_layout_count != 0 && !desc->bind_group_layouts))
     return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto resource_table = desc->struct_size >= GRANIT_PIPELINE_LAYOUT_DESC_VERSION_2_SIZE
+                                  ? desc->resource_table
+                                  : GRANIT_NULL_HANDLE;
   return granit::detail::renderer_registry::instance().create_pipeline_layout(
-      renderer, {desc->bind_group_layouts, desc->bind_group_layout_count}, *layout);
+      renderer, {desc->bind_group_layouts, desc->bind_group_layout_count},
+      resource_table, *layout);
 }
 
 extern "C" granit_result granit_pipeline_layout_destroy(granit_renderer renderer,

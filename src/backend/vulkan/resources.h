@@ -85,6 +85,8 @@ public:
   [[nodiscard]] const vulkan_bindless_resource_registry& registry() const noexcept {
     return registry_;
   }
+  [[nodiscard]] VkDescriptorSetLayout layout() const noexcept { return registry_.layout(); }
+  [[nodiscard]] VkDescriptorSet descriptor_set() const noexcept { return registry_.descriptor_set(); }
 
 private:
   std::shared_ptr<vulkan_renderer_state> renderer_;

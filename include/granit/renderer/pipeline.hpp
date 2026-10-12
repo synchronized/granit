@@ -15,6 +15,7 @@
 #include <granit/renderer/buffer.hpp>
 #include <granit/renderer/pipeline.h>
 #include <granit/renderer/renderer.hpp>
+#include <granit/renderer/resource_table.hpp>
 #include <granit/renderer/resource_types.hpp>
 #include <granit/renderer/sampler.hpp>
 #include <granit/renderer/shader.hpp>
@@ -290,13 +291,19 @@ public:
   }
   [[nodiscard]] result
   initialize(renderer_ref owner,
-             std::span<const bind_group_layout_ref> bind_group_layouts = {}) noexcept;
+             std::span<const bind_group_layout_ref> bind_group_layouts = {},
+             resource_table_ref resource_table = {}) noexcept;
   [[nodiscard]] result initialize(renderer& owner) noexcept {
     return initialize(owner.ref());
   }
   [[nodiscard]] result
   initialize(renderer& owner, std::span<const bind_group_layout_ref> bind_group_layouts) noexcept {
-    return initialize(owner.ref(), bind_group_layouts);
+    return initialize(owner.ref(), bind_group_layouts, {});
+  }
+  [[nodiscard]] result initialize(renderer& owner,
+                                  std::span<const bind_group_layout_ref> bind_group_layouts,
+                                  resource_table_ref resource_table) noexcept {
+    return initialize(owner.ref(), bind_group_layouts, resource_table);
   }
   [[nodiscard]] result reset() noexcept;
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
@@ -695,7 +702,8 @@ inline result bind_group::reset() noexcept {
 
 inline result
 pipeline_layout::initialize(renderer_ref owner,
-                            std::span<const bind_group_layout_ref> bind_group_layouts) noexcept {
+                            std::span<const bind_group_layout_ref> bind_group_layouts,
+                            resource_table_ref resource_table) noexcept {
   const auto renderer = owner.native_handle();
   if (valid() || bind_group_layouts.size() > UINT32_MAX)
     return result::invalid_argument;
@@ -707,10 +715,11 @@ pipeline_layout::initialize(renderer_ref owner,
     for (const auto layout : bind_group_layouts)
       handles.push_back(layout.native_handle());
     const granit_pipeline_layout_desc desc{
-        .struct_size = GRANIT_PIPELINE_LAYOUT_DESC_VERSION_1_SIZE,
+        .struct_size = GRANIT_PIPELINE_LAYOUT_DESC_VERSION_2_SIZE,
         .bind_group_layout_count = static_cast<std::uint32_t>(handles.size()),
         .bind_group_layouts = handles.data(),
-        .reserved = 0};
+        .reserved = 0,
+        .resource_table = resource_table.native_handle()};
     const auto value = granit_pipeline_layout_create(renderer, &desc, &handle_);
     if (value == GRANIT_SUCCESS)
       renderer_ = renderer;

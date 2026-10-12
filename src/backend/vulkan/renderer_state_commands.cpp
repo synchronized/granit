@@ -261,6 +261,19 @@ granit_result vulkan_renderer_state::bind_graphics_groups(
   }
 }
 
+granit_result vulkan_renderer_state::bind_graphics_resource_table(
+    backend_command_recorder_resource& recorder_resource,
+    backend_pipeline_layout_resource& layout_resource,
+    std::uint32_t group_index,
+    backend_resource_table_resource& resource_table_resource) {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
+  const auto& layout = static_cast<vulkan_pipeline_layout_resource&>(layout_resource).native();
+  const auto& table = static_cast<vulkan_resource_table_resource&>(resource_table_resource);
+  return recorder.bind_graphics_resource_table(device_, layout, group_index, table.descriptor_set());
+}
+
 granit_result
 vulkan_renderer_state::bind_compute_pipeline(backend_command_recorder_resource& recorder_resource,
                                              backend_compute_pipeline_resource& resource) noexcept {
@@ -332,6 +345,19 @@ granit_result vulkan_renderer_state::bind_compute_groups(
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }
+}
+
+granit_result vulkan_renderer_state::bind_compute_resource_table(
+    backend_command_recorder_resource& recorder_resource,
+    backend_pipeline_layout_resource& layout_resource,
+    std::uint32_t group_index,
+    backend_resource_table_resource& resource_table_resource) {
+  if (device_lost())
+    return GRANIT_ERROR_DEVICE_LOST;
+  auto& recorder = static_cast<vulkan_command_recorder_resource&>(recorder_resource).native();
+  const auto& layout = static_cast<vulkan_pipeline_layout_resource&>(layout_resource).native();
+  const auto& table = static_cast<vulkan_resource_table_resource&>(resource_table_resource);
+  return recorder.bind_compute_resource_table(device_, layout, group_index, table.descriptor_set());
 }
 
 granit_result vulkan_renderer_state::dispatch(backend_command_recorder_resource& recorder_resource,

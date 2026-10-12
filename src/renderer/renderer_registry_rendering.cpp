@@ -40,6 +40,82 @@ granit_result renderer_registry::bind_graphics_pipeline(granit_renderer renderer
   return result;
 }
 
+granit_result renderer_registry::bind_graphics_resource_table(granit_renderer renderer,
+                                                               granit_command_recorder recorder,
+                                                               granit_pipeline_layout layout,
+                                                               granit_resource_table table) {
+  auto command = acquire_command_recorder(renderer, recorder);
+  if (!command)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  std::shared_ptr<pipeline_layout_record> layout_record;
+  std::shared_ptr<resource_table_record> table_record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto layout_found = pipeline_layouts_.find(layout);
+    const auto table_found = resource_tables_.find(table);
+    if (layout_found == pipeline_layouts_.end() || table_found == resource_tables_.end() ||
+        layout_found->second->owner != command->owner ||
+        table_found->second->owner != command->owner)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    layout_record = layout_found->second;
+    table_record = table_found->second;
+    if (layout_record->resource_table != table_record || !table_record->native)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  std::lock_guard command_lock{command->mutex};
+  if (!command->commands->command_recorder_is_recording(*command->native))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto result = command->graphics->bind_graphics_resource_table(
+      *command->native, *layout_record->native,
+      static_cast<std::uint32_t>(layout_record->bind_group_layouts.size()), *table_record->native);
+  trace_command_event("bind_graphics_resource_table", recorder, command->active_frame, layout, 1,
+                      result);
+  if (result == GRANIT_SUCCESS) {
+    retain_resource(command->retained_resources, layout_record, layout_record->metadata);
+    retain_resource(command->retained_resources, table_record, table_record->metadata);
+  }
+  return result;
+}
+
+granit_result renderer_registry::bind_compute_resource_table(granit_renderer renderer,
+                                                              granit_command_recorder recorder,
+                                                              granit_pipeline_layout layout,
+                                                              granit_resource_table table) {
+  auto command = acquire_command_recorder(renderer, recorder);
+  if (!command)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (!command->compute)
+    return GRANIT_ERROR_UNSUPPORTED;
+  std::shared_ptr<pipeline_layout_record> layout_record;
+  std::shared_ptr<resource_table_record> table_record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto layout_found = pipeline_layouts_.find(layout);
+    const auto table_found = resource_tables_.find(table);
+    if (layout_found == pipeline_layouts_.end() || table_found == resource_tables_.end() ||
+        layout_found->second->owner != command->owner ||
+        table_found->second->owner != command->owner)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    layout_record = layout_found->second;
+    table_record = table_found->second;
+    if (layout_record->resource_table != table_record || !table_record->native)
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+  }
+  std::lock_guard command_lock{command->mutex};
+  if (!command->commands->command_recorder_is_recording(*command->native))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto result = command->compute->bind_compute_resource_table(
+      *command->native, *layout_record->native,
+      static_cast<std::uint32_t>(layout_record->bind_group_layouts.size()), *table_record->native);
+  trace_command_event("bind_compute_resource_table", recorder, command->active_frame, layout, 1,
+                      result);
+  if (result == GRANIT_SUCCESS) {
+    retain_resource(command->retained_resources, layout_record, layout_record->metadata);
+    retain_resource(command->retained_resources, table_record, table_record->metadata);
+  }
+  return result;
+}
+
 granit_result
 renderer_registry::bind_graphics_groups(granit_renderer renderer, granit_command_recorder recorder,
                                         granit_pipeline_layout layout, std::uint32_t first_group,

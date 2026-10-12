@@ -12,6 +12,7 @@
 - [S-95：0.59.0 Resource Table 实验性 API](S-95-0.59.0-resource-table-experimental-api.md)——建立可选、可回退、
   可测量的 Resource Table 公共实验 API，复用 Vulkan Bindless 原型，验证 WebGPU 回退和 Tutorial 12；不改变
   Bind Group 默认路径。
+- [S-96：0.60.0 Resource Table Shader 变体与真实压力](S-96-0.60.0-resource-table-shader-and-pressure.md)——承接 v0.59.0，验证 Shader/Material 变体、WebGPU 回退和真实压力。
 
 ## 最近完成
 

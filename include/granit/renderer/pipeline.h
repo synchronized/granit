@@ -11,6 +11,7 @@
 #include <granit/core/result.h>
 #include <granit/core/types.h>
 #include <granit/renderer/renderer.h>
+#include <granit/renderer/resource_table.h>
 #include <granit/renderer/resource_types.h>
 #include <granit/renderer/shader.h>
 
@@ -91,10 +92,12 @@ typedef struct granit_pipeline_layout_desc {
   uint32_t bind_group_layout_count;
   const granit_bind_group_layout* bind_group_layouts;
   uint64_t reserved;
+  granit_resource_table resource_table;
 } granit_pipeline_layout_desc;
 #define GRANIT_PIPELINE_LAYOUT_DESC_VERSION_1_SIZE UINT32_C(24)
+#define GRANIT_PIPELINE_LAYOUT_DESC_VERSION_2_SIZE UINT32_C(32)
 #define GRANIT_PIPELINE_LAYOUT_DESC_INIT                                                           \
-  {GRANIT_PIPELINE_LAYOUT_DESC_VERSION_1_SIZE, UINT32_C(0), 0, UINT64_C(0)}
+  {GRANIT_PIPELINE_LAYOUT_DESC_VERSION_2_SIZE, UINT32_C(0), 0, UINT64_C(0), GRANIT_NULL_HANDLE}
 
 typedef uint32_t granit_vertex_format;
 #define GRANIT_VERTEX_FORMAT_FLOAT32 UINT32_C(1)

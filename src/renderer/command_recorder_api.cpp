@@ -267,6 +267,20 @@ extern "C" granit_result granit_command_recorder_bind_graphics_groups(
   }
 }
 
+extern "C" granit_result granit_command_recorder_bind_graphics_resource_table(
+    granit_renderer renderer, granit_command_recorder recorder, granit_pipeline_layout layout,
+    granit_resource_table resource_table) {
+  if (renderer == GRANIT_NULL_HANDLE || recorder == GRANIT_NULL_HANDLE ||
+      layout == GRANIT_NULL_HANDLE || resource_table == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return granit::detail::renderer_registry::instance().bind_graphics_resource_table(
+        renderer, recorder, layout, resource_table);
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
 extern "C" granit_result granit_command_recorder_bind_compute_pipeline(
     granit_renderer renderer, granit_command_recorder recorder, granit_compute_pipeline pipeline) {
   if (renderer == GRANIT_NULL_HANDLE || recorder == GRANIT_NULL_HANDLE ||
@@ -299,6 +313,20 @@ extern "C" granit_result granit_command_recorder_bind_compute_groups(
         {desc->dynamic_offsets, desc->dynamic_offset_count});
   } catch (const std::bad_alloc&) {
     return GRANIT_ERROR_OUT_OF_MEMORY;
+  } catch (...) {
+    return GRANIT_ERROR_INTERNAL;
+  }
+}
+
+extern "C" granit_result granit_command_recorder_bind_compute_resource_table(
+    granit_renderer renderer, granit_command_recorder recorder, granit_pipeline_layout layout,
+    granit_resource_table resource_table) {
+  if (renderer == GRANIT_NULL_HANDLE || recorder == GRANIT_NULL_HANDLE ||
+      layout == GRANIT_NULL_HANDLE || resource_table == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  try {
+    return granit::detail::renderer_registry::instance().bind_compute_resource_table(
+        renderer, recorder, layout, resource_table);
   } catch (...) {
     return GRANIT_ERROR_INTERNAL;
   }

@@ -130,3 +130,4 @@
 - [2026-08-25 F-10 Frame Context 验证记录](2026-08-25-f10-frame-context-validation.md)
 - [2026-08-18 Windows/Linux CI 验证记录](2026-08-18-cross-platform-ci-validation.md)
 - [2026-08-18 S-08 Linux Integration 验证记录](2026-08-18-s08-linux-integration-validation.md)
+- [2026-10-12 v0.59.0 S-95 Resource Table 验收](2026-10-12-v0.59.0-s95-resource-table-acceptance.md)

@@ -63,6 +63,13 @@ public:
                        std::span<const backend_texture_access>) {
     return GRANIT_ERROR_UNSUPPORTED;
   }
+  [[nodiscard]] virtual granit_result
+  bind_graphics_resource_table(backend_command_recorder_resource&,
+                               backend_pipeline_layout_resource&,
+                               std::uint32_t,
+                               backend_resource_table_resource&) {
+    return GRANIT_ERROR_UNSUPPORTED;
+  }
   [[nodiscard]] virtual granit_result set_viewports(backend_command_recorder_resource&,
                                                     std::uint32_t,
                                                     std::span<const granit_viewport>) noexcept {

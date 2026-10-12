@@ -13,6 +13,7 @@
 #include <granit/core/result.hpp>
 #include <granit/renderer/command_recorder.h>
 #include <granit/renderer/pipeline.hpp>
+#include <granit/renderer/resource_table.hpp>
 #include <granit/renderer/render_target.hpp>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/swapchain.hpp>
@@ -163,6 +164,15 @@ public:
   [[nodiscard]] result bind_graphics_pipeline(const graphics_pipeline& pipeline) noexcept {
     return bind_graphics_pipeline(pipeline.ref());
   }
+  [[nodiscard]] result bind_graphics_resource_table(pipeline_layout_ref layout,
+                                                     resource_table_ref table) noexcept {
+    return from_native(granit_command_recorder_bind_graphics_resource_table(
+        renderer_, handle_, layout.native_handle(), table.native_handle()));
+  }
+  [[nodiscard]] result bind_graphics_resource_table(const pipeline_layout& layout,
+                                                     const resource_table& table) noexcept {
+    return bind_graphics_resource_table(layout.ref(), table.ref());
+  }
   [[nodiscard]] result
   bind_graphics_groups(pipeline_layout_ref layout, std::uint32_t first_group,
                        std::span<const bind_group_ref> bind_groups,
@@ -192,6 +202,15 @@ public:
   }
   [[nodiscard]] result bind_compute_pipeline(const compute_pipeline& pipeline) noexcept {
     return bind_compute_pipeline(pipeline.ref());
+  }
+  [[nodiscard]] result bind_compute_resource_table(pipeline_layout_ref layout,
+                                                    resource_table_ref table) noexcept {
+    return from_native(granit_command_recorder_bind_compute_resource_table(
+        renderer_, handle_, layout.native_handle(), table.native_handle()));
+  }
+  [[nodiscard]] result bind_compute_resource_table(const pipeline_layout& layout,
+                                                    const resource_table& table) noexcept {
+    return bind_compute_resource_table(layout.ref(), table.ref());
   }
   [[nodiscard]] result
   bind_compute_groups(pipeline_layout_ref layout, std::uint32_t first_group,

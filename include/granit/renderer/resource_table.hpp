@@ -79,6 +79,21 @@ struct resource_table_update {
   std::uint64_t size{};
 };
 
+class resource_table;
+
+/** 不拥有 Resource Table，只在来源对象有效期内使用。 */
+class resource_table_ref {
+public:
+  resource_table_ref() = default;
+  [[nodiscard]] constexpr bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
+  [[nodiscard]] constexpr granit_resource_table native_handle() const noexcept { return handle_; }
+
+private:
+  friend class resource_table;
+  explicit constexpr resource_table_ref(granit_resource_table handle) noexcept : handle_(handle) {}
+  granit_resource_table handle_{GRANIT_NULL_HANDLE};
+};
+
 class resource_table {
 public:
   resource_table() = default;
@@ -152,6 +167,7 @@ public:
   }
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
   [[nodiscard]] explicit operator bool() const noexcept { return valid(); }
+  [[nodiscard]] constexpr resource_table_ref ref() const noexcept { return resource_table_ref{handle_}; }
   [[nodiscard]] granit_resource_table native_handle() const noexcept { return handle_; }
 
 private:

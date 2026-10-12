@@ -38,7 +38,7 @@ TEST_CASE("Pipeline资源创建把空Renderer归类为无效句柄", "[pipeline]
   CHECK(bind_layout == GRANIT_NULL_HANDLE);
 
   const granit_pipeline_layout_desc pipeline_layout_desc{GRANIT_PIPELINE_LAYOUT_DESC_VERSION_1_SIZE,
-                                                         0, nullptr, 0};
+                                                         0, nullptr, 0, GRANIT_NULL_HANDLE};
   granit_pipeline_layout pipeline_layout = UINT64_C(1);
   CHECK(granit_pipeline_layout_create(GRANIT_NULL_HANDLE, &pipeline_layout_desc,
                                       &pipeline_layout) == GRANIT_ERROR_INVALID_HANDLE);
@@ -74,6 +74,11 @@ TEST_CASE("Bind Group 绑定描述校验版本和动态 Offset 指针", "[pipeli
   desc.dynamic_offsets = &dynamic_offset;
   CHECK(granit_command_recorder_bind_graphics_groups(UINT64_C(1), UINT64_C(2), UINT64_C(3),
                                                      &desc) == GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(granit_command_recorder_bind_graphics_resource_table(
+            UINT64_C(1), UINT64_C(2), UINT64_C(3), UINT64_C(4)) ==
+        GRANIT_ERROR_INVALID_HANDLE);
+  CHECK(granit_command_recorder_bind_compute_resource_table(
+            UINT64_C(1), UINT64_C(2), UINT64_C(3), UINT64_C(4)) == GRANIT_ERROR_INVALID_HANDLE);
 }
 
 bool environment_unavailable(granit::result value) {

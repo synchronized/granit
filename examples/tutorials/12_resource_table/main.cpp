@@ -5,6 +5,7 @@
 #include "tutorial/tutorial_runtime.h"
 
 #include <granit/renderer/renderer.hpp>
+#include <granit/renderer/resource_table.hpp>
 #include <imgui.h>
 
 #include <iostream>
@@ -27,6 +28,22 @@ private:
     auto result = runtime_.initialize(renderer_owner());
     if (result.ok()) result = frame_context_.initialize(renderer());
     if (result.ok()) result = renderer_owner().get_limits(limits_);
+    if (result.ok()) {
+      result = granit::get_resource_table_capabilities(renderer_owner().ref(), table_capabilities_);
+    }
+    if (result.ok()) {
+      result = table_.initialize(renderer_owner(),
+                                 {.resource_types = GRANIT_RESOURCE_TABLE_RESOURCE_SAMPLER_BIT,
+                                  .sampler_capacity = 1});
+    }
+    if (result.ok()) {
+      result = sampler_.initialize(renderer_owner());
+    }
+    if (result.ok()) {
+      result = table_.update({.type = granit::resource_table_resource_type::sampler,
+                              .slot = 0,
+                              .resource = sampler_.native_handle()});
+    }
     return result;
   }
 
@@ -58,9 +75,10 @@ private:
     if (result.ok()) {
       ImGui::Text("Descriptor Indexing device support: %s",
                   limits_.supports_bindless_descriptor_indexing() ? "yes" : "no");
-      ImGui::Text("Granit Bindless backend: experimental / not active");
+      ImGui::Text("Resource Table support: %s", resource_table_support_name(table_capabilities_.support));
+      ImGui::Text("Resource Table sampler slot 0: populated");
       ImGui::Text("Default path: traditional Bind Group");
-      ImGui::Text("WebGPU and unsupported Vulkan devices: explicit fallback");
+      ImGui::Text("Explicit Resource Table binding remains experimental");
       result = runtime_.end_frame();
     }
     if (result.failed()) return result;
@@ -96,7 +114,23 @@ private:
   granit::example::tutorial::tutorial_runtime runtime_;
   granit::frame_context frame_context_;
   granit::renderer_limits limits_{};
+  granit::resource_table_capabilities table_capabilities_{};
+  granit::resource_table table_;
+  granit::sampler sampler_;
   bool smoke_test_{};
+
+  static const char* resource_table_support_name(granit::resource_table_support support) noexcept {
+    switch (support) {
+    case granit::resource_table_support::native:
+      return "native";
+    case granit::resource_table_support::logical:
+      return "logical";
+    case granit::resource_table_support::fallback:
+      return "fallback";
+    default:
+      return "unsupported";
+    }
+  }
 };
 
 application app;

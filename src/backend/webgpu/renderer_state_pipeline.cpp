@@ -99,8 +99,11 @@ webgpu_renderer_state::allocate_pipeline_layout_resource() {
 
 granit_result webgpu_renderer_state::create_pipeline_layout(
     std::span<backend_bind_group_layout_resource* const> bind_group_layouts,
+    backend_resource_table_resource* resource_table,
     backend_pipeline_layout_resource& layout) noexcept {
   if (!capabilities_initialized_)
+    return GRANIT_ERROR_UNSUPPORTED;
+  if (resource_table != nullptr)
     return GRANIT_ERROR_UNSUPPORTED;
   try {
     std::vector<webgpu_bind_group_layout> native_layouts;

@@ -8,6 +8,21 @@
 
 ## Unreleased
 
+## 0.59.0 - 2026-10-12
+
+### 新增
+
+- 增加实验性的 Resource Table C/C++ API、能力查询、槽位更新和批量更新；
+- Vulkan Descriptor Indexing 后端支持 Sampled Texture View、Sampler 和 Storage Buffer descriptor 更新；
+- Pipeline Layout 与 Command Recorder 支持将 Resource Table 绑定到末尾 descriptor set；
+- Tutorial 12 改为展示 Resource Table 能力和自动模式槽位更新。
+
+### 边界
+
+- Bind Group 仍是默认绑定路径；WebGPU 当前保留逻辑回退，显式原生 Resource Table 不支持时返回错误；
+- Shader/Material 绑定模型变体、真实跨平台压力和 GPU 在途更新安全性延期到 v0.60.0；
+- Resource Table 仍为 0.x 实验性 API，后续可删除或重设计。
+
 ## 0.58.0 - 2026-10-12
 
 ### 修复

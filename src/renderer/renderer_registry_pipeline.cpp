@@ -383,6 +383,7 @@ granit_result renderer_registry::destroy_bind_group(granit_renderer renderer,
 
 granit_result renderer_registry::create_pipeline_layout(
     granit_renderer renderer, std::span<const granit_bind_group_layout> bind_group_layouts,
+    granit_resource_table resource_table,
     granit_pipeline_layout& layout) {
   try {
     const auto interfaces = acquire_backend_interfaces(renderer);
@@ -396,6 +397,7 @@ granit_result renderer_registry::create_pipeline_layout(
     record->owner = owner;
     record->pipelines = pipelines;
     record->retirement = interfaces->retirement;
+    std::shared_ptr<resource_table_record> resource_table_record;
     std::vector<backend_bind_group_layout_resource*> native_layouts;
     {
       std::lock_guard lock{mutex_};
@@ -406,9 +408,19 @@ granit_result renderer_registry::create_pipeline_layout(
         record->bind_group_layouts.push_back(found->second);
         native_layouts.push_back(found->second->native.get());
       }
+      if (resource_table != GRANIT_NULL_HANDLE) {
+        const auto found = resource_tables_.find(resource_table);
+        if (found == resource_tables_.end() || found->second->owner != owner ||
+            !found->second->native)
+          return GRANIT_ERROR_INVALID_HANDLE;
+        resource_table_record = found->second;
+      }
     }
+    record->resource_table = resource_table_record;
     record->native = pipelines->allocate_pipeline_layout_resource();
-    const auto result = pipelines->create_pipeline_layout(native_layouts, *record->native);
+    const auto result = pipelines->create_pipeline_layout(
+        native_layouts, resource_table_record ? resource_table_record->native.get() : nullptr,
+        *record->native);
     if (result != GRANIT_SUCCESS)
       return result;
     std::lock_guard lock{mutex_};

@@ -25,6 +25,7 @@ public:
   allocate_pipeline_layout_resource() = 0;
   [[nodiscard]] virtual granit_result
   create_pipeline_layout(std::span<backend_bind_group_layout_resource* const> bind_group_layouts,
+                         backend_resource_table_resource* resource_table,
                          backend_pipeline_layout_resource& layout) noexcept = 0;
 };
 

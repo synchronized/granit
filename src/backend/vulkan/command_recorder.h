@@ -62,6 +62,10 @@ public:
                        std::span<const std::uint32_t> dynamic_offsets,
                        std::span<const std::pair<VkBuffer, VkAccessFlags2>> buffer_accesses,
                        std::span<const vulkan_image_access> image_accesses);
+  [[nodiscard]] granit_result bind_graphics_resource_table(const vulkan_device& device,
+                                                           VkPipelineLayout layout,
+                                                           std::uint32_t group_index,
+                                                           VkDescriptorSet resource_table);
   [[nodiscard]] granit_result bind_compute_pipeline(const vulkan_device& device,
                                                     VkPipeline pipeline) noexcept;
   [[nodiscard]] granit_result
@@ -70,6 +74,10 @@ public:
                       std::span<const std::uint32_t> dynamic_offsets,
                       std::span<const std::pair<VkBuffer, VkAccessFlags2>> buffer_accesses,
                       std::span<const vulkan_image_access> image_accesses);
+  [[nodiscard]] granit_result bind_compute_resource_table(const vulkan_device& device,
+                                                          VkPipelineLayout layout,
+                                                          std::uint32_t group_index,
+                                                          VkDescriptorSet resource_table);
   [[nodiscard]] granit_result dispatch(const vulkan_device& device, std::uint32_t group_count_x,
                                        std::uint32_t group_count_y,
                                        std::uint32_t group_count_z) noexcept;

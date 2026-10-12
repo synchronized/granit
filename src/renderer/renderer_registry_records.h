@@ -125,6 +125,7 @@ struct renderer_registry::pipeline_layout_record {
   std::shared_ptr<backend_retirement_renderer> retirement;
   std::unique_ptr<backend_pipeline_layout_resource> native;
   std::vector<std::shared_ptr<bind_group_layout_record>> bind_group_layouts;
+  std::shared_ptr<resource_table_record> resource_table;
 };
 struct renderer_registry::bind_group_record {
   resource_metadata metadata;
