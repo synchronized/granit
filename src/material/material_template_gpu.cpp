@@ -51,21 +51,31 @@ material_template_gpu::initialize(granit_renderer renderer, const material_packa
                                   granit_shader_library shader_library,
                                   granit_resource_table resource_table) {
   std::lock_guard lock{mutex_};
-  const bool uses_resource_table = package.binding_model() == package_binding_model::resource_table;
+  const bool requests_resource_table =
+      package.binding_model() == package_binding_model::resource_table;
+  bool uses_resource_table = requests_resource_table;
   if (renderer_ != GRANIT_NULL_HANDLE || renderer == GRANIT_NULL_HANDLE ||
-      (uses_resource_table != (resource_table != GRANIT_NULL_HANDLE)) ||
-      (!uses_resource_table && package.binding_model() != package_binding_model::bind_group) ||
+      (!requests_resource_table && resource_table != GRANIT_NULL_HANDLE) ||
+      (!requests_resource_table && package.binding_model() != package_binding_model::bind_group) ||
       package.required_renderer_features() !=
-          (uses_resource_table ? package_feature_bindless_resource_table : 0) ||
+          (requests_resource_table ? package_feature_bindless_resource_table : 0) ||
       additional_layouts.size() > 6 ||
       std::ranges::find(additional_layouts, GRANIT_NULL_HANDLE) != additional_layouts.end()) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
-  if (uses_resource_table) {
+  if (requests_resource_table) {
     granit_resource_table_capabilities capabilities = GRANIT_RESOURCE_TABLE_CAPABILITIES_INIT;
     const auto result = granit_renderer_get_resource_table_capabilities(renderer, &capabilities);
-    if (result != GRANIT_SUCCESS || capabilities.support != GRANIT_RESOURCE_TABLE_SUPPORT_NATIVE)
-      return result == GRANIT_SUCCESS ? GRANIT_ERROR_UNSUPPORTED : result;
+    if (result != GRANIT_SUCCESS)
+      return result;
+    if (capabilities.support == GRANIT_RESOURCE_TABLE_SUPPORT_NATIVE) {
+      if (resource_table == GRANIT_NULL_HANDLE)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+    } else {
+      if (resource_table != GRANIT_NULL_HANDLE)
+        return GRANIT_ERROR_UNSUPPORTED;
+      uses_resource_table = false;
+    }
   }
 
   std::vector<granit_bind_group_layout_entry> material_entries;
