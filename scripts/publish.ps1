@@ -44,6 +44,53 @@ if ($versionContent -match '(?m)^set\(GRANIT_PROJECT_VERSION "(\d+\.\d+\.\d+)"\)
 if ($currentVersion -ne $Version) {
   throw "工程版本（$currentVersion）与目标版本（$Version）不一致"
 }
+$versionDocPath = "docs/versions/v$Version.md"
+if (-not (Test-Path $versionDocPath)) {
+  throw "缺少版本文档：$versionDocPath"
+}
+$versionDoc = Get-Content -Raw -Encoding UTF8 $versionDocPath
+if ($versionDoc -match '\*\*规划中[。*]') {
+  throw "版本文档仍处于规划阶段，请先完成发布候选收口：$versionDocPath"
+}
+if ($versionDoc -notmatch '(?m)^## 发布门槛') {
+  throw "版本文档缺少“发布门槛”章节：$versionDocPath"
+}
+$changelog = Get-Content -Raw -Encoding UTF8 CHANGELOG.md
+$changelogHeading = "## $Version - "
+$changelogStart = $changelog.IndexOf($changelogHeading)
+if ($changelogStart -lt 0) {
+  throw "CHANGELOG.md 缺少版本章节：$changelogHeading"
+}
+$changelogBodyStart = $changelogStart + $changelogHeading.Length
+$nextHeading = $changelog.IndexOf([Environment]::NewLine + "## ", $changelogBodyStart)
+if ($nextHeading -lt 0) {
+  $changelogBody = $changelog.Substring($changelogBodyStart)
+} else {
+  $changelogBody = $changelog.Substring($changelogBodyStart, $nextHeading - $changelogBodyStart)
+}
+if ([string]::IsNullOrWhiteSpace($changelogBody)) {
+  throw "CHANGELOG.md 的 $Version 章节为空，请先完成发布说明"
+}
+$planMatch = [regex]::Match($versionDoc, '\.\./plans/([^\)]+)')
+if (-not $planMatch.Success) {
+  throw "版本文档没有关联实施计划：$versionDocPath"
+}
+$planPath = Join-Path 'docs/plans' $planMatch.Groups[1].Value
+if (-not (Test-Path $planPath)) {
+  throw "关联实施计划不存在：$planPath"
+}
+$planDoc = Get-Content -Raw -Encoding UTF8 $planPath
+if ($planDoc -match '\*\*(规划中|实施中)[。*]') {
+  throw "实施计划尚未完成，请先收口：$planPath"
+}
+$recordPaths = @(Get-ChildItem docs/records -Filter "*v$Version*" -File)
+if ($recordPaths.Count -eq 0) {
+  throw "缺少版本验收记录：docs/records/*v$Version*"
+}
+$recordDoc = Get-Content -Raw -Encoding UTF8 $recordPaths[0].FullName
+if ($recordDoc -notmatch '(?m)^## 发布状态') {
+  throw "版本验收记录缺少“发布状态”章节：$($recordPaths[0].Name)"
+}
 
 git fetch origin main --quiet
 if ($LASTEXITCODE -ne 0) {

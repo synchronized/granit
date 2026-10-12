@@ -47,6 +47,52 @@ if [ "$current" != "$version" ]; then
   exit 1
 fi
 
+version_doc="docs/versions/v${version}.md"
+if [ ! -f "$version_doc" ]; then
+  echo "错误: 缺少版本文档：${version_doc}" >&2
+  exit 1
+fi
+if grep -Eq '^\*\*规划中[。*]' "$version_doc"; then
+  echo "错误: 版本文档仍处于规划阶段，请先完成发布候选收口：${version_doc}" >&2
+  exit 1
+fi
+if ! grep -Eq '^## 发布门槛$' "$version_doc"; then
+  echo "错误: 版本文档缺少“发布门槛”章节：${version_doc}" >&2
+  exit 1
+fi
+changelog_heading="## ${version} - "
+if ! grep -Fq "$changelog_heading" CHANGELOG.md; then
+  echo "错误: CHANGELOG.md 缺少版本章节：${changelog_heading}" >&2
+  exit 1
+fi
+changelog_body="$(awk -v heading="$changelog_heading" '
+  index($0, heading) == 1 { found=1; next }
+  found && /^## / { exit }
+  found { print }
+' CHANGELOG.md)"
+if [ -z "$(printf '%s' "$changelog_body" | tr -d '[:space:]')" ]; then
+  echo "错误: CHANGELOG.md 的 ${version} 章节为空，请先完成发布说明" >&2
+  exit 1
+fi
+plan_name="$(sed -nE 's#.*\.\./plans/([^\)]+).*#\1#p' "$version_doc" | head -1)"
+if [ -z "$plan_name" ] || [ ! -f "docs/plans/${plan_name}" ]; then
+  echo "错误: 版本文档没有有效的实施计划链接：${version_doc}" >&2
+  exit 1
+fi
+if grep -Eq '^\*\*(规划中|实施中)[。*]' "docs/plans/${plan_name}"; then
+  echo "错误: 实施计划尚未完成，请先收口：docs/plans/${plan_name}" >&2
+  exit 1
+fi
+record="$(find docs/records -maxdepth 1 -type f -name "*v${version}*" -print -quit)"
+if [ -z "$record" ]; then
+  echo "错误: 缺少版本验收记录：docs/records/*v${version}*" >&2
+  exit 1
+fi
+if ! grep -Eq '^## 发布状态$' "$record"; then
+  echo "错误: 版本验收记录缺少“发布状态”章节：${record}" >&2
+  exit 1
+fi
+
 git fetch origin main --quiet
 head_commit="$(git rev-parse HEAD)"
 remote_commit="$(git rev-parse origin/main)"

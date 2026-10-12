@@ -130,6 +130,16 @@ git pull --ff-only
 要求本地 `main` 与 `origin/main` 完全一致。远端构建、测试和打包全部通过后，工作流才创建 tag 和
 GitHub Release。Linux/macOS 使用对应的 `release.sh --commit` 和 `publish.sh`，阶段边界相同。
 
+### 发布前自动收口门禁
+
+版本准备必须在 release 分支完成版本文档、实施计划、验收记录和 CHANGELOG 的最终收口，再合并到
+main。正式发布脚本会重复检查：版本文档不能仍处于“规划中”，实施计划不能仍处于“规划中/实施中”，
+验收记录必须包含“发布状态”章节，CHANGELOG 对应版本章节不能为空。任一检查失败都会阻止创建
+tag 或 GitHub Release。
+
+这样发布 tag 指向的提交已经包含完整的版本事实；发布后只需记录公开制品复核，不应再进行常规的
+版本状态修正。
+
 ### 5.1 准备版本提交
 
 `release` 脚本更新 `cmake/granit_version.cmake`、`README.md` 和 `CHANGELOG.md`。默认模式只显示
