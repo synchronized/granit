@@ -21,7 +21,7 @@
 | 09：Particles | 动态 Storage Buffer、粒子几何、透明混合 | S-82B 已实现，待跨平台验收 | [09_particles](../../examples/tutorials/09_particles) |
 | 10：Transparency | Opaque、Mask、Blend、对象级排序 | S-82C 已实现，待跨平台验收 | [10_transparency](../../examples/tutorials/10_transparency) |
 | 11：Capabilities | Format、Usage、Sampler、Mip 和 Renderer limits | S-82D 已实现，待跨平台验收 | [11_capabilities](../../examples/tutorials/11_capabilities) |
-| [12：Resource Table](12-resource-table.md) | Resource Table 能力查询、显式选择、传统 Bind Group 回退 | 验证实验 API 边界，不改变默认绑定路径 | [12_resource_table](../../examples/tutorials/12_resource_table) |
+| [12：Resource Table](12-resource-table.md) | Resource Table 能力查询、显式选择、传统 Bind Group 回退 | 当前验证实验 API 边界；v0.60.0 计划收敛为 Suzanne/小型 glTF 场景 | [12_resource_table](../../examples/tutorials/12_resource_table) |
 
 前七个渲染教程复用仓库私有的 `examples/common/application`。它只处理 Window、Renderer 异步初始化、
 Surface、Swapchain、事件循环、Resize、Acquire 与 Present；Shader、资源、命令录制和场景仍留在
