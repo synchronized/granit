@@ -9,7 +9,9 @@
 
 ## 当前计划
 
-当前没有正在实施的版本计划。下一版本将在新的上游需求或可复现性能证据确认后建立。
+- [S-95：0.59.0 Resource Table 实验性 API](S-95-0.59.0-resource-table-experimental-api.md)——建立可选、可回退、
+  可测量的 Resource Table 公共实验 API，复用 Vulkan Bindless 原型，验证 WebGPU 回退和 Tutorial 13；不改变
+  Bind Group 默认路径。
 
 ## 最近完成
 
