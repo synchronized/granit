@@ -554,6 +554,21 @@ granit_result draw_shared_fixture(granit_renderer renderer, granit_frame frame,
   rendering.color_attachments = &color;
   rendering.depth_stencil_attachment = &depth;
   rendering.area = {0, 0, width, height};
+
+  // 专门覆盖异常销毁：Render Pass 未显式结束时，销毁 recorder 也必须闭合原生 Pass。
+  granit_command_recorder abandoned_recorder{};
+  auto abandoned_result = granit_command_recorder_create(renderer, &recorder_desc,
+                                                         &abandoned_recorder);
+  if (abandoned_result == GRANIT_SUCCESS)
+    abandoned_result = granit_command_recorder_begin(renderer, abandoned_recorder);
+  if (abandoned_result == GRANIT_SUCCESS)
+    abandoned_result = granit_command_recorder_begin_rendering(renderer, abandoned_recorder,
+                                                                &rendering);
+  const auto abandoned_destroy_result =
+      granit_command_recorder_destroy(renderer, abandoned_recorder);
+  if (abandoned_result != GRANIT_SUCCESS || abandoned_destroy_result != GRANIT_SUCCESS)
+    return abandoned_result != GRANIT_SUCCESS ? abandoned_result : abandoned_destroy_result;
+
   if (native_result == GRANIT_SUCCESS)
     native_result = granit_command_recorder_begin_rendering(renderer, recorder, &rendering);
   for (std::size_t index = 0; native_result == GRANIT_SUCCESS && index < offsets.size(); ++index) {
