@@ -27,6 +27,7 @@
 #include <granit/renderer/pipeline_warmup.h>
 #include <granit/renderer/readback_batch.h>
 #include <granit/renderer/renderer.h>
+#include <granit/renderer/resource_table.h>
 #include <granit/renderer/sampler.h>
 #include <granit/renderer/shader.h>
 #include <granit/renderer/shader_library.h>
@@ -75,6 +76,19 @@ public:
                                                granit_renderer& renderer);
   [[nodiscard]] granit_result destroy(granit_renderer renderer);
   [[nodiscard]] granit_result get_limits(granit_renderer renderer, granit_renderer_limits& limits);
+  [[nodiscard]] granit_result get_resource_table_capabilities(
+      granit_renderer renderer, granit_resource_table_capabilities& capabilities);
+  [[nodiscard]] granit_result create_resource_table(
+      granit_renderer renderer, const granit_resource_table_desc& desc,
+      granit_resource_table& table);
+  [[nodiscard]] granit_result update_resource_table(
+      granit_renderer renderer, granit_resource_table table,
+      const granit_resource_table_update_desc& update);
+  [[nodiscard]] granit_result update_resource_table_batch(
+      granit_renderer renderer, granit_resource_table table,
+      std::span<const granit_resource_table_update_desc> updates);
+  [[nodiscard]] granit_result destroy_resource_table(granit_renderer renderer,
+                                                     granit_resource_table table);
   [[nodiscard]] granit_result
   get_texture_format_capabilities(granit_renderer renderer, granit_texture_format format,
                                   granit_texture_format_capabilities& capabilities);
@@ -471,6 +485,8 @@ private:
   struct texture_record;
   struct texture_view_record;
   struct sampler_record;
+  struct resource_table_slot;
+  struct resource_table_record;
   struct shader_record;
   struct shader_library_record;
   struct bind_group_layout_record;
@@ -525,6 +541,8 @@ private:
   std::unordered_map<granit_texture, std::shared_ptr<texture_record>> textures_;
   std::unordered_map<granit_texture_view, std::shared_ptr<texture_view_record>> texture_views_;
   std::unordered_map<granit_sampler, std::shared_ptr<sampler_record>> samplers_;
+  std::unordered_map<granit_resource_table, std::shared_ptr<resource_table_record>>
+      resource_tables_;
   std::unordered_map<granit_shader, std::shared_ptr<shader_record>> shaders_;
   std::unordered_map<granit_shader_library, std::shared_ptr<shader_library_record>>
       shader_libraries_;

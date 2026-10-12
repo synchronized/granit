@@ -77,6 +77,7 @@ target_sources(
     core/retirement_queue.cpp
     core/resource_validation.cpp
     renderer/renderer_api.cpp
+    renderer/resource_table_api.cpp
     renderer/async_operation_api.cpp
     renderer/pipeline_api.cpp
     renderer/buffer_api.cpp
@@ -141,6 +142,8 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/render_target.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/resource_types.h"
       "${PROJECT_SOURCE_DIR}/include/granit/renderer/resource_types.hpp"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/resource_table.h"
+      "${PROJECT_SOURCE_DIR}/include/granit/renderer/resource_table.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/core/result.h"
       "${PROJECT_SOURCE_DIR}/include/granit/core/result.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/core/shader_features.h"

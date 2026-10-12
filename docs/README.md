@@ -104,6 +104,7 @@
 ### GPU 资源
 
 - [资源类型总览](reference/resource-types.md)
+- [Resource Table（实验性）](reference/resource-table.md)
 - [Buffer](reference/buffer.md)
 - [Readback Batch](reference/readback-batch.md)
 - [Texture 与 Texture View](reference/texture.md)

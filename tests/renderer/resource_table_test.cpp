@@ -3,7 +3,11 @@
 
 #include "renderer/resource_table.hpp"
 
+#include <array>
 #include <catch2/catch_all.hpp>
+#include <granit/renderer/renderer.hpp>
+#include <granit/renderer/resource_table.hpp>
+#include <granit/renderer/sampler.hpp>
 
 namespace {
 using granit::internal::resource_table;
@@ -54,4 +58,72 @@ TEST_CASE("Resource Table 拒绝容量溢出和重复释放", "[resource_table][
   CHECK(!table.allocate(11, resource_table_type::sampler, 304).has_value());
   CHECK(table.release(*handle, 1) == resource_table_result::success);
   CHECK(table.release(*handle, 1) == resource_table_result::invalid_handle);
+}
+
+TEST_CASE("公共 Resource Table 校验能力、槽位和 Renderer 归属",
+          "[resource_table][public][validation]") {
+  granit::renderer first;
+  const auto first_result = first.initialize({.application_name = "granit-resource-table-first"});
+  if (first_result == granit::result::backend_unavailable ||
+      first_result == granit::result::incompatible_driver ||
+      first_result == granit::result::no_suitable_device)
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(first_result == granit::result::success);
+
+  granit_resource_table_capabilities capabilities = GRANIT_RESOURCE_TABLE_CAPABILITIES_INIT;
+  REQUIRE(granit_renderer_get_resource_table_capabilities(first.native_handle(), &capabilities) ==
+          GRANIT_SUCCESS);
+  CHECK(capabilities.resource_types != 0);
+  CHECK(capabilities.max_samplers > 0);
+
+  granit::sampler sampler;
+  REQUIRE(sampler.initialize(first) == granit::result::success);
+  granit::resource_table table;
+  REQUIRE(table.initialize(first, {.resource_types = GRANIT_RESOURCE_TABLE_RESOURCE_SAMPLER_BIT,
+                                   .sampler_capacity = 1}) == granit::result::success);
+
+  CHECK(table.update({.type = granit::resource_table_resource_type::sampler,
+                     .slot = 0,
+                     .resource = sampler.native_handle()}) == granit::result::success);
+  CHECK(table.update({.type = granit::resource_table_resource_type::sampler,
+                     .slot = 1,
+                     .resource = sampler.native_handle()}) == granit::result::invalid_argument);
+  CHECK(table.update({.type = granit::resource_table_resource_type::sampled_texture_view,
+                     .slot = 0,
+                     .resource = sampler.native_handle()}) == granit::result::invalid_argument);
+
+  granit::renderer second;
+  REQUIRE(second.initialize({.application_name = "granit-resource-table-second"}) ==
+          granit::result::success);
+  granit::sampler foreign_sampler;
+  REQUIRE(foreign_sampler.initialize(second) == granit::result::success);
+  CHECK(table.update({.type = granit::resource_table_resource_type::sampler,
+                     .slot = 0,
+                     .resource = foreign_sampler.native_handle()}) ==
+        granit::result::invalid_handle);
+}
+
+TEST_CASE("公共 Resource Table 批量更新失败时不部分写入",
+          "[resource_table][public][validation]") {
+  granit::renderer renderer;
+  const auto result = renderer.initialize({.application_name = "granit-resource-table-batch"});
+  if (result == granit::result::backend_unavailable ||
+      result == granit::result::incompatible_driver ||
+      result == granit::result::no_suitable_device)
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(result == granit::result::success);
+
+  granit::sampler sampler;
+  REQUIRE(sampler.initialize(renderer) == granit::result::success);
+  granit::resource_table table;
+  REQUIRE(table.initialize(renderer, {.resource_types = GRANIT_RESOURCE_TABLE_RESOURCE_SAMPLER_BIT,
+                                      .sampler_capacity = 1}) == granit::result::success);
+  const std::array updates{
+      granit::resource_table_update{.type = granit::resource_table_resource_type::sampler,
+                                    .slot = 0,
+                                    .resource = sampler.native_handle()},
+      granit::resource_table_update{.type = granit::resource_table_resource_type::sampler,
+                                    .slot = 2,
+                                    .resource = sampler.native_handle()}};
+  CHECK(table.update_batch(updates) == granit::result::invalid_argument);
 }

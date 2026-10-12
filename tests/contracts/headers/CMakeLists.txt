@@ -18,6 +18,7 @@ add_library(
     renderer_h.c
     render_target_h.c
     resource_types_h.c
+    resource_table_h.c
     sampler_h.c
     shader_h.c
     shader_types_h.c
@@ -68,6 +69,7 @@ add_library(
     renderer_hpp.cpp
     render_target_hpp.cpp
     resource_types_hpp.cpp
+    resource_table_hpp.cpp
     sampler_hpp.cpp
     shader_hpp.cpp
     shader_types_hpp.cpp

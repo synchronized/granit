@@ -624,6 +624,15 @@ granit_result renderer_registry::destroy(granit_renderer renderer) {
     }
     std::erase_if(warmed_pipeline_keys_,
                   [&state](const auto& entry) { return entry.second.lock() == state; });
+    for (auto table = resource_tables_.begin(); table != resource_tables_.end();) {
+      if (table->second->owner == state) {
+        static_cast<void>(
+            handles_.erase(table->first, resource_type::resource_table, state->domain()));
+        table = resource_tables_.erase(table);
+      } else {
+        ++table;
+      }
+    }
     for (auto sampler = samplers_.begin(); sampler != samplers_.end();) {
       if (sampler->second->owner == state) {
         native_samplers.push_back(std::move(sampler->second));

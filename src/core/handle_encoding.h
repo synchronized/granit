@@ -39,6 +39,7 @@ enum class handle_type : std::uint8_t {
   readback_batch = 0x15,
   pipeline_warmup_batch = 0x16,
   shader_library = 0x17,
+  resource_table = 0x18,
 
   scene_snapshot = 0x40,
   material = 0x41,
@@ -112,6 +113,7 @@ constexpr std::array registered_handle_types{
     handle_type::readback_batch,
     handle_type::pipeline_warmup_batch,
     handle_type::shader_library,
+    handle_type::resource_table,
     handle_type::scene_snapshot,
     handle_type::material,
     handle_type::render_pipeline,

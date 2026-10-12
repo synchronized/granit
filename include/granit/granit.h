@@ -26,6 +26,7 @@
 #include <granit/renderer/render_target.h>
 #include <granit/renderer/renderer.h>
 #include <granit/renderer/resource_types.h>
+#include <granit/renderer/resource_table.h>
 #include <granit/renderer/sampler.h>
 #include <granit/renderer/shader.h>
 #include <granit/renderer/shader_library.h>

@@ -77,6 +77,20 @@ struct renderer_registry::sampler_record {
   std::unique_ptr<backend_sampler_resource> native;
   granit_compare_operation compare_operation{};
 };
+struct renderer_registry::resource_table_slot {
+  granit_handle resource{GRANIT_NULL_HANDLE};
+  std::uint64_t offset{};
+  std::uint64_t size{};
+};
+struct renderer_registry::resource_table_record {
+  resource_metadata metadata;
+  std::shared_ptr<backend_renderer> owner;
+  granit_resource_table_binding_mode binding_mode{};
+  std::uint32_t resource_types{};
+  std::vector<resource_table_slot> sampled_texture_views;
+  std::vector<resource_table_slot> samplers;
+  std::vector<resource_table_slot> storage_buffers;
+};
 struct renderer_registry::shader_record {
   resource_metadata metadata;
   std::shared_ptr<backend_renderer> owner;
