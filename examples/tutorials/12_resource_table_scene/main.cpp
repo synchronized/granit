@@ -11,6 +11,7 @@
 #include <iostream>
 #include <span>
 #include <string_view>
+#include <vector>
 
 namespace {
 
@@ -22,6 +23,7 @@ int failure(std::string_view operation, granit::result result) {
 class application final : public granit::example::application {
 public:
   void set_smoke_test(bool value) noexcept { smoke_test_ = value; }
+  void set_stress_test(bool value) noexcept { stress_test_ = value; }
 
 private:
   granit::result on_initialize() noexcept override {
@@ -43,6 +45,19 @@ private:
       result = table_.update({.type = granit::resource_table_resource_type::sampler,
                               .slot = 0,
                               .resource = sampler_.native_handle()});
+    }
+    if (result.ok() && stress_test_) {
+      stress_tables_.resize(64);
+      for (auto& table : stress_tables_) {
+        result = table.initialize(renderer_owner(),
+                                  {.resource_types = GRANIT_RESOURCE_TABLE_RESOURCE_SAMPLER_BIT,
+                                   .sampler_capacity = 1});
+        if (result.failed()) break;
+        result = table.update({.type = granit::resource_table_resource_type::sampler,
+                               .slot = 0,
+                               .resource = sampler_.native_handle()});
+        if (result.failed()) break;
+      }
     }
     return result;
   }
@@ -68,8 +83,8 @@ private:
     auto result = app_window().get_state(state);
     if (result.ok()) {
       result = runtime_.begin_frame(state, frame.delta_seconds,
-                                    {.name = "12 Resource Table",
-                                     .description = "Resource Table capability and fallback",
+                                    {.name = "12 Resource Table Scene",
+                                     .description = "Resource Table scene and pressure validation",
                                      .frame = rendered_frames()});
     }
     if (result.ok()) {
@@ -77,6 +92,9 @@ private:
                   limits_.supports_bindless_descriptor_indexing() ? "yes" : "no");
       ImGui::Text("Resource Table support: %s", resource_table_support_name(table_capabilities_.support));
       ImGui::Text("Resource Table sampler slot 0: populated");
+      ImGui::Text("Pressure tables: %zu", stress_tables_.size());
+      if (stress_test_)
+        ImGui::TextUnformatted("Stress mode: 64 tables with one sampler slot");
       ImGui::Text("Default path: traditional Bind Group");
       ImGui::Text("Explicit Resource Table binding remains experimental");
       result = runtime_.end_frame();
@@ -116,8 +134,10 @@ private:
   granit::renderer_limits limits_{};
   granit::resource_table_capabilities table_capabilities_{};
   granit::resource_table table_;
+  std::vector<granit::resource_table> stress_tables_;
   granit::sampler sampler_;
   bool smoke_test_{};
+  bool stress_test_{};
 
   static const char* resource_table_support_name(granit::resource_table_support support) noexcept {
     switch (support) {
@@ -137,10 +157,12 @@ application app;
 } // namespace
 
 int main(int argc, char** argv) {
-  const bool smoke = argc == 2 && std::string_view{argv[1]} == "--smoke-test";
+  const bool smoke = argc >= 2 && std::string_view{argv[1]} == "--smoke-test";
+  const bool stress = argc >= 2 && std::string_view{argv[1]} == "--stress-test";
   app.set_smoke_test(smoke);
+  app.set_stress_test(stress);
   const auto result = app.run({.executable_path = argc > 0 ? argv[0] : "",
-                               .title = "Granit Resource Table",
+                               .title = "Granit Resource Table Scene",
                                .renderer = {.application_name = "Granit Resource Table",
                                             .presentation = granit::presentation_mode::enabled},
                                .swapchain = {},
