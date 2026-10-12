@@ -74,10 +74,16 @@ archive_error encode_material_archive(const material_archive_encode_desc& desc,
   if (desc.target_environment != material_archive_target_cross_backend) {
     return archive_error::unsupported_target;
   }
-  if (desc.binding_model != material_archive_binding_model_bind_group) {
+  if (desc.binding_model != material_archive_binding_model_bind_group &&
+      desc.binding_model != material_archive_binding_model_resource_table) {
     return archive_error::unsupported_binding_model;
   }
-  if (desc.required_renderer_features != 0) {
+  if (desc.required_renderer_features != 0 &&
+      (desc.required_renderer_features & ~material_archive_feature_resource_table) != 0) {
+    return archive_error::unsupported_renderer_features;
+  }
+  if (desc.binding_model == material_archive_binding_model_resource_table &&
+      desc.required_renderer_features != material_archive_feature_resource_table) {
     return archive_error::unsupported_renderer_features;
   }
   if (desc.sections.size() > material_archive_max_sections) {
@@ -219,10 +225,16 @@ archive_error parse_material_archive_layout(std::span<const std::byte> bytes,
   if (parsed.header.target_environment != material_archive_target_cross_backend) {
     return archive_error::unsupported_target;
   }
-  if (parsed.header.binding_model != material_archive_binding_model_bind_group) {
+  if (parsed.header.binding_model != material_archive_binding_model_bind_group &&
+      parsed.header.binding_model != material_archive_binding_model_resource_table) {
     return archive_error::unsupported_binding_model;
   }
-  if (parsed.header.required_renderer_features != 0) {
+  if (parsed.header.required_renderer_features != 0 &&
+      parsed.header.required_renderer_features != material_archive_feature_resource_table) {
+    return archive_error::unsupported_renderer_features;
+  }
+  if (parsed.header.binding_model == material_archive_binding_model_resource_table &&
+      parsed.header.required_renderer_features != material_archive_feature_resource_table) {
     return archive_error::unsupported_renderer_features;
   }
   std::memcpy(parsed.header.content_hash.data(), bytes.data() + 64,

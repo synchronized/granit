@@ -335,8 +335,15 @@ archive_error encode_material_package_archive(const material_package& package,
         material_archive_section_source{archive_section_type::pipeline_states,
                                         archive_section_required, 8, pipeline_states}};
     return encode_material_archive({.target_environment = material_archive_target_cross_backend,
-                                    .binding_model = material_archive_binding_model_bind_group,
-                                    .required_renderer_features = 0,
+                                    .binding_model = package.binding_model() ==
+                                                         package_binding_model::resource_table
+                                                     ? material_archive_binding_model_resource_table
+                                                     : material_archive_binding_model_bind_group,
+                                    .required_renderer_features =
+                                        package.binding_model() ==
+                                                package_binding_model::resource_table
+                                            ? material_archive_feature_resource_table
+                                            : 0,
                                     .sections = sections},
                                    bytes);
   } catch (const std::bad_alloc&) {
@@ -378,9 +385,14 @@ archive_error decode_material_package_archive(std::span<const std::byte> bytes,
     material_package_desc desc;
     desc.format_version = material_package_format_version;
     desc.target = package_target::cross_backend;
-    desc.binding_model = package_binding_model::bind_group;
+    desc.binding_model = layout.header.binding_model == material_archive_binding_model_resource_table
+                             ? package_binding_model::resource_table
+                             : package_binding_model::bind_group;
     desc.binding_groups = read_u32(pipeline_states, 24);
-    desc.required_renderer_features = 0;
+    desc.required_renderer_features =
+        desc.binding_model == package_binding_model::resource_table
+            ? package_feature_bindless_resource_table
+            : 0;
 
     desc.metadata.constant_buffer_size = read_u32(metadata, 0);
     const auto parameter_count = read_u32(metadata, 4);

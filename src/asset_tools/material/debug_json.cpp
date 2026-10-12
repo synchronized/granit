@@ -287,7 +287,10 @@ archive_error export_material_archive_debug_json(std::span<const std::byte> byte
            << ",\n    \"file_size\": " << layout.header.file_size << ",\n    \"content_hash\": ";
     write_hash(stream, layout.header.content_hash);
     stream << "\n  },\n  \"requirements\": {\n    \"target_environment\": \"cross_backend\",\n"
-              "    \"binding_model\": \"bind_group\",\n    \"binding_groups\": [";
+              "    \"binding_model\": \""
+           << (package.binding_model() == package_binding_model::resource_table ? "resource_table"
+                                                                                 : "bind_group")
+           << "\",\n    \"binding_groups\": [";
     constexpr std::array groups{std::pair{package_binding_group_frame, "frame"},
                                 std::pair{package_binding_group_material, "material"},
                                 std::pair{package_binding_group_object, "object"},

@@ -24,6 +24,8 @@ inline constexpr std::uint32_t material_archive_max_alignment = 4096;
 inline constexpr std::uint64_t material_archive_max_file_size = UINT64_C(1024) * 1024 * 1024;
 inline constexpr std::uint32_t material_archive_target_cross_backend = 2;
 inline constexpr std::uint32_t material_archive_binding_model_bind_group = 1;
+inline constexpr std::uint32_t material_archive_binding_model_resource_table = 2;
+inline constexpr std::uint64_t material_archive_feature_resource_table = UINT64_C(1) << 0;
 
 enum class archive_section_type : std::uint32_t {
   string_table = 1,

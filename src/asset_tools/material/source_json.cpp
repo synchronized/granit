@@ -545,11 +545,17 @@ parse_material_source_json(std::string_view json,
       return source_json_error::invalid_schema;
     }
     if (version != material_source_format_version || *target != "cross_backend" ||
-        *binding != "bind_group") {
+        (*binding != "bind_group" && *binding != "resource_table")) {
       return source_json_error::unsupported_value;
     }
     material_package_desc desc;
     desc.format_version = material_package_format_version;
+    desc.binding_model = *binding == "resource_table" ? package_binding_model::resource_table
+                                                       : package_binding_model::bind_group;
+    desc.required_renderer_features =
+        desc.binding_model == package_binding_model::resource_table
+            ? package_feature_bindless_resource_table
+            : 0;
     desc.binding_groups = 0;
     constexpr std::array group_names{
         std::pair{"frame", package_binding_group_frame},

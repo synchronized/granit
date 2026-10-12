@@ -145,7 +145,8 @@ package_error material_package::build(material_package_desc desc, material_packa
   if (desc.target != package_target::cross_backend) {
     return package_error::unsupported_target;
   }
-  if (desc.binding_model != package_binding_model::bind_group) {
+  if (desc.binding_model != package_binding_model::bind_group &&
+      desc.binding_model != package_binding_model::resource_table) {
     return package_error::unsupported_binding_model;
   }
   const auto base_groups = package_binding_group_frame | package_binding_group_material;
@@ -154,7 +155,16 @@ package_error material_package::build(material_package_desc desc, material_packa
       desc.binding_groups != package_binding_groups_all) {
     return package_error::invalid_binding_groups;
   }
-  if (desc.required_renderer_features != 0) {
+  if (desc.required_renderer_features != 0 &&
+      (desc.required_renderer_features & ~package_feature_bindless_resource_table) != 0) {
+    return package_error::unsupported_renderer_features;
+  }
+  if (desc.binding_model == package_binding_model::resource_table &&
+      (desc.required_renderer_features & package_feature_bindless_resource_table) == 0) {
+    return package_error::unsupported_renderer_features;
+  }
+  if (desc.binding_model != package_binding_model::resource_table &&
+      (desc.required_renderer_features & package_feature_bindless_resource_table) != 0) {
     return package_error::unsupported_renderer_features;
   }
 

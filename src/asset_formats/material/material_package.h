@@ -29,7 +29,7 @@ enum class package_target : std::uint8_t {
 
 enum class package_binding_model : std::uint8_t {
   bind_group,
-  bindless,
+  resource_table,
 };
 
 using package_binding_groups = std::uint32_t;

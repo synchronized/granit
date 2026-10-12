@@ -56,16 +56,18 @@ TEST_CASE("材质包规范化变体并按稳定键查找") {
   CHECK(package.find(make_feature_id("shadow"), found->key) == nullptr);
 }
 
-TEST_CASE("材质包拒绝不兼容版本与未实现绑定模型") {
+TEST_CASE("材质包校验绑定模型和版本") {
   material_package package;
   material_package_desc desc;
   desc.format_version = material_package_format_version + 1;
   CHECK(material_package::build(std::move(desc), package) == package_error::unsupported_version);
 
   desc = {};
-  desc.binding_model = package_binding_model::bindless;
-  CHECK(material_package::build(std::move(desc), package) ==
-        package_error::unsupported_binding_model);
+  desc.binding_model = package_binding_model::resource_table;
+  desc.required_renderer_features = package_feature_bindless_resource_table;
+  desc.variants.push_back(variant({}));
+  CHECK(material_package::build(std::move(desc), package) == package_error::none);
+  CHECK(package.binding_model() == package_binding_model::resource_table);
 
   desc = {};
   desc.binding_groups = package_binding_group_frame | package_binding_group_lighting;
