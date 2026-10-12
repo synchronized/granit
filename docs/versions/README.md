@@ -12,15 +12,16 @@
 
 ## 当前版本
 
-[v0.58.0：后端诊断闭环与硬件捕获](v0.58.0.md) 已发布；[v0.59.0：Resource Table 实验性 API](v0.59.0.md)
+[v0.59.0：Resource Table 实验性 API](v0.59.0.md) 已发布；[v0.60.0：Resource Table Shader 集成与真实压力](v0.60.0.md)
 正在规划。
 
 ## 计划版本
 
-- [v0.59.0：Resource Table 实验性 API](v0.59.0.md)
+- [v0.60.0：Resource Table Shader 集成与真实压力](v0.60.0.md)
 
 ## 已发布版本
 
+- [v0.59.0：Resource Table 实验性 API](v0.59.0.md)
 - [v0.58.0：后端诊断闭环与硬件捕获](v0.58.0.md)
 - [v0.57.0：诊断硬化与跨后端回归](v0.57.0.md)
 - [v0.56.0：帧诊断与 RenderDoc 协作](v0.56.0.md)

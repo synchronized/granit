@@ -10,7 +10,7 @@
 ## 当前阶段
 
 Granit 已形成桌面 Vulkan、浏览器 WebGPU、C11 ABI、C++20 RAII、Window、RenderPipeline 与
-AssetTools 的完整闭环。当前仍处于 0.x，v0.58.0 已发布并完成后端诊断闭环。Bindless 继续作为
+AssetTools 的完整闭环。当前仍处于 0.x，v0.59.0 已发布并完成 Resource Table 实验性公共契约。Bindless 继续作为
 Vulkan 内部实验。
 不改变 Vulkan 驱动由平台提供的边界。
 
@@ -30,9 +30,13 @@ Vulkan 内部实验。
 
 ## 当前计划
 
-[v0.59.0](versions/v0.59.0.md) 由 [S-95](plans/S-95-0.59.0-resource-table-experimental-api.md)
-规划：建立可选、可回退、可测量的 Resource Table 实验性 API，复用 Vulkan Bindless 原型，验证 WebGPU
-回退、Shader 变体和 Tutorial 12；不改变 Bind Group 默认路径。
+[v0.60.0](versions/v0.60.0.md) 由 [S-96](plans/S-96-0.60.0-resource-table-shader-and-pressure.md)
+规划：让 Resource Table 进入真实 Shader/Material 采样路径，补齐 Tutorial 12 可见纹理结果、WebGPU
+合法回退、在途更新保护和跨平台压力数据；不改变 Bind Group 默认路径。
+
+[v0.59.0](versions/v0.59.0.md) 已由 [S-95](plans/S-95-0.59.0-resource-table-experimental-api.md)
+完成：建立可选、可回退、可测量的 Resource Table 实验性公共 API，复用 Vulkan Bindless 原型，
+不改变 Bind Group 默认路径。
 
 [v0.58.0](versions/v0.58.0.md) 已由 [S-94](plans/S-94-0.58.0-backend-diagnostics-and-capture.md)
 完成：补齐 WebGPU/Vulkan 诊断回归，固定 Windows Vulkan 硬件的 RenderDoc CLI 捕获入口，并保留
