@@ -8,6 +8,15 @@
 
 ## Unreleased
 
+## 0.60.0 - 2026-10-12
+
+- 完成实验性 Resource Table 绑定模型与 Material 公共入口接线；
+- Vulkan 原生路径绑定 Resource Table，WebGPU 和不支持设备合法回退到 Bind Group；
+- 增加 GPU 完成序列保护，拒绝在途 Resource Table 更新；
+- 将 Tutorial 12 收敛为 Suzanne/多纹理 Resource Table 场景，并增加 64 表压力入口；
+- Windows Clang 全量 112 项测试和 Emscripten Tutorial 12 目标构建通过；
+- 后端分化的 Resource Table 数组 Shader 实际采样延期到后续版本，不改变默认 Bind Group 路径。
+
 ## 0.59.0 - 2026-10-12
 
 ### 新增
