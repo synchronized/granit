@@ -23,6 +23,9 @@
 - [S-92：0.56.0 帧诊断与 RenderDoc 协作](S-92-0.56.0-frame-diagnostics-and-renderdoc.md)——增加可选 RenderDoc
   单帧捕获、Vulkan 标记和跨后端 Frame Trace，不引入 RenderDoc/Vulkan 公共依赖。
 
+- [S-88：0.52.0 真实绑定压力与 Resource Table 闸门](S-88-0.52.0-binding-pressure-and-resource-table-gate.md)——
+  补齐真实 Shader 采样压力证据，再决定是否进入 Resource Table 原型。
+
 - [S-91：0.55.0 Bindless 真实压力与边界复评](S-91-0.55.0-bindless-pressure-and-boundary.md)——完成
   Descriptor/CPU 压力、GPU 时间戳、容量耗尽和跨平台回退证据，并发布 `v0.55.0`；不新增公共 Bindless ABI。
 
