@@ -53,7 +53,7 @@ if ($versionDoc -match '\*\*规划中[。*]') {
   throw "版本文档仍处于规划阶段，请先完成发布候选收口：$versionDocPath"
 }
 if ($versionDoc -notmatch '(?m)^## 发布门槛') {
-  throw "版本文档缺少“发布门槛”章节：$versionDocPath"
+  throw "版本文档缺少[发布门槛]章节：$versionDocPath"
 }
 $changelog = Get-Content -Raw -Encoding UTF8 CHANGELOG.md
 $changelogHeading = "## $Version - "
@@ -89,7 +89,7 @@ if ($recordPaths.Count -eq 0) {
 }
 $recordDoc = Get-Content -Raw -Encoding UTF8 $recordPaths[0].FullName
 if ($recordDoc -notmatch '(?m)^## 发布状态') {
-  throw "版本验收记录缺少“发布状态”章节：$($recordPaths[0].Name)"
+  throw "版本验收记录缺少[发布状态]章节：$($recordPaths[0].Name)"
 }
 
 git fetch origin main --quiet
