@@ -32,7 +32,7 @@ Vulkan 内部实验。
 
 [v0.59.0](versions/v0.59.0.md) 由 [S-95](plans/S-95-0.59.0-resource-table-experimental-api.md)
 规划：建立可选、可回退、可测量的 Resource Table 实验性 API，复用 Vulkan Bindless 原型，验证 WebGPU
-回退、Shader 变体和 Tutorial 13；不改变 Bind Group 默认路径。
+回退、Shader 变体和 Tutorial 12；不改变 Bind Group 默认路径。
 
 [v0.58.0](versions/v0.58.0.md) 已由 [S-94](plans/S-94-0.58.0-backend-diagnostics-and-capture.md)
 完成：补齐 WebGPU/Vulkan 诊断回归，固定 Windows Vulkan 硬件的 RenderDoc CLI 捕获入口，并保留

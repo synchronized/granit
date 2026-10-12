@@ -51,8 +51,8 @@ private:
     auto result = app_window().get_state(state);
     if (result.ok()) {
       result = runtime_.begin_frame(state, frame.delta_seconds,
-                                    {.name = "12 Bindless Probe",
-                                     .description = "Descriptor Indexing capability and fallback",
+                                    {.name = "12 Resource Table",
+                                     .description = "Resource Table capability and fallback",
                                      .frame = rendered_frames()});
     }
     if (result.ok()) {
@@ -106,8 +106,8 @@ int main(int argc, char** argv) {
   const bool smoke = argc == 2 && std::string_view{argv[1]} == "--smoke-test";
   app.set_smoke_test(smoke);
   const auto result = app.run({.executable_path = argc > 0 ? argv[0] : "",
-                               .title = "Granit Bindless Probe",
-                               .renderer = {.application_name = "Granit Bindless Probe",
+                               .title = "Granit Resource Table",
+                               .renderer = {.application_name = "Granit Resource Table",
                                             .presentation = granit::presentation_mode::enabled},
                                .swapchain = {},
                                .smoke_test = smoke});
