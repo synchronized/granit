@@ -42,13 +42,14 @@ std::uint32_t resource_type_bit(std::uint32_t type) noexcept {
 
 granit_result renderer_registry::get_resource_table_capabilities(
     granit_renderer renderer, granit_resource_table_capabilities& capabilities) {
-  const auto state = acquire_backend(renderer);
-  if (!state) return GRANIT_ERROR_INVALID_HANDLE;
+  const auto interfaces = acquire_backend_interfaces(renderer);
+  if (!interfaces) return GRANIT_ERROR_INVALID_HANDLE;
   const bool has_descriptor_indexing =
-      (state->capabilities().renderer_features &
+      (interfaces->renderer->capabilities().renderer_features &
        GRANIT_RENDERER_FEATURE_BINDLESS_DESCRIPTOR_INDEXING_BIT) != 0;
-  capabilities.support = has_descriptor_indexing ? GRANIT_RESOURCE_TABLE_SUPPORT_LOGICAL
-                                                  : GRANIT_RESOURCE_TABLE_SUPPORT_FALLBACK;
+  capabilities.support = has_descriptor_indexing && interfaces->resource_tables
+                             ? GRANIT_RESOURCE_TABLE_SUPPORT_NATIVE
+                             : GRANIT_RESOURCE_TABLE_SUPPORT_FALLBACK;
   capabilities.resource_types = all_resource_types;
   capabilities.max_sampled_texture_views = maximum_capacity;
   capabilities.max_samplers = maximum_capacity;
@@ -69,7 +70,6 @@ granit_result renderer_registry::create_resource_table(
   const auto capability_result = get_resource_table_capabilities(renderer, capabilities);
   if (capability_result != GRANIT_SUCCESS) return capability_result;
   if (desc.binding_mode == GRANIT_RESOURCE_TABLE_BINDING_MODE_EXPLICIT &&
-      capabilities.support != GRANIT_RESOURCE_TABLE_SUPPORT_LOGICAL &&
       capabilities.support != GRANIT_RESOURCE_TABLE_SUPPORT_NATIVE) {
     return GRANIT_ERROR_UNSUPPORTED;
   }
@@ -90,11 +90,18 @@ granit_result renderer_registry::create_resource_table(
 
   auto record = std::make_shared<resource_table_record>();
   record->owner = interfaces->renderer;
+  record->resource_api = interfaces->resource_tables;
   record->binding_mode = desc.binding_mode;
   record->resource_types = desc.resource_types;
   record->sampled_texture_views.resize(desc.sampled_texture_view_capacity);
   record->samplers.resize(desc.sampler_capacity);
   record->storage_buffers.resize(desc.storage_buffer_capacity);
+  if (record->resource_api) {
+    record->native = record->resource_api->allocate_resource_table_resource();
+    if (!record->native) return GRANIT_ERROR_OUT_OF_MEMORY;
+    const auto result = record->resource_api->create_resource_table(desc, *record->native);
+    if (result != GRANIT_SUCCESS) return result;
+  }
 
   std::lock_guard lock{mutex_};
   if (backend_renderers_.find(renderer) == backend_renderers_.end())
@@ -181,6 +188,27 @@ granit_result renderer_registry::update_resource_table_batch(
   }
   for (std::size_t index = 0; index < updates.size(); ++index) {
     const auto& update = updates[index];
+    if (record.native) {
+      backend_resource* native_resource = nullptr;
+      if (update.resource != GRANIT_NULL_HANDLE) {
+        switch (update.type) {
+        case GRANIT_RESOURCE_TABLE_RESOURCE_SAMPLED_TEXTURE_VIEW:
+          native_resource = texture_views_.at(update.resource)->native.get();
+          break;
+        case GRANIT_RESOURCE_TABLE_RESOURCE_SAMPLER:
+          native_resource = samplers_.at(update.resource)->native.get();
+          break;
+        case GRANIT_RESOURCE_TABLE_RESOURCE_STORAGE_BUFFER:
+          native_resource = buffers_.at(update.resource)->native.get();
+          break;
+        default:
+          return GRANIT_ERROR_INVALID_ARGUMENT;
+        }
+      }
+      const auto native_result = record.resource_api->update_resource_table(
+          *record.native, update, native_resource);
+      if (native_result != GRANIT_SUCCESS) return native_result;
+    }
     auto& slot = (*validated[index].slots)[validated[index].slot];
     slot.resource = update.resource;
     slot.offset = update.offset;

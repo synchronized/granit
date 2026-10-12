@@ -9,9 +9,9 @@ Bindless。
 
 ## 当前状态
 
-当前阶段已提供 C/C++ 句柄、能力查询、槽位更新和生命周期校验。`LOGICAL` 表示 CPU 侧契约可用；
-它不表示 Shader 已经可以从 GPU 读取该表。GPU descriptor、Pipeline Layout 和 Command Recorder
-绑定将在 v0.59.0 后续阶段接入，完成前不得把该 API 用作生产渲染路径。
+当前阶段已提供 C/C++ 句柄、能力查询、槽位更新和生命周期校验。支持 Descriptor Indexing 的
+Vulkan 后端会报告 `NATIVE` 并更新真实 descriptor；`LOGICAL` 只表示 CPU 侧契约可用。Pipeline
+Layout、Command Recorder 绑定和 Shader 读取仍在实施中，完成前不得把该 API 用作生产渲染路径。
 
 ## 使用边界
 

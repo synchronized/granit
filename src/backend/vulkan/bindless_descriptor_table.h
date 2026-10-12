@@ -25,13 +25,17 @@ public:
 
   [[nodiscard]] granit_result initialize(const vulkan_device& device,
                                          std::uint32_t sampled_texture_capacity,
-                                         std::uint32_t sampler_capacity) noexcept;
+                                         std::uint32_t sampler_capacity,
+                                         std::uint32_t storage_buffer_capacity) noexcept;
   void destroy(const vulkan_device& device) noexcept;
   [[nodiscard]] granit_result update_sampled_texture(const vulkan_device& device,
                                                      std::uint32_t index,
                                                      VkImageView image_view) noexcept;
   [[nodiscard]] granit_result update_sampler(const vulkan_device& device, std::uint32_t index,
                                              VkSampler sampler) noexcept;
+  [[nodiscard]] granit_result update_storage_buffer(const vulkan_device& device,
+                                                    std::uint32_t index, VkBuffer buffer,
+                                                    VkDeviceSize offset, VkDeviceSize size) noexcept;
 
   [[nodiscard]] bool valid() const noexcept { return descriptor_set_ != VK_NULL_HANDLE; }
   [[nodiscard]] VkDescriptorSetLayout layout() const noexcept { return layout_; }
@@ -43,6 +47,7 @@ private:
   VkDescriptorSet descriptor_set_{VK_NULL_HANDLE};
   std::uint32_t sampled_texture_capacity_{};
   std::uint32_t sampler_capacity_{};
+  std::uint32_t storage_buffer_capacity_{};
 };
 
 } // namespace granit::detail

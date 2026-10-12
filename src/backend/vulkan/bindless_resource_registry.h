@@ -20,7 +20,7 @@ class vulkan_device;
 class vulkan_bindless_resource_registry {
 public:
   explicit vulkan_bindless_resource_registry(std::uint64_t owner)
-      : texture_table_(0), sampler_table_(0), owner_(owner) {}
+      : texture_table_(0), sampler_table_(0), storage_buffer_table_(0), owner_(owner) {}
   ~vulkan_bindless_resource_registry() = default;
 
   vulkan_bindless_resource_registry(const vulkan_bindless_resource_registry&) = delete;
@@ -28,7 +28,8 @@ public:
 
   [[nodiscard]] granit_result initialize(const vulkan_device& device,
                                          std::uint32_t sampled_texture_capacity,
-                                         std::uint32_t sampler_capacity) noexcept;
+                                         std::uint32_t sampler_capacity,
+                                         std::uint32_t storage_buffer_capacity) noexcept;
   void destroy(const vulkan_device& device) noexcept;
 
   [[nodiscard]] granit_result register_sampled_texture(const vulkan_device& device,
@@ -38,11 +39,31 @@ public:
   [[nodiscard]] granit_result register_sampler(const vulkan_device& device, VkSampler sampler,
                                                std::uint64_t resource,
                                                std::uint64_t& handle) noexcept;
+  [[nodiscard]] granit_result register_storage_buffer(const vulkan_device& device,
+                                                      VkBuffer buffer, std::uint64_t resource,
+                                                      std::uint64_t offset, std::uint64_t size,
+                                                      std::uint64_t& handle) noexcept;
+  [[nodiscard]] granit_result update_sampled_texture_at(const vulkan_device& device,
+                                                        std::uint32_t index,
+                                                        VkImageView image_view) noexcept {
+    return descriptors_.update_sampled_texture(device, index, image_view);
+  }
+  [[nodiscard]] granit_result update_sampler_at(const vulkan_device& device, std::uint32_t index,
+                                                VkSampler sampler) noexcept {
+    return descriptors_.update_sampler(device, index, sampler);
+  }
+  [[nodiscard]] granit_result update_storage_buffer_at(const vulkan_device& device,
+                                                       std::uint32_t index, VkBuffer buffer,
+                                                       std::uint64_t offset,
+                                                       std::uint64_t size) noexcept {
+    return descriptors_.update_storage_buffer(device, index, buffer, offset, size);
+  }
   [[nodiscard]] granit_result release(std::uint64_t handle, internal::resource_table_type type,
                                       std::uint64_t retire_after) noexcept;
   void collect(std::uint64_t completed) noexcept {
     texture_table_.collect(completed);
     sampler_table_.collect(completed);
+    storage_buffer_table_.collect(completed);
   }
 
   [[nodiscard]] std::uint32_t sampled_texture_capacity() const noexcept {
@@ -50,6 +71,9 @@ public:
   }
   [[nodiscard]] std::uint32_t sampler_capacity() const noexcept {
     return sampler_table_.capacity();
+  }
+  [[nodiscard]] std::uint32_t storage_buffer_capacity() const noexcept {
+    return storage_buffer_table_.capacity();
   }
   [[nodiscard]] VkDescriptorSetLayout layout() const noexcept { return descriptors_.layout(); }
   [[nodiscard]] VkDescriptorSet descriptor_set() const noexcept {
@@ -64,6 +88,7 @@ private:
 
   internal::resource_table texture_table_;
   internal::resource_table sampler_table_;
+  internal::resource_table storage_buffer_table_;
   std::uint64_t owner_{};
   vulkan_bindless_descriptor_table descriptors_;
 };

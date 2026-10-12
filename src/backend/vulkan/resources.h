@@ -7,8 +7,11 @@
 #include <memory>
 #include <volk.h>
 
+#include <granit/renderer/resource_table.h>
+
 #include "backend/contracts/resources.h"
 #include "backend/vulkan/command_recorder.h"
+#include "backend/vulkan/bindless_resource_registry.h"
 #include "backend/vulkan/memory_allocator.h"
 #include "backend/vulkan/swapchain.h"
 #include "backend/vulkan/timestamp_query.h"
@@ -69,6 +72,23 @@ public:
 private:
   std::shared_ptr<vulkan_renderer_state> renderer_;
   VkSampler native_{VK_NULL_HANDLE};
+};
+
+class vulkan_resource_table_resource final : public backend_resource_table_resource {
+public:
+  explicit vulkan_resource_table_resource(std::shared_ptr<vulkan_renderer_state> renderer) noexcept;
+  ~vulkan_resource_table_resource() override;
+
+  [[nodiscard]] granit_result initialize(const granit_resource_table_desc& desc) noexcept;
+  [[nodiscard]] granit_result update(const granit_resource_table_update_desc& update,
+                                     backend_resource* resource) noexcept;
+  [[nodiscard]] const vulkan_bindless_resource_registry& registry() const noexcept {
+    return registry_;
+  }
+
+private:
+  std::shared_ptr<vulkan_renderer_state> renderer_;
+  vulkan_bindless_resource_registry registry_;
 };
 
 class vulkan_shader_resource final : public backend_shader_resource {

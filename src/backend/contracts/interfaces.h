@@ -27,6 +27,7 @@ struct backend_interfaces {
   std::shared_ptr<backend_renderer> renderer;
   std::shared_ptr<backend_diagnostic_renderer> diagnostics;
   std::shared_ptr<backend_resource_renderer> resources;
+  std::shared_ptr<backend_resource_table_renderer> resource_tables;
   std::shared_ptr<backend_presentation_renderer> presentation;
   std::shared_ptr<backend_queue> queue;
   std::shared_ptr<backend_command_renderer> commands;
@@ -55,6 +56,8 @@ discover_backend_interfaces(const std::shared_ptr<backend_renderer>& renderer) {
   interfaces.renderer = renderer;
   interfaces.diagnostics = std::dynamic_pointer_cast<backend_diagnostic_renderer>(renderer);
   interfaces.resources = std::dynamic_pointer_cast<backend_resource_renderer>(renderer);
+  interfaces.resource_tables =
+      std::dynamic_pointer_cast<backend_resource_table_renderer>(renderer);
   interfaces.presentation = std::dynamic_pointer_cast<backend_presentation_renderer>(renderer);
   interfaces.queue = std::dynamic_pointer_cast<backend_queue>(renderer);
   interfaces.commands = std::dynamic_pointer_cast<backend_command_renderer>(renderer);

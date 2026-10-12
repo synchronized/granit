@@ -44,6 +44,22 @@ std::unique_ptr<backend_sampler_resource> vulkan_renderer_state::allocate_sample
   return std::make_unique<vulkan_sampler_resource>(shared_from_this());
 }
 
+std::unique_ptr<backend_resource_table_resource>
+vulkan_renderer_state::allocate_resource_table_resource() {
+  return std::make_unique<vulkan_resource_table_resource>(shared_from_this());
+}
+
+granit_result vulkan_renderer_state::create_resource_table(
+    const granit_resource_table_desc& desc, backend_resource_table_resource& table) noexcept {
+  return static_cast<vulkan_resource_table_resource&>(table).initialize(desc);
+}
+
+granit_result vulkan_renderer_state::update_resource_table(
+    backend_resource_table_resource& table, const granit_resource_table_update_desc& update,
+    backend_resource* resource) noexcept {
+  return static_cast<vulkan_resource_table_resource&>(table).update(update, resource);
+}
+
 std::unique_ptr<backend_shader_resource> vulkan_renderer_state::allocate_shader_resource() {
   return std::make_unique<vulkan_shader_resource>(shared_from_this());
 }

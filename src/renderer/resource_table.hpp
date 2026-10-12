@@ -18,7 +18,7 @@ enum class resource_table_result : std::uint8_t {
   capacity_exhausted,
 };
 
-enum class resource_table_type : std::uint8_t { texture_view, sampler };
+enum class resource_table_type : std::uint8_t { texture_view, sampler, storage_buffer };
 
 struct resource_table_handle {
   std::uint64_t value{};

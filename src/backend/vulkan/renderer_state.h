@@ -55,6 +55,7 @@ namespace granit::detail {
 class vulkan_renderer_state final : public backend_renderer,
                                     public backend_diagnostic_renderer,
                                     public backend_resource_renderer,
+                                    public backend_resource_table_renderer,
                                     public backend_presentation_renderer,
                                     public backend_queue,
                                     public backend_command_renderer,
@@ -101,6 +102,14 @@ public:
   [[nodiscard]] std::unique_ptr<backend_texture_view_resource>
   allocate_texture_view_resource() override;
   [[nodiscard]] std::unique_ptr<backend_sampler_resource> allocate_sampler_resource() override;
+  [[nodiscard]] std::unique_ptr<backend_resource_table_resource>
+  allocate_resource_table_resource() override;
+  [[nodiscard]] granit_result create_resource_table(
+      const granit_resource_table_desc& desc,
+      backend_resource_table_resource& table) noexcept override;
+  [[nodiscard]] granit_result update_resource_table(
+      backend_resource_table_resource& table, const granit_resource_table_update_desc& update,
+      backend_resource* resource) noexcept override;
   [[nodiscard]] std::unique_ptr<backend_shader_resource> allocate_shader_resource() override;
   [[nodiscard]] std::unique_ptr<backend_bind_group_layout_resource>
   allocate_bind_group_layout_resource() override;

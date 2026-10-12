@@ -85,6 +85,8 @@ struct renderer_registry::resource_table_slot {
 struct renderer_registry::resource_table_record {
   resource_metadata metadata;
   std::shared_ptr<backend_renderer> owner;
+  std::shared_ptr<backend_resource_table_renderer> resource_api;
+  std::unique_ptr<backend_resource_table_resource> native;
   granit_resource_table_binding_mode binding_mode{};
   std::uint32_t resource_types{};
   std::vector<resource_table_slot> sampled_texture_views;

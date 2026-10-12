@@ -13,6 +13,7 @@
 #include <granit/renderer/pipeline.h>
 #include <granit/renderer/sampler.h>
 #include <granit/renderer/texture.h>
+#include <granit/renderer/resource_table.h>
 
 #include "backend/contracts/binding.h"
 #include "backend/contracts/readback.h"
@@ -84,6 +85,24 @@ public:
   create_compute_pipeline(backend_pipeline_layout_resource& layout,
                           backend_shader_resource& compute_shader, const char* compute_entry,
                           backend_compute_pipeline_resource& pipeline) noexcept = 0;
+};
+
+/** 可选 Resource Table 后端能力；不支持的后端不加入 HAL 快照。 */
+class backend_resource_table_renderer {
+public:
+  backend_resource_table_renderer() = default;
+  virtual ~backend_resource_table_renderer() = default;
+  backend_resource_table_renderer(const backend_resource_table_renderer&) = delete;
+  backend_resource_table_renderer& operator=(const backend_resource_table_renderer&) = delete;
+
+  [[nodiscard]] virtual std::unique_ptr<backend_resource_table_resource>
+  allocate_resource_table_resource() = 0;
+  [[nodiscard]] virtual granit_result create_resource_table(
+      const granit_resource_table_desc& desc,
+      backend_resource_table_resource& table) noexcept = 0;
+  [[nodiscard]] virtual granit_result update_resource_table(
+      backend_resource_table_resource& table, const granit_resource_table_update_desc& update,
+      backend_resource* resource) noexcept = 0;
 };
 
 } // namespace granit::detail
