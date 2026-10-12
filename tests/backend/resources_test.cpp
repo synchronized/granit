@@ -167,6 +167,10 @@ public:
 
   granit_result wait_for_all_submissions() noexcept override { return GRANIT_SUCCESS; }
 
+  granit::detail::submission_serial completed_submission_serial() const noexcept override {
+    return 1;
+  }
+
   granit_result
   submit_swapchain_frame(granit::detail::backend_command_recorder_resource&,
                          granit::detail::backend_swapchain_resource&, std::uint32_t image_index,

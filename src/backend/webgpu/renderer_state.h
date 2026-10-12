@@ -308,6 +308,7 @@ public:
   [[nodiscard]] granit_result
   wait_command_recorder(backend_command_recorder_resource& recorder) noexcept override;
   [[nodiscard]] granit_result wait_for_all_submissions() noexcept override;
+  [[nodiscard]] submission_serial completed_submission_serial() const noexcept override;
   void retire_resource(submission_serial retire_after, retirement_order order,
                        std::shared_ptr<void> resource) override;
   [[nodiscard]] std::size_t collect_retired() noexcept override;

@@ -318,6 +318,10 @@ granit_result vulkan_renderer_state::wait_for_all_submissions() noexcept {
   return GRANIT_SUCCESS;
 }
 
+submission_serial vulkan_renderer_state::completed_submission_serial() const noexcept {
+  return submission_serials_.completed();
+}
+
 void vulkan_renderer_state::retire_resource(submission_serial retire_after, retirement_order order,
                                             std::shared_ptr<void> resource) {
   std::lock_guard lock{retirement_mutex_};

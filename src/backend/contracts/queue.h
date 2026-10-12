@@ -32,6 +32,8 @@ public:
   [[nodiscard]] virtual granit_result
   wait_command_recorder(backend_command_recorder_resource& recorder) noexcept = 0;
   [[nodiscard]] virtual granit_result wait_for_all_submissions() noexcept = 0;
+  /** 返回后端已确认完成的最后一个提交序列。 */
+  [[nodiscard]] virtual submission_serial completed_submission_serial() const noexcept = 0;
   [[nodiscard]] virtual granit_result
   submit_swapchain_frame(backend_command_recorder_resource& recorder,
                          backend_swapchain_resource& swapchain, std::uint32_t image_index,

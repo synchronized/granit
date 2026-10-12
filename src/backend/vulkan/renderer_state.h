@@ -405,6 +405,7 @@ public:
   [[nodiscard]] granit_result
   wait_command_recorder(backend_command_recorder_resource& recorder) noexcept override;
   [[nodiscard]] granit_result wait_for_all_submissions() noexcept override;
+  [[nodiscard]] submission_serial completed_submission_serial() const noexcept override;
   [[nodiscard]] granit_result wait_for_present_idle() noexcept override;
   [[nodiscard]] granit_result create_timestamp_query_pool(
       std::uint32_t query_count,

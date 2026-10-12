@@ -140,6 +140,12 @@ granit_result renderer_registry::update_resource_table_batch(
   if (found == resource_tables_.end() || found->second->owner != state->second)
     return GRANIT_ERROR_INVALID_HANDLE;
   auto& record = *found->second;
+  const auto interfaces = discover_backend_interfaces(state->second);
+  if (!interfaces.queue)
+    return GRANIT_ERROR_UNSUPPORTED;
+  if (record.metadata.last_use_serial.load() > interfaces.queue->completed_submission_serial()) {
+    return GRANIT_ERROR_RESOURCE_IN_USE;
+  }
 
   struct validated_update {
     std::vector<resource_table_slot>* slots;

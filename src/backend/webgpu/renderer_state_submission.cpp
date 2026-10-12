@@ -50,6 +50,10 @@ granit_result webgpu_renderer_state::wait_for_all_submissions() noexcept {
                                                                   : GRANIT_SUCCESS;
 }
 
+submission_serial webgpu_renderer_state::completed_submission_serial() const noexcept {
+  return next_submission_serial_ == 0 ? 0 : next_submission_serial_ - 1;
+}
+
 void webgpu_renderer_state::retire_resource(submission_serial, retirement_order,
                                             std::shared_ptr<void> resource) {
   // WebGPU 命令会持有所引用对象；命令完成编码后即可释放应用侧引用。

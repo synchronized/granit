@@ -89,6 +89,9 @@ GRANIT_API granit_result granit_resource_table_update(
     granit_renderer renderer, granit_resource_table table,
     const granit_resource_table_update_desc* update);
 
+/**
+ * 批量更新槽位；若表仍被已提交但未完成的 GPU 工作引用，返回 GRANIT_ERROR_RESOURCE_IN_USE。
+ */
 GRANIT_API granit_result granit_resource_table_update_batch(
     granit_renderer renderer, granit_resource_table table,
     const granit_resource_table_update_desc* updates, uint32_t update_count);
