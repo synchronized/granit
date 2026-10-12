@@ -2,13 +2,23 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "application/application.h"
+#include "assets/asset_manager.h"
+#include "camera/orbit_camera.h"
+#include "camera/orbit_camera_input_accumulator.h"
+#include "gltf/scene.h"
+#include "gltf_rendering/scene_resources.h"
 #include "tutorial/tutorial_runtime.h"
 
+#include <granit/pipeline/render_pipeline.hpp>
+#include <granit/pipeline/scene.hpp>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/resource_table.hpp>
 #include <imgui.h>
 
 #include <iostream>
+#include <array>
+#include <cmath>
+#include <cstdint>
 #include <span>
 #include <string_view>
 #include <vector>
@@ -27,15 +37,36 @@ public:
 
 private:
   granit::result on_initialize() noexcept override {
-    auto result = runtime_.initialize(renderer_owner());
-    if (result.ok()) result = frame_context_.initialize(renderer());
-    if (result.ok()) result = renderer_owner().get_limits(limits_);
+    granit::result result = granit::result::success;
+    if (!runtime_.initialized()) {
+      result = runtime_.initialize(renderer_owner());
+      if (result.ok()) result = renderer_owner().get_limits(limits_);
+    }
+    if (result.ok() && !model_asset_.valid()) {
+      model_asset_ = assets().load<granit::example::gltf::scene>(
+          granit::example::assets::asset_location::bundled("tutorials/02_pbr_assets/Suzanne.gltf"));
+    }
+    if (result.ok() && !model_asset_.ready()) {
+      if (model_asset_.status() == granit::example::assets::asset_status::failed ||
+          model_asset_.status() == granit::example::assets::asset_status::cancelled)
+        return granit::result::invalid_argument;
+      return granit::result::not_ready;
+    }
+    if (result.ok()) {
+      const auto model_scene = model_asset_.value();
+      if (!model_scene || model_scene->materials.empty()) return granit::result::invalid_argument;
+      model_scene_ = *model_scene;
+      result = model_gpu_.initialize(renderer_owner(), model_scene_);
+    }
+    if (result.ok()) result = pipeline_.initialize(renderer(), {.enable_fxaa = true});
     if (result.ok()) {
       result = granit::get_resource_table_capabilities(renderer_owner().ref(), table_capabilities_);
     }
     if (result.ok()) {
       result = table_.initialize(renderer_owner(),
-                                 {.resource_types = GRANIT_RESOURCE_TABLE_RESOURCE_SAMPLER_BIT,
+                                 {.resource_types = GRANIT_RESOURCE_TABLE_RESOURCE_SAMPLED_TEXTURE_VIEW_BIT |
+                                                     GRANIT_RESOURCE_TABLE_RESOURCE_SAMPLER_BIT,
+                                  .sampled_texture_view_capacity = 1,
                                   .sampler_capacity = 1});
     }
     if (result.ok()) {
@@ -45,6 +76,24 @@ private:
       result = table_.update({.type = granit::resource_table_resource_type::sampler,
                               .slot = 0,
                               .resource = sampler_.native_handle()});
+    }
+    if (result.ok()) {
+      granit::texture_view_ref texture_view;
+      granit::sampler_ref texture_sampler;
+      result = model_gpu_.texture_binding(model_scene_.materials.front().base_color_texture, true,
+                                          texture_view, texture_sampler);
+      if (result.ok()) {
+        resource_table_texture_ = texture_view.native_handle();
+        resource_table_sampler_ = texture_sampler.native_handle();
+        const std::array updates{
+            granit::resource_table_update{.type = granit::resource_table_resource_type::sampled_texture_view,
+                                          .slot = 0,
+                                          .resource = resource_table_texture_},
+            granit::resource_table_update{.type = granit::resource_table_resource_type::sampler,
+                                          .slot = 0,
+                                          .resource = resource_table_sampler_}};
+        result = table_.update_batch(updates);
+      }
     }
     if (result.ok() && stress_test_) {
       stress_tables_.resize(64);
@@ -59,6 +108,9 @@ private:
         if (result.failed()) break;
       }
     }
+    if (result.ok() &&
+        !camera_.focus({.radius = 1.6F}, presentation_info().width, presentation_info().height))
+      result = granit::result::invalid_argument;
     return result;
   }
 
@@ -66,7 +118,12 @@ private:
     return granit::result::success;
   }
 
-  void on_shutdown(granit::result) noexcept override { runtime_.shutdown(); }
+  void on_shutdown(granit::result) noexcept override {
+    runtime_.shutdown();
+    static_cast<void>(scene_.reset());
+    static_cast<void>(pipeline_.reset());
+    model_gpu_.reset();
+  }
 
   granit::result on_window_event(const granit::window_event& event) noexcept override {
     runtime_.process(event);
@@ -75,10 +132,12 @@ private:
 
   granit::result on_input_event(const granit::input_event& event) noexcept override {
     runtime_.process(event);
+    camera_input_.process(event, runtime_.wants_mouse(), runtime_.wants_keyboard());
     return granit::result::success;
   }
 
   granit::result on_render(granit::example::present_frame& frame) noexcept override {
+    camera_input_.begin_frame();
     granit::window_state state;
     auto result = app_window().get_state(state);
     if (result.ok()) {
@@ -93,6 +152,9 @@ private:
       ImGui::Text("Resource Table support: %s", resource_table_support_name(table_capabilities_.support));
       ImGui::Text("Resource Table sampler slot 0: populated");
       ImGui::Text("Pressure tables: %zu", stress_tables_.size());
+      ImGui::Text("Suzanne materials: %zu", model_scene_.materials.size());
+      ImGui::Text("Resource Table texture slot 0: %s",
+                  resource_table_texture_ != GRANIT_NULL_HANDLE ? "populated" : "empty");
       if (stress_test_)
         ImGui::TextUnformatted("Stress mode: 64 tables with one sampler slot");
       ImGui::Text("Default path: traditional Bind Group");
@@ -100,42 +162,72 @@ private:
       result = runtime_.end_frame();
     }
     if (result.failed()) return result;
+    const auto input = camera_input_.finish(runtime_.wants_mouse(), runtime_.wants_keyboard());
+    if (!smoke_test_ && !camera_.orbit(frame.delta_seconds * 0.25F))
+      result = granit::result::invalid_argument;
+    if (result.ok() && !camera_.update(input, frame.swapchain.width, frame.swapchain.height))
+      result = granit::result::invalid_argument;
+    const bool empty_frame = rendered_frames() == 0;
+    if (result.ok()) result = update_scene(!empty_frame);
+    if (result.failed()) return result;
+    granit::render_pipeline_render_desc render_desc{};
+    render_desc.scene = scene_.ref();
+    render_desc.output = frame.backbuffer.view;
+    render_desc.output_format = frame.swapchain.format;
+    render_desc.width = frame.swapchain.width;
+    render_desc.height = frame.swapchain.height;
+    render_desc.draw_bindings = empty_frame
+                                    ? std::span<const granit::render_pipeline_draw_binding>{}
+                                    : std::span{model_gpu_.draw_bindings()};
+    render_desc.frame = &frame.acquired;
+    render_desc.canvas = runtime_.canvas_ref();
+    render_desc.clear_color = {0.025F, 0.03F, 0.045F, 1.0F};
+    return pipeline_.render(render_desc);
+  }
 
-    granit::frame_recording recording;
-    result = frame_context_.begin(frame.acquired, recording);
-    const granit::color_attachment_desc color{.view = frame.backbuffer.view,
-                                              .resolve_view = {},
-                                              .clear_value = {.red = 0.015F,
-                                                              .green = 0.02F,
-                                                              .blue = 0.04F,
-                                                              .alpha = 1.0F}};
-    const granit::rendering_desc rendering{
-        .color_attachments = std::span{&color, 1},
-        .area = {0, 0, frame.swapchain.width, frame.swapchain.height}};
-    if (result.ok()) result = recording.recorder().begin_rendering(rendering);
-    if (result.ok()) result = recording.recorder().end_rendering();
-    if (result.ok()) {
-      result = runtime_.canvas().record(
-          recording.recorder(), {.color = frame.backbuffer.view,
-                                 .color_format = frame.swapchain.format,
-                                 .width = frame.swapchain.width,
-                                 .height = frame.swapchain.height,
-                                 .load_operation = granit::attachment_load_operation::load,
-                                 .encode_srgb = true,
-                                 .frame_slot = recording.frame_slot()});
-    }
-    if (result.ok()) result = recording.submit();
-    if (result.failed() && recording.valid()) static_cast<void>(recording.abort());
-    return result;
+  granit::result update_scene(bool with_renderables) noexcept {
+    auto result = scene_.reset();
+    if (result.failed()) return result;
+    granit::example::camera::camera_matrices matrices;
+    if (!camera_.matrices(presentation_info().width, presentation_info().height, matrices))
+      return granit::result::invalid_argument;
+    const granit::scene_view scene_view{
+        .view = matrices.view,
+        .projection = matrices.projection,
+        .view_projection = matrices.view_projection,
+        .camera_position = matrices.position,
+        .viewport_x = 0,
+        .viewport_y = 0,
+        .viewport_width = static_cast<float>(presentation_info().width),
+        .viewport_height = static_cast<float>(presentation_info().height),
+        .layer_mask = UINT64_MAX,
+    };
+    const granit::scene_directional_light light{
+        .direction_to_light = {0.365148F, 0.912871F, 0.182574F},
+        .radiance = {4.0F, 3.8F, 3.4F},
+        .layer_mask = UINT64_MAX,
+    };
+    if (with_renderables)
+      return model_gpu_.create_snapshot(std::span{&scene_view, 1}, std::span{&light, 1}, {}, {},
+                                        scene_);
+    return scene_.initialize(renderer_owner(), {.views = std::span{&scene_view, 1}});
   }
 
   granit::example::tutorial::tutorial_runtime runtime_;
-  granit::frame_context frame_context_;
   granit::renderer_limits limits_{};
   granit::resource_table_capabilities table_capabilities_{};
   granit::resource_table table_;
   std::vector<granit::resource_table> stress_tables_;
   granit::sampler sampler_;
+  granit::example::assets::asset_handle<granit::example::gltf::scene> model_asset_;
+  granit::example::gltf::scene model_scene_;
+  granit::example::gltf_rendering::scene_resources model_gpu_;
+  granit::render_pipeline pipeline_;
+  granit::scene_snapshot scene_;
+  granit::example::camera::orbit_camera camera_;
+  granit::example::camera::orbit_camera_input_accumulator camera_input_;
+  granit_handle resource_table_texture_{GRANIT_NULL_HANDLE};
+  granit_handle resource_table_sampler_{GRANIT_NULL_HANDLE};
   bool smoke_test_{};
   bool stress_test_{};
 

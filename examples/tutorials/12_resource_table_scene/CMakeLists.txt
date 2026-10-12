@@ -3,9 +3,26 @@
 
 add_executable(granit_tutorial_12_resource_table_scene main.cpp)
 target_compile_features(granit_tutorial_12_resource_table_scene PRIVATE cxx_std_20)
-target_link_libraries(granit_tutorial_12_resource_table_scene PRIVATE granit_example_application granit_example_tutorial)
+target_link_libraries(
+  granit_tutorial_12_resource_table_scene
+  PRIVATE
+    granit_example_application
+    granit_example_camera
+    granit_example_tutorial
+    granit_example_gltf_rendering
+    granit::render_pipeline
+)
 granit_target_compile_warnings(granit_tutorial_12_resource_table_scene)
 granit_target_output_directories(granit_tutorial_12_resource_table_scene)
+granit_example_target_assets(
+  TARGET granit_tutorial_12_resource_table_scene
+  ROOT "${PROJECT_SOURCE_DIR}/examples/assets"
+  FILES
+    tutorials/02_pbr_assets/Suzanne.gltf
+    tutorials/02_pbr_assets/Suzanne.bin
+    tutorials/02_pbr_assets/Suzanne_BaseColor.png
+    tutorials/02_pbr_assets/Suzanne_MetallicRoughness.png
+)
 if(EMSCRIPTEN)
   include(granit_web)
   granit_target_webgpu(granit_tutorial_12_resource_table_scene)
