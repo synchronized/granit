@@ -155,9 +155,31 @@ granit_result material_gpu_instance::flush() {
     }
     const auto result = granit_resource_table_update_batch(
         renderer_, resource_table_, updates.data(), static_cast<std::uint32_t>(updates.size()));
-    if (result == GRANIT_SUCCESS)
-      resources_dirty_ = false;
-    return result;
+    if (result != GRANIT_SUCCESS)
+      return result;
+    resources_dirty_ = false;
+
+    granit_bind_group_entry entry{};
+    if (uniform_buffer_ != GRANIT_NULL_HANDLE) {
+      entry = {.binding = 0,
+               .array_element = 0,
+               .resource = uniform_buffer_,
+               .offset = 0,
+               .size = data_->bytes().size()};
+    }
+    granit_bind_group_desc desc = GRANIT_BIND_GROUP_DESC_INIT;
+    desc.layout = layout_;
+    desc.entry_count = uniform_buffer_ == GRANIT_NULL_HANDLE ? 0U : 1U;
+    desc.entries = uniform_buffer_ == GRANIT_NULL_HANDLE ? nullptr : &entry;
+    granit_bind_group replacement = GRANIT_NULL_HANDLE;
+    const auto group_result = granit_bind_group_create(renderer_, &desc, &replacement);
+    if (group_result != GRANIT_SUCCESS)
+      return group_result;
+    const auto old = bind_group_;
+    bind_group_ = replacement;
+    if (old != GRANIT_NULL_HANDLE)
+      return granit_bind_group_destroy(renderer_, old);
+    return GRANIT_SUCCESS;
   }
 
   std::vector<granit_bind_group_entry> entries;
@@ -275,7 +297,7 @@ granit_result material_gpu_instance::prepare_migration(granit_bind_group_layout 
   }
 
   material_gpu_instance candidate;
-  auto result = candidate.initialize(renderer_, target_layout, target_metadata);
+  auto result = candidate.initialize(renderer_, target_layout, target_metadata, resource_table_);
   if (result != GRANIT_SUCCESS) {
     return result;
   }

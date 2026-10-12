@@ -7,6 +7,7 @@
 #include <granit/pipeline/material.h>
 #include <granit/renderer/pipeline.h>
 #include <granit/renderer/resource_types.h>
+#include <granit/renderer/resource_table.h>
 #include <granit/renderer/sampler.h>
 #include <granit/renderer/texture.h>
 
@@ -34,6 +35,7 @@ struct material_draw_state {
   granit_bind_group_layout object_layout = GRANIT_NULL_HANDLE;
   granit_bind_group_layout lighting_layout = GRANIT_NULL_HANDLE;
   granit_bind_group material_group = GRANIT_NULL_HANDLE;
+  granit_resource_table resource_table = GRANIT_NULL_HANDLE;
 };
 
 [[nodiscard]] granit_result validate_material_handle(granit_renderer renderer,

@@ -12,6 +12,7 @@
 #include "pipeline/material_access.h"
 
 #include <granit/renderer/pipeline.hpp>
+#include <granit/renderer/resource_table.hpp>
 
 #include <algorithm>
 #include <array>
@@ -34,10 +35,49 @@ struct material_state {
   granit::material::material_package package;
   granit::bind_group_layout object_layout;
   granit::bind_group_layout lighting_layout;
+  granit::resource_table resource_table;
   granit::material::material_template_gpu material_template;
   granit::material::material_gpu_instance instance;
   bool alive = true;
 };
+
+granit_result initialize_material_resource_table(
+    granit_renderer renderer, const granit::material::material_package& package,
+    granit::resource_table& table) {
+  using namespace granit::material;
+  if (package.binding_model() != package_binding_model::resource_table)
+    return GRANIT_SUCCESS;
+
+  granit::resource_table_capabilities capabilities;
+  const auto capability_result =
+      granit::get_resource_table_capabilities(granit::renderer_ref::from_native(renderer),
+                                              capabilities);
+  if (capability_result != granit::result::success)
+    return static_cast<granit_result>(capability_result);
+  if (capabilities.support != granit::resource_table_support::native)
+    return GRANIT_SUCCESS;
+
+  std::uint32_t resource_types = 0;
+  std::uint32_t texture_capacity = 0;
+  std::uint32_t sampler_capacity = 0;
+  for (const auto& parameter : package.metadata().parameters()) {
+    if (parameter.type == parameter_type::texture_view) {
+      resource_types |= GRANIT_RESOURCE_TABLE_RESOURCE_SAMPLED_TEXTURE_VIEW_BIT;
+      texture_capacity = std::max(texture_capacity, parameter.binding + 1U);
+    } else if (parameter.type == parameter_type::sampler) {
+      resource_types |= GRANIT_RESOURCE_TABLE_RESOURCE_SAMPLER_BIT;
+      sampler_capacity = std::max(sampler_capacity, parameter.binding + 1U);
+    }
+  }
+  if (resource_types == 0)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  return static_cast<granit_result>(table.initialize(
+      granit::renderer_ref::from_native(renderer),
+      {.binding_mode = granit::resource_table_binding_mode::explicit_selection,
+       .resource_types = resource_types,
+       .sampled_texture_view_capacity = texture_capacity,
+       .sampler_capacity = sampler_capacity}));
+}
 
 struct material_slot {
   std::shared_ptr<material_state> state;
@@ -245,7 +285,8 @@ granit_result granit::pipeline::detail::acquire_material_draw_state(
               .material_layout = state->material_template.material_layout(),
               .object_layout = state->object_layout.native_handle(),
               .lighting_layout = state->lighting_layout.native_handle(),
-              .material_group = state->instance.bind_group()};
+              .material_group = state->instance.bind_group(),
+              .resource_table = state->resource_table.native_handle()};
     if (output.pipeline_layout == GRANIT_NULL_HANDLE || output.frame_layout == GRANIT_NULL_HANDLE ||
         output.material_layout == GRANIT_NULL_HANDLE ||
         output.object_layout == GRANIT_NULL_HANDLE ||
@@ -352,6 +393,9 @@ extern "C" granit_result granit_material_create(granit_renderer renderer,
         renderer_ref, granit::lighting::standard_lighting_layout_entries);
     if (lighting_result.failed())
       return static_cast<granit_result>(lighting_result);
+    result = initialize_material_resource_table(renderer, state->package, state->resource_table);
+    if (result != GRANIT_SUCCESS)
+      return result;
     const std::array additional_layouts{state->object_layout.native_handle(),
                                         state->lighting_layout.native_handle()};
     const auto binding_groups = state->package.binding_groups();
@@ -361,11 +405,13 @@ extern "C" granit_result granit_material_create(granit_renderer renderer,
                                                                                  : 0U;
     result = state->material_template.initialize(renderer, state->package,
                                                  std::span{additional_layouts}.first(layout_count),
-                                                 desc->shader_library);
+                                                 desc->shader_library,
+                                                 state->resource_table.native_handle());
     if (result != GRANIT_SUCCESS)
       return result;
     result = state->instance.initialize(renderer, state->material_template.material_layout(),
-                                        state->package.metadata());
+                                        state->package.metadata(),
+                                        state->resource_table.native_handle());
     if (result != GRANIT_SUCCESS)
       return result;
     result = apply_updates(state->instance, desc->initial_updates, desc->initial_update_count);

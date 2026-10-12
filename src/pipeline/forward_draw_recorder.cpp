@@ -178,6 +178,9 @@ granit_result record_forward_draws(
       result = granit_command_recorder_bind_graphics_groups(state.renderer, recorder,
                                                             material.pipeline_layout, &bind_desc);
     }
+    if (result == GRANIT_SUCCESS && material.resource_table != GRANIT_NULL_HANDLE)
+      result = granit_command_recorder_bind_graphics_resource_table(
+          state.renderer, recorder, material.pipeline_layout, material.resource_table);
     if (result == GRANIT_SUCCESS)
       result = granit_command_recorder_set_viewports(state.renderer, recorder, 0, &viewport, 1);
     if (result == GRANIT_SUCCESS)
