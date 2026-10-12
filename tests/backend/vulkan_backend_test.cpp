@@ -254,7 +254,7 @@ TEST_CASE("Vulkan Bindless Descriptor Table 创建并校验索引边界", "[vulk
     SKIP("当前 Vulkan 设备不支持 Granit Bindless 前置特性");
 
   vulkan_bindless_descriptor_table table;
-  REQUIRE(table.initialize(device, 4, 4) == GRANIT_SUCCESS);
+  REQUIRE(table.initialize(device, 4, 4, 4) == GRANIT_SUCCESS);
   REQUIRE(table.valid());
   CHECK(table.layout() != VK_NULL_HANDLE);
   CHECK(table.descriptor_set() != VK_NULL_HANDLE);

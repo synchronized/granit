@@ -70,7 +70,7 @@ TEST_CASE("Vulkan Bindless Shader 按索引采样 texture 和 sampler", "[vulkan
   vulkan_memory_allocator allocator;
   REQUIRE(allocator.initialize(instance, device) == GRANIT_SUCCESS);
   vulkan_bindless_resource_registry registry{UINT64_C(0x534F)};
-  REQUIRE(registry.initialize(device, 2, 2) == GRANIT_SUCCESS);
+  REQUIRE(registry.initialize(device, 2, 2, 2) == GRANIT_SUCCESS);
 
   const auto create_image = [&](VkImageUsageFlags usage, vulkan_image_allocation& image) {
     VkImageCreateInfo info{};
@@ -503,7 +503,8 @@ TEST_CASE("Vulkan Bindless Shader 按索引采样 texture 和 sampler", "[vulkan
   registry.collect(1);
   constexpr std::uint32_t pressure_capacity = 512;
   vulkan_bindless_resource_registry pressure_registry{UINT64_C(0x534F01)};
-  REQUIRE(pressure_registry.initialize(device, pressure_capacity, pressure_capacity) ==
+  REQUIRE(pressure_registry.initialize(device, pressure_capacity, pressure_capacity,
+                                       pressure_capacity) ==
           GRANIT_SUCCESS);
   const std::array<std::uint32_t, 3> pressure_sizes{8, 64, 512};
   constexpr std::uint32_t pressure_iterations = 16;
