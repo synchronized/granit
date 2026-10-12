@@ -10,6 +10,17 @@
 
 ## 0.58.0 - 2026-10-12
 
+### 修复
+
+- WebGPU recorder 在异常销毁活动 Render/Compute Pass 时先结束原生 Pass 再释放，避免 Dawn 命令缓冲失效；
+- 增加 Render Pass 异常销毁浏览器回归、Chrome WebGPU smoke 和 tutorial-06 验收；
+- 固化 RenderDoc CLI `.rdc` 捕获与缺失时继续运行的 no-op 诊断路径。
+
+### 边界
+
+- WebGPU Timestamp 明确保持不支持；Vulkan Timestamp 保持现有支持；
+- 不新增公共 ABI、RenderDoc/Vulkan/Dawn 依赖、Bindless、SVT 或纹理驻留能力。
+
 ## 0.57.0 - 2026-10-09
 
 ### 改进
