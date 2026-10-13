@@ -60,6 +60,7 @@ private:
     parameter_id id = 0;
     parameter_type type = parameter_type::texture_view;
     std::uint32_t binding = 0;
+    std::uint32_t resource_table_slot = 0;
     granit_handle resource = GRANIT_NULL_HANDLE;
   };
 

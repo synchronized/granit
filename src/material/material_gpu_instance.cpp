@@ -24,9 +24,18 @@ granit_result material_gpu_instance::initialize(granit_renderer renderer,
   try {
     auto data = std::make_unique<material_instance_data>(metadata);
     std::vector<resource_binding> resources;
+    std::uint32_t texture_slot = 0;
+    std::uint32_t sampler_slot = 0;
     for (const auto& parameter : metadata.parameters()) {
       if (is_resource_type(parameter.type)) {
-        resources.push_back({parameter.id, parameter.type, parameter.binding, GRANIT_NULL_HANDLE});
+        const auto resource_table_slot = parameter.type == parameter_type::texture_view
+                                             ? texture_slot++
+                                             : sampler_slot++;
+        resources.push_back({parameter.id,
+                             parameter.type,
+                             parameter.binding,
+                             resource_table_slot,
+                             GRANIT_NULL_HANDLE});
       }
     }
 
@@ -141,7 +150,7 @@ granit_result material_gpu_instance::flush() {
                               ? GRANIT_RESOURCE_TABLE_RESOURCE_SAMPLED_TEXTURE_VIEW
                               : GRANIT_RESOURCE_TABLE_RESOURCE_SAMPLER;
         updates.push_back({.type = type,
-                           .slot = binding.binding,
+                           .slot = binding.resource_table_slot,
                            .resource = binding.resource,
                            .offset = 0,
                            .size = 0});
