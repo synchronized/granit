@@ -72,6 +72,7 @@ private:
   granit_bind_group_layout material_layout_ = GRANIT_NULL_HANDLE;
   granit_pipeline_layout pipeline_layout_ = GRANIT_NULL_HANDLE;
   granit_resource_table resource_table_ = GRANIT_NULL_HANDLE;
+  material_implementation_id implementation_id_ = 0;
   granit_shader_library shader_library_ = GRANIT_NULL_HANDLE;
   granit_shader library_reference_shader_ = GRANIT_NULL_HANDLE;
   mutable std::mutex mutex_;

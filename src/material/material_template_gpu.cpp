@@ -51,13 +51,27 @@ material_template_gpu::initialize(granit_renderer renderer, const material_packa
                                   granit_shader_library shader_library,
                                   granit_resource_table resource_table) {
   std::lock_guard lock{mutex_};
+  const auto find_implementation = [&](package_binding_model model) {
+    const auto found = std::ranges::find_if(package.implementations(), [&](const auto& value) {
+      return value.binding_model == model;
+    });
+    return found == package.implementations().end() ? nullptr : &*found;
+  };
+  const material_implementation* implementation = nullptr;
+  if (resource_table != GRANIT_NULL_HANDLE) {
+    implementation = find_implementation(package_binding_model::resource_table);
+  } else {
+    implementation = find_implementation(package_binding_model::bind_group);
+    if (implementation == nullptr && !package.implementations().empty())
+      implementation = &package.implementations().front();
+  }
+  if (implementation == nullptr) return GRANIT_ERROR_UNSUPPORTED;
   const bool requests_resource_table =
-      package.binding_model() == package_binding_model::resource_table;
+      implementation->binding_model == package_binding_model::resource_table;
   bool uses_resource_table = requests_resource_table;
   if (renderer_ != GRANIT_NULL_HANDLE || renderer == GRANIT_NULL_HANDLE ||
       (!requests_resource_table && resource_table != GRANIT_NULL_HANDLE) ||
-      (!requests_resource_table && package.binding_model() != package_binding_model::bind_group) ||
-      package.required_renderer_features() !=
+      implementation->required_renderer_features !=
           (requests_resource_table ? package_feature_bindless_resource_table : 0) ||
       additional_layouts.size() > 6 ||
       std::ranges::find(additional_layouts, GRANIT_NULL_HANDLE) != additional_layouts.end()) {
@@ -148,8 +162,9 @@ material_template_gpu::initialize(granit_renderer renderer, const material_packa
   granit_shader library_reference_shader = GRANIT_NULL_HANDLE;
   if (shader_library != GRANIT_NULL_HANDLE) {
     for (const auto& variant : package.variants()) {
-      const auto source = std::ranges::find_if(variant.shaders, [](const auto& shader) {
-        return !std::ranges::all_of(shader.asset_id,
+      const auto source = std::ranges::find_if(variant.shaders, [&](const auto& shader) {
+        return shader.implementation == implementation->id &&
+               !std::ranges::all_of(shader.asset_id,
                                     [](std::byte value) { return value == std::byte{}; });
       });
       if (source == variant.shaders.end())
@@ -171,6 +186,7 @@ material_template_gpu::initialize(granit_renderer renderer, const material_packa
   material_layout_ = material_layout;
   pipeline_layout_ = pipeline_layout;
   resource_table_ = resource_table;
+  implementation_id_ = implementation->id;
   shader_library_ = shader_library;
   library_reference_shader_ = library_reference_shader;
   return GRANIT_SUCCESS;
@@ -212,6 +228,7 @@ granit_result material_template_gpu::reset() noexcept {
   material_layout_ = GRANIT_NULL_HANDLE;
   pipeline_layout_ = GRANIT_NULL_HANDLE;
   resource_table_ = GRANIT_NULL_HANDLE;
+  implementation_id_ = 0;
   shader_library_ = GRANIT_NULL_HANDLE;
   library_reference_shader_ = GRANIT_NULL_HANDLE;
   return first_error;
@@ -235,10 +252,16 @@ granit_result material_template_gpu::acquire_pipeline(const material_pipeline_re
   if (variant == nullptr) {
     return GRANIT_ERROR_NOT_READY;
   }
-  const auto vertex = std::ranges::find(variant->shaders, package_shader_stage::vertex,
-                                        &material_shader_code::stage);
-  const auto fragment = std::ranges::find(variant->shaders, package_shader_stage::fragment,
-                                          &material_shader_code::stage);
+  const auto vertex = std::ranges::find_if(variant->shaders, [&](const auto& shader) {
+    return shader.implementation == implementation_id_ &&
+           shader.stage == package_shader_stage::vertex;
+  });
+  const auto fragment = std::ranges::find_if(variant->shaders, [&](const auto& shader) {
+    return shader.implementation == implementation_id_ &&
+           shader.stage == package_shader_stage::fragment;
+  });
+  if (vertex == variant->shaders.end() || fragment == variant->shaders.end())
+    return GRANIT_ERROR_NOT_READY;
 
   cache_entry replacement{.request = request};
   const auto warmed = std::ranges::find_if(
@@ -333,10 +356,16 @@ granit_result material_template_gpu::add_pipeline_warmup(const material_pipeline
   }
   if (variant == nullptr)
     return GRANIT_ERROR_NOT_READY;
-  const auto vertex = std::ranges::find(variant->shaders, package_shader_stage::vertex,
-                                        &material_shader_code::stage);
-  const auto fragment = std::ranges::find(variant->shaders, package_shader_stage::fragment,
-                                          &material_shader_code::stage);
+  const auto vertex = std::ranges::find_if(variant->shaders, [&](const auto& shader) {
+    return shader.implementation == implementation_id_ &&
+           shader.stage == package_shader_stage::vertex;
+  });
+  const auto fragment = std::ranges::find_if(variant->shaders, [&](const auto& shader) {
+    return shader.implementation == implementation_id_ &&
+           shader.stage == package_shader_stage::fragment;
+  });
+  if (vertex == variant->shaders.end() || fragment == variant->shaders.end())
+    return GRANIT_ERROR_NOT_READY;
   const material_pipeline_request resolved{request.pass, variant_key, request.color_format,
                                            request.depth_stencil_format, request.sample_count};
   warmup_entry entry{.request = resolved};
