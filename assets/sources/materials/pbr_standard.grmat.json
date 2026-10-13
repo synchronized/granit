@@ -32,7 +32,7 @@
     }
   ],
   "material": {
-    "constant_buffer_size": 64,
+    "constant_buffer_size": 96,
     "parameters": [
       {
         "name": "base_color",
@@ -94,6 +94,46 @@
         "name": "base_color_sampler_index",
         "type": "uint32",
         "offset": 60
+      },
+      {
+        "name": "metallic_roughness_texture_index",
+        "type": "uint32",
+        "offset": 64
+      },
+      {
+        "name": "normal_texture_index",
+        "type": "uint32",
+        "offset": 68
+      },
+      {
+        "name": "occlusion_texture_index",
+        "type": "uint32",
+        "offset": 72
+      },
+      {
+        "name": "emissive_texture_index",
+        "type": "uint32",
+        "offset": 76
+      },
+      {
+        "name": "metallic_roughness_sampler_index",
+        "type": "uint32",
+        "offset": 80
+      },
+      {
+        "name": "normal_sampler_index",
+        "type": "uint32",
+        "offset": 84
+      },
+      {
+        "name": "occlusion_sampler_index",
+        "type": "uint32",
+        "offset": 88
+      },
+      {
+        "name": "emissive_sampler_index",
+        "type": "uint32",
+        "offset": 92
       },
       {
         "name": "base_color_texture",

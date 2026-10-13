@@ -32,6 +32,14 @@ struct vertex_output {
   uint uv1_mask;
   uint base_color_texture_index;
   uint base_color_sampler_index;
+  uint metallic_roughness_texture_index;
+  uint normal_texture_index;
+  uint occlusion_texture_index;
+  uint emissive_texture_index;
+  uint metallic_roughness_sampler_index;
+  uint normal_sampler_index;
+  uint occlusion_sampler_index;
+  uint emissive_sampler_index;
 };
 
 [[vk::binding(0, 2)]] cbuffer ObjectConstants {
@@ -53,8 +61,23 @@ vertex_output vertex_main(vertex_input input) {
 }
 
 float4 fragment_main(vertex_output input) : SV_Target0 {
-  const float4 sampled = resource_table_textures[base_color_texture_index].Sample(
+  const float4 sampled_base_color = resource_table_textures[base_color_texture_index].Sample(
       resource_table_samplers[base_color_sampler_index],
                                                             input.texture_coordinate);
-  return base_color * sampled;
+  const float4 sampled_metallic_roughness =
+      resource_table_textures[metallic_roughness_texture_index].Sample(
+          resource_table_samplers[metallic_roughness_sampler_index], input.texture_coordinate);
+  const float3 sampled_normal =
+      resource_table_textures[normal_texture_index].Sample(
+          resource_table_samplers[normal_sampler_index], input.texture_coordinate).xyz;
+  const float4 sampled_occlusion = resource_table_textures[occlusion_texture_index].Sample(
+      resource_table_samplers[occlusion_sampler_index], input.texture_coordinate);
+  const float4 sampled_emissive = resource_table_textures[emissive_texture_index].Sample(
+      resource_table_samplers[emissive_sampler_index], input.texture_coordinate);
+  const float normal_influence = 0.5 + 0.5 * sampled_normal.z;
+  const float lighting_influence =
+      0.75 + 0.25 * sampled_metallic_roughness.g * sampled_occlusion.r;
+  const float3 color = base_color.rgb * sampled_base_color.rgb * normal_influence *
+                       lighting_influence + sampled_emissive.rgb * 0.1;
+  return float4(color, base_color.a * sampled_base_color.a);
 }

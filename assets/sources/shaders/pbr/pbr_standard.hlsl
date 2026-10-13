@@ -50,7 +50,16 @@ struct vertex_output {
   uint debug_display;
   float alpha_cutoff;
   uint uv1_mask;
-  uint2 material_reserved;
+  uint base_color_texture_index;
+  uint base_color_sampler_index;
+  uint metallic_roughness_texture_index;
+  uint normal_texture_index;
+  uint occlusion_texture_index;
+  uint emissive_texture_index;
+  uint metallic_roughness_sampler_index;
+  uint normal_sampler_index;
+  uint occlusion_sampler_index;
+  uint emissive_sampler_index;
 };
 
 [[vk::binding(1, 1)]] Texture2D<float4> base_color_texture;

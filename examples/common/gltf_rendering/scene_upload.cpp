@@ -184,6 +184,14 @@ granit::result create_material(granit::renderer_ref renderer, const gltf::materi
   std::uint32_t uv1_mask{};
   constexpr std::uint32_t base_color_texture_index = 0;
   constexpr std::uint32_t base_color_sampler_index = 0;
+  constexpr std::uint32_t metallic_roughness_texture_index = 1;
+  constexpr std::uint32_t normal_texture_index = 2;
+  constexpr std::uint32_t occlusion_texture_index = 3;
+  constexpr std::uint32_t emissive_texture_index = 4;
+  constexpr std::uint32_t metallic_roughness_sampler_index = 1;
+  constexpr std::uint32_t normal_sampler_index = 2;
+  constexpr std::uint32_t occlusion_sampler_index = 3;
+  constexpr std::uint32_t emissive_sampler_index = 4;
   for (std::size_t index = 0; index < references.size(); ++index) {
     if (const auto result = resolve_sampler(*references[index], plan, samplers, default_sampler,
                                             resolved_samplers[index]);
@@ -227,6 +235,38 @@ granit::result create_material(granit::renderer_ref renderer, const gltf::materi
           granit::material_parameter_id("base_color_sampler_index"),
           granit::material_parameter_type::uint32,
           std::as_bytes(std::span{&base_color_sampler_index, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("metallic_roughness_texture_index"),
+          granit::material_parameter_type::uint32,
+          std::as_bytes(std::span{&metallic_roughness_texture_index, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("normal_texture_index"),
+          granit::material_parameter_type::uint32,
+          std::as_bytes(std::span{&normal_texture_index, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("occlusion_texture_index"),
+          granit::material_parameter_type::uint32,
+          std::as_bytes(std::span{&occlusion_texture_index, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("emissive_texture_index"),
+          granit::material_parameter_type::uint32,
+          std::as_bytes(std::span{&emissive_texture_index, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("metallic_roughness_sampler_index"),
+          granit::material_parameter_type::uint32,
+          std::as_bytes(std::span{&metallic_roughness_sampler_index, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("normal_sampler_index"),
+          granit::material_parameter_type::uint32,
+          std::as_bytes(std::span{&normal_sampler_index, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("occlusion_sampler_index"),
+          granit::material_parameter_type::uint32,
+          std::as_bytes(std::span{&occlusion_sampler_index, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("emissive_sampler_index"),
+          granit::material_parameter_type::uint32,
+          std::as_bytes(std::span{&emissive_sampler_index, 1})),
       granit::material_parameter_update::texture_binding(
           granit::material_parameter_id("base_color_texture"), base_color),
       granit::material_parameter_update::texture_binding(
