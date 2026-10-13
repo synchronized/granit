@@ -93,6 +93,7 @@ struct material_desc {
   std::span<const material_parameter_update> initial_updates{};
   shader_library_ref shader_library{};
   std::span<const material_shader_library> shader_libraries{};
+  std::uint32_t implementation{};
 };
 
 struct material_pipeline_warmup_desc {
@@ -176,6 +177,8 @@ public:
           .shader_libraries = shader_libraries.data(),
           .shader_library_count = static_cast<std::uint32_t>(shader_libraries.size()),
           .reserved_3 = 0,
+          .implementation = desc.implementation,
+          .reserved_4 = 0,
       };
       return create_native(owner, native);
     } catch (const std::bad_alloc&) {

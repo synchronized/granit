@@ -12,6 +12,7 @@
 #include <granit/renderer/resource_table.h>
 
 #include <mutex>
+#include <cstdint>
 #include <span>
 #include <vector>
 
@@ -38,7 +39,8 @@ public:
              std::span<const granit_bind_group_layout> additional_layouts = {},
              granit_shader_library shader_library = GRANIT_NULL_HANDLE,
              granit_resource_table resource_table = GRANIT_NULL_HANDLE,
-             std::span<const granit_material_shader_library> shader_libraries = {});
+             std::span<const granit_material_shader_library> shader_libraries = {},
+             std::uint32_t requested_implementation = 0);
   [[nodiscard]] granit_result reset() noexcept;
   [[nodiscard]] granit_result acquire_pipeline(const material_pipeline_request& request,
                                                granit_graphics_pipeline& pipeline);

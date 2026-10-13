@@ -58,7 +58,8 @@ material_template_gpu::initialize(granit_renderer renderer, const material_packa
                                   std::span<const granit_bind_group_layout> additional_layouts,
                                   granit_shader_library shader_library,
                                   granit_resource_table resource_table,
-                                  std::span<const granit_material_shader_library> shader_libraries) {
+                                  std::span<const granit_material_shader_library> shader_libraries,
+                                  std::uint32_t requested_implementation) {
   std::lock_guard lock{mutex_};
   const auto find_implementation = [&](package_binding_model model) {
     const auto found = std::ranges::find_if(package.implementations(), [&](const auto& value) {
@@ -67,19 +68,24 @@ material_template_gpu::initialize(granit_renderer renderer, const material_packa
     return found == package.implementations().end() ? nullptr : &*found;
   };
   const material_implementation* implementation = nullptr;
-  if (resource_table != GRANIT_NULL_HANDLE) {
-    implementation = find_implementation(package_binding_model::resource_table);
+  if (requested_implementation != 0) {
+    const auto found = std::ranges::find_if(package.implementations(), [requested_implementation](
+                                                const auto& value) {
+      return value.id == requested_implementation;
+    });
+    if (found == package.implementations().end())
+      return GRANIT_ERROR_INVALID_ARGUMENT;
+    implementation = &*found;
   } else {
     implementation = find_implementation(package_binding_model::bind_group);
     if (implementation == nullptr && !package.implementations().empty())
       implementation = &package.implementations().front();
   }
   if (implementation == nullptr) return GRANIT_ERROR_UNSUPPORTED;
-  const bool requests_resource_table =
+  bool requests_resource_table =
       implementation->binding_model == package_binding_model::resource_table;
   bool uses_resource_table = requests_resource_table;
   if (renderer_ != GRANIT_NULL_HANDLE || renderer == GRANIT_NULL_HANDLE ||
-      (!requests_resource_table && resource_table != GRANIT_NULL_HANDLE) ||
       implementation->required_renderer_features !=
           (requests_resource_table ? package_feature_bindless_resource_table : 0) ||
       additional_layouts.size() > 6 ||
@@ -95,8 +101,11 @@ material_template_gpu::initialize(granit_renderer renderer, const material_packa
       if (resource_table == GRANIT_NULL_HANDLE)
         return GRANIT_ERROR_INVALID_ARGUMENT;
     } else {
-      if (resource_table != GRANIT_NULL_HANDLE)
+      const auto fallback = find_implementation(package_binding_model::bind_group);
+      if (fallback == nullptr)
         return GRANIT_ERROR_UNSUPPORTED;
+      implementation = fallback;
+      requests_resource_table = false;
       uses_resource_table = false;
     }
   }

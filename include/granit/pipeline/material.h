@@ -60,6 +60,8 @@ typedef struct granit_material_desc {
   const granit_material_shader_library* shader_libraries;
   uint32_t shader_library_count;
   uint32_t reserved_3;
+  uint32_t implementation;
+  uint32_t reserved_4;
 } granit_material_desc;
 
 /** 将材质变体加入 Pipeline 预热批次所需的目标描述。variant 为零时选择该 Pass 的首个变体。 */
@@ -97,6 +99,8 @@ typedef struct granit_material_pipeline_warmup_desc {
    GRANIT_NULL_HANDLE,                                                                             \
    UINT64_C(0),                                                                                    \
    NULL,                                                                                            \
+   UINT32_C(0),                                                                                    \
+   UINT32_C(0),                                                                                    \
    UINT32_C(0),                                                                                    \
    UINT32_C(0)}
 

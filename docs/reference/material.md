@@ -46,6 +46,9 @@ RenderPipeline 资产根目录下的 `materials/pbr_standard.grmat` 是对应的
 - `granit_material_desc` 可以通过 `shader_libraries` 和数量同时提供多个
   `implementation -> Shader Library` 映射；旧的 `shader_library` 字段仍表示 implementation 1 的
   单库快捷路径。映射数组由调用方持有，创建调用返回后仍须保持各 Library 有效，直到 Material 销毁。
+- `implementation` 为零时默认选择 Bind Group implementation；指定非零值时选择对应实现。请求
+  Resource Table 但当前 Renderer 不支持原生资源表时，若归档包含 Bind Group implementation，
+  Material 自动回退到 Bind Group；没有合法回退则返回不支持。
 - 源 JSON 的 implementation 可以额外声明 `shader_library` 别名。未指定逐 Shader
   `implementation` 时，AssetTools 会按相同的 Shader/variant 自动生成各 implementation 的引用；
   该别名只影响构建期载荷解析，不改变公共材质参数或运行时 API。

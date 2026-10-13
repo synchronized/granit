@@ -370,6 +370,7 @@ extern "C" granit_result granit_material_create(granit_renderer renderer,
   if (desc == nullptr || desc->struct_size < GRANIT_MATERIAL_DESC_VERSION_1_SIZE ||
       desc->reserved != 0 || desc->reserved_tail != 0 || desc->reserved_2 != 0 ||
       desc->reserved_3 != 0 ||
+      desc->reserved_4 != 0 ||
       (desc->shader_library_count != 0 && desc->shader_libraries == nullptr) ||
       (desc->shader_library_count != 0 && desc->shader_library != GRANIT_NULL_HANDLE) ||
       (desc->initial_update_count != 0 && desc->initial_updates == nullptr)) {
@@ -421,7 +422,7 @@ extern "C" granit_result granit_material_create(granit_renderer renderer,
                                                  std::span{additional_layouts}.first(layout_count),
                                                  desc->shader_library,
                                                  state->resource_table.native_handle(),
-                                                 shader_libraries);
+                                                 shader_libraries, desc->implementation);
     if (result != GRANIT_SUCCESS)
       return result;
     result = state->instance.initialize(renderer, state->material_template.material_layout(),
