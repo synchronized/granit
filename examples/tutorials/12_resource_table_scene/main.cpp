@@ -44,7 +44,8 @@ private:
     }
     if (result.ok() && !model_asset_.valid()) {
       model_asset_ = assets().load<granit::example::gltf::scene>(
-          granit::example::assets::asset_location::bundled("tutorials/02_pbr_assets/Suzanne.gltf"));
+          granit::example::assets::asset_location::bundled(
+              "tutorials/12_resource_table_scene/ResourceTableGallery.gltf"));
     }
     if (result.ok() && !model_asset_.ready()) {
       if (model_asset_.status() == granit::example::assets::asset_status::failed ||
