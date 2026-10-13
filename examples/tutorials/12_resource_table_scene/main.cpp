@@ -16,7 +16,6 @@
 #include <imgui.h>
 
 #include <iostream>
-#include <array>
 #include <cmath>
 #include <cstdint>
 #include <span>
@@ -67,7 +66,8 @@ private:
       result = table_.initialize(renderer_owner(),
                                  {.resource_types = GRANIT_RESOURCE_TABLE_RESOURCE_SAMPLED_TEXTURE_VIEW_BIT |
                                                      GRANIT_RESOURCE_TABLE_RESOURCE_SAMPLER_BIT,
-                                  .sampled_texture_view_capacity = 1,
+                                  .sampled_texture_view_capacity =
+                                      static_cast<std::uint32_t>(model_scene_.materials.size()),
                                   .sampler_capacity = 1});
     }
     if (result.ok()) {
@@ -79,20 +79,25 @@ private:
                               .resource = sampler_.native_handle()});
     }
     if (result.ok()) {
-      granit::texture_view_ref texture_view;
-      granit::sampler_ref texture_sampler;
-      result = model_gpu_.texture_binding(model_scene_.materials.front().base_color_texture, true,
-                                          texture_view, texture_sampler);
+      std::vector<granit::resource_table_update> updates;
+      updates.reserve(model_scene_.materials.size() + 1);
+      for (std::size_t index = 0; index < model_scene_.materials.size(); ++index) {
+        granit::texture_view_ref texture_view;
+        granit::sampler_ref texture_sampler;
+        result = model_gpu_.texture_binding(model_scene_.materials[index].base_color_texture, true,
+                                            texture_view, texture_sampler);
+        if (result.failed()) break;
+        const auto texture = texture_view.native_handle();
+        if (index == 0) resource_table_texture_ = texture;
+        updates.push_back({.type = granit::resource_table_resource_type::sampled_texture_view,
+                           .slot = static_cast<std::uint32_t>(index),
+                           .resource = texture});
+        if (index == 0) resource_table_sampler_ = texture_sampler.native_handle();
+      }
       if (result.ok()) {
-        resource_table_texture_ = texture_view.native_handle();
-        resource_table_sampler_ = texture_sampler.native_handle();
-        const std::array updates{
-            granit::resource_table_update{.type = granit::resource_table_resource_type::sampled_texture_view,
-                                          .slot = 0,
-                                          .resource = resource_table_texture_},
-            granit::resource_table_update{.type = granit::resource_table_resource_type::sampler,
-                                          .slot = 0,
-                                          .resource = resource_table_sampler_}};
+        updates.push_back({.type = granit::resource_table_resource_type::sampler,
+                           .slot = 0,
+                           .resource = resource_table_sampler_});
         result = table_.update_batch(updates);
       }
     }
@@ -153,9 +158,10 @@ private:
       ImGui::Text("Resource Table support: %s", resource_table_support_name(table_capabilities_.support));
       ImGui::Text("Resource Table sampler slot 0: populated");
       ImGui::Text("Pressure tables: %zu", stress_tables_.size());
-      ImGui::Text("Suzanne materials: %zu", model_scene_.materials.size());
+      ImGui::Text("Gallery materials: %zu", model_scene_.materials.size());
       ImGui::Text("Resource Table texture slot 0: %s",
                   resource_table_texture_ != GRANIT_NULL_HANDLE ? "populated" : "empty");
+      ImGui::Text("Resource Table texture capacity: %zu", model_scene_.materials.size());
       if (stress_test_)
         ImGui::TextUnformatted("Stress mode: 64 tables with one sampler slot");
       ImGui::Text("Default path: traditional Bind Group");
