@@ -36,7 +36,8 @@ int main(int argc, char** argv) {
     return 1;
   const auto source = read_text(argv[1]);
   const auto library = read_bytes(argv[2]);
-  const std::span<const std::byte> libraries[]{library};
+  const granit::asset_tools::material::build_desc::shader_library libraries[]{
+      {.archive = library}};
   auto [build_status, built] =
       granit::asset_tools::material::build({.source_json = source, .shader_libraries = libraries});
   const auto built_info = built.info();
@@ -52,7 +53,8 @@ int main(int argc, char** argv) {
     return 3;
 
   const std::array invalid_archive{std::byte{0}};
-  const std::span<const std::byte> invalid_libraries[]{invalid_archive};
+  const granit::asset_tools::material::build_desc::shader_library invalid_libraries[]{
+      {.archive = invalid_archive}};
   auto [invalid_status, invalid] = granit::asset_tools::material::build(
       {.source_json = source, .shader_libraries = invalid_libraries});
   if (invalid_status != granit::result::invalid_argument || !invalid ||

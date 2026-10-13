@@ -32,6 +32,7 @@ struct material_shader_reference {
   shader_content_id content_id{};
   package_shader_stage stage{package_shader_stage::vertex};
   std::string entry_point;
+  material_implementation_id implementation = 1;
 };
 
 [[nodiscard]] source_json_error

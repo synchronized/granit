@@ -73,6 +73,7 @@ granit_result granit_asset_tools_material_build(const granit_asset_tools_materia
     for (uint32_t index = 0; index < desc->shader_library_count; ++index) {
       const auto& source = desc->shader_libraries[index];
       if (source.struct_size < sizeof(source) || source.reserved != 0 ||
+          source.reserved2 != 0 || source.implementation == 0 ||
           !valid_bytes(source.archive, source.archive_size) || source.archive_size == 0)
         return GRANIT_ERROR_INVALID_ARGUMENT;
       granit::detail::shader_format::shader_library_view shader_library;
@@ -95,8 +96,12 @@ granit_result granit_asset_tools_material_build(const granit_asset_tools_materia
         const auto stage = shader->stage == granit::shader_stage::vertex
                                ? granit::material::package_shader_stage::vertex
                                : granit::material::package_shader_stage::fragment;
-        references.push_back({std::string{shader_library.name}, std::string{name.name},
-                              shader->content_id, stage, std::string{shader->entry_point}});
+        references.push_back({.library = std::string{shader_library.name},
+                              .name = std::string{name.name},
+                              .content_id = shader->content_id,
+                              .stage = stage,
+                              .entry_point = std::string{shader->entry_point},
+                              .implementation = source.implementation});
       }
     }
 

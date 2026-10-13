@@ -493,21 +493,29 @@ source_json_error parse_variant(std::span<const material_shader_reference> shade
     const auto* name = shader == nullptr ? nullptr : as<std::string>(member(*shader, "shader"));
     const auto* variant_name =
         shader == nullptr ? nullptr : as<std::string>(member(*shader, "variant"));
+    std::uint32_t implementation = 1;
+    if (shader != nullptr && member(*shader, "implementation") != nullptr &&
+        !u32(member(*shader, "implementation"), implementation)) {
+      return source_json_error::invalid_schema;
+    }
     if (library == nullptr || name == nullptr || library->empty() || name->empty() ||
         (variant_name != nullptr && variant_name->empty())) {
       return source_json_error::invalid_schema;
     }
     const auto full_name = variant_name == nullptr ? *name : *name + "/" + *variant_name;
     const auto found = std::ranges::find_if(shader_references, [&](const auto& reference) {
-      return reference.library == *library && reference.name == full_name;
+      return reference.library == *library && reference.name == full_name &&
+             reference.implementation == implementation;
     });
-    if (found == shader_references.end())
+    if (found == shader_references.end()) {
       return source_json_error::invalid_schema;
+    }
     material_shader_code code{.stage = found->stage,
                               .entry_point = found->entry_point,
                               .asset_id = found->content_id,
                               .spirv = {},
-                              .wgsl = {}};
+                              .wgsl = {},
+                              .implementation = implementation};
     variant.shaders.push_back(std::move(code));
   }
   return source_json_error::none;
@@ -578,6 +586,45 @@ parse_material_source_json(std::string_view json,
         .required_renderer_features = binding_model == package_binding_model::resource_table
                                           ? package_feature_bindless_resource_table
                                           : 0};
+    if (const auto* implementations =
+            as<json_value::array>(member(*object, "implementations"));
+        implementations != nullptr) {
+      desc.implementations.clear();
+      for (const auto& value : *implementations) {
+        const auto* implementation = as<json_value::object>(&value);
+        const auto* model = implementation == nullptr
+                                ? nullptr
+                                : as<std::string>(member(*implementation, "binding_model"));
+        std::uint32_t id = 0;
+        if (implementation == nullptr || model == nullptr ||
+            !u32(member(*implementation, "id"), id) || id == 0 ||
+            (*model != "bind_group" && *model != "resource_table")) {
+          return source_json_error::invalid_schema;
+        }
+        const auto* groups = as<json_value::array>(member(*implementation, "binding_groups"));
+        if (groups == nullptr) return source_json_error::invalid_schema;
+        package_binding_groups implementation_groups = 0;
+        for (const auto& group_value : *groups) {
+          const auto* name = as<std::string>(&group_value);
+          const auto found = name == nullptr
+                                 ? group_names.end()
+                                 : std::ranges::find_if(group_names, [&](const auto& group) {
+                                     return group.first == *name;
+                                   });
+          if (found == group_names.end() || (implementation_groups & found->second) != 0)
+            return source_json_error::invalid_schema;
+          implementation_groups |= found->second;
+        }
+        desc.implementations.push_back(
+            {.id = id,
+             .binding_model = *model == "resource_table" ? package_binding_model::resource_table
+                                                            : package_binding_model::bind_group,
+             .binding_groups = implementation_groups,
+             .required_renderer_features =
+                 *model == "resource_table" ? package_feature_bindless_resource_table : 0});
+      }
+      if (desc.implementations.empty()) return source_json_error::invalid_schema;
+    }
     if (!u32(member(*material, "constant_buffer_size"), desc.metadata.constant_buffer_size)) {
       return source_json_error::invalid_schema;
     }

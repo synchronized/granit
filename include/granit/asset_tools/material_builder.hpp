@@ -8,6 +8,7 @@
 #include <granit/core/result.hpp>
 
 #include <cstddef>
+#include <cstdint>
 #include <new>
 #include <span>
 #include <string_view>
@@ -18,7 +19,11 @@ namespace granit::asset_tools::material {
 
 struct build_desc {
   std::string_view source_json;
-  std::span<const std::span<const std::byte>> shader_libraries;
+  struct shader_library {
+    std::span<const std::byte> archive;
+    std::uint32_t implementation = 1;
+  };
+  std::span<const shader_library> shader_libraries;
 };
 
 struct result_info {
@@ -89,9 +94,13 @@ inline std::pair<::granit::result, result> build(const build_desc& desc) noexcep
   try {
     std::vector<granit_asset_tools_material_shader_library> libraries;
     libraries.reserve(desc.shader_libraries.size());
-    for (const auto archive : desc.shader_libraries) {
-      libraries.push_back(
-          {sizeof(granit_asset_tools_material_shader_library), 0, archive.data(), archive.size()});
+    for (const auto& shader_library : desc.shader_libraries) {
+      libraries.push_back({sizeof(granit_asset_tools_material_shader_library),
+                           0,
+                           shader_library.archive.data(),
+                           shader_library.archive.size(),
+                           shader_library.implementation,
+                           0});
     }
     const granit_asset_tools_material_build_desc native{
         sizeof(granit_asset_tools_material_build_desc),

@@ -40,10 +40,13 @@ typedef struct granit_asset_tools_material_shader_library {
   uint32_t reserved;
   const void* archive;
   uint64_t archive_size;
+  uint32_t implementation;
+  uint32_t reserved2;
 } granit_asset_tools_material_shader_library;
 
 #define GRANIT_ASSET_TOOLS_MATERIAL_SHADER_LIBRARY_INIT                                            \
-  {(uint32_t)sizeof(granit_asset_tools_material_shader_library), UINT32_C(0), 0, UINT64_C(0)}
+  {(uint32_t)sizeof(granit_asset_tools_material_shader_library), UINT32_C(0), 0, UINT64_C(0),     \
+   UINT32_C(1), UINT32_C(0)}
 
 /** Material 源构建描述。所有输入均在调用期间借用。 */
 typedef struct granit_asset_tools_material_build_desc {

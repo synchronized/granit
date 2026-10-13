@@ -158,6 +158,10 @@ Shader Library 结果还包含缓存命中状态与失败 Shader 逻辑名称。
 - `granit_asset_tools_material_inspect` 从内存检查已有 `.grmat`，使用与 Runtime 相同的格式实现。
   build 和 inspect 均返回移动独占的结果句柄；`granit_asset_tools_material_result_get_info` 一次返回
   Archive、调试 JSON 和诊断视图。
+- 多 implementation 源 JSON 在每个 Shader 引用上声明 `implementation`。C API 的每个
+  `granit_asset_tools_material_shader_library` 输入项也声明对应的 implementation ID；C++ 包装的
+  `build_desc::shader_library` 使用同样的字段。同一材质可分别引用 Bind Group 与 Vulkan Resource
+  Table Library，公共参数和纹理数据仍只维护一份。
 - 描述结构无效时不创建结果；输入内容或资产语义无效时返回 `invalid_argument`，并尽量返回包含
   诊断的结果句柄。CLI 把诊断写入标准错误，并只在构建成功后原子替换输出文件。
 - CLI 使用 `granit_asset_tool material build` 和 `granit_asset_tool material inspect`。Material

@@ -93,10 +93,10 @@ int build_package(int argc, char** argv) {
     std::cerr << "无法读取材质源描述\n";
     return 1;
   }
-  std::vector<std::span<const std::byte>> library_views;
+  std::vector<granit::asset_tools::material::build_desc::shader_library> library_views;
   library_views.reserve(libraries.size());
   for (const auto& library : libraries)
-    library_views.push_back(library);
+    library_views.push_back({.archive = library});
   auto [status, result] = granit::asset_tools::material::build({source, library_views});
   if (status.failed()) {
     std::cerr << result.diagnostic();
