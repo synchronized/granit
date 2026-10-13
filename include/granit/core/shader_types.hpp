@@ -31,6 +31,7 @@ enum class shader_backend : std::uint32_t {
 
 enum class shader_profile : std::uint32_t {
   portable = GRANIT_SHADER_PROFILE_PORTABLE,
+  vulkan_native = GRANIT_SHADER_PROFILE_VULKAN_NATIVE,
 };
 
 /** 标识一项 Shader 资产，供 Shader Library 查找。 */

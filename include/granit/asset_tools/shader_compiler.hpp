@@ -33,6 +33,7 @@ struct compile_desc {
   shader_stage stage{shader_stage::vertex};
   std::string_view entry_point{"main"};
   shader_backend target_backends{shader_backend::all};
+  shader_profile profile{shader_profile::portable};
   std::string_view spirv_output_path;
   std::string_view wgsl_output_path;
   std::span<const shader_define> defines;
@@ -169,6 +170,7 @@ public:
           .struct_size = sizeof(granit_asset_tools_shader_compile_desc),
           .stage = static_cast<granit_shader_stage>(desc.stage),
           .target_backends = static_cast<granit_shader_backend_flags>(desc.target_backends),
+          .profile = static_cast<granit_shader_profile>(desc.profile),
           .input_path = desc.input_path.data(),
           .input_path_length = desc.input_path.size(),
           .entry_point = desc.entry_point.data(),

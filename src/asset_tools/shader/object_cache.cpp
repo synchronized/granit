@@ -69,6 +69,9 @@ bool valid_context(const shader_object_cache_context& context) {
          !context.target_environment.empty() && !stage_name(context.stage).empty() &&
          context.backend_mask != 0 &&
          (context.backend_mask & ~GRANIT_SHADER_BACKEND_ALL_BITS) == 0 &&
+         (context.profile == shader_profile::portable ||
+          (context.profile == shader_profile::vulkan_native &&
+           context.backend_mask == GRANIT_SHADER_BACKEND_VULKAN_BIT)) &&
          (context.required_features & ~GRANIT_SHADER_FEATURE_ALL_BITS) == 0;
 }
 
@@ -90,7 +93,7 @@ granit_result restore_shader_object_cache(const shader_object_cache_context& con
     std::uint32_t packaged_backends = 0;
     if (granit::detail::shader_format::find_shader_object_variant(
             object, granit::detail::shader_format::shader_object_backend::vulkan,
-            shader_profile::portable) != nullptr)
+            context.profile) != nullptr)
       packaged_backends |= GRANIT_SHADER_BACKEND_VULKAN_BIT;
     if (granit::detail::shader_format::find_shader_object_variant(
             object, granit::detail::shader_format::shader_object_backend::webgpu,
@@ -147,7 +150,7 @@ granit_result write_shader_object_cache(const shader_object_cache_context& conte
     std::vector<std::byte> object;
     if (granit::detail::shader_format::encode_shader_object(
             {wgsl, spirv, serialize_shader_info_json(info), key, context.backend_mask,
-             context.required_features, context.stage, context.entry_point},
+             context.required_features, context.stage, context.entry_point, context.profile},
             object) != granit::detail::shader_format::shader_object_error::success)
       return GRANIT_ERROR_INVALID_ARGUMENT;
     if (granit::asset_tools::detail::store_shader_object(context.object_path, object, wgsl, spirv, cache_hit) !=

@@ -1,7 +1,7 @@
 {
   "format_version": 1,
   "name": "vulkan_only_array",
-  "target_profile": "portable",
+  "target_profile": "vulkan_native",
   "target_backends": ["vulkan"],
   "shaders": [
     {

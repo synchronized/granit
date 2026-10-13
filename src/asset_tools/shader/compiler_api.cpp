@@ -291,6 +291,10 @@ granit_asset_tools_shader_compiler_compile(granit_asset_tools_shader_compiler co
   if (desc == nullptr || desc->struct_size < sizeof(*desc) || stage_name(desc->stage) == nullptr ||
       desc->target_backends == 0 ||
       (desc->target_backends & ~GRANIT_SHADER_BACKEND_ALL_BITS) != 0 ||
+      (desc->profile != GRANIT_SHADER_PROFILE_PORTABLE &&
+       desc->profile != GRANIT_SHADER_PROFILE_VULKAN_NATIVE) ||
+      (desc->profile == GRANIT_SHADER_PROFILE_VULKAN_NATIVE &&
+       desc->target_backends != GRANIT_SHADER_BACKEND_VULKAN_BIT) ||
       !valid_string(desc->input_path, desc->input_path_length) ||
       !valid_string(desc->entry_point, desc->entry_point_length) ||
       !valid_string(desc->spirv_output_path, desc->spirv_output_path_length) ||
@@ -665,7 +669,9 @@ granit_result granit_asset_tools_shader_get_target_capabilities(
     return GRANIT_ERROR_INVALID_ARGUMENT;
   if ((backend != GRANIT_SHADER_BACKEND_VULKAN_BIT &&
        backend != GRANIT_SHADER_BACKEND_WEBGPU_BIT) ||
-      profile != GRANIT_SHADER_PROFILE_PORTABLE)
+      (profile != GRANIT_SHADER_PROFILE_PORTABLE &&
+       !(backend == GRANIT_SHADER_BACKEND_VULKAN_BIT &&
+         profile == GRANIT_SHADER_PROFILE_VULKAN_NATIVE)))
     return GRANIT_ERROR_UNSUPPORTED;
   capabilities->backend = backend;
   capabilities->profile = profile;

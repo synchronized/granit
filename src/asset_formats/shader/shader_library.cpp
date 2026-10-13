@@ -94,7 +94,10 @@ bool valid_variant(const shader_library_variant& variant) noexcept {
                                 variant.code_format == shader_code_format::spirv) ||
                                (variant.backend == shader_object_backend::webgpu &&
                                 variant.code_format == shader_code_format::wgsl);
-  return matching_format && variant.profile == shader_profile::portable;
+  return matching_format &&
+         (variant.profile == shader_profile::portable ||
+          (variant.backend == shader_object_backend::vulkan &&
+           variant.profile == shader_profile::vulkan_native));
 }
 
 struct encoded_shader {
@@ -168,6 +171,8 @@ shader_library_error encode_shader_library(const shader_library_encode_desc& des
         if ((desc.backend_mask & backend_bit(backend)) == 0)
           continue;
         const auto* variant = find_shader_object_variant(object, backend, shader_profile::portable);
+        if (variant == nullptr && backend == shader_object_backend::vulkan)
+          variant = find_shader_object_variant(object, backend, shader_profile::vulkan_native);
         const auto bytes = source_payload(source, backend);
         if (variant == nullptr || bytes.empty())
           return shader_library_error::missing_payload;

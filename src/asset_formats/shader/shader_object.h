@@ -49,6 +49,7 @@ struct shader_object_source {
   std::uint64_t required_features = 0;
   shader_stage stage = shader_stage::vertex;
   std::string_view entry_point = "main";
+  shader_profile profile = shader_profile::portable;
 };
 
 struct shader_object_view {

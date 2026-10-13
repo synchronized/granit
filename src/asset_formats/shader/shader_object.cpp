@@ -83,7 +83,10 @@ bool read_variant(std::span<const std::byte> bytes, std::size_t index,
                              variant.backend == shader_object_backend::vulkan;
   const auto valid_format = variant.code_format == shader_code_format::wgsl ||
                             variant.code_format == shader_code_format::spirv;
-  return valid_backend && valid_format && variant.profile == shader_profile::portable &&
+  const auto valid_profile = variant.profile == shader_profile::portable ||
+                             (variant.backend == shader_object_backend::vulkan &&
+                              variant.profile == shader_profile::vulkan_native);
+  return valid_backend && valid_format && valid_profile &&
          variant.byte_size != 0 && read_u32(bytes, offset + 12) == 0;
 }
 
@@ -97,6 +100,9 @@ shader_object_error encode_shader_object(const shader_object_source& source,
       (!source.spirv.empty() && source.spirv.size() % 4 != 0) ||
       source.reflection_json.empty() || source.backend_mask == 0 ||
       (source.backend_mask & ~GRANIT_SHADER_BACKEND_ALL_BITS) != 0 ||
+      (source.profile != shader_profile::portable &&
+       !(source.profile == shader_profile::vulkan_native &&
+         source.backend_mask == GRANIT_SHADER_BACKEND_VULKAN_BIT)) ||
       (source.stage != shader_stage::vertex && source.stage != shader_stage::fragment &&
        source.stage != shader_stage::compute) ||
       source.entry_point.empty() || source.entry_point.size() > UINT32_MAX)
@@ -135,7 +141,7 @@ shader_object_error encode_shader_object(const shader_object_source& source,
       write_variant(output, variant_index,
                     {.backend = shader_object_backend::vulkan,
                      .code_format = shader_code_format::spirv,
-                     .profile = shader_profile::portable,
+                     .profile = source.profile,
                      .required_features = source.required_features,
                      .byte_size = source.spirv.size(),
                      .digest = sha256_bytes(source.spirv)});
@@ -217,6 +223,9 @@ shader_object_error validate_shader_object_payloads(const shader_object_view& ob
       find_shader_object_variant(object, shader_object_backend::webgpu, shader_profile::portable);
   const auto* spirv_variant =
       find_shader_object_variant(object, shader_object_backend::vulkan, shader_profile::portable);
+  if (spirv_variant == nullptr)
+    spirv_variant = find_shader_object_variant(object, shader_object_backend::vulkan,
+                                               shader_profile::vulkan_native);
   if ((wgsl_variant != nullptr && (wgsl_variant->code_format != shader_code_format::wgsl ||
                                    wgsl.empty() || wgsl.size() != wgsl_variant->byte_size)) ||
       (spirv_variant != nullptr &&
@@ -234,6 +243,8 @@ shader_object_error validate_shader_object_payload(const shader_object_view& obj
                                                    shader_object_backend backend,
                                                    std::span<const std::byte> payload) noexcept {
   const auto* variant = find_shader_object_variant(object, backend, shader_profile::portable);
+  if (variant == nullptr && backend == shader_object_backend::vulkan)
+    variant = find_shader_object_variant(object, backend, shader_profile::vulkan_native);
   if (variant == nullptr)
     return shader_object_error::invalid_argument;
   const auto expected_format = backend == shader_object_backend::vulkan ? shader_code_format::spirv

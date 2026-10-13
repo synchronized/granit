@@ -376,13 +376,16 @@ parse_shader_library_source_manifest(std::string_view json,
     const auto* profile = as<std::string>(member(*object, "target_profile"));
     const auto* backends = as<json_value::array>(member(*object, "target_backends"));
     const auto* shaders = as<json_value::array>(member(*object, "shaders"));
-    if (name == nullptr || !identifier(*name) || profile == nullptr || *profile != "portable" ||
+    if (name == nullptr || !identifier(*name) || profile == nullptr ||
+        (*profile != "portable" && *profile != "vulkan_native") ||
         backends == nullptr || backends->empty() || backends->size() > 2 || shaders == nullptr ||
         shaders->empty() || shaders->size() > maximum_shader_count)
       return shader_library_source_error::invalid_schema;
 
     shader_library_source_manifest replacement;
     replacement.name = *name;
+    replacement.target_profile = *profile == "vulkan_native" ? shader_profile::vulkan_native
+                                                                : shader_profile::portable;
     std::uint32_t backend_bits = 0;
     for (const auto& backend : *backends) {
       const auto* text = as<std::string>(&backend);
@@ -398,6 +401,9 @@ parse_shader_library_source_manifest(std::string_view json,
       backend_bits |= bit;
     }
     replacement.target_backends = static_cast<shader_backend>(backend_bits);
+    if (replacement.target_profile == shader_profile::vulkan_native &&
+        replacement.target_backends != shader_backend::vulkan)
+      return shader_library_source_error::invalid_schema;
     std::set<std::string, std::less<>> names;
     replacement.shaders.reserve(shaders->size());
     for (const auto& value : *shaders) {

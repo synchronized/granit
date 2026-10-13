@@ -29,6 +29,7 @@ typedef uint32_t granit_shader_backend_flags;
 /** Shader 目标能力档位。 */
 typedef uint32_t granit_shader_profile;
 #define GRANIT_SHADER_PROFILE_PORTABLE UINT32_C(1)
+#define GRANIT_SHADER_PROFILE_VULKAN_NATIVE UINT32_C(2)
 
 /** Shader 使用的资源绑定模型。AUTO 允许运行时选择可用模型。 */
 typedef uint32_t granit_shader_binding_model;

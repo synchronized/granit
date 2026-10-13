@@ -60,6 +60,8 @@ typedef struct granit_asset_tools_shader_compile_desc {
   granit_shader_stage stage;
   /** 产物面向的后端非零位集合；当前编译路径会生成后续打包所需的全部中间载荷。 */
   granit_shader_backend_flags target_backends;
+  /** 目标能力档位；vulkan_native 只能与 Vulkan-only 目标组合。 */
+  granit_shader_profile profile;
   const char* input_path;
   uint64_t input_path_length;
   const char* entry_point;
@@ -81,6 +83,7 @@ typedef struct granit_asset_tools_shader_compile_desc {
   {(uint32_t)sizeof(granit_asset_tools_shader_compile_desc),                                       \
    GRANIT_SHADER_STAGE_VERTEX,                                                                     \
    GRANIT_SHADER_BACKEND_ALL_BITS,                                                                 \
+   GRANIT_SHADER_PROFILE_PORTABLE,                                                                 \
    0,                                                                                              \
    UINT64_C(0),                                                                                    \
    0,                                                                                              \

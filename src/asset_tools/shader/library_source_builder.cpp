@@ -241,8 +241,10 @@ extern "C" granit_result granit_asset_tools_shader_build_library_from_manifest(
     const auto revisions = "dxc=" + dxc_identity + ";tint=" + tint_identity;
     const bool has_webgpu = (static_cast<granit_shader_backend_flags>(manifest.target_backends) &
                              GRANIT_SHADER_BACKEND_WEBGPU_BIT) != 0;
-    const auto target_environment = has_webgpu ? std::string_view{"vulkan1.3+webgpu-portable"}
-                                               : std::string_view{"vulkan1.3"};
+    const auto target_environment = manifest.target_profile == granit::shader_profile::vulkan_native
+                                        ? std::string_view{"vulkan1.3-native"}
+                                        : has_webgpu ? std::string_view{"vulkan1.3+webgpu-portable"}
+                                                     : std::string_view{"vulkan1.3"};
 
     compiler_owner compiler;
     const granit_asset_tools_shader_compiler_desc compiler_desc{
@@ -309,6 +311,7 @@ extern "C" granit_result granit_asset_tools_shader_build_library_from_manifest(
           .target_environment = target_environment,
           .compile_options = options,
           .backend_mask = static_cast<granit_shader_backend_flags>(manifest.target_backends),
+          .profile = manifest.target_profile,
           .required_features = 0,
       };
       bool object_hit = false;
@@ -329,6 +332,7 @@ extern "C" granit_result granit_asset_tools_shader_build_library_from_manifest(
             .struct_size = sizeof(granit_asset_tools_shader_compile_desc),
             .stage = static_cast<granit_shader_stage>(item.shader->stage),
             .target_backends = static_cast<granit_shader_backend_flags>(manifest.target_backends),
+            .profile = static_cast<granit_shader_profile>(manifest.target_profile),
             .input_path = source_string.data(),
             .input_path_length = source_string.size(),
             .entry_point = item.shader->entry_point.data(),

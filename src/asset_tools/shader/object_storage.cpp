@@ -120,11 +120,14 @@ shader_object_error store_shader_object(const std::filesystem::path& path,
                                                      shader_profile::portable) != nullptr;
     const auto has_spirv = find_shader_object_variant(view, shader_object_backend::vulkan,
                                                       shader_profile::portable) != nullptr;
+    const auto has_native_spirv =
+        find_shader_object_variant(view, shader_object_backend::vulkan,
+                                   shader_profile::vulkan_native) != nullptr;
     if (std::ranges::equal(read_file(path), manifest) &&
         (!has_wgsl || std::ranges::equal(read_file(wgsl_path), wgsl_bytes)) &&
-        (!has_spirv || std::ranges::equal(read_file(spirv_path), spirv)) &&
+        (!(has_spirv || has_native_spirv) || std::ranges::equal(read_file(spirv_path), spirv)) &&
         (has_wgsl || !std::filesystem::exists(wgsl_path)) &&
-        (has_spirv || !std::filesystem::exists(spirv_path))) {
+        ((has_spirv || has_native_spirv) || !std::filesystem::exists(spirv_path))) {
       cache_hit = true;
       return shader_object_error::success;
     }

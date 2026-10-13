@@ -25,6 +25,7 @@ struct shader_object_cache_context {
   std::string_view target_environment;
   std::string_view compile_options;
   granit_shader_backend_flags backend_mask{GRANIT_SHADER_BACKEND_ALL_BITS};
+  shader_profile profile{shader_profile::portable};
   granit_shader_feature_flags required_features{};
 };
 
