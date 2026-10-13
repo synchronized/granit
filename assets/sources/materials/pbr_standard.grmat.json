@@ -86,6 +86,16 @@
         "offset": 52
       },
       {
+        "name": "base_color_texture_index",
+        "type": "uint32",
+        "offset": 56
+      },
+      {
+        "name": "base_color_sampler_index",
+        "type": "uint32",
+        "offset": 60
+      },
+      {
         "name": "base_color_texture",
         "type": "texture_view",
         "binding": 1

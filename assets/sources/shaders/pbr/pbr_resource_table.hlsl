@@ -30,7 +30,8 @@ struct vertex_output {
   uint debug_display;
   float alpha_cutoff;
   uint uv1_mask;
-  uint2 material_reserved;
+  uint base_color_texture_index;
+  uint base_color_sampler_index;
 };
 
 [[vk::binding(0, 2)]] cbuffer ObjectConstants {
@@ -52,7 +53,8 @@ vertex_output vertex_main(vertex_input input) {
 }
 
 float4 fragment_main(vertex_output input) : SV_Target0 {
-  const float4 sampled = resource_table_textures[0].Sample(resource_table_samplers[0],
+  const float4 sampled = resource_table_textures[base_color_texture_index].Sample(
+      resource_table_samplers[base_color_sampler_index],
                                                             input.texture_coordinate);
   return base_color * sampled;
 }

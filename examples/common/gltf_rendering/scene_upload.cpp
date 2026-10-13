@@ -182,6 +182,8 @@ granit::result create_material(granit::renderer_ref renderer, const gltf::materi
                               &source.emissive_texture};
   std::array<granit::sampler_ref, 5> resolved_samplers;
   std::uint32_t uv1_mask{};
+  constexpr std::uint32_t base_color_texture_index = 0;
+  constexpr std::uint32_t base_color_sampler_index = 0;
   for (std::size_t index = 0; index < references.size(); ++index) {
     if (const auto result = resolve_sampler(*references[index], plan, samplers, default_sampler,
                                             resolved_samplers[index]);
@@ -217,6 +219,14 @@ granit::result create_material(granit::renderer_ref renderer, const gltf::materi
       granit::material_parameter_update::value(granit::material_parameter_id("uv1_mask"),
                                                granit::material_parameter_type::uint32,
                                                std::as_bytes(std::span{&uv1_mask, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("base_color_texture_index"),
+          granit::material_parameter_type::uint32,
+          std::as_bytes(std::span{&base_color_texture_index, 1})),
+      granit::material_parameter_update::value(
+          granit::material_parameter_id("base_color_sampler_index"),
+          granit::material_parameter_type::uint32,
+          std::as_bytes(std::span{&base_color_sampler_index, 1})),
       granit::material_parameter_update::texture_binding(
           granit::material_parameter_id("base_color_texture"), base_color),
       granit::material_parameter_update::texture_binding(
