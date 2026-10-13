@@ -37,15 +37,13 @@ else()
       "${granit_asset_sources_dir}/materials/pbr_standard.grmat.json"
       --output "${granit_gltf_rendering_material_package}" --shader-library
       "${granit_installed_asset_snapshot_dir}/libraries/pbr_standard.grshlib"
-    COMMAND
-      "${CMAKE_COMMAND}" -E compare_files
-      "${granit_gltf_rendering_material_package}"
-      "${granit_installed_asset_snapshot_dir}/materials/pbr_standard.grmat"
+      --shader-library-implementation 2
+      --shader-library "${GRANIT_PBR_RESOURCE_TABLE_SHADER_LIBRARY}"
     DEPENDS
       granit_asset_tool
+      granit_pbr_resource_table_shader_library
       "${granit_asset_sources_dir}/materials/pbr_standard.grmat.json"
       "${granit_installed_asset_snapshot_dir}/libraries/pbr_standard.grshlib"
-      "${granit_installed_asset_snapshot_dir}/materials/pbr_standard.grmat"
     COMMENT "生成示例 PBR 材质归档"
     VERBATIM
   )

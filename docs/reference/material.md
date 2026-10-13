@@ -43,6 +43,9 @@ RenderPipeline 资产根目录下的 `materials/pbr_standard.grmat` 是对应的
   Library；Renderer 在
   首次需要对应 Pipeline 时选择当前后端载荷。缺少 Library 或内容 ID 返回
   `GRANIT_ERROR_NOT_READY`。
+- 源 JSON 的 implementation 可以额外声明 `shader_library` 别名。未指定逐 Shader
+  `implementation` 时，AssetTools 会按相同的 Shader/variant 自动生成各 implementation 的引用；
+  该别名只影响构建期载荷解析，不改变公共材质参数或运行时 API。
 - 源 JSON 的 `binding_groups` 显式声明 Pipeline Layout 使用的连续绑定组。顺序固定为 `frame`、
   `material`、`object`、`lighting`；前两组必需，使用 `lighting` 时也必须包含 `object`。Unlit 通常
   使用前三组，标准 PBR 使用全部四组。

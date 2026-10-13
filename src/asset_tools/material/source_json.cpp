@@ -457,7 +457,13 @@ bool parse_pipeline(const json_value& value, material_pipeline_state& pipeline) 
   return true;
 }
 
+struct implementation_shader_library {
+  material_implementation_id id = 1;
+  std::string library;
+};
+
 source_json_error parse_variant(std::span<const material_shader_reference> shader_references,
+                                std::span<const implementation_shader_library> implementations,
                                 const json_value& value, material_variant_desc& variant) {
   const auto* object = as<json_value::object>(&value);
   const auto* pass = object == nullptr ? nullptr : as<std::string>(member(*object, "pass"));
@@ -493,30 +499,44 @@ source_json_error parse_variant(std::span<const material_shader_reference> shade
     const auto* name = shader == nullptr ? nullptr : as<std::string>(member(*shader, "shader"));
     const auto* variant_name =
         shader == nullptr ? nullptr : as<std::string>(member(*shader, "variant"));
+    const auto* implementation_value =
+        shader == nullptr ? nullptr : member(*shader, "implementation");
     std::uint32_t implementation = 1;
-    if (shader != nullptr && member(*shader, "implementation") != nullptr &&
-        !u32(member(*shader, "implementation"), implementation)) {
+    if (implementation_value != nullptr && !u32(implementation_value, implementation))
       return source_json_error::invalid_schema;
-    }
     if (library == nullptr || name == nullptr || library->empty() || name->empty() ||
         (variant_name != nullptr && variant_name->empty())) {
       return source_json_error::invalid_schema;
     }
     const auto full_name = variant_name == nullptr ? *name : *name + "/" + *variant_name;
-    const auto found = std::ranges::find_if(shader_references, [&](const auto& reference) {
-      return reference.library == *library && reference.name == full_name &&
-             reference.implementation == implementation;
-    });
-    if (found == shader_references.end()) {
-      return source_json_error::invalid_schema;
+    const auto append_shader = [&](material_implementation_id selected_id,
+                                   std::string_view selected_library) {
+      const auto found = std::ranges::find_if(shader_references, [&](const auto& reference) {
+        return reference.library == selected_library && reference.name == full_name &&
+               reference.implementation == selected_id;
+      });
+      if (found == shader_references.end())
+        return false;
+      variant.shaders.push_back({.stage = found->stage,
+                                 .entry_point = found->entry_point,
+                                 .asset_id = found->content_id,
+                                 .spirv = {},
+                                 .wgsl = {},
+                                 .implementation = selected_id});
+      return true;
+    };
+    if (implementation_value != nullptr) {
+      if (!append_shader(implementation, *library))
+        return source_json_error::invalid_schema;
+    } else {
+      for (const auto& candidate : implementations) {
+        const auto selected_library = candidate.library.empty() || candidate.id == 1
+                                          ? std::string_view{*library}
+                                          : std::string_view{candidate.library};
+        if (!append_shader(candidate.id, selected_library))
+          return source_json_error::invalid_schema;
+      }
     }
-    material_shader_code code{.stage = found->stage,
-                              .entry_point = found->entry_point,
-                              .asset_id = found->content_id,
-                              .spirv = {},
-                              .wgsl = {},
-                              .implementation = implementation};
-    variant.shaders.push_back(std::move(code));
   }
   return source_json_error::none;
 }
@@ -561,6 +581,7 @@ parse_material_source_json(std::string_view json,
     const auto binding_model = *binding == "resource_table"
                                    ? package_binding_model::resource_table
                                    : package_binding_model::bind_group;
+    std::vector<implementation_shader_library> implementation_libraries{{.id = 1, .library = {}}};
     package_binding_groups parsed_binding_groups = 0;
     constexpr std::array group_names{
         std::pair{"frame", package_binding_group_frame},
@@ -603,6 +624,12 @@ parse_material_source_json(std::string_view json,
         }
         const auto* groups = as<json_value::array>(member(*implementation, "binding_groups"));
         if (groups == nullptr) return source_json_error::invalid_schema;
+        std::string shader_library;
+        if (const auto* library = member(*implementation, "shader_library"); library != nullptr) {
+          const auto* text = as<std::string>(library);
+          if (text == nullptr || text->empty()) return source_json_error::invalid_schema;
+          shader_library = *text;
+        }
         package_binding_groups implementation_groups = 0;
         for (const auto& group_value : *groups) {
           const auto* name = as<std::string>(&group_value);
@@ -622,8 +649,10 @@ parse_material_source_json(std::string_view json,
              .binding_groups = implementation_groups,
              .required_renderer_features =
                  *model == "resource_table" ? package_feature_bindless_resource_table : 0});
+        implementation_libraries.push_back({.id = id, .library = std::move(shader_library)});
       }
       if (desc.implementations.empty()) return source_json_error::invalid_schema;
+      implementation_libraries.erase(implementation_libraries.begin());
     }
     if (!u32(member(*material, "constant_buffer_size"), desc.metadata.constant_buffer_size)) {
       return source_json_error::invalid_schema;
@@ -641,7 +670,7 @@ parse_material_source_json(std::string_view json,
     }
     for (const auto& value : *variants) {
       material_variant_desc variant;
-      const auto result = parse_variant(shader_references, value, variant);
+      const auto result = parse_variant(shader_references, implementation_libraries, value, variant);
       if (result != source_json_error::none) {
         return result;
       }

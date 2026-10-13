@@ -8,6 +8,29 @@
     "object",
     "lighting"
   ],
+  "implementations": [
+    {
+      "id": 1,
+      "binding_model": "bind_group",
+      "binding_groups": [
+        "frame",
+        "material",
+        "object",
+        "lighting"
+      ]
+    },
+    {
+      "id": 2,
+      "binding_model": "resource_table",
+      "binding_groups": [
+        "frame",
+        "material",
+        "object",
+        "lighting"
+      ],
+      "shader_library": "pbr_resource_table"
+    }
+  ],
   "material": {
     "constant_buffer_size": 64,
     "parameters": [

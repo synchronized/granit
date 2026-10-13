@@ -120,6 +120,8 @@ function(granit_prepare_runtime_shader_libraries)
       TARGET granit_pbr_resource_table_shader_library
       SOURCES "${granit_asset_sources_dir}/shaders/pbr/pbr_resource_table.hlsl"
     )
+    set(GRANIT_PBR_RESOURCE_TABLE_SHADER_LIBRARY
+        "${output_root}/pbr_resource_table.grshlib" PARENT_SCOPE)
     set(pbr_resource_table_material
         "${output_root}/../runtime-materials/pbr_resource_table_probe.grmat")
     set(pbr_resource_table_material_stamp "${pbr_resource_table_material}.verified")

@@ -76,27 +76,26 @@ constexpr std::string_view multi_implementation_source = R"({
   "binding_groups": ["frame", "material"],
   "implementations": [
     {"id": 1, "binding_model": "bind_group", "binding_groups": ["frame", "material"]},
-    {"id": 2, "binding_model": "resource_table", "binding_groups": ["frame", "material"]}
+    {"id": 2, "binding_model": "resource_table", "binding_groups": ["frame", "material"],
+     "shader_library": "fixture_native"}
   ],
   "material": {"constant_buffer_size": 0, "parameters": []},
   "variants": [{"pass": "opaque", "shaders": [
-    {"library": "fixture", "shader": "main.vertex", "implementation": 1},
-    {"library": "fixture", "shader": "main.fragment", "variant": "textured", "implementation": 1},
-    {"library": "fixture", "shader": "native.vertex", "implementation": 2},
-    {"library": "fixture", "shader": "native.fragment", "implementation": 2}
+    {"library": "fixture", "shader": "main.vertex"},
+    {"library": "fixture", "shader": "main.fragment", "variant": "textured"}
   ]}]
 })";
 
 const std::array multi_implementation_references{
     references[0], references[1],
-    granit::material::material_shader_reference{.library = "fixture",
-                                                .name = "native.vertex",
+    granit::material::material_shader_reference{.library = "fixture_native",
+                                                .name = "main.vertex",
                                                 .content_id = references[0].content_id,
                                                 .stage = granit::material::package_shader_stage::vertex,
                                                 .entry_point = "main",
                                                 .implementation = 2},
-    granit::material::material_shader_reference{.library = "fixture",
-                                                .name = "native.fragment",
+    granit::material::material_shader_reference{.library = "fixture_native",
+                                                .name = "main.fragment/textured",
                                                 .content_id = references[1].content_id,
                                                 .stage = granit::material::package_shader_stage::fragment,
                                                 .entry_point = "main",
@@ -130,7 +129,8 @@ TEST_CASE("材质源 JSON 支持多个 implementation 和对应 Shader") {
           granit::material::source_json_error::none);
   REQUIRE(package.implementations().size() == 2);
   REQUIRE(package.variants().front().shaders.size() == 4);
-  CHECK(package.variants().front().shaders[2].implementation == 2);
+  CHECK(package.variants().front().shaders[1].implementation == 2);
+  CHECK(package.variants().front().shaders[3].implementation == 2);
   CHECK(package.implementations()[1].binding_model ==
         granit::material::package_binding_model::resource_table);
 }

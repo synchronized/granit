@@ -168,6 +168,9 @@ Shader Library 结果还包含缓存命中状态与失败 Shader 逻辑名称。
   领域不查找、加载或下载 Shader Toolchain。多 implementation CLI 构建可在对应
   `--shader-library <file>` 前使用 `--shader-library-implementation <id>` 指定输入归属；未指定时
   默认为 implementation 1。
+- implementation 也可以声明 `shader_library` 别名。未显式声明 Shader 引用的 implementation
+  会自动复用同名 Shader 和变体，并从该别名库解析；这样公共材质参数和变体列表只需维护一份，
+  不同后端只替换 Shader Library 载荷。显式的 Shader `implementation` 仍优先于自动展开。
 
 ## Texture Builder
 
