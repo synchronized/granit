@@ -214,8 +214,10 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
                                        .array_element = entry.array_element};
         if (declaration->type == GRANIT_BINDING_TYPE_UNIFORM_BUFFER ||
             declaration->type == GRANIT_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER ||
-            declaration->type == GRANIT_BINDING_TYPE_STORAGE_BUFFER) {
-          const bool uniform = declaration->type != GRANIT_BINDING_TYPE_STORAGE_BUFFER;
+            declaration->type == GRANIT_BINDING_TYPE_STORAGE_BUFFER ||
+            declaration->type == GRANIT_BINDING_TYPE_READ_ONLY_STORAGE_BUFFER) {
+          const bool uniform = declaration->type != GRANIT_BINDING_TYPE_STORAGE_BUFFER &&
+                               declaration->type != GRANIT_BINDING_TYPE_READ_ONLY_STORAGE_BUFFER;
           const auto found = buffers_.find(entry.resource);
           if (found == buffers_.end() || found->second->owner != state ||
               entry.offset >= found->second->desc.size || entry.size == 0 ||
@@ -236,6 +238,8 @@ granit_result renderer_registry::create_bind_group(granit_renderer renderer,
           write.type = declaration->type == GRANIT_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER
                            ? backend_binding_type::dynamic_uniform_buffer
                        : uniform ? backend_binding_type::uniform_buffer
+                       : declaration->type == GRANIT_BINDING_TYPE_READ_ONLY_STORAGE_BUFFER
+                           ? backend_binding_type::read_only_storage_buffer
                                  : backend_binding_type::storage_buffer;
           write.buffer = found->second->native.get();
           write.offset = entry.offset;

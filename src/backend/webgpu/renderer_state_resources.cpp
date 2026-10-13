@@ -772,6 +772,9 @@ granit_result webgpu_renderer_state::create_bind_group_layout(
       case GRANIT_BINDING_TYPE_STORAGE_BUFFER:
         type = GRANIT_WEBGPU_BINDING_TYPE_STORAGE_BUFFER;
         break;
+      case GRANIT_BINDING_TYPE_READ_ONLY_STORAGE_BUFFER:
+        type = GRANIT_WEBGPU_BINDING_TYPE_READ_ONLY_STORAGE_BUFFER;
+        break;
       case GRANIT_BINDING_TYPE_STORAGE_TEXTURE: {
         if (entry.storage_texture_access != GRANIT_STORAGE_TEXTURE_ACCESS_WRITE_ONLY)
           return GRANIT_ERROR_UNSUPPORTED;
@@ -854,6 +857,10 @@ webgpu_renderer_state::create_bind_group(backend_bind_group_layout_resource& lay
         break;
       case backend_binding_type::storage_buffer:
         entry.type = GRANIT_WEBGPU_BINDING_TYPE_STORAGE_BUFFER;
+        entry.buffer = native_buffer(*write.buffer);
+        break;
+      case backend_binding_type::read_only_storage_buffer:
+        entry.type = GRANIT_WEBGPU_BINDING_TYPE_READ_ONLY_STORAGE_BUFFER;
         entry.buffer = native_buffer(*write.buffer);
         break;
       case backend_binding_type::sampled_texture:

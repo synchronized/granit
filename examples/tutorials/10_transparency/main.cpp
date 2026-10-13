@@ -63,7 +63,8 @@ private:
   }
   granit::result initialize_layout() noexcept {
     const std::array entries{granit::bind_group_layout_entry{.binding = 0,
-      .type = granit::binding_type::storage_buffer, .visibility = granit::shader_stage_flags::vertex}};
+      .type = granit::binding_type::read_only_storage_buffer,
+      .visibility = granit::shader_stage_flags::vertex}};
     auto result = layout_.initialize(renderer_owner(), entries);
     const std::array layouts{layout_.ref()};
     if (result.ok()) result = pipeline_layout_.initialize(renderer_owner(), layouts);

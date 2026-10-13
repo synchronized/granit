@@ -401,7 +401,8 @@ granit_result vulkan_renderer_state::create_native_bind_group_layout(
     VkDescriptorType type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     if (entry.type == GRANIT_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER)
       type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-    else if (entry.type == GRANIT_BINDING_TYPE_STORAGE_BUFFER)
+    else if (entry.type == GRANIT_BINDING_TYPE_STORAGE_BUFFER ||
+             entry.type == GRANIT_BINDING_TYPE_READ_ONLY_STORAGE_BUFFER)
       type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     else if (entry.type == GRANIT_BINDING_TYPE_SAMPLED_TEXTURE ||
              entry.type == GRANIT_BINDING_TYPE_SAMPLED_TEXTURE_CUBE ||
@@ -453,6 +454,7 @@ granit_result vulkan_renderer_state::create_native_bind_group(
     case backend_binding_type::dynamic_uniform_buffer:
       return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
     case backend_binding_type::storage_buffer:
+    case backend_binding_type::read_only_storage_buffer:
       return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     case backend_binding_type::sampled_texture:
     case backend_binding_type::sampled_texture_cube:
@@ -473,7 +475,8 @@ granit_result vulkan_renderer_state::create_native_bind_group(
     std::size_t index{};
     if (write.type == backend_binding_type::dynamic_uniform_buffer)
       index = 1;
-    else if (write.type == backend_binding_type::storage_buffer)
+    else if (write.type == backend_binding_type::storage_buffer ||
+             write.type == backend_binding_type::read_only_storage_buffer)
       index = 2;
     else if (write.type == backend_binding_type::sampled_texture ||
              write.type == backend_binding_type::sampled_texture_cube ||

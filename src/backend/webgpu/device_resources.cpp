@@ -1001,6 +1001,9 @@ granit_result create_bind_group_layout(webgpu_instance_handle instance,
       case GRANIT_WEBGPU_BINDING_TYPE_STORAGE_BUFFER:
         entry.buffer.type = WGPUBufferBindingType_Storage;
         break;
+      case GRANIT_WEBGPU_BINDING_TYPE_READ_ONLY_STORAGE_BUFFER:
+        entry.buffer.type = WGPUBufferBindingType_ReadOnlyStorage;
+        break;
       case GRANIT_WEBGPU_BINDING_TYPE_STORAGE_TEXTURE:
         if (source.storage_texture_access != GRANIT_WEBGPU_STORAGE_TEXTURE_ACCESS_WRITE_ONLY ||
             (source.storage_texture_format != GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA8_UNORM &&
@@ -1131,11 +1134,13 @@ granit_result create_bind_group(webgpu_instance_handle instance, const webgpu_bi
       entry.binding = source.binding;
       if (source.type == GRANIT_WEBGPU_BINDING_TYPE_UNIFORM_BUFFER ||
           source.type == GRANIT_WEBGPU_BINDING_TYPE_DYNAMIC_UNIFORM_BUFFER ||
-          source.type == GRANIT_WEBGPU_BINDING_TYPE_STORAGE_BUFFER) {
+          source.type == GRANIT_WEBGPU_BINDING_TYPE_STORAGE_BUFFER ||
+          source.type == GRANIT_WEBGPU_BINDING_TYPE_READ_ONLY_STORAGE_BUFFER) {
         const auto buffer = state.buffers.find(source.buffer);
         if (buffer == state.buffers.end())
           return GRANIT_ERROR_INVALID_HANDLE;
-        const auto required_usage = source.type == GRANIT_WEBGPU_BINDING_TYPE_STORAGE_BUFFER
+        const auto required_usage = source.type == GRANIT_WEBGPU_BINDING_TYPE_STORAGE_BUFFER ||
+                                            source.type == GRANIT_WEBGPU_BINDING_TYPE_READ_ONLY_STORAGE_BUFFER
                                         ? GRANIT_WEBGPU_BUFFER_USAGE_STORAGE_BIT
                                         : GRANIT_WEBGPU_BUFFER_USAGE_UNIFORM_BIT;
         if (source.offset >= buffer->second.size || source.size == 0 ||

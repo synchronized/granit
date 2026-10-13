@@ -160,6 +160,7 @@ private:
 enum class binding_type : std::uint32_t {
   uniform_buffer = GRANIT_BINDING_TYPE_UNIFORM_BUFFER,
   storage_buffer = GRANIT_BINDING_TYPE_STORAGE_BUFFER,
+  read_only_storage_buffer = GRANIT_BINDING_TYPE_READ_ONLY_STORAGE_BUFFER,
   sampled_texture = GRANIT_BINDING_TYPE_SAMPLED_TEXTURE,
   sampled_texture_cube = GRANIT_BINDING_TYPE_SAMPLED_TEXTURE_CUBE,
   storage_texture = GRANIT_BINDING_TYPE_STORAGE_TEXTURE,

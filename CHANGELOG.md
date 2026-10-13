@@ -14,6 +14,8 @@
   Tutorial 12 的 Chrome 运行时仍有独立的 `INVALID_ARGUMENT` 初始化阻塞，待后续收口。
 - Tutorial 12 已增加可自动退出的 `--stress-test`，输出 64 个 Resource Table 创建和 64 次 sampler 更新的 CPU 压力计时；Bind Group 对照和 GPU 时间仍待完成。
 - 示例资产部署新增目录级预加载，修复 Tutorial 12 的 Emscripten Windows 链接命令行过长问题。
+- 新增 `read_only_storage_buffer` 绑定类型；WebGPU Tutorial 09/10 的顶点 Storage Buffer 使用只读布局，
+  避免 `read-write storage buffer` 可见性校验错误，同时保留 Vulkan 和计算管线的可写 Storage Buffer。
 
 ## 0.60.0 - 2026-10-12
 
