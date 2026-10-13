@@ -43,13 +43,22 @@ granit_result create_shader(granit_renderer renderer, const material_shader_code
 
 } // namespace
 
+granit_shader_library
+material_template_gpu::shader_library_for(material_implementation_id id) const noexcept {
+  const auto found = std::ranges::find_if(shader_libraries_, [id](const auto& value) {
+    return value.implementation == id;
+  });
+  return found == shader_libraries_.end() ? GRANIT_NULL_HANDLE : found->shader_library;
+}
+
 material_template_gpu::~material_template_gpu() { static_cast<void>(reset()); }
 
 granit_result
 material_template_gpu::initialize(granit_renderer renderer, const material_package& package,
                                   std::span<const granit_bind_group_layout> additional_layouts,
                                   granit_shader_library shader_library,
-                                  granit_resource_table resource_table) {
+                                  granit_resource_table resource_table,
+                                  std::span<const granit_material_shader_library> shader_libraries) {
   std::lock_guard lock{mutex_};
   const auto find_implementation = [&](package_binding_model model) {
     const auto found = std::ranges::find_if(package.implementations(), [&](const auto& value) {
@@ -159,8 +168,48 @@ material_template_gpu::initialize(granit_renderer renderer, const material_packa
     static_cast<void>(granit_bind_group_layout_destroy(renderer, frame_layout));
     return result;
   }
+  std::vector<granit_material_shader_library> resolved_libraries;
+  try {
+    resolved_libraries.assign(shader_libraries.begin(), shader_libraries.end());
+    if (resolved_libraries.empty() && shader_library != GRANIT_NULL_HANDLE) {
+      resolved_libraries.push_back({.implementation = 1,
+                                    .reserved = 0,
+                                    .shader_library = shader_library,
+                                    .reserved_tail = 0});
+    }
+    for (std::size_t index = 0; index < resolved_libraries.size(); ++index) {
+      const auto& value = resolved_libraries[index];
+      if (value.implementation == 0 || value.shader_library == GRANIT_NULL_HANDLE ||
+          value.reserved != 0 || value.reserved_tail != 0) {
+        static_cast<void>(granit_pipeline_layout_destroy(renderer, pipeline_layout));
+        static_cast<void>(granit_bind_group_layout_destroy(renderer, material_layout));
+        static_cast<void>(granit_bind_group_layout_destroy(renderer, frame_layout));
+        return GRANIT_ERROR_INVALID_ARGUMENT;
+      }
+      for (std::size_t previous = 0; previous < index; ++previous) {
+        if (resolved_libraries[previous].implementation == value.implementation) {
+          static_cast<void>(granit_pipeline_layout_destroy(renderer, pipeline_layout));
+          static_cast<void>(granit_bind_group_layout_destroy(renderer, material_layout));
+          static_cast<void>(granit_bind_group_layout_destroy(renderer, frame_layout));
+          return GRANIT_ERROR_INVALID_ARGUMENT;
+        }
+      }
+    }
+  } catch (const std::bad_alloc&) {
+    static_cast<void>(granit_pipeline_layout_destroy(renderer, pipeline_layout));
+    static_cast<void>(granit_bind_group_layout_destroy(renderer, material_layout));
+    static_cast<void>(granit_bind_group_layout_destroy(renderer, frame_layout));
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
+  const auto find_library = [&](material_implementation_id id) {
+    const auto found = std::ranges::find_if(resolved_libraries, [id](const auto& value) {
+      return value.implementation == id;
+    });
+    return found == resolved_libraries.end() ? GRANIT_NULL_HANDLE : found->shader_library;
+  };
   granit_shader library_reference_shader = GRANIT_NULL_HANDLE;
-  if (shader_library != GRANIT_NULL_HANDLE) {
+  const auto implementation_library = find_library(implementation->id);
+  if (implementation_library != GRANIT_NULL_HANDLE) {
     for (const auto& variant : package.variants()) {
       const auto source = std::ranges::find_if(variant.shaders, [&](const auto& shader) {
         return shader.implementation == implementation->id &&
@@ -169,7 +218,7 @@ material_template_gpu::initialize(granit_renderer renderer, const material_packa
       });
       if (source == variant.shaders.end())
         continue;
-      result = create_shader(renderer, *source, shader_library, library_reference_shader);
+      result = create_shader(renderer, *source, implementation_library, library_reference_shader);
       if (result != GRANIT_SUCCESS) {
         static_cast<void>(granit_pipeline_layout_destroy(renderer, pipeline_layout));
         static_cast<void>(granit_bind_group_layout_destroy(renderer, material_layout));
@@ -187,7 +236,8 @@ material_template_gpu::initialize(granit_renderer renderer, const material_packa
   pipeline_layout_ = pipeline_layout;
   resource_table_ = resource_table;
   implementation_id_ = implementation->id;
-  shader_library_ = shader_library;
+  shader_library_ = implementation_library;
+  shader_libraries_ = std::move(resolved_libraries);
   library_reference_shader_ = library_reference_shader;
   return GRANIT_SUCCESS;
 }
@@ -230,6 +280,7 @@ granit_result material_template_gpu::reset() noexcept {
   resource_table_ = GRANIT_NULL_HANDLE;
   implementation_id_ = 0;
   shader_library_ = GRANIT_NULL_HANDLE;
+  shader_libraries_.clear();
   library_reference_shader_ = GRANIT_NULL_HANDLE;
   return first_error;
 }
@@ -272,11 +323,13 @@ granit_result material_template_gpu::acquire_pipeline(const material_pipeline_re
     replacement.fragment_shader = warmed->fragment_shader;
     warmups_.erase(warmed);
   } else {
-    result = create_shader(renderer_, *vertex, shader_library_, replacement.vertex_shader);
+    result = create_shader(renderer_, *vertex, shader_library_for(vertex->implementation),
+                           replacement.vertex_shader);
     if (result != GRANIT_SUCCESS) {
       return result;
     }
-    result = create_shader(renderer_, *fragment, shader_library_, replacement.fragment_shader);
+    result = create_shader(renderer_, *fragment, shader_library_for(fragment->implementation),
+                           replacement.fragment_shader);
     if (result != GRANIT_SUCCESS) {
       static_cast<void>(granit_shader_destroy(renderer_, replacement.vertex_shader));
       return result;
@@ -369,10 +422,12 @@ granit_result material_template_gpu::add_pipeline_warmup(const material_pipeline
   const material_pipeline_request resolved{request.pass, variant_key, request.color_format,
                                            request.depth_stencil_format, request.sample_count};
   warmup_entry entry{.request = resolved};
-  auto result = create_shader(renderer_, *vertex, shader_library_, entry.vertex_shader);
+  auto result = create_shader(renderer_, *vertex, shader_library_for(vertex->implementation),
+                              entry.vertex_shader);
   if (result != GRANIT_SUCCESS)
     return result;
-  result = create_shader(renderer_, *fragment, shader_library_, entry.fragment_shader);
+  result = create_shader(renderer_, *fragment, shader_library_for(fragment->implementation),
+                         entry.fragment_shader);
   if (result != GRANIT_SUCCESS) {
     static_cast<void>(granit_shader_destroy(renderer_, entry.vertex_shader));
     return result;

@@ -369,6 +369,9 @@ extern "C" granit_result granit_material_create(granit_renderer renderer,
   *material = GRANIT_NULL_HANDLE;
   if (desc == nullptr || desc->struct_size < GRANIT_MATERIAL_DESC_VERSION_1_SIZE ||
       desc->reserved != 0 || desc->reserved_tail != 0 || desc->reserved_2 != 0 ||
+      desc->reserved_3 != 0 ||
+      (desc->shader_library_count != 0 && desc->shader_libraries == nullptr) ||
+      (desc->shader_library_count != 0 && desc->shader_library != GRANIT_NULL_HANDLE) ||
       (desc->initial_update_count != 0 && desc->initial_updates == nullptr)) {
     return GRANIT_ERROR_INVALID_ARGUMENT;
   }
@@ -403,10 +406,22 @@ extern "C" granit_result granit_material_create(granit_renderer renderer,
         (binding_groups & granit::material::package_binding_group_lighting) != 0 ? 2U
         : (binding_groups & granit::material::package_binding_group_object) != 0 ? 1U
                                                                                  : 0U;
+    std::vector<granit_material_shader_library> shader_libraries;
+    shader_libraries.reserve(desc->shader_library_count == 0 ? 1 : desc->shader_library_count);
+    if (desc->shader_library_count != 0) {
+      shader_libraries.assign(desc->shader_libraries,
+                              desc->shader_libraries + desc->shader_library_count);
+    } else if (desc->shader_library != GRANIT_NULL_HANDLE) {
+      shader_libraries.push_back({.implementation = 1,
+                                  .reserved = 0,
+                                  .shader_library = desc->shader_library,
+                                  .reserved_tail = 0});
+    }
     result = state->material_template.initialize(renderer, state->package,
                                                  std::span{additional_layouts}.first(layout_count),
                                                  desc->shader_library,
-                                                 state->resource_table.native_handle());
+                                                 state->resource_table.native_handle(),
+                                                 shader_libraries);
     if (result != GRANIT_SUCCESS)
       return result;
     result = state->instance.initialize(renderer, state->material_template.material_layout(),

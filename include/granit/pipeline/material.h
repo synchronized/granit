@@ -39,6 +39,14 @@ typedef struct granit_material_parameter_update {
   granit_handle resource;
 } granit_material_parameter_update;
 
+/** implementation 对应的 Shader Library；Library 由调用方持有。 */
+typedef struct granit_material_shader_library {
+  uint32_t implementation;
+  uint32_t reserved;
+  granit_shader_library shader_library;
+  uint64_t reserved_tail;
+} granit_material_shader_library;
+
 typedef struct granit_material_desc {
   uint32_t struct_size;
   uint32_t reserved;
@@ -49,6 +57,9 @@ typedef struct granit_material_desc {
   uint32_t reserved_tail;
   granit_shader_library shader_library;
   uint64_t reserved_2;
+  const granit_material_shader_library* shader_libraries;
+  uint32_t shader_library_count;
+  uint32_t reserved_3;
 } granit_material_desc;
 
 /** 将材质变体加入 Pipeline 预热批次所需的目标描述。variant 为零时选择该 Pass 的首个变体。 */
@@ -84,7 +95,10 @@ typedef struct granit_material_pipeline_warmup_desc {
    UINT32_C(0),                                                                                    \
    UINT32_C(0),                                                                                    \
    GRANIT_NULL_HANDLE,                                                                             \
-   UINT64_C(0)}
+   UINT64_C(0),                                                                                    \
+   NULL,                                                                                            \
+   UINT32_C(0),                                                                                    \
+   UINT32_C(0)}
 
 #ifdef __cplusplus
 extern "C" {

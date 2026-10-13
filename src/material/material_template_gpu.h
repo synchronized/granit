@@ -37,7 +37,8 @@ public:
   initialize(granit_renderer renderer, const material_package& package,
              std::span<const granit_bind_group_layout> additional_layouts = {},
              granit_shader_library shader_library = GRANIT_NULL_HANDLE,
-             granit_resource_table resource_table = GRANIT_NULL_HANDLE);
+             granit_resource_table resource_table = GRANIT_NULL_HANDLE,
+             std::span<const granit_material_shader_library> shader_libraries = {});
   [[nodiscard]] granit_result reset() noexcept;
   [[nodiscard]] granit_result acquire_pipeline(const material_pipeline_request& request,
                                                granit_graphics_pipeline& pipeline);
@@ -53,6 +54,8 @@ public:
   [[nodiscard]] std::size_t cached_pipeline_count() const noexcept;
 
 private:
+  [[nodiscard]] granit_shader_library shader_library_for(material_implementation_id id) const noexcept;
+
   struct cache_entry {
     material_pipeline_request request;
     granit_shader vertex_shader = GRANIT_NULL_HANDLE;
@@ -74,6 +77,7 @@ private:
   granit_resource_table resource_table_ = GRANIT_NULL_HANDLE;
   material_implementation_id implementation_id_ = 0;
   granit_shader_library shader_library_ = GRANIT_NULL_HANDLE;
+  std::vector<granit_material_shader_library> shader_libraries_;
   granit_shader library_reference_shader_ = GRANIT_NULL_HANDLE;
   mutable std::mutex mutex_;
   std::vector<cache_entry> cache_;

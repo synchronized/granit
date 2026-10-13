@@ -131,6 +131,7 @@ private:
   default_material_textures default_textures_;
   granit::sampler default_sampler_;
   granit::shader_library shader_library_;
+  granit::shader_library resource_table_shader_library_;
   std::vector<granit::material_instance> materials_;
   std::vector<gltf::material_alpha_mode> material_alpha_modes_;
   std::vector<granit::render_pipeline_draw_binding> draw_bindings_;

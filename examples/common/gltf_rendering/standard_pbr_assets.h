@@ -18,6 +18,9 @@ namespace granit::example::gltf_rendering {
 /** 返回编译期内嵌的 PBR Shader Library。 */
 [[nodiscard]] std::span<const std::byte> standard_pbr_shader_library() noexcept;
 
+/** 返回编译期内嵌的 Vulkan Resource Table PBR Shader Library；不可用时返回空 span。 */
+[[nodiscard]] std::span<const std::byte> standard_pbr_resource_table_shader_library() noexcept;
+
 } // namespace granit::example::gltf_rendering
 
 #endif

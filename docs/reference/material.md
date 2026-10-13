@@ -43,6 +43,9 @@ RenderPipeline 资产根目录下的 `materials/pbr_standard.grmat` 是对应的
   Library；Renderer 在
   首次需要对应 Pipeline 时选择当前后端载荷。缺少 Library 或内容 ID 返回
   `GRANIT_ERROR_NOT_READY`。
+- `granit_material_desc` 可以通过 `shader_libraries` 和数量同时提供多个
+  `implementation -> Shader Library` 映射；旧的 `shader_library` 字段仍表示 implementation 1 的
+  单库快捷路径。映射数组由调用方持有，创建调用返回后仍须保持各 Library 有效，直到 Material 销毁。
 - 源 JSON 的 implementation 可以额外声明 `shader_library` 别名。未指定逐 Shader
   `implementation` 时，AssetTools 会按相同的 Shader/variant 自动生成各 implementation 的引用；
   该别名只影响构建期载荷解析，不改变公共材质参数或运行时 API。

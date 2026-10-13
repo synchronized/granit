@@ -8,6 +8,8 @@ set(granit_gltf_rendering_material_include
     "${CMAKE_CURRENT_BINARY_DIR}/generated/standard_pbr.grmat.inc")
 set(granit_gltf_rendering_shader_library_include
     "${CMAKE_CURRENT_BINARY_DIR}/generated/pbr_standard.grshlib.inc")
+set(granit_gltf_rendering_resource_table_shader_library_include
+    "${CMAKE_CURRENT_BINARY_DIR}/generated/pbr_resource_table.grshlib.inc")
 
 add_custom_command(
   OUTPUT "${granit_gltf_rendering_shader_library_include}"
@@ -23,6 +25,22 @@ add_custom_command(
   COMMENT "内嵌示例 PBR Shader Library"
   VERBATIM
 )
+
+if(GRANIT_PBR_RESOURCE_TABLE_SHADER_LIBRARY)
+  add_custom_command(
+    OUTPUT "${granit_gltf_rendering_resource_table_shader_library_include}"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated"
+    COMMAND
+      "${CMAKE_COMMAND}"
+      "-DINPUT=${GRANIT_PBR_RESOURCE_TABLE_SHADER_LIBRARY}"
+      "-DOUTPUT=${granit_gltf_rendering_resource_table_shader_library_include}"
+      -P "${PROJECT_SOURCE_DIR}/cmake/assets/embed_binary.cmake"
+    DEPENDS granit_pbr_resource_table_shader_library
+            "${PROJECT_SOURCE_DIR}/cmake/assets/embed_binary.cmake"
+    COMMENT "内嵌 Vulkan Resource Table PBR Shader Library"
+    VERBATIM
+  )
+endif()
 
 if(CMAKE_CROSSCOMPILING)
   set(
@@ -78,6 +96,12 @@ add_library(
   "${granit_gltf_rendering_material_include}"
   "${granit_gltf_rendering_shader_library_include}"
 )
+if(GRANIT_PBR_RESOURCE_TABLE_SHADER_LIBRARY)
+  target_sources(granit_example_gltf_rendering PRIVATE
+                 "${granit_gltf_rendering_resource_table_shader_library_include}")
+  target_compile_definitions(granit_example_gltf_rendering
+                             PRIVATE GRANIT_EXAMPLE_HAS_RESOURCE_TABLE_SHADER_LIBRARY=1)
+endif()
 target_compile_features(granit_example_gltf_rendering PUBLIC cxx_std_20)
 target_include_directories(
   granit_example_gltf_rendering

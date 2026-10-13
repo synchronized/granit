@@ -83,10 +83,16 @@ private:
   granit_handle resource_{GRANIT_NULL_HANDLE};
 };
 
+struct material_shader_library {
+  std::uint32_t implementation{};
+  shader_library_ref shader_library{};
+};
+
 struct material_desc {
   std::span<const std::byte> archive{};
   std::span<const material_parameter_update> initial_updates{};
   shader_library_ref shader_library{};
+  std::span<const material_shader_library> shader_libraries{};
 };
 
 struct material_pipeline_warmup_desc {
@@ -140,13 +146,23 @@ public:
   }
 
   [[nodiscard]] result initialize(renderer_ref owner, const material_desc& desc) noexcept {
-    if (desc.initial_updates.size() > std::numeric_limits<std::uint32_t>::max())
+    if (desc.initial_updates.size() > std::numeric_limits<std::uint32_t>::max() ||
+        desc.shader_libraries.size() > std::numeric_limits<std::uint32_t>::max() ||
+        (!desc.shader_libraries.empty() && desc.shader_library.valid()))
       return result::invalid_argument;
     try {
       std::vector<granit_material_parameter_update> updates;
       updates.reserve(desc.initial_updates.size());
       for (const auto& update : desc.initial_updates)
         updates.push_back(update.native());
+      std::vector<granit_material_shader_library> shader_libraries;
+      shader_libraries.reserve(desc.shader_libraries.size());
+      for (const auto& library : desc.shader_libraries) {
+        shader_libraries.push_back({.implementation = library.implementation,
+                                    .reserved = 0,
+                                    .shader_library = library.shader_library.native_handle(),
+                                    .reserved_tail = 0});
+      }
       const granit_material_desc native{
           .struct_size = GRANIT_MATERIAL_DESC_VERSION_1_SIZE,
           .reserved = 0,
@@ -157,6 +173,9 @@ public:
           .reserved_tail = 0,
           .shader_library = desc.shader_library.native_handle(),
           .reserved_2 = 0,
+          .shader_libraries = shader_libraries.data(),
+          .shader_library_count = static_cast<std::uint32_t>(shader_libraries.size()),
+          .reserved_3 = 0,
       };
       return create_native(owner, native);
     } catch (const std::bad_alloc&) {
