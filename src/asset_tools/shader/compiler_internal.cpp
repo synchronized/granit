@@ -427,6 +427,18 @@ int compile_hlsl_shader(const hlsl_compile_options& options, shader_info& info,
     return 1;
   }
 
+  if (options.wgsl_output.empty()) {
+    if (!inspect_shader(options.spirv_output, false, info, output, error) ||
+        info.entry_point != options.entry_point || info.stage != options.stage) {
+      std::filesystem::remove(options.spirv_output, filesystem_error);
+      error << "Vulkan-only Shader SPIR-V 反射检查失败\n";
+      return 1;
+    }
+    output << "已生成 " << options.spirv_output.string() << "（Vulkan-only, "
+           << info.entry_point << ", " << info.stage << "）\n";
+    return 0;
+  }
+
   process_result bridge_process;
   auto bridge_arguments = vulkan_arguments;
   bridge_arguments[2] = "-fspv-target-env=vulkan1.1";

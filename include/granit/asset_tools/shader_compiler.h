@@ -54,7 +54,7 @@ typedef struct granit_asset_tools_shader_define {
 #define GRANIT_ASSET_TOOLS_SHADER_DEFINE_INIT                                                      \
   {(uint32_t)sizeof(granit_asset_tools_shader_define), UINT32_C(0), 0, UINT64_C(0), 0, UINT64_C(0)}
 
-/** HLSL 编译描述；spirv_output_path 与 wgsl_output_path 均必填。 */
+/** HLSL 编译描述；SPIR-V 路径必填，WebGPU 目标需要额外提供 WGSL 路径。 */
 typedef struct granit_asset_tools_shader_compile_desc {
   uint32_t struct_size;
   granit_shader_stage stage;
@@ -66,6 +66,7 @@ typedef struct granit_asset_tools_shader_compile_desc {
   uint64_t entry_point_length;
   const char* spirv_output_path;
   uint64_t spirv_output_path_length;
+  /** WebGPU 目标必填；仅 Vulkan 目标可以为 NULL/0。 */
   const char* wgsl_output_path;
   uint64_t wgsl_output_path_length;
   /** 实现按名称排序并拒绝重复项。 */

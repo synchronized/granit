@@ -62,7 +62,8 @@ std::string_view stage_name(shader_stage stage) {
 }
 
 bool valid_context(const shader_object_cache_context& context) {
-  return !context.source_path.empty() && !context.wgsl_path.empty() &&
+  const bool has_webgpu = (context.backend_mask & GRANIT_SHADER_BACKEND_WEBGPU_BIT) != 0;
+  return !context.source_path.empty() && (!has_webgpu || !context.wgsl_path.empty()) &&
          !context.spirv_path.empty() && !context.object_path.empty() &&
          !context.entry_point.empty() && !context.tool_identity.empty() &&
          !context.target_environment.empty() && !stage_name(context.stage).empty() &&
@@ -111,7 +112,8 @@ granit_result restore_shader_object_cache(const shader_object_cache_context& con
         granit::detail::shader_format::shader_object_error::success)
       return GRANIT_SUCCESS;
     if (!write_bytes(context.spirv_path, spirv) ||
-        !write_bytes(context.wgsl_path, std::as_bytes(std::span{wgsl})))
+        ((context.backend_mask & GRANIT_SHADER_BACKEND_WEBGPU_BIT) != 0 &&
+         !write_bytes(context.wgsl_path, std::as_bytes(std::span{wgsl}))))
       return GRANIT_ERROR_INITIALIZATION_FAILED;
     cache_hit = true;
     return GRANIT_SUCCESS;
@@ -134,7 +136,8 @@ granit_result write_shader_object_cache(const shader_object_cache_context& conte
     shader_info info;
     std::ostringstream output;
     std::ostringstream diagnostic;
-    if (source.empty() || wgsl.empty() || spirv.empty() ||
+    const bool has_webgpu = (context.backend_mask & GRANIT_SHADER_BACKEND_WEBGPU_BIT) != 0;
+    if (source.empty() || (has_webgpu && wgsl.empty()) || spirv.empty() ||
         !inspect_shader(context.spirv_path, false, info, output, diagnostic) ||
         info.entry_point != context.entry_point || info.stage != stage_name(context.stage))
       return GRANIT_ERROR_INVALID_ARGUMENT;

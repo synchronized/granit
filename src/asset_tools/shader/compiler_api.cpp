@@ -296,7 +296,9 @@ granit_asset_tools_shader_compiler_compile(granit_asset_tools_shader_compiler co
       !valid_string(desc->spirv_output_path, desc->spirv_output_path_length) ||
       !valid_string(desc->wgsl_output_path, desc->wgsl_output_path_length) ||
       desc->input_path_length == 0 || desc->entry_point_length == 0 ||
-      desc->spirv_output_path_length == 0 || desc->wgsl_output_path_length == 0 ||
+      desc->spirv_output_path_length == 0 ||
+      ((desc->target_backends & GRANIT_SHADER_BACKEND_WEBGPU_BIT) != 0 &&
+       desc->wgsl_output_path_length == 0) ||
       !valid_binding_expectations(*desc))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   if (compiler_value->tint.empty() || compiler_value->dxc.empty())
@@ -354,7 +356,9 @@ granit_asset_tools_shader_compiler_compile(granit_asset_tools_shader_compiler co
     if (exit_code == 0) {
       value->spirv = read_binary_file(spirv_output);
       value->wgsl = read_text_file(wgsl_output);
-      if (value->spirv.empty() || value->wgsl.empty()) {
+      if (value->spirv.empty() ||
+          ((desc->target_backends & GRANIT_SHADER_BACKEND_WEBGPU_BIT) != 0 &&
+           value->wgsl.empty())) {
         value->status = GRANIT_ERROR_INITIALIZATION_FAILED;
         value->diagnostic += "无法读取编译产物\n";
       }

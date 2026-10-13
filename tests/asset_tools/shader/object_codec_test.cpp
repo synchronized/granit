@@ -67,6 +67,18 @@ int main(int argc, char** argv) {
       find_shader_object_variant(webgpu_view, shader_object_backend::vulkan,
                                  granit::shader_profile::portable) != nullptr)
     return 20;
+  std::vector<std::byte> vulkan_only;
+  if (encode_shader_object({{}, spirv, reflection, cache_key, GRANIT_SHADER_BACKEND_VULKAN_BIT, 0,
+                            granit::shader_stage::compute, "main"},
+                           vulkan_only) != shader_object_error::success ||
+      decode_shader_object(vulkan_only, view) != shader_object_error::success ||
+      validate_shader_object_payloads(view, {}, spirv) != shader_object_error::success ||
+      view.variant_count != 1 ||
+      find_shader_object_variant(view, shader_object_backend::vulkan,
+                                 granit::shader_profile::portable) == nullptr ||
+      find_shader_object_variant(view, shader_object_backend::webgpu,
+                                 granit::shader_profile::portable) != nullptr)
+    return 23;
   const auto same_from_other_directory =
       make_shader_cache_key({wgsl, "wgsl", "main", "compute", "tint-r1", "vulkan1.3", "--use-ir"});
   if (same_from_other_directory != cache_key)

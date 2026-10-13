@@ -62,7 +62,8 @@ Compute Workgroup 和 Override 常量的结构化调试视图；`verify` 执行�
 不读取构建机 GPU；当前两个 portable 目标都只包含基线能力，因此可选特性为 `none`。
 
 `compile` 从统一 Toolchain 根目录调用 DXC 与 Tint，同时生成 Vulkan 1.3 SPIR-V 和 WebGPU
-portable WGSL。
+portable WGSL。由 `build-library` 使用的 Vulkan-only manifest 可以省略 WGSL 载荷；此时只会
+运行 Vulkan 编译和反射检查，不会生成 WGSL sidecar。
 `--define NAME=VALUE` 可以重复；工具按名称排序后传给 DXC。
 重复名称、非法标识符和空值会在启动编译器前失败。
 Shader Object 写入与缓存只由 `build-library` 在内部管理。

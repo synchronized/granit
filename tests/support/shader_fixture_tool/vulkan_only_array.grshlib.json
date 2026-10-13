@@ -1,0 +1,17 @@
+{
+  "format_version": 1,
+  "name": "vulkan_only_array",
+  "target_profile": "portable",
+  "target_backends": ["vulkan"],
+  "shaders": [
+    {
+      "name": "array.fragment",
+      "source": "vulkan_only_array.hlsl",
+      "stage": "fragment",
+      "entry_point": "main",
+      "variants": [
+        {"name": "default", "defines": {"GRANIT_VULKAN_ONLY_TEST": "1"}}
+      ]
+    }
+  ]
+}

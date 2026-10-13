@@ -124,6 +124,20 @@ int main() {
       shader_library_error::missing_payload) {
     return 10;
   }
+  std::vector<std::byte> vulkan_manifest;
+  if (encode_shader_object({{}, spirv, reflection, first_key, GRANIT_SHADER_BACKEND_VULKAN_BIT, 0,
+                            granit::shader_stage::compute, "main"},
+                           vulkan_manifest) != shader_object_error::success)
+    return 16;
+  const std::array vulkan_source{
+      shader_library_object_source{vulkan_manifest, {}, spirv, "main.compute"}};
+  std::vector<std::byte> vulkan_only_without_wgsl;
+  if (encode_shader_library(
+          {vulkan_source, GRANIT_SHADER_BACKEND_VULKAN_BIT, "vulkan-only"},
+          vulkan_only_without_wgsl) != shader_library_error::success ||
+      decode_shader_library(vulkan_only_without_wgsl, library) != shader_library_error::success ||
+      library.backend_mask != GRANIT_SHADER_BACKEND_VULKAN_BIT || library.payloads.size() != 1)
+    return 17;
   if (encode_shader_library({sources, 0, "codec"}, second) !=
           shader_library_error::invalid_argument ||
       encode_shader_library({sources, 4, "codec"}, second) !=

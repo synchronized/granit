@@ -239,7 +239,10 @@ extern "C" granit_result granit_asset_tools_shader_build_library_from_manifest(
     const auto dxc_identity = tool_identity(toolchain.dxc);
     const auto tint_identity = tool_identity(toolchain.tint);
     const auto revisions = "dxc=" + dxc_identity + ";tint=" + tint_identity;
-    constexpr std::string_view target_environment = "vulkan1.3+webgpu-portable";
+    const bool has_webgpu = (static_cast<granit_shader_backend_flags>(manifest.target_backends) &
+                             GRANIT_SHADER_BACKEND_WEBGPU_BIT) != 0;
+    const auto target_environment = has_webgpu ? std::string_view{"vulkan1.3+webgpu-portable"}
+                                               : std::string_view{"vulkan1.3"};
 
     compiler_owner compiler;
     const granit_asset_tools_shader_compiler_desc compiler_desc{
@@ -287,6 +290,8 @@ extern "C" granit_result granit_asset_tools_shader_build_library_from_manifest(
       spirv += ".spv";
       auto wgsl = object;
       wgsl += ".wgsl";
+      if (!has_webgpu)
+        wgsl.clear();
       const auto source_string = path_text(source);
       const auto object_string = path_text(object);
       const auto spirv_string = path_text(spirv);
@@ -330,7 +335,7 @@ extern "C" granit_result granit_asset_tools_shader_build_library_from_manifest(
             .entry_point_length = item.shader->entry_point.size(),
             .spirv_output_path = spirv_string.data(),
             .spirv_output_path_length = spirv_string.size(),
-            .wgsl_output_path = wgsl_string.data(),
+            .wgsl_output_path = wgsl_string.empty() ? nullptr : wgsl_string.data(),
             .wgsl_output_path_length = wgsl_string.size(),
             .defines = native_defines.data(),
             .define_count = static_cast<std::uint32_t>(native_defines.size()),

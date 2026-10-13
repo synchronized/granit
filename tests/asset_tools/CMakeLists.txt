@@ -569,5 +569,16 @@ if(GRANIT_TESTING_ENABLED)
         "${CMAKE_CURRENT_BINARY_DIR}/source-library-cli/objects" --output
         "${CMAKE_CURRENT_BINARY_DIR}/source-library-cli/fixture.grshlib"
     )
+    add_test(
+      NAME granit.asset_tools.shader.build_vulkan_only_library
+      COMMAND
+        "${CMAKE_COMMAND}"
+        "-DASSET_TOOL=$<TARGET_FILE:granit_asset_tool>"
+        "-DMANIFEST=${CMAKE_CURRENT_SOURCE_DIR}/../support/shader_fixture_tool/vulkan_only_array.grshlib.json"
+        "-DTOOLCHAIN=${GRANIT_SHADER_TOOLCHAIN_ROOT}"
+        "-DCACHE_DIR=${CMAKE_CURRENT_BINARY_DIR}/vulkan-only-array/objects"
+        "-DOUTPUT=${CMAKE_CURRENT_BINARY_DIR}/vulkan-only-array/vulkan_only_array.grshlib"
+        -P "${PROJECT_SOURCE_DIR}/tests/cmake/check_vulkan_only_shader_library.cmake"
+    )
   endif()
 endif()

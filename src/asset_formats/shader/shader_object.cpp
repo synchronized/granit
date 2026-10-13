@@ -91,7 +91,10 @@ bool read_variant(std::span<const std::byte> bytes, std::size_t index,
 
 shader_object_error encode_shader_object(const shader_object_source& source,
                                          std::vector<std::byte>& output) noexcept {
-  if (source.wgsl.empty() || source.spirv.empty() || source.spirv.size() % 4 != 0 ||
+  const bool has_webgpu = (source.backend_mask & GRANIT_SHADER_BACKEND_WEBGPU_BIT) != 0;
+  const bool has_vulkan = (source.backend_mask & GRANIT_SHADER_BACKEND_VULKAN_BIT) != 0;
+  if ((has_webgpu && source.wgsl.empty()) || (has_vulkan && source.spirv.empty()) ||
+      (!source.spirv.empty() && source.spirv.size() % 4 != 0) ||
       source.reflection_json.empty() || source.backend_mask == 0 ||
       (source.backend_mask & ~GRANIT_SHADER_BACKEND_ALL_BITS) != 0 ||
       (source.stage != shader_stage::vertex && source.stage != shader_stage::fragment &&
@@ -215,7 +218,7 @@ shader_object_error validate_shader_object_payloads(const shader_object_view& ob
   const auto* spirv_variant =
       find_shader_object_variant(object, shader_object_backend::vulkan, shader_profile::portable);
   if ((wgsl_variant != nullptr && (wgsl_variant->code_format != shader_code_format::wgsl ||
-                                   wgsl.size() != wgsl_variant->byte_size)) ||
+                                   wgsl.empty() || wgsl.size() != wgsl_variant->byte_size)) ||
       (spirv_variant != nullptr &&
        (spirv_variant->code_format != shader_code_format::spirv ||
         spirv.size() != spirv_variant->byte_size || spirv.size() % 4 != 0)))
