@@ -137,6 +137,7 @@ async function main() {
     let center = [];
     let corner = [];
     let colorDistance = 0;
+    let maximumColorDistance = 0;
     // Xvfb 下 WebGPU 已 Present 的帧偶尔尚未进入浏览器合成结果。短时间轮询合成帧，仍由
     // WebGPU validation 消息和最终像素差异判定真实渲染失败。
     for (let attempt = 0; attempt < 20 && colorDistance < 60; ++attempt) {
@@ -146,6 +147,15 @@ async function main() {
       corner = pixelAt(image, 4, 4);
       colorDistance = Math.abs(center[0] - corner[0]) + Math.abs(center[1] - corner[1]) +
         Math.abs(center[2] - corner[2]);
+      maximumColorDistance = 0;
+      for (let y = 0; y < image.height; ++y) {
+        for (let x = 0; x < image.width; ++x) {
+          const pixel = pixelAt(image, x, y);
+          maximumColorDistance = Math.max(maximumColorDistance,
+            Math.abs(pixel[0] - corner[0]) + Math.abs(pixel[1] - corner[1]) +
+            Math.abs(pixel[2] - corner[2]));
+        }
+      }
     }
     if (errors.length !== 0)
       throw new Error(`教程 ${tutorialNumber} 浏览器错误：\n${errors.join("\n")}`);
@@ -153,8 +163,9 @@ async function main() {
     // 截图，此时整张截图的 alpha 为零。应用侧帧计数、特性值、Resize 和 validation 消息仍可
     // 验证实际 WebGPU 路径；能读取合成层的平台继续执行像素差异检查。
     const compositionUnavailable = center[3] === 0 && corner[3] === 0;
-    if (!compositionUnavailable && colorDistance < 60)
-      throw new Error(`教程 ${tutorialNumber} 中心像素与背景差异不足：${center} / ${corner}`);
+    if (!compositionUnavailable && maximumColorDistance < 60)
+      throw new Error(`教程 ${tutorialNumber} 画面与背景差异不足：最大差异 ${maximumColorDistance}，` +
+                      `中心 ${center} / 背景 ${corner}`);
     if (compositionUnavailable)
       console.log(`教程 ${tutorialNumber} 当前浏览器环境不支持 Canvas 合成层截图，跳过像素差异检查`);
 

@@ -19,6 +19,8 @@
 - 重新生成并提交 PBR 安装材质归档，修复 Emscripten 继续嵌入旧归档、导致 Tutorial 02/12 初始材质
   纹理索引参数缺失和 `GRANIT_ERROR_INVALID_ARGUMENT` 的问题；Chrome 两个教程回归通过。
 
+- 补齐 Tutorial 09/10 的 WebGPU 浏览器验收导出，修复 Tutorial 10 Resize 时深度纹理未按新尺寸重建的问题。
+
 ## 0.60.0 - 2026-10-12
 
 - 完成实验性 Resource Table 绑定模型与 Material 公共入口接线；

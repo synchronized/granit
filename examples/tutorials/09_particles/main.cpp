@@ -18,6 +18,10 @@
 #include <span>
 #include <string_view>
 
+#if defined(__EMSCRIPTEN__)
+#include <emscripten/emscripten.h>
+#endif
+
 namespace {
 
 struct particle {
@@ -223,6 +227,28 @@ private:
 
 tutorial_application application;
 } // namespace
+
+#if defined(__EMSCRIPTEN__)
+extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_09_rendered_frames() noexcept {
+  return application.rendered_frames();
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_09_recreate_count() noexcept {
+  return application.completed_recreates();
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_09_feature_value() noexcept {
+  return application.particle_count();
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_09_canvas_items() noexcept {
+  return application.canvas_items();
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE int granit_tutorial_09_ready() noexcept {
+  return application.ready() ? 1 : 0;
+}
+#endif
 
 int main(int argument_count, char** arguments) {
   const bool smoke_test = argument_count == 2 && std::string_view{arguments[1]} == "--smoke-test";

@@ -15,6 +15,10 @@
 #include <span>
 #include <string_view>
 
+#if defined(__EMSCRIPTEN__)
+#include <emscripten/emscripten.h>
+#endif
+
 namespace {
 struct object_data { std::array<float, 4> position_size; std::array<float, 4> color_mode; };
 constexpr std::uint32_t object_count = 4;
@@ -25,6 +29,7 @@ int failure(std::string_view operation, granit::result result) {
 class application final : public granit::example::application {
 public:
   void set_smoke_test(bool value) noexcept { smoke_test_ = value; }
+  [[nodiscard]] std::uint32_t canvas_items() const noexcept { return runtime_.canvas_items(); }
 private:
   granit::result on_initialize() noexcept override {
     auto result = runtime_.initialize(renderer_owner());
@@ -45,7 +50,8 @@ private:
     return result;
   }
   granit::result on_swapchain_changed(const granit::swapchain_info& info) noexcept override {
-    return info.format == pipeline_format_ ? granit::result::success : create_pipeline();
+    // 深度纹理与交换链尺寸一致，尺寸变化时即使格式不变也必须重建。
+    return info.format == pipeline_format_ ? create_depth() : create_pipeline();
   }
   void on_shutdown(granit::result) noexcept override {
     runtime_.shutdown(); static_cast<void>(pipeline_.reset()); static_cast<void>(group_.reset());
@@ -138,6 +144,28 @@ private:
 };
 application app;
 } // namespace
+
+#if defined(__EMSCRIPTEN__)
+extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_10_rendered_frames() noexcept {
+  return app.rendered_frames();
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_10_recreate_count() noexcept {
+  return app.completed_recreates();
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_10_feature_value() noexcept {
+  return object_count;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_10_canvas_items() noexcept {
+  return app.canvas_items();
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE int granit_tutorial_10_ready() noexcept {
+  return app.ready() ? 1 : 0;
+}
+#endif
 
 int main(int argc, char** argv) {
   const bool smoke = argc == 2 && std::string_view{argv[1]} == "--smoke-test"; app.set_smoke_test(smoke);
