@@ -43,9 +43,19 @@ struct material_state {
 
 granit_result initialize_material_resource_table(
     granit_renderer renderer, const granit::material::material_package& package,
-    granit::resource_table& table) {
+    granit::resource_table& table, std::uint32_t requested_implementation) {
   using namespace granit::material;
-  if (package.binding_model() != package_binding_model::resource_table)
+  const auto implementation = requested_implementation == 0
+                                  ? std::ranges::find_if(package.implementations(), [](const auto& value) {
+                                      return value.binding_model == package_binding_model::bind_group;
+                                    })
+                                  : std::ranges::find_if(package.implementations(),
+                                                         [requested_implementation](const auto& value) {
+                                                           return value.id == requested_implementation;
+                                                         });
+  if (implementation == package.implementations().end())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (implementation->binding_model != package_binding_model::resource_table)
     return GRANIT_SUCCESS;
 
   granit::resource_table_capabilities capabilities;
@@ -397,7 +407,8 @@ extern "C" granit_result granit_material_create(granit_renderer renderer,
         renderer_ref, granit::lighting::standard_lighting_layout_entries);
     if (lighting_result.failed())
       return static_cast<granit_result>(lighting_result);
-    result = initialize_material_resource_table(renderer, state->package, state->resource_table);
+    result = initialize_material_resource_table(renderer, state->package, state->resource_table,
+                                                desc->implementation);
     if (result != GRANIT_SUCCESS)
       return result;
     const std::array additional_layouts{state->object_layout.native_handle(),

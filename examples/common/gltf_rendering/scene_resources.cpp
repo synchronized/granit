@@ -70,6 +70,7 @@ scene_resources::scene_resources(scene_resources&& other) noexcept
       default_sampler_(std::move(other.default_sampler_)),
       shader_library_(std::move(other.shader_library_)),
       resource_table_shader_library_(std::move(other.resource_table_shader_library_)),
+      resource_table_enabled_(other.resource_table_enabled_),
       materials_(std::move(other.materials_)),
       material_alpha_modes_(std::move(other.material_alpha_modes_)),
       draw_bindings_(std::move(other.draw_bindings_)) {
@@ -91,6 +92,7 @@ scene_resources& scene_resources::operator=(scene_resources&& other) noexcept {
     default_sampler_ = std::move(other.default_sampler_);
     shader_library_ = std::move(other.shader_library_);
     resource_table_shader_library_ = std::move(other.resource_table_shader_library_);
+    resource_table_enabled_ = other.resource_table_enabled_;
     materials_ = std::move(other.materials_);
     material_alpha_modes_ = std::move(other.material_alpha_modes_);
     draw_bindings_ = std::move(other.draw_bindings_);

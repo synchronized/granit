@@ -56,13 +56,16 @@ private:
       const auto model_scene = model_asset_.value();
       if (!model_scene || model_scene->materials.empty()) return granit::result::invalid_argument;
       model_scene_ = *model_scene;
+      result = granit::get_resource_table_capabilities(renderer_owner().ref(), table_capabilities_);
+      resource_table_available_ = table_capabilities_.support ==
+                                  granit::resource_table_support::native;
+      model_gpu_.set_resource_table_enabled(true);
+    }
+    if (result.ok()) {
       result = model_gpu_.initialize(renderer_owner(), model_scene_);
     }
     if (result.ok()) result = pipeline_.initialize(renderer(), {.enable_fxaa = true});
-    if (result.ok()) {
-      result = granit::get_resource_table_capabilities(renderer_owner().ref(), table_capabilities_);
-    }
-    if (result.ok()) {
+    if (result.ok() && resource_table_available_) {
       result = table_.initialize(renderer_owner(),
                                  {.resource_types = GRANIT_RESOURCE_TABLE_RESOURCE_SAMPLED_TEXTURE_VIEW_BIT |
                                                      GRANIT_RESOURCE_TABLE_RESOURCE_SAMPLER_BIT,
@@ -70,15 +73,15 @@ private:
                                       static_cast<std::uint32_t>(model_scene_.materials.size()),
                                   .sampler_capacity = 1});
     }
-    if (result.ok()) {
+    if (result.ok() && resource_table_available_) {
       result = sampler_.initialize(renderer_owner());
     }
-    if (result.ok()) {
+    if (result.ok() && resource_table_available_) {
       result = table_.update({.type = granit::resource_table_resource_type::sampler,
                               .slot = 0,
                               .resource = sampler_.native_handle()});
     }
-    if (result.ok()) {
+    if (result.ok() && resource_table_available_) {
       std::vector<granit::resource_table_update> updates;
       updates.reserve(model_scene_.materials.size() + 1);
       for (std::size_t index = 0; index < model_scene_.materials.size(); ++index) {
@@ -101,7 +104,7 @@ private:
         result = table_.update_batch(updates);
       }
     }
-    if (result.ok() && stress_test_) {
+    if (result.ok() && stress_test_ && resource_table_available_) {
       stress_tables_.resize(64);
       for (auto& table : stress_tables_) {
         result = table.initialize(renderer_owner(),
@@ -156,16 +159,20 @@ private:
       ImGui::Text("Descriptor Indexing device support: %s",
                   limits_.supports_bindless_descriptor_indexing() ? "yes" : "no");
       ImGui::Text("Resource Table support: %s", resource_table_support_name(table_capabilities_.support));
-      ImGui::Text("Resource Table sampler slot 0: populated");
+      ImGui::Text("Resource Table sampler slot 0: %s",
+                  resource_table_available_ ? "populated" : "unavailable");
       ImGui::Text("Pressure tables: %zu", stress_tables_.size());
       ImGui::Text("Gallery materials: %zu", model_scene_.materials.size());
       ImGui::Text("Resource Table texture slot 0: %s",
                   resource_table_texture_ != GRANIT_NULL_HANDLE ? "populated" : "empty");
-      ImGui::Text("Resource Table texture capacity: %zu", model_scene_.materials.size());
+      if (resource_table_available_)
+        ImGui::Text("Resource Table texture capacity: %zu", model_scene_.materials.size());
+      else
+        ImGui::TextUnformatted("Resource Table texture capacity: unavailable");
       if (stress_test_)
         ImGui::TextUnformatted("Stress mode: 64 tables with one sampler slot");
-      ImGui::Text("Default path: traditional Bind Group");
-      ImGui::Text("Explicit Resource Table binding remains experimental");
+      ImGui::Text("Requested path: Resource Table (unsupported devices fall back)");
+      ImGui::Text("Material implementation selection is explicit");
       result = runtime_.end_frame();
     }
     if (result.failed()) return result;
@@ -223,6 +230,7 @@ private:
   granit::example::tutorial::tutorial_runtime runtime_;
   granit::renderer_limits limits_{};
   granit::resource_table_capabilities table_capabilities_{};
+  bool resource_table_available_{};
   granit::resource_table table_;
   std::vector<granit::resource_table> stress_tables_;
   granit::sampler sampler_;

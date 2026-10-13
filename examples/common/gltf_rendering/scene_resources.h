@@ -49,6 +49,9 @@ public:
   scene_resources(scene_resources&& other) noexcept;
   scene_resources& operator=(scene_resources&& other) noexcept;
 
+  /** 请求材质优先使用 Resource Table；不支持时由 Material 回退到 Bind Group。 */
+  void set_resource_table_enabled(bool enabled) noexcept { resource_table_enabled_ = enabled; }
+
   /** 成功后替换现有资源；失败时当前对象保持不变。 */
   [[nodiscard]] granit::result initialize(granit::renderer_ref renderer, const gltf::scene& source,
                                           float sampler_anisotropy = 8.0F,
@@ -132,6 +135,7 @@ private:
   granit::sampler default_sampler_;
   granit::shader_library shader_library_;
   granit::shader_library resource_table_shader_library_;
+  bool resource_table_enabled_{};
   std::vector<granit::material_instance> materials_;
   std::vector<gltf::material_alpha_mode> material_alpha_modes_;
   std::vector<granit::render_pipeline_draw_binding> draw_bindings_;

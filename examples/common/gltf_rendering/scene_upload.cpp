@@ -165,6 +165,7 @@ granit::result create_material(granit::renderer_ref renderer, const gltf::materi
                                const default_material_textures& defaults,
                                const granit::sampler& default_sampler,
                                std::span<const granit::material_shader_library> shader_libraries,
+                               std::uint32_t implementation,
                                granit::material_instance& output) {
   const auto base_color =
       resolve_texture(source.base_color_texture, true, textures, defaults.white_srgb);
@@ -243,6 +244,7 @@ granit::result create_material(granit::renderer_ref renderer, const gltf::materi
       .initial_updates = updates,
       .shader_library = {},
       .shader_libraries = shader_libraries,
+      .implementation = implementation,
   };
   return output.initialize(renderer, desc);
 }
@@ -532,7 +534,8 @@ granit::result scene_resources::create(granit::renderer_ref renderer, const gltf
     materials_.emplace_back();
     if (const auto result = create_material(renderer, source_material, plan_, textures_, samplers_,
                                             default_textures_, default_sampler_,
-                                            available_shader_libraries, materials_.back());
+                                            available_shader_libraries,
+                                            resource_table_enabled_ ? 2U : 0U, materials_.back());
         result.failed())
       return result;
     material_alpha_modes_.push_back(source_material.alpha_mode);
@@ -542,7 +545,8 @@ granit::result scene_resources::create(granit::renderer_ref renderer, const gltf
   materials_.emplace_back();
   if (const auto result =
           create_material(renderer, {}, plan_, textures_, samplers_, default_textures_,
-                          default_sampler_, available_shader_libraries, materials_.back());
+                          default_sampler_, available_shader_libraries,
+                          resource_table_enabled_ ? 2U : 0U, materials_.back());
       result.failed())
     return result;
   material_alpha_modes_.push_back(gltf::material_alpha_mode::opaque);
