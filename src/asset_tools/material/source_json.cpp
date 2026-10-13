@@ -550,13 +550,10 @@ parse_material_source_json(std::string_view json,
     }
     material_package_desc desc;
     desc.format_version = material_package_format_version;
-    desc.binding_model = *binding == "resource_table" ? package_binding_model::resource_table
-                                                       : package_binding_model::bind_group;
-    desc.required_renderer_features =
-        desc.binding_model == package_binding_model::resource_table
-            ? package_feature_bindless_resource_table
-            : 0;
-    desc.binding_groups = 0;
+    const auto binding_model = *binding == "resource_table"
+                                   ? package_binding_model::resource_table
+                                   : package_binding_model::bind_group;
+    package_binding_groups parsed_binding_groups = 0;
     constexpr std::array group_names{
         std::pair{"frame", package_binding_group_frame},
         std::pair{"material", package_binding_group_material},
@@ -570,10 +567,17 @@ parse_material_source_json(std::string_view json,
                              : std::ranges::find_if(group_names, [&](const auto& group) {
                                  return group.first == *name;
                                });
-      if (found == group_names.end() || (desc.binding_groups & found->second) != 0)
+      if (found == group_names.end() || (parsed_binding_groups & found->second) != 0)
         return source_json_error::invalid_schema;
-      desc.binding_groups |= found->second;
+      parsed_binding_groups |= found->second;
     }
+    desc.implementations.front() = {
+        .id = 1,
+        .binding_model = binding_model,
+        .binding_groups = parsed_binding_groups,
+        .required_renderer_features = binding_model == package_binding_model::resource_table
+                                          ? package_feature_bindless_resource_table
+                                          : 0};
     if (!u32(member(*material, "constant_buffer_size"), desc.metadata.constant_buffer_size)) {
       return source_json_error::invalid_schema;
     }

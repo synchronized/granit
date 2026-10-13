@@ -409,14 +409,6 @@ archive_error decode_material_package_archive(std::span<const std::byte> bytes,
     material_package_desc desc;
     desc.format_version = material_package_format_version;
     desc.target = package_target::cross_backend;
-    desc.binding_model = layout.header.binding_model == material_archive_binding_model_resource_table
-                             ? package_binding_model::resource_table
-                             : package_binding_model::bind_group;
-    desc.binding_groups = read_u32(pipeline_states, 24);
-    desc.required_renderer_features =
-        desc.binding_model == package_binding_model::resource_table
-            ? package_feature_bindless_resource_table
-            : 0;
 
     const auto implementation_count = read_u32(implementation_definitions, 0);
     const auto implementation_record_size = read_u32(implementation_definitions, 4);
@@ -427,6 +419,7 @@ archive_error decode_material_package_archive(std::span<const std::byte> bytes,
       return archive_error::invalid_semantic_data;
     }
     std::set<material_implementation_id> implementation_ids;
+    desc.implementations.clear();
     desc.implementations.reserve(implementation_count);
     for (std::uint32_t index = 0; index < implementation_count; ++index) {
       const auto record = 8U + index * implementation_record_size;
@@ -450,15 +443,20 @@ archive_error decode_material_package_archive(std::span<const std::byte> bytes,
            .required_renderer_features = required_features});
     }
     if (desc.implementations.size() == 1) {
-      desc.binding_model = desc.implementations.front().binding_model;
-      desc.binding_groups = desc.implementations.front().binding_groups;
-      desc.required_renderer_features = desc.implementations.front().required_renderer_features;
+      const auto& implementation = desc.implementations.front();
       if (layout.header.binding_model !=
-              (desc.binding_model == package_binding_model::resource_table
+              (implementation.binding_model == package_binding_model::resource_table
                    ? material_archive_binding_model_resource_table
                    : material_archive_binding_model_bind_group) ||
-          layout.header.required_renderer_features != desc.required_renderer_features) {
+          layout.header.required_renderer_features != implementation.required_renderer_features ||
+          read_u32(pipeline_states, 24) != implementation.binding_groups) {
         return archive_error::invalid_semantic_data;
+      }
+    } else {
+      for (const auto& implementation : desc.implementations) {
+        if (implementation.binding_groups != read_u32(pipeline_states, 24)) {
+          return archive_error::invalid_semantic_data;
+        }
       }
     }
 

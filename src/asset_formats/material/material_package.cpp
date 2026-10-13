@@ -146,59 +146,32 @@ package_error material_package::build(material_package_desc desc, material_packa
     return package_error::unsupported_target;
   }
   std::vector<material_implementation> implementations;
-  if (!desc.implementations.empty()) {
-    implementations.reserve(desc.implementations.size());
-    for (const auto& source : desc.implementations) {
+  implementations.reserve(desc.implementations.size());
+  for (const auto& source : desc.implementations) {
     if (source.id == 0 ||
         (source.binding_model != package_binding_model::bind_group &&
-         source.binding_model != package_binding_model::resource_table) ||
-        (source.required_renderer_features & ~package_feature_bindless_resource_table) != 0 ||
+         source.binding_model != package_binding_model::resource_table)) {
+      return package_error::unsupported_binding_model;
+    }
+    const auto base_groups = package_binding_group_frame | package_binding_group_material;
+    if (source.binding_groups != base_groups &&
+        source.binding_groups != (base_groups | package_binding_group_object) &&
+        source.binding_groups != package_binding_groups_all) {
+      return package_error::invalid_binding_groups;
+    }
+    if ((source.required_renderer_features & ~package_feature_bindless_resource_table) != 0 ||
         (source.binding_model == package_binding_model::resource_table &&
          (source.required_renderer_features & package_feature_bindless_resource_table) == 0) ||
         (source.binding_model == package_binding_model::bind_group &&
-         (source.required_renderer_features & package_feature_bindless_resource_table) != 0) ||
-        (source.binding_groups != (package_binding_group_frame | package_binding_group_material) &&
-         source.binding_groups !=
-             (package_binding_group_frame | package_binding_group_material |
-              package_binding_group_object) &&
-         source.binding_groups != package_binding_groups_all)) {
-      return package_error::unsupported_binding_model;
+         (source.required_renderer_features & package_feature_bindless_resource_table) != 0)) {
+      return package_error::unsupported_renderer_features;
     }
-      if (std::ranges::find(implementations, source.id, &material_implementation::id) !=
-          implementations.end()) {
-        return package_error::duplicate_implementation;
-      }
-      implementations.push_back({source.id, source.binding_model, source.binding_groups,
-                                 source.required_renderer_features});
+    if (std::ranges::find(implementations, source.id, &material_implementation::id) !=
+        implementations.end()) {
+      return package_error::duplicate_implementation;
     }
-  }
-  if (desc.binding_model != package_binding_model::bind_group &&
-      desc.binding_model != package_binding_model::resource_table) {
-    return package_error::unsupported_binding_model;
-  }
-  const auto base_groups = package_binding_group_frame | package_binding_group_material;
-  if (desc.binding_groups != base_groups &&
-      desc.binding_groups != (base_groups | package_binding_group_object) &&
-      desc.binding_groups != package_binding_groups_all) {
-    return package_error::invalid_binding_groups;
-  }
-  if (desc.required_renderer_features != 0 &&
-      (desc.required_renderer_features & ~package_feature_bindless_resource_table) != 0) {
-    return package_error::unsupported_renderer_features;
-  }
-  if (desc.binding_model == package_binding_model::resource_table &&
-      (desc.required_renderer_features & package_feature_bindless_resource_table) == 0) {
-    return package_error::unsupported_renderer_features;
-  }
-  if (desc.binding_model != package_binding_model::resource_table &&
-      (desc.required_renderer_features & package_feature_bindless_resource_table) != 0) {
-    return package_error::unsupported_renderer_features;
-  }
-  if (implementations.empty()) {
-    implementations.push_back({.id = 1,
-                               .binding_model = desc.binding_model,
-                               .binding_groups = desc.binding_groups,
-                               .required_renderer_features = desc.required_renderer_features});
+    implementations.push_back({source.id, source.binding_model, source.binding_groups,
+                               source.required_renderer_features});
   }
 
   material_metadata metadata;
@@ -276,20 +249,25 @@ package_error material_package::build(material_package_desc desc, material_packa
   material_package built;
   built.format_version_ = desc.format_version;
   built.target_ = desc.target;
-  built.binding_model_ = desc.binding_model;
-  built.binding_groups_ = desc.binding_groups;
-  built.required_renderer_features_ = desc.required_renderer_features;
   built.implementations_ = std::move(implementations);
-  if (!built.implementations_.empty()) {
-    built.binding_model_ = built.implementations_.front().binding_model;
-    built.binding_groups_ = built.implementations_.front().binding_groups;
-    built.required_renderer_features_ =
-        built.implementations_.front().required_renderer_features;
-  }
   built.metadata_ = std::move(metadata);
   built.variants_ = std::move(variants);
   package = std::move(built);
   return package_error::none;
+}
+
+package_binding_model material_package::binding_model() const noexcept {
+  return implementations_.empty() ? package_binding_model::bind_group
+                                   : implementations_.front().binding_model;
+}
+
+package_binding_groups material_package::binding_groups() const noexcept {
+  return implementations_.empty() ? package_binding_groups_all
+                                   : implementations_.front().binding_groups;
+}
+
+package_feature_flags material_package::required_renderer_features() const noexcept {
+  return implementations_.empty() ? 0 : implementations_.front().required_renderer_features;
 }
 
 const material_implementation*

@@ -140,11 +140,8 @@ struct material_variant_desc {
 struct material_package_desc {
   std::uint32_t format_version = material_package_format_version;
   package_target target = package_target::cross_backend;
-  package_binding_model binding_model = package_binding_model::bind_group;
-  package_binding_groups binding_groups = package_binding_groups_all;
-  package_feature_flags required_renderer_features = 0;
   metadata_desc metadata;
-  std::vector<material_implementation_desc> implementations;
+  std::vector<material_implementation_desc> implementations{{.id = 1}};
   std::vector<material_variant_desc> variants;
 };
 
@@ -166,11 +163,9 @@ public:
 
   [[nodiscard]] std::uint32_t format_version() const noexcept { return format_version_; }
   [[nodiscard]] package_target target() const noexcept { return target_; }
-  [[nodiscard]] package_binding_model binding_model() const noexcept { return binding_model_; }
-  [[nodiscard]] package_binding_groups binding_groups() const noexcept { return binding_groups_; }
-  [[nodiscard]] package_feature_flags required_renderer_features() const noexcept {
-    return required_renderer_features_;
-  }
+  [[nodiscard]] package_binding_model binding_model() const noexcept;
+  [[nodiscard]] package_binding_groups binding_groups() const noexcept;
+  [[nodiscard]] package_feature_flags required_renderer_features() const noexcept;
   [[nodiscard]] const material_metadata& metadata() const noexcept { return metadata_; }
   [[nodiscard]] std::span<const material_variant> variants() const noexcept { return variants_; }
   [[nodiscard]] std::span<const material_implementation> implementations() const noexcept {
@@ -184,9 +179,6 @@ public:
 private:
   std::uint32_t format_version_ = material_package_format_version;
   package_target target_ = package_target::cross_backend;
-  package_binding_model binding_model_ = package_binding_model::bind_group;
-  package_binding_groups binding_groups_ = package_binding_groups_all;
-  package_feature_flags required_renderer_features_ = 0;
   material_metadata metadata_;
   std::vector<material_implementation> implementations_;
   std::vector<material_variant> variants_;

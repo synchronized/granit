@@ -54,15 +54,16 @@ build_package(granit::material::package_binding_groups binding_groups =
                   granit::material::package_binding_model::bind_group) {
   using namespace granit::material;
   material_package_desc desc;
-  desc.binding_model = binding_model;
-  desc.required_renderer_features = binding_model == package_binding_model::resource_table
-                                        ? package_feature_bindless_resource_table
-                                        : 0;
+  desc.implementations.front().binding_model = binding_model;
+  desc.implementations.front().required_renderer_features =
+      binding_model == package_binding_model::resource_table
+          ? package_feature_bindless_resource_table
+          : 0;
   desc.metadata.constant_buffer_size = 16;
   desc.metadata.parameters = {
       {.name = "color", .type = parameter_type::float4, .default_value = {}},
   };
-  desc.binding_groups = binding_groups;
+  desc.implementations.front().binding_groups = binding_groups;
   desc.variants.push_back({.pass = make_feature_id("opaque"),
                            .features = {},
                            .shaders = {{.stage = package_shader_stage::vertex,
@@ -88,7 +89,8 @@ granit::material::material_package build_asset_package() {
   using namespace granit::material;
   const auto asset_dir = std::string{GRANIT_SHADER_OBJECT_FIXTURE_DIR};
   material_package_desc desc;
-  desc.binding_groups = package_binding_group_frame | package_binding_group_material;
+  desc.implementations.front().binding_groups =
+      package_binding_group_frame | package_binding_group_material;
   granit::tests::shader_asset_store store;
   REQUIRE(store.add(asset_dir + "/minimal.vert.grshaderobj"));
   REQUIRE(store.add(asset_dir + "/minimal.frag.grshaderobj"));

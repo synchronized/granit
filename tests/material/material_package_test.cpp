@@ -63,18 +63,20 @@ TEST_CASE("材质包校验绑定模型和版本") {
   CHECK(material_package::build(std::move(desc), package) == package_error::unsupported_version);
 
   desc = {};
-  desc.binding_model = package_binding_model::resource_table;
-  desc.required_renderer_features = package_feature_bindless_resource_table;
+  desc.implementations.front().binding_model = package_binding_model::resource_table;
+  desc.implementations.front().required_renderer_features =
+      package_feature_bindless_resource_table;
   desc.variants.push_back(variant({}));
   CHECK(material_package::build(std::move(desc), package) == package_error::none);
   CHECK(package.binding_model() == package_binding_model::resource_table);
 
   desc = {};
-  desc.binding_groups = package_binding_group_frame | package_binding_group_lighting;
+  desc.implementations.front().binding_groups =
+      package_binding_group_frame | package_binding_group_lighting;
   CHECK(material_package::build(std::move(desc), package) == package_error::invalid_binding_groups);
 
   desc = {};
-  desc.required_renderer_features = package_feature_bindless_resource_table;
+  desc.implementations.front().required_renderer_features = package_feature_bindless_resource_table;
   CHECK(material_package::build(std::move(desc), package) ==
         package_error::unsupported_renderer_features);
 }
