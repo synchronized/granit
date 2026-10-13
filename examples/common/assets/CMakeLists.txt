@@ -54,9 +54,10 @@ endif()
 
 function(granit_example_target_assets)
   set(one_value_args TARGET ROOT)
-  set(multi_value_args FILES)
+  set(multi_value_args FILES DIRECTORIES)
   cmake_parse_arguments(ARG "" "${one_value_args}" "${multi_value_args}" ${ARGN})
-  if(NOT ARG_TARGET OR NOT TARGET "${ARG_TARGET}" OR NOT ARG_ROOT OR NOT ARG_FILES)
+  if(NOT ARG_TARGET OR NOT TARGET "${ARG_TARGET}" OR NOT ARG_ROOT OR
+     (NOT ARG_FILES AND NOT ARG_DIRECTORIES))
     message(FATAL_ERROR "granit_example_target_assets 参数不完整")
   endif()
 
@@ -81,6 +82,31 @@ function(granit_example_target_assets)
         POST_BUILD
         COMMAND "${CMAKE_COMMAND}" -E make_directory "${destination}"
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${source}" "${destination}"
+        VERBATIM
+      )
+    endif()
+  endforeach()
+
+  foreach(relative_path IN LISTS ARG_DIRECTORIES)
+    if(IS_ABSOLUTE "${relative_path}" OR relative_path MATCHES "(^|/)\\.\\.(/|$)")
+      message(FATAL_ERROR "示例资产目录必须使用 ROOT 下的规范相对路径：${relative_path}")
+    endif()
+    set(source "${ARG_ROOT}/${relative_path}")
+    if(NOT IS_DIRECTORY "${source}")
+      message(FATAL_ERROR "示例资产目录不存在：${source}")
+    endif()
+
+    if(EMSCRIPTEN)
+      target_link_options(
+        "${ARG_TARGET}" PRIVATE "--preload-file=${source}@/assets/${relative_path}"
+      )
+    else()
+      set(destination "$<TARGET_FILE_DIR:${ARG_TARGET}>/assets/${relative_path}")
+      add_custom_command(
+        TARGET "${ARG_TARGET}"
+        POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E make_directory "${destination}"
+        COMMAND "${CMAKE_COMMAND}" -E copy_directory "${source}" "${destination}"
         VERBATIM
       )
     endif()

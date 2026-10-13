@@ -24,6 +24,10 @@
 三次运行均正常退出，没有报告资源表创建、更新或 Vulkan 后端错误。完整 Windows Clang
 回归测试 113/113 通过。
 
+同日将 Tutorial 12 的纹理资产改为目录级预加载后，Emscripten Debug 的
+`granit_tutorial_12_resource_table_scene` 目标成功链接；原先逐文件预加载会在 Windows
+链接阶段触发“命令行太长”。
+
 ## 命令
 
 ```powershell

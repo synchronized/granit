@@ -20,38 +20,8 @@ granit_example_target_assets(
   FILES
     tutorials/12_resource_table_scene/ResourceTableGallery.gltf
     tutorials/12_resource_table_scene/ResourceTableGallery.bin
-    tutorials/12_resource_table_scene/textures/Gallery_BaseColor_00.png
-    tutorials/12_resource_table_scene/textures/Gallery_BaseColor_01.png
-    tutorials/12_resource_table_scene/textures/Gallery_BaseColor_02.png
-    tutorials/12_resource_table_scene/textures/Gallery_BaseColor_03.png
-    tutorials/12_resource_table_scene/textures/Gallery_BaseColor_04.png
-    tutorials/12_resource_table_scene/textures/Gallery_BaseColor_05.png
-    tutorials/12_resource_table_scene/textures/Gallery_BaseColor_06.png
-    tutorials/12_resource_table_scene/textures/Gallery_BaseColor_07.png
-    tutorials/12_resource_table_scene/textures/Gallery_BaseColor_08.png
-    tutorials/12_resource_table_scene/textures/Gallery_BaseColor_09.png
-    tutorials/12_resource_table_scene/textures/Gallery_BaseColor_10.png
-    tutorials/12_resource_table_scene/textures/Gallery_BaseColor_11.png
-    tutorials/12_resource_table_scene/textures/Gallery_BaseColor_12.png
-    tutorials/12_resource_table_scene/textures/Gallery_BaseColor_13.png
-    tutorials/12_resource_table_scene/textures/Gallery_BaseColor_14.png
-    tutorials/12_resource_table_scene/textures/Gallery_BaseColor_15.png
-    tutorials/12_resource_table_scene/textures/Gallery_MetallicRoughness_00.png
-    tutorials/12_resource_table_scene/textures/Gallery_MetallicRoughness_01.png
-    tutorials/12_resource_table_scene/textures/Gallery_MetallicRoughness_02.png
-    tutorials/12_resource_table_scene/textures/Gallery_MetallicRoughness_03.png
-    tutorials/12_resource_table_scene/textures/Gallery_MetallicRoughness_04.png
-    tutorials/12_resource_table_scene/textures/Gallery_MetallicRoughness_05.png
-    tutorials/12_resource_table_scene/textures/Gallery_MetallicRoughness_06.png
-    tutorials/12_resource_table_scene/textures/Gallery_MetallicRoughness_07.png
-    tutorials/12_resource_table_scene/textures/Gallery_MetallicRoughness_08.png
-    tutorials/12_resource_table_scene/textures/Gallery_MetallicRoughness_09.png
-    tutorials/12_resource_table_scene/textures/Gallery_MetallicRoughness_10.png
-    tutorials/12_resource_table_scene/textures/Gallery_MetallicRoughness_11.png
-    tutorials/12_resource_table_scene/textures/Gallery_MetallicRoughness_12.png
-    tutorials/12_resource_table_scene/textures/Gallery_MetallicRoughness_13.png
-    tutorials/12_resource_table_scene/textures/Gallery_MetallicRoughness_14.png
-    tutorials/12_resource_table_scene/textures/Gallery_MetallicRoughness_15.png
+  DIRECTORIES
+    tutorials/12_resource_table_scene/textures
 )
 if(EMSCRIPTEN)
   include(granit_web)
