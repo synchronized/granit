@@ -36,6 +36,8 @@ const char* section_name(std::uint32_t type) noexcept {
     return "pipeline_states";
   case archive_section_type::wgsl_data:
     return "wgsl_data";
+  case archive_section_type::implementation_definitions:
+    return "implementation_definitions";
   }
   return "unknown";
 }

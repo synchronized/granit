@@ -19,10 +19,10 @@ constexpr std::array<std::byte, 8> archive_magic{std::byte{'G'}, std::byte{'R'},
                                                  std::byte{'A'}, std::byte{'T'}, std::byte{0},
                                                  std::byte{0},   std::byte{0}};
 constexpr std::uint32_t first_required_section = 1;
-constexpr std::uint32_t last_known_section = 11;
+constexpr std::uint32_t last_known_section = 12;
 
 bool required_section(std::uint32_t type) noexcept {
-  return (type >= first_required_section && type <= 6) || type == 10;
+  return (type >= first_required_section && type <= 6) || type == 10 || type == 12;
 }
 
 std::uint32_t read_u32(std::span<const std::byte> bytes, std::size_t offset) noexcept {
@@ -74,7 +74,8 @@ archive_error encode_material_archive(const material_archive_encode_desc& desc,
   if (desc.target_environment != material_archive_target_cross_backend) {
     return archive_error::unsupported_target;
   }
-  if (desc.binding_model != material_archive_binding_model_bind_group &&
+  if (desc.binding_model != 0 &&
+      desc.binding_model != material_archive_binding_model_bind_group &&
       desc.binding_model != material_archive_binding_model_resource_table) {
     return archive_error::unsupported_binding_model;
   }
@@ -84,6 +85,9 @@ archive_error encode_material_archive(const material_archive_encode_desc& desc,
   }
   if (desc.binding_model == material_archive_binding_model_resource_table &&
       desc.required_renderer_features != material_archive_feature_resource_table) {
+    return archive_error::unsupported_renderer_features;
+  }
+  if (desc.binding_model == 0 && desc.required_renderer_features != 0) {
     return archive_error::unsupported_renderer_features;
   }
   if (desc.sections.size() > material_archive_max_sections) {
@@ -225,7 +229,8 @@ archive_error parse_material_archive_layout(std::span<const std::byte> bytes,
   if (parsed.header.target_environment != material_archive_target_cross_backend) {
     return archive_error::unsupported_target;
   }
-  if (parsed.header.binding_model != material_archive_binding_model_bind_group &&
+  if (parsed.header.binding_model != 0 &&
+      parsed.header.binding_model != material_archive_binding_model_bind_group &&
       parsed.header.binding_model != material_archive_binding_model_resource_table) {
     return archive_error::unsupported_binding_model;
   }

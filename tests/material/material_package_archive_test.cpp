@@ -82,7 +82,7 @@ TEST_CASE("材质包语义数据编码到独立归档区段") {
 
   material_archive_layout layout;
   REQUIRE(parse_material_archive_layout(bytes, layout) == archive_error::none);
-  REQUIRE(layout.sections.size() == 7);
+  REQUIRE(layout.sections.size() == 8);
   const auto section = [&](archive_section_type type) -> std::span<const std::byte> {
     const auto found = std::ranges::find(layout.sections, static_cast<std::uint32_t>(type),
                                          &material_archive_section::type);

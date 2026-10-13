@@ -123,10 +123,6 @@ std::string read_string(std::span<const std::byte> table, std::uint32_t offset,
 
 archive_error encode_material_package_archive(const material_package& package,
                                               std::vector<std::byte>& bytes) noexcept {
-  // 多 implementation 的目录和 Shader 归属将在 v0.61 归档版本中一起升级；
-  // 在新目录格式落地前必须显式拒绝，不能静默丢弃后端实现。
-  if (package.implementations().size() != 1)
-    return archive_error::invalid_semantic_data;
   try {
     std::set<std::string> strings;
     for (const auto& parameter : package.metadata().parameters()) {
@@ -251,7 +247,7 @@ archive_error encode_material_package_archive(const material_package& package,
         append_u32(shader_records, static_cast<std::uint32_t>(shader->stage));
         append_u32(shader_records, entry.offset);
         append_u32(shader_records, entry.length);
-        append_u32(shader_records, 0);
+        append_u32(shader_records, shader->implementation);
         append_bytes(shader_records, shader->asset_id);
       }
       shader_cursor += static_cast<std::uint32_t>(shaders.size());
@@ -260,6 +256,22 @@ archive_error encode_material_package_archive(const material_package& package,
     const auto shader_count = shader_cursor;
     for (std::uint32_t index = 0; index < 4; ++index) {
       shader_records[index] = static_cast<std::byte>(shader_count >> (index * 8U));
+    }
+
+    std::vector<std::byte> implementation_definitions;
+    append_u32(implementation_definitions,
+               static_cast<std::uint32_t>(package.implementations().size()));
+    append_u32(implementation_definitions, 32);
+    for (const auto& implementation : package.implementations()) {
+      append_u32(implementation_definitions, implementation.id);
+      append_u32(implementation_definitions,
+                 implementation.binding_model == package_binding_model::resource_table
+                     ? material_archive_binding_model_resource_table
+                     : material_archive_binding_model_bind_group);
+      append_u32(implementation_definitions, implementation.binding_groups);
+      append_u32(implementation_definitions, 0);
+      append_u64(implementation_definitions, implementation.required_renderer_features);
+      append_u64(implementation_definitions, 0);
     }
 
     constexpr std::uint32_t pipeline_header_size = 32;
@@ -338,17 +350,23 @@ archive_error encode_material_package_archive(const material_package& package,
                                         archive_section_required, 8, shader_records},
         material_archive_section_source{archive_section_type::pipeline_states,
                                         archive_section_required, 8, pipeline_states}};
+    const auto all_sections = std::array{
+        sections[0], sections[1], sections[2], sections[3], sections[4], sections[5], sections[6],
+        material_archive_section_source{archive_section_type::implementation_definitions,
+                                        archive_section_required, 8, implementation_definitions}};
+    const auto& implementation = package.implementations().front();
     return encode_material_archive({.target_environment = material_archive_target_cross_backend,
-                                    .binding_model = package.binding_model() ==
-                                                         package_binding_model::resource_table
-                                                     ? material_archive_binding_model_resource_table
-                                                     : material_archive_binding_model_bind_group,
+                                    .binding_model = package.implementations().size() == 1
+                                                         ? (implementation.binding_model ==
+                                                                    package_binding_model::resource_table
+                                                                ? material_archive_binding_model_resource_table
+                                                                : material_archive_binding_model_bind_group)
+                                                         : 0,
                                     .required_renderer_features =
-                                        package.binding_model() ==
-                                                package_binding_model::resource_table
-                                            ? material_archive_feature_resource_table
+                                        package.implementations().size() == 1
+                                            ? implementation.required_renderer_features
                                             : 0,
-                                    .sections = sections},
+                                    .sections = all_sections},
                                    bytes);
   } catch (const std::bad_alloc&) {
     return archive_error::out_of_memory;
@@ -379,10 +397,12 @@ archive_error decode_material_package_archive(std::span<const std::byte> bytes,
     const auto variant_records = find_section(bytes, layout, archive_section_type::variant_records);
     const auto shader_records = find_section(bytes, layout, archive_section_type::shader_records);
     const auto pipeline_states = find_section(bytes, layout, archive_section_type::pipeline_states);
+    const auto implementation_definitions =
+        find_section(bytes, layout, archive_section_type::implementation_definitions);
 
     if (!utf8_valid(strings) || metadata.size() < 16 || feature_definitions.size() < 8 ||
         pass_definitions.size() < 8 || variant_records.size() < 16 || shader_records.size() < 8 ||
-        pipeline_states.size() < 32) {
+        pipeline_states.size() < 32 || implementation_definitions.size() < 8) {
       return archive_error::invalid_semantic_data;
     }
 
@@ -397,6 +417,50 @@ archive_error decode_material_package_archive(std::span<const std::byte> bytes,
         desc.binding_model == package_binding_model::resource_table
             ? package_feature_bindless_resource_table
             : 0;
+
+    const auto implementation_count = read_u32(implementation_definitions, 0);
+    const auto implementation_record_size = read_u32(implementation_definitions, 4);
+    if (implementation_count == 0 || implementation_count > 16 ||
+        implementation_record_size != 32 ||
+        !record_range_valid(implementation_count, implementation_record_size, 8,
+                            implementation_definitions.size())) {
+      return archive_error::invalid_semantic_data;
+    }
+    std::set<material_implementation_id> implementation_ids;
+    desc.implementations.reserve(implementation_count);
+    for (std::uint32_t index = 0; index < implementation_count; ++index) {
+      const auto record = 8U + index * implementation_record_size;
+      const auto id = read_u32(implementation_definitions, record);
+      const auto binding_model = read_u32(implementation_definitions, record + 4);
+      const auto binding_groups = read_u32(implementation_definitions, record + 8);
+      const auto required_features = read_u64(implementation_definitions, record + 16);
+      if (id == 0 || !implementation_ids.insert(id).second ||
+          (binding_model != material_archive_binding_model_bind_group &&
+           binding_model != material_archive_binding_model_resource_table) ||
+          read_u32(implementation_definitions, record + 12) != 0 ||
+          read_u64(implementation_definitions, record + 24) != 0) {
+        return archive_error::invalid_semantic_data;
+      }
+      desc.implementations.push_back(
+          {.id = id,
+           .binding_model = binding_model == material_archive_binding_model_resource_table
+                                ? package_binding_model::resource_table
+                                : package_binding_model::bind_group,
+           .binding_groups = binding_groups,
+           .required_renderer_features = required_features});
+    }
+    if (desc.implementations.size() == 1) {
+      desc.binding_model = desc.implementations.front().binding_model;
+      desc.binding_groups = desc.implementations.front().binding_groups;
+      desc.required_renderer_features = desc.implementations.front().required_renderer_features;
+      if (layout.header.binding_model !=
+              (desc.binding_model == package_binding_model::resource_table
+                   ? material_archive_binding_model_resource_table
+                   : material_archive_binding_model_bind_group) ||
+          layout.header.required_renderer_features != desc.required_renderer_features) {
+        return archive_error::invalid_semantic_data;
+      }
+    }
 
     desc.metadata.constant_buffer_size = read_u32(metadata, 0);
     const auto parameter_count = read_u32(metadata, 4);
@@ -461,16 +525,18 @@ archive_error decode_material_package_archive(std::span<const std::byte> bytes,
       const auto stage = read_u32(shader_records, record);
       const auto name_offset = read_u32(shader_records, record + 4);
       const auto name_length = read_u32(shader_records, record + 8);
+      const auto implementation = read_u32(shader_records, record + 12);
       if (stage > static_cast<std::uint32_t>(package_shader_stage::fragment) ||
           !string_valid(strings, name_offset, name_length) ||
-          read_u32(shader_records, record + 12) != 0) {
+          !implementation_ids.contains(implementation)) {
         return archive_error::invalid_semantic_data;
       }
       material_shader_code shader{.stage = static_cast<package_shader_stage>(stage),
                                   .entry_point = read_string(strings, name_offset, name_length),
                                   .asset_id = {},
                                   .spirv = {},
-                                  .wgsl = {}};
+                                  .wgsl = {},
+                                  .implementation = implementation};
       std::ranges::copy(shader_records.subspan(record + 16, shader.asset_id.size()),
                         shader.asset_id.begin());
       shaders.push_back(std::move(shader));

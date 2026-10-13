@@ -14,7 +14,7 @@
 
 namespace granit::material {
 
-inline constexpr std::uint32_t material_archive_version_major = 5;
+inline constexpr std::uint32_t material_archive_version_major = 6;
 inline constexpr std::uint32_t material_archive_version_minor = 0;
 inline constexpr std::uint32_t material_archive_endian_tag = UINT32_C(0x01020304);
 inline constexpr std::uint32_t material_archive_header_size = 96;
@@ -39,6 +39,7 @@ enum class archive_section_type : std::uint32_t {
   dependency_metadata = 9,
   pipeline_states = 10,
   wgsl_data = 11,
+  implementation_definitions = 12,
 };
 
 using archive_section_flags = std::uint32_t;
