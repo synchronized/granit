@@ -1,0 +1,20 @@
+{
+  "format_version": 1,
+  "name": "pbr_resource_table",
+  "target_profile": "vulkan_native",
+  "target_backends": ["vulkan"],
+  "shaders": [
+    {
+      "name": "standard.vertex",
+      "source": "pbr_resource_table.hlsl",
+      "stage": "vertex",
+      "entry_point": "vertex_main"
+    },
+    {
+      "name": "standard.fragment",
+      "source": "pbr_resource_table.hlsl",
+      "stage": "fragment",
+      "entry_point": "fragment_main"
+    }
+  ]
+}

@@ -113,6 +113,15 @@ function(granit_prepare_runtime_shader_libraries)
     )
     granit_add_hlsl_shader_library(
       ALL
+      NAME pbr_resource_table
+      MANIFEST "${granit_asset_sources_dir}/shaders/pbr/pbr_resource_table.grshlib.json"
+      OUTPUT "${output_root}/pbr_resource_table.grshlib"
+      CACHE_DIR "${object_root}/pbr-resource-table"
+      TARGET granit_pbr_resource_table_shader_library
+      SOURCES "${granit_asset_sources_dir}/shaders/pbr/pbr_resource_table.hlsl"
+    )
+    granit_add_hlsl_shader_library(
+      ALL
       NAME canvas
       MANIFEST "${granit_asset_sources_dir}/shaders/unlit/canvas.grshlib.json"
       OUTPUT "${output_root}/unlit_canvas.grshlib"
