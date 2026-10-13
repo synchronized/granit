@@ -12,9 +12,13 @@
 - [S-95：0.59.0 Resource Table 实验性 API](S-95-0.59.0-resource-table-experimental-api.md)——建立可选、可回退、
   可测量的 Resource Table 公共实验 API，复用 Vulkan Bindless 原型，验证 WebGPU 回退和 Tutorial 12；不改变
   Bind Group 默认路径。
-- [S-96：0.60.0 Resource Table Shader 变体与真实压力](S-96-0.60.0-resource-table-shader-and-pressure.md)——承接 v0.59.0，验证 Shader/Material 变体、WebGPU 回退和真实压力。
+- [S-97：0.61.0 Resource Table 实际 Shader 采样与多材质场景](S-97-0.61.0-resource-table-shader-and-multimaterial-scene.md)——承接 v0.60.0，
+  实现 Vulkan Resource Table Shader 实际采样，以真实模型和可控材质网格验证多纹理、多材质和多 Draw 压力；WebGPU 继续使用 Bind Group 回退。
 
 ## 最近完成
+
+- [S-96：0.60.0 Resource Table Shader 变体与真实压力](S-96-0.60.0-resource-table-shader-and-pressure.md)——完成 Resource Table 材质契约、生命周期保护、
+  WebGPU Bind Group 回退、Tutorial 12 基础场景和压力入口，并发布 `v0.60.0`；真正的 Resource Table 数组 Shader 采样由 S-97 承接。
 
 - [S-94：0.58.0 后端诊断闭环与硬件捕获](S-94-0.58.0-backend-diagnostics-and-capture.md)——完成 WebGPU/Vulkan
   诊断回归，固化 Windows Vulkan 硬件的 RenderDoc CLI 捕获和跨平台 no-op 证据，不新增公共 ABI，并发布

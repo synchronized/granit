@@ -30,9 +30,13 @@ Vulkan 内部实验。
 
 ## 当前计划
 
-[v0.60.0](versions/v0.60.0.md) 由 [S-96](plans/S-96-0.60.0-resource-table-shader-and-pressure.md)
-规划：让 Resource Table 进入真实 Shader/Material 采样路径，补齐 Tutorial 12 可见纹理结果、WebGPU
-合法回退、在途更新保护和跨平台压力数据；不改变 Bind Group 默认路径。
+[v0.61.0](versions/v0.61.0.md) 由 [S-97](plans/S-97-0.61.0-resource-table-shader-and-multimaterial-scene.md)
+规划：实现 Vulkan Resource Table Shader 实际纹理采样，升级 Tutorial 12 的多材质场景和压力对照，
+并保持 WebGPU Bind Group 回退与 Bind Group 默认路径。
+
+[v0.60.0](versions/v0.60.0.md) 已由 [S-96](plans/S-96-0.60.0-resource-table-shader-and-pressure.md)
+完成并发布：交付 Resource Table 材质契约、生命周期保护、WebGPU 合法回退、Tutorial 12 基础场景和
+压力入口；真正的 Resource Table 数组 Shader 采样由 v0.61.0 承接。
 
 [v0.59.0](versions/v0.59.0.md) 已由 [S-95](plans/S-95-0.59.0-resource-table-experimental-api.md)
 完成：建立可选、可回退、可测量的 Resource Table 实验性公共 API，复用 Vulkan Bindless 原型，

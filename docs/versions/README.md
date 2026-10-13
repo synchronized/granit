@@ -12,12 +12,12 @@
 
 ## 当前版本
 
-[v0.59.0：Resource Table 实验性 API](v0.59.0.md) 已发布；[v0.60.0：Resource Table Shader 集成与真实压力](v0.60.0.md)
-正在规划。
+[v0.60.0：Resource Table Shader 集成与真实压力](v0.60.0.md) 已发布；[v0.61.0：Resource Table 实际 Shader 采样与多材质场景](v0.61.0.md)
+已确认，待实施。
 
 ## 计划版本
 
-- [v0.60.0：Resource Table Shader 集成与真实压力](v0.60.0.md)
+- [v0.61.0：Resource Table 实际 Shader 采样与多材质场景](v0.61.0.md)
 
 ## 已发布版本
 
