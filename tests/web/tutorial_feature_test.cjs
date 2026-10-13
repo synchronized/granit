@@ -60,9 +60,11 @@ async function main() {
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
   const errors = [];
   const diagnostics = [];
+  const consoleMessages = [];
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => {
     const text = message.text();
+    consoleMessages.push(`${message.type()}: ${text}`);
     if (message.type() === "warning")
       diagnostics.push(text);
     if (message.type() === "error" ||
@@ -106,7 +108,7 @@ async function main() {
         };
       }, readinessExports);
       throw new Error(
-        `${error.message}; state=${JSON.stringify(state)}; page=${[...errors, ...diagnostics].join(" | ")}`,
+        `${error.message}; state=${JSON.stringify(state)}; page=${[...errors, ...diagnostics].join(" | ")}; console=${consoleMessages.join(" | ")}`,
       );
     }
 

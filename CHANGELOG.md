@@ -10,6 +10,8 @@
 
 - v0.61.0 Resource Table Vulkan 变体开始通过材质常量传递 5 个纹理和 5 个采样器数组索引；
 - 当前已完成多纹理真实索引采样验证，压力对照和跨平台收口仍在实施中。
+- WebGPU 资源初始化已停止加载 Vulkan 专用 Resource Table Shader Library，并显式回退 Bind Group；
+  Tutorial 12 的 Chrome 运行时仍有独立的 `INVALID_ARGUMENT` 初始化阻塞，待后续收口。
 - Tutorial 12 已增加可自动退出的 `--stress-test`，输出 64 个 Resource Table 创建和 64 次 sampler 更新的 CPU 压力计时；Bind Group 对照和 GPU 时间仍待完成。
 - 示例资产部署新增目录级预加载，修复 Tutorial 12 的 Emscripten Windows 链接命令行过长问题。
 

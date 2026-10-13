@@ -5,6 +5,7 @@
 #include "gltf_rendering/standard_pbr_assets.h"
 
 #include <granit/pipeline/pbr_material.hpp>
+#include <granit/renderer/renderer.h>
 #include <granit/renderer/upload_batch.hpp>
 
 #include <algorithm>
@@ -343,6 +344,13 @@ granit::result scene_resources::create(granit::renderer_ref renderer, const gltf
     return granit::result::invalid_handle;
   if (!std::isfinite(sampler_anisotropy) || sampler_anisotropy < 1.0F)
     return granit::result::invalid_argument;
+  granit_renderer_info renderer_info = GRANIT_RENDERER_INFO_INIT;
+  if (const auto info_result = granit::from_native(
+          granit_renderer_get_info(renderer.native_handle(), &renderer_info));
+      info_result.failed())
+    return info_result;
+  const bool supports_vulkan_resource_table =
+      renderer_info.backend == GRANIT_RENDERER_BACKEND_VULKAN;
   plan_ = std::move(plan);
   if (!report(scene_upload_stage::planning, 1, 1))
     return granit::result::cancelled;
@@ -561,8 +569,8 @@ granit::result scene_resources::create(granit::renderer_ref renderer, const gltf
   if (const auto result = shader_library_.initialize(renderer, standard_pbr_shader_library());
       result.failed())
     return result;
-  if (const auto resource_table_archive = standard_pbr_resource_table_shader_library();
-      !resource_table_archive.empty()) {
+  if (supports_vulkan_resource_table) {
+    const auto resource_table_archive = standard_pbr_resource_table_shader_library();
     if (const auto result = resource_table_shader_library_.initialize(renderer,
                                                                        resource_table_archive);
         result.failed())
@@ -577,6 +585,8 @@ granit::result scene_resources::create(granit::renderer_ref renderer, const gltf
                                                     shader_libraries}
                                               : std::span<const granit::material_shader_library>{
                                                     shader_libraries.data(), 1};
+  const auto requested_implementation =
+      resource_table_enabled_ && resource_table_shader_library_.valid() ? 2U : 0U;
   materials_.reserve(source.materials.size() + 1);
   material_alpha_modes_.reserve(source.materials.size() + 1);
   for (std::size_t material_index = 0; material_index < source.materials.size(); ++material_index) {
@@ -585,7 +595,7 @@ granit::result scene_resources::create(granit::renderer_ref renderer, const gltf
     if (const auto result = create_material(renderer, source_material, plan_, textures_, samplers_,
                                             default_textures_, default_sampler_,
                                             available_shader_libraries,
-                                            resource_table_enabled_ ? 2U : 0U, materials_.back());
+                                            requested_implementation, materials_.back());
         result.failed())
       return result;
     material_alpha_modes_.push_back(source_material.alpha_mode);
@@ -596,7 +606,7 @@ granit::result scene_resources::create(granit::renderer_ref renderer, const gltf
   if (const auto result =
           create_material(renderer, {}, plan_, textures_, samplers_, default_textures_,
                           default_sampler_, available_shader_libraries,
-                          resource_table_enabled_ ? 2U : 0U, materials_.back());
+                          requested_implementation, materials_.back());
       result.failed())
     return result;
   material_alpha_modes_.push_back(gltf::material_alpha_mode::opaque);

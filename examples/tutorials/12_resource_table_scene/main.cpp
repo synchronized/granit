@@ -23,6 +23,10 @@
 #include <string_view>
 #include <vector>
 
+#if defined(__EMSCRIPTEN__)
+#include <emscripten/emscripten.h>
+#endif
+
 namespace {
 
 int failure(std::string_view operation, granit::result result) {
@@ -34,6 +38,11 @@ class application final : public granit::example::application {
 public:
   void set_smoke_test(bool value) noexcept { smoke_test_ = value; }
   void set_stress_test(bool value) noexcept { stress_test_ = value; }
+  [[nodiscard]] std::uint32_t feature_value() const noexcept {
+    return static_cast<std::uint32_t>(model_scene_.materials.size());
+  }
+  [[nodiscard]] std::uint32_t canvas_items() const noexcept { return runtime_.canvas_items(); }
+  [[nodiscard]] granit_result shutdown_reason() const noexcept { return shutdown_reason_.native(); }
 
 private:
   granit::result on_initialize() noexcept override {
@@ -138,7 +147,8 @@ private:
     return granit::result::success;
   }
 
-  void on_shutdown(granit::result) noexcept override {
+  void on_shutdown(granit::result reason) noexcept override {
+    shutdown_reason_ = reason;
     runtime_.shutdown();
     static_cast<void>(scene_.reset());
     static_cast<void>(pipeline_.reset());
@@ -259,6 +269,7 @@ private:
   std::uint64_t stress_elapsed_us_{};
   bool smoke_test_{};
   bool stress_test_{};
+  granit::result shutdown_reason_{granit::result::success};
 
   static const char* resource_table_support_name(granit::resource_table_support support) noexcept {
     switch (support) {
@@ -276,6 +287,32 @@ private:
 
 application app;
 } // namespace
+
+#if defined(__EMSCRIPTEN__)
+extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_12_rendered_frames() noexcept {
+  return app.rendered_frames();
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_12_recreate_count() noexcept {
+  return app.completed_recreates();
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_12_feature_value() noexcept {
+  return app.feature_value();
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_12_canvas_items() noexcept {
+  return app.canvas_items();
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE int granit_tutorial_12_ready() noexcept {
+  return app.ready() ? 1 : 0;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE granit_result granit_tutorial_12_shutdown_result() noexcept {
+  return app.shutdown_reason();
+}
+#endif
 
 int main(int argc, char** argv) {
   const bool smoke = argc >= 2 && std::string_view{argv[1]} == "--smoke-test";
