@@ -120,6 +120,24 @@ function(granit_prepare_runtime_shader_libraries)
       TARGET granit_pbr_resource_table_shader_library
       SOURCES "${granit_asset_sources_dir}/shaders/pbr/pbr_resource_table.hlsl"
     )
+    set(pbr_resource_table_material
+        "${output_root}/../runtime-materials/pbr_resource_table_probe.grmat")
+    set(pbr_resource_table_material_stamp "${pbr_resource_table_material}.verified")
+    add_custom_command(
+      OUTPUT "${pbr_resource_table_material_stamp}"
+      COMMAND "${CMAKE_COMMAND}" -E make_directory "${output_root}/../runtime-materials"
+      COMMAND "$<TARGET_FILE:granit_asset_tool>" material build
+              "${granit_asset_sources_dir}/materials/pbr_resource_table_probe.grmat.json"
+              --output "${pbr_resource_table_material}"
+              --shader-library-implementation 2
+              --shader-library "${output_root}/pbr_resource_table.grshlib"
+      COMMAND "${CMAKE_COMMAND}" -E touch "${pbr_resource_table_material_stamp}"
+      DEPENDS granit_pbr_resource_table_shader_library
+              "${granit_asset_sources_dir}/materials/pbr_resource_table_probe.grmat.json"
+      COMMENT "构建 Resource Table 材质探针"
+      VERBATIM)
+    add_custom_target(granit_pbr_resource_table_material
+                      DEPENDS "${pbr_resource_table_material_stamp}")
     granit_add_hlsl_shader_library(
       ALL
       NAME canvas

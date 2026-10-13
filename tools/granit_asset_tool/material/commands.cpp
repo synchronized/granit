@@ -8,6 +8,7 @@
 #include <granit/asset_tools/material_builder.hpp>
 
 #include <filesystem>
+#include <charconv>
 #include <iostream>
 #include <string>
 #include <string_view>
@@ -19,7 +20,8 @@ namespace {
 void print_usage() {
   std::cerr << "用法：\n"
                "  granit_asset_tool material build <source.grmat.json> "
-               "--output <package.grmat> --shader-library <library.grshlib>... "
+               "--output <package.grmat> [--shader-library-implementation <id>] "
+               "--shader-library <library.grshlib>... "
                "[--emit-debug-json [debug.json]]\n"
                "  granit_asset_tool material inspect <package.grmat> --json "
                "[--output <debug.json>]\n";
@@ -60,6 +62,8 @@ int build_package(int argc, char** argv) {
   bool emit_debug_json = false;
   std::filesystem::path debug_path;
   std::vector<std::vector<std::byte>> libraries;
+  std::vector<std::uint32_t> library_implementations;
+  std::uint32_t next_implementation = 1;
   for (int index = 5; index < argc;) {
     const std::string_view option{argv[index]};
     if (option == "--shader-library" && index + 1 < argc) {
@@ -69,6 +73,20 @@ int build_package(int argc, char** argv) {
         return 1;
       }
       libraries.push_back(std::move(archive));
+      library_implementations.push_back(next_implementation);
+      next_implementation = 1;
+      index += 2;
+    } else if (option == "--shader-library-implementation" && index + 1 < argc) {
+      const auto text = std::string_view{argv[index + 1]};
+      const auto* first = text.data();
+      const auto* last = first + text.size();
+      std::uint32_t implementation = 0;
+      const auto parsed = std::from_chars(first, last, implementation);
+      if (parsed.ec != std::errc{} || parsed.ptr != last || implementation == 0) {
+        print_usage();
+        return 2;
+      }
+      next_implementation = implementation;
       index += 2;
     } else if (option == "--emit-debug-json") {
       if (emit_debug_json) {
@@ -95,8 +113,9 @@ int build_package(int argc, char** argv) {
   }
   std::vector<granit::asset_tools::material::build_desc::shader_library> library_views;
   library_views.reserve(libraries.size());
-  for (const auto& library : libraries)
-    library_views.push_back({.archive = library});
+  for (std::size_t index = 0; index < libraries.size(); ++index)
+    library_views.push_back(
+        {.archive = libraries[index], .implementation = library_implementations[index]});
   auto [status, result] = granit::asset_tools::material::build({source, library_views});
   if (status.failed()) {
     std::cerr << result.diagnostic();

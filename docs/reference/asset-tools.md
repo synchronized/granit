@@ -165,7 +165,9 @@ Shader Library 结果还包含缓存命中状态与失败 Shader 逻辑名称。
 - 描述结构无效时不创建结果；输入内容或资产语义无效时返回 `invalid_argument`，并尽量返回包含
   诊断的结果句柄。CLI 把诊断写入标准错误，并只在构建成功后原子替换输出文件。
 - CLI 使用 `granit_asset_tool material build` 和 `granit_asset_tool material inspect`。Material
-  领域不查找、加载或下载 Shader Toolchain。
+  领域不查找、加载或下载 Shader Toolchain。多 implementation CLI 构建可在对应
+  `--shader-library <file>` 前使用 `--shader-library-implementation <id>` 指定输入归属；未指定时
+  默认为 implementation 1。
 
 ## Texture Builder
 
