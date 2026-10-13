@@ -8,6 +8,9 @@
 
 ## Unreleased
 
+- v0.61.0 Resource Table Vulkan 变体开始通过材质常量传递 BaseColor 纹理/采样器数组索引；
+- 当前仅完成单通道真实索引采样验证，完整多纹理 PBR、压力对照和跨平台收口仍在实施中。
+
 ## 0.60.0 - 2026-10-12
 
 - 完成实验性 Resource Table 绑定模型与 Material 公共入口接线；
