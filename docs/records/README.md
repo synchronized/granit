@@ -132,3 +132,4 @@
 - [2026-08-18 S-08 Linux Integration 验证记录](2026-08-18-s08-linux-integration-validation.md)
 - [2026-10-12 v0.59.0 S-95 Resource Table 验收](2026-10-12-v0.59.0-s95-resource-table-acceptance.md)
 - [2026-10-12 v0.60.0 Resource Table 验收](2026-10-12-v0.60.0-resource-table-acceptance.md)
+- [2026-10-13 S-97D Resource Table 压力首轮](2026-10-13-s97d-resource-table-pressure.md)

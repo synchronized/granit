@@ -15,9 +15,10 @@
 #include <granit/renderer/resource_table.hpp>
 #include <imgui.h>
 
-#include <iostream>
 #include <cmath>
+#include <chrono>
 #include <cstdint>
+#include <iostream>
 #include <span>
 #include <string_view>
 #include <vector>
@@ -105,6 +106,7 @@ private:
       }
     }
     if (result.ok() && stress_test_ && resource_table_available_) {
+      const auto stress_begin = std::chrono::steady_clock::now();
       stress_tables_.resize(64);
       for (auto& table : stress_tables_) {
         result = table.initialize(renderer_owner(),
@@ -115,6 +117,15 @@ private:
                                .slot = 0,
                                .resource = sampler_.native_handle()});
         if (result.failed()) break;
+      }
+      if (result.ok()) {
+        stress_elapsed_us_ = static_cast<std::uint64_t>(
+            std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now() - stress_begin)
+                .count());
+        std::cout << "resource_table_pressure tables=" << stress_tables_.size()
+                  << " sampler_updates=" << stress_tables_.size()
+                  << " elapsed_us=" << stress_elapsed_us_ << '\n';
       }
     }
     if (result.ok() &&
@@ -170,7 +181,9 @@ private:
       else
         ImGui::TextUnformatted("Resource Table texture capacity: unavailable");
       if (stress_test_)
-        ImGui::TextUnformatted("Stress mode: 64 tables with one sampler slot");
+        ImGui::Text("Stress mode: %zu tables, %zu sampler updates, %llu us",
+                    stress_tables_.size(), stress_tables_.size(),
+                    static_cast<unsigned long long>(stress_elapsed_us_));
       ImGui::Text("Requested path: Resource Table (unsupported devices fall back)");
       ImGui::Text("Material implementation selection is explicit");
       result = runtime_.end_frame();
@@ -243,6 +256,7 @@ private:
   granit::example::camera::orbit_camera_input_accumulator camera_input_;
   granit_handle resource_table_texture_{GRANIT_NULL_HANDLE};
   granit_handle resource_table_sampler_{GRANIT_NULL_HANDLE};
+  std::uint64_t stress_elapsed_us_{};
   bool smoke_test_{};
   bool stress_test_{};
 
@@ -266,14 +280,14 @@ application app;
 int main(int argc, char** argv) {
   const bool smoke = argc >= 2 && std::string_view{argv[1]} == "--smoke-test";
   const bool stress = argc >= 2 && std::string_view{argv[1]} == "--stress-test";
-  app.set_smoke_test(smoke);
+  app.set_smoke_test(smoke || stress);
   app.set_stress_test(stress);
   const auto result = app.run({.executable_path = argc > 0 ? argv[0] : "",
                                .title = "Granit Resource Table Scene",
                                .renderer = {.application_name = "Granit Resource Table",
                                             .presentation = granit::presentation_mode::enabled},
                                .swapchain = {},
-                               .smoke_test = smoke});
+                               .smoke_test = smoke || stress});
   if (smoke && result == granit::result::backend_unavailable) return 77;
   return result.failed() ? failure("application run", result) : 0;
 }
