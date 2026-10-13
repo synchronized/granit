@@ -22,6 +22,7 @@ inline constexpr std::uint32_t material_package_format_version = 5;
 using material_pass_id = std::uint64_t;
 using material_feature_id = std::uint64_t;
 using material_variant_key = std::uint64_t;
+using material_implementation_id = std::uint32_t;
 
 enum class package_target : std::uint8_t {
   cross_backend,
@@ -44,6 +45,20 @@ inline constexpr package_binding_groups package_binding_groups_all =
 using package_feature_flags = std::uint64_t;
 inline constexpr package_feature_flags package_feature_bindless_resource_table = UINT64_C(1) << 0;
 
+struct material_implementation_desc {
+  material_implementation_id id = 0;
+  package_binding_model binding_model = package_binding_model::bind_group;
+  package_binding_groups binding_groups = package_binding_groups_all;
+  package_feature_flags required_renderer_features = 0;
+};
+
+struct material_implementation {
+  material_implementation_id id = 0;
+  package_binding_model binding_model = package_binding_model::bind_group;
+  package_binding_groups binding_groups = package_binding_groups_all;
+  package_feature_flags required_renderer_features = 0;
+};
+
 enum class package_shader_stage : std::uint8_t {
   vertex,
   fragment,
@@ -56,6 +71,7 @@ enum class package_error : std::uint8_t {
   unsupported_binding_model,
   invalid_binding_groups,
   unsupported_renderer_features,
+  duplicate_implementation,
   invalid_metadata,
   missing_variant,
   invalid_pass,
@@ -111,6 +127,7 @@ struct material_shader_code {
   // 仅供内部测试与程序化模板使用；归档不会序列化这两项。
   std::vector<std::uint32_t> spirv;
   std::string wgsl;
+  material_implementation_id implementation = 1;
 };
 
 struct material_variant_desc {
@@ -127,6 +144,7 @@ struct material_package_desc {
   package_binding_groups binding_groups = package_binding_groups_all;
   package_feature_flags required_renderer_features = 0;
   metadata_desc metadata;
+  std::vector<material_implementation_desc> implementations;
   std::vector<material_variant_desc> variants;
 };
 
@@ -155,6 +173,11 @@ public:
   }
   [[nodiscard]] const material_metadata& metadata() const noexcept { return metadata_; }
   [[nodiscard]] std::span<const material_variant> variants() const noexcept { return variants_; }
+  [[nodiscard]] std::span<const material_implementation> implementations() const noexcept {
+    return implementations_;
+  }
+  [[nodiscard]] const material_implementation*
+  find_implementation(material_implementation_id id) const noexcept;
   [[nodiscard]] const material_variant* find(material_pass_id pass,
                                              material_variant_key key) const noexcept;
 
@@ -165,6 +188,7 @@ private:
   package_binding_groups binding_groups_ = package_binding_groups_all;
   package_feature_flags required_renderer_features_ = 0;
   material_metadata metadata_;
+  std::vector<material_implementation> implementations_;
   std::vector<material_variant> variants_;
 };
 

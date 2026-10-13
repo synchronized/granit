@@ -145,6 +145,33 @@ package_error material_package::build(material_package_desc desc, material_packa
   if (desc.target != package_target::cross_backend) {
     return package_error::unsupported_target;
   }
+  std::vector<material_implementation> implementations;
+  if (!desc.implementations.empty()) {
+    implementations.reserve(desc.implementations.size());
+    for (const auto& source : desc.implementations) {
+    if (source.id == 0 ||
+        (source.binding_model != package_binding_model::bind_group &&
+         source.binding_model != package_binding_model::resource_table) ||
+        (source.required_renderer_features & ~package_feature_bindless_resource_table) != 0 ||
+        (source.binding_model == package_binding_model::resource_table &&
+         (source.required_renderer_features & package_feature_bindless_resource_table) == 0) ||
+        (source.binding_model == package_binding_model::bind_group &&
+         (source.required_renderer_features & package_feature_bindless_resource_table) != 0) ||
+        (source.binding_groups != (package_binding_group_frame | package_binding_group_material) &&
+         source.binding_groups !=
+             (package_binding_group_frame | package_binding_group_material |
+              package_binding_group_object) &&
+         source.binding_groups != package_binding_groups_all)) {
+      return package_error::unsupported_binding_model;
+    }
+      if (std::ranges::find(implementations, source.id, &material_implementation::id) !=
+          implementations.end()) {
+        return package_error::duplicate_implementation;
+      }
+      implementations.push_back({source.id, source.binding_model, source.binding_groups,
+                                 source.required_renderer_features});
+    }
+  }
   if (desc.binding_model != package_binding_model::bind_group &&
       desc.binding_model != package_binding_model::resource_table) {
     return package_error::unsupported_binding_model;
@@ -166,6 +193,12 @@ package_error material_package::build(material_package_desc desc, material_packa
   if (desc.binding_model != package_binding_model::resource_table &&
       (desc.required_renderer_features & package_feature_bindless_resource_table) != 0) {
     return package_error::unsupported_renderer_features;
+  }
+  if (implementations.empty()) {
+    implementations.push_back({.id = 1,
+                               .binding_model = desc.binding_model,
+                               .binding_groups = desc.binding_groups,
+                               .required_renderer_features = desc.required_renderer_features});
   }
 
   material_metadata metadata;
@@ -192,26 +225,32 @@ package_error material_package::build(material_package_desc desc, material_packa
       }
     }
 
-    std::array<bool, 2> stages{};
+    std::vector<std::array<bool, 2>> stages(implementations.size());
     for (const auto& shader : source.shaders) {
+      const auto implementation = std::ranges::find(implementations, shader.implementation,
+                                                     &material_implementation::id);
       const auto stage_index = static_cast<std::size_t>(shader.stage);
       const auto has_asset = !std::ranges::all_of(
           shader.asset_id, [](std::byte value) { return value == std::byte{}; });
       const auto has_internal_code = is_spirv(shader.spirv) && !shader.wgsl.empty() &&
                                      shader.wgsl.find('\0') == std::string::npos;
-      if (stage_index >= stages.size() || shader.entry_point.empty() ||
+      if (implementation == implementations.end() || stage_index >= 2 || shader.entry_point.empty() ||
           shader.entry_point.find('\0') != std::string::npos ||
           (!has_asset && !has_internal_code)) {
         return package_error::invalid_shader;
       }
-      if (stages[stage_index]) {
+      const auto implementation_index = static_cast<std::size_t>(
+          std::distance(implementations.begin(), implementation));
+      if (stages[implementation_index][stage_index]) {
         return package_error::duplicate_shader_stage;
       }
-      stages[stage_index] = true;
+      stages[implementation_index][stage_index] = true;
     }
-    if (!stages[static_cast<std::size_t>(package_shader_stage::vertex)] ||
-        !stages[static_cast<std::size_t>(package_shader_stage::fragment)]) {
-      return package_error::missing_shader_stage;
+    for (const auto& implementation_stages : stages) {
+      if (!implementation_stages[static_cast<std::size_t>(package_shader_stage::vertex)] ||
+          !implementation_stages[static_cast<std::size_t>(package_shader_stage::fragment)]) {
+        return package_error::missing_shader_stage;
+      }
     }
     if (!pipeline_state_valid(source.pipeline)) {
       return package_error::invalid_pipeline_state;
@@ -240,10 +279,23 @@ package_error material_package::build(material_package_desc desc, material_packa
   built.binding_model_ = desc.binding_model;
   built.binding_groups_ = desc.binding_groups;
   built.required_renderer_features_ = desc.required_renderer_features;
+  built.implementations_ = std::move(implementations);
+  if (!built.implementations_.empty()) {
+    built.binding_model_ = built.implementations_.front().binding_model;
+    built.binding_groups_ = built.implementations_.front().binding_groups;
+    built.required_renderer_features_ =
+        built.implementations_.front().required_renderer_features;
+  }
   built.metadata_ = std::move(metadata);
   built.variants_ = std::move(variants);
   package = std::move(built);
   return package_error::none;
+}
+
+const material_implementation*
+material_package::find_implementation(material_implementation_id id) const noexcept {
+  const auto found = std::ranges::find(implementations_, id, &material_implementation::id);
+  return found == implementations_.end() ? nullptr : &*found;
 }
 
 const material_variant* material_package::find(material_pass_id pass,

@@ -123,6 +123,10 @@ std::string read_string(std::span<const std::byte> table, std::uint32_t offset,
 
 archive_error encode_material_package_archive(const material_package& package,
                                               std::vector<std::byte>& bytes) noexcept {
+  // 多 implementation 的目录和 Shader 归属将在 v0.61 归档版本中一起升级；
+  // 在新目录格式落地前必须显式拒绝，不能静默丢弃后端实现。
+  if (package.implementations().size() != 1)
+    return archive_error::invalid_semantic_data;
   try {
     std::set<std::string> strings;
     for (const auto& parameter : package.metadata().parameters()) {

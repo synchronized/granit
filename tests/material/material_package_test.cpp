@@ -79,6 +79,32 @@ TEST_CASE("材质包校验绑定模型和版本") {
         package_error::unsupported_renderer_features);
 }
 
+TEST_CASE("材质包允许公共变体对应多个后端 implementation") {
+  auto source = variant({});
+  for (auto& shader_code : source.shaders)
+    shader_code.implementation = 2;
+  auto fallback = variant({});
+  material_package_desc desc;
+  desc.implementations = {
+      {.id = 1,
+       .binding_model = package_binding_model::bind_group,
+       .binding_groups = package_binding_groups_all,
+       .required_renderer_features = 0},
+      {.id = 2,
+       .binding_model = package_binding_model::resource_table,
+       .binding_groups = package_binding_groups_all,
+       .required_renderer_features = package_feature_bindless_resource_table},
+  };
+  fallback.shaders.insert(fallback.shaders.end(), source.shaders.begin(), source.shaders.end());
+  desc.variants.push_back(std::move(fallback));
+
+  material_package package;
+  REQUIRE(material_package::build(std::move(desc), package) == package_error::none);
+  REQUIRE(package.implementations().size() == 2);
+  CHECK(package.find_implementation(1)->binding_model == package_binding_model::bind_group);
+  CHECK(package.find_implementation(2)->binding_model == package_binding_model::resource_table);
+}
+
 TEST_CASE("材质包拒绝重复特性、重复变体和无效 Shader") {
   const auto feature = make_feature_id("normal_map");
   material_package package;
