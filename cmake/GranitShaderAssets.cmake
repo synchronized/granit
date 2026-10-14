@@ -14,9 +14,6 @@ function(granit_add_hlsl_shader_library)
   if(NOT ARG_NAME OR NOT ARG_MANIFEST OR NOT ARG_OUTPUT OR NOT ARG_CACHE_DIR OR NOT ARG_TARGET)
     message(FATAL_ERROR "granit_add_hlsl_shader_library 缺少必要参数")
   endif()
-  if(NOT GRANIT_VERIFY_SHADER_ASSET_SNAPSHOTS)
-    set(ARG_REFERENCE "")
-  endif()
   if(NOT GRANIT_SHADER_TOOLCHAIN_ROOT OR NOT GRANIT_DXC_EXECUTABLE OR
      NOT GRANIT_TINT_EXECUTABLE)
     message(FATAL_ERROR "从 HLSL 源清单构建 Shader Library 需要完整 Shader Toolchain 根目录")
@@ -41,7 +38,7 @@ function(granit_add_hlsl_shader_library)
         --toolchain "${GRANIT_SHADER_TOOLCHAIN_ROOT}"
         --cache "${ARG_CACHE_DIR}" --output "${ARG_OUTPUT}")
   set(dependencies "${asset_tool_dependency}" "${ARG_MANIFEST}" ${ARG_SOURCES})
-  if(ARG_REFERENCE)
+  if(ARG_REFERENCE AND GRANIT_VERIFY_SHADER_ASSET_SNAPSHOTS)
     list(APPEND commands COMMAND "${CMAKE_COMMAND}" -E compare_files "${ARG_OUTPUT}"
                                  "${ARG_REFERENCE}")
     list(APPEND dependencies "${ARG_REFERENCE}")
