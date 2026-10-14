@@ -8,10 +8,6 @@
 
 ## Unreleased
 
-后续版本内容暂未开始收集。
-
-## 0.61.0 - 2026-10-14
-
 - v0.61.0 Resource Table Vulkan 变体通过材质常量传递 5 个纹理和 5 个采样器数组索引；
 - Tutorial 12 已升级为 32 材质、32 Draw、64 张确定性纹理的真实多材质场景，并完成 Resource Table/
   Bind Group CPU/GPU 压力对照；Bind Group 继续是默认路径。
