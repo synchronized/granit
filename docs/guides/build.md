@@ -28,6 +28,7 @@
 | `GRANIT_BUILD_INTEGRATION_IMGUI` | `OFF` | 构建 ImGui Draw Data 集成组件 |
 | `GRANIT_DEPENDENCY_POLICY` | `auto` | 第三方依赖默认获取策略：`system`（只用系统包）/ `auto`（先系统后下载）/ `download`（强制下载锁定版） |
 | `GRANIT_DEPENDENCY_SOURCE_CACHE_DIR` | `vendor/cache` | 下载型 SDL3/ImGui 的共享源码缓存；各 preset 的编译产物仍在自己的 `build/<preset>` 目录 |
+| `GRANIT_SHADER_TOOLCHAIN_MODE` | 开发 preset 为 `auto`；手动配置为 `system` | 先使用系统工具，缺失或不完整时从共享缓存获取锁定工具链；可设为 `off`、`system`、`auto` 或 `download` |
 | `GRANIT_SHADER_TOOLCHAIN_CACHE_DIR` | 开发 preset 为 `vendor/cache`；手动配置为 `build/toolchains` | 锁定 Shader Toolchain 的归档和已校验工具链缓存；编译产物仍在自己的 `build/<preset>` 目录 |
 | `GRANIT_ENABLE_XCB` | Linux 上 `ON` | 找到 XCB 开发头时启用私有 XCB Surface 后端 |
 | `GRANIT_ENABLE_WAYLAND` | Linux 上 `ON` | 找到 Wayland 协议工具时启用 Wayland 后端 |
@@ -35,8 +36,10 @@
 | `GRANIT_ENABLE_PEDANTIC_WARNINGS` | `OFF` | 启用 `-Wpedantic` 等严格标准扩展警告 |
 | `GRANIT_WARNINGS_AS_ERRORS` | `OFF` | 将 Granit 自有源码警告视为错误 |
 
-仓库提供的开发 presets 会将第三方依赖获取策略 `GRANIT_DEPENDENCY_POLICY` 设为 `auto`（缺失时
-下载锁定版本），并将 `GRANIT_WARNINGS_AS_ERRORS` 设为 `ON`，以便尽早发现问题。作为子项目手动
+仓库提供的开发 presets 会将第三方依赖获取策略 `GRANIT_DEPENDENCY_POLICY` 和 Shader 工具链模式
+设为 `auto`（缺失时下载锁定版本），并将 `GRANIT_WARNINGS_AS_ERRORS` 设为 `ON`，以便尽早发现问题。
+这样全新 Debug/Release preset 会共享同一套已校验工具链，不会因为本机没有系统 Tint 而跳过示例目标。
+作为子项目手动
 引入时，依赖策略与警告选项默认保持 `auto` / `OFF`；所有警告选项均为目标私有属性，不会传递给使用者。
 
 当 SDL3 或 ImGui 需要下载时，CMake 会把锁定版本的压缩包和解压后的源码保存到
