@@ -199,6 +199,56 @@ jobs:
         shell: bash
         run: ccache --show-stats
 
+  lavapipe-resource-table:
+    runs-on: ubuntu-24.04
+    container:
+      image: >-
+        ghcr.io/synchronized/granit-ci@sha256:6a2d0aba3b2464838958a4259d3a343106205eb35df9f4ad24d060bf98739015
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: 准备锁定 Shader 工具链
+        id: shader-toolchain
+        uses: ./.github/actions/setup-shader-toolchain
+      - name: 安装并选择 Lavapipe
+        shell: bash
+        run: |
+          set -euo pipefail
+          apt-get update -qq
+          apt-get install -y -qq mesa-vulkan-drivers vulkan-tools xvfb
+          icd=$(find /usr/share/vulkan/icd.d -maxdepth 1 -type f \
+            -name 'lvp_icd*.json' | sort | head -n 1)
+          test -n "$icd"
+          export VK_ICD_FILENAMES="$icd"
+          echo "VK_ICD_FILENAMES=$icd" >> "$GITHUB_ENV"
+          vulkaninfo --summary
+      - name: 配置并构建 Lavapipe 验收目标
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="${{ steps.shader-toolchain.outputs.root }}"
+          cmake --preset linux-clang-release \
+            -DGRANIT_SHADER_TOOLCHAIN_ROOT="$root" \
+            -DGRANIT_SHADER_TOOLCHAIN_POLICY=locked \
+            -DGRANIT_TINT_REVISION=0bc38adde72b79013536f8ce354b639ae19ae195
+          cmake --build --preset linux-clang-release --target \
+            granit_tutorial_12_resource_table_scene \
+            granit_renderer_test \
+            granit_vulkan_backend_test \
+            granit_gpu_offscreen_smoke
+      - name: 运行 Lavapipe Resource Table 与 Vulkan 回归
+        shell: bash
+        run: |
+          set -euo pipefail
+          build="build/linux-clang-release"
+          export GRANIT_VULKAN_VALIDATION=on
+          xvfb-run -a "$build/bin/granit_tutorial_12_resource_table_scene" --stress-test-32
+          xvfb-run -a "$build/bin/granit_tutorial_12_resource_table_scene" --bind-group-stress-test-32
+          xvfb-run -a ctest --test-dir "$build" --output-on-failure \
+            -R '^(granit\.tutorial\.12_resource_table_scene|granit\.backend\.vulkan|granit\.renderer\.resources|granit\.smoke\.gpu_offscreen)$'
+
   integration-runtime:
     runs-on: ubuntu-24.04
     container:
