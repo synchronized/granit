@@ -38,10 +38,11 @@ int link_shader_fixture_library(int argc, char** argv) {
     objects.emplace_back(spec.substr(separator + 1));
   }
   bool cache_hit = false;
+  std::string diagnostic;
   if (granit::asset_tools::detail::link_shader_library(objects, logical_names, *library_name,
                                                        backend_mask, *output_path,
-                                                       cache_hit) != GRANIT_SUCCESS) {
-    std::cerr << "无法链接 Shader Library\n";
+                                                       cache_hit, diagnostic) != GRANIT_SUCCESS) {
+    std::cerr << "无法链接 Shader Library\n" << diagnostic;
     return 1;
   }
   std::cout << (cache_hit ? "Shader Library 内容未变化：" : "已链接 Shader Library：")

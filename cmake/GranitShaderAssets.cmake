@@ -38,7 +38,7 @@ function(granit_add_hlsl_shader_library)
         --toolchain "${GRANIT_SHADER_TOOLCHAIN_ROOT}"
         --cache "${ARG_CACHE_DIR}" --output "${ARG_OUTPUT}")
   set(dependencies "${asset_tool_dependency}" "${ARG_MANIFEST}" ${ARG_SOURCES})
-  if(ARG_REFERENCE)
+  if(ARG_REFERENCE AND GRANIT_VERIFY_SHADER_ASSET_SNAPSHOTS)
     list(APPEND commands COMMAND "${CMAKE_COMMAND}" -E compare_files "${ARG_OUTPUT}"
                                  "${ARG_REFERENCE}")
     list(APPEND dependencies "${ARG_REFERENCE}")

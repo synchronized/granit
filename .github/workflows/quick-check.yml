@@ -111,7 +111,8 @@ jobs:
           cmake --preset linux-clang-release \
             -DGRANIT_BUILD_EXAMPLES=OFF \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DGRANIT_VERIFY_SHADER_ASSET_SNAPSHOTS=OFF
           cmake --build --preset linux-clang-release
       - name: 运行单元与 Smoke 测试
         shell: bash

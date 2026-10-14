@@ -100,7 +100,10 @@ private:
       .color_formats = std::span{&format, 1}, .depth_stencil_format = granit::texture_format::d32_float,
       .vertex_buffers = {}, .primitive = {}, .depth = granit::depth_state{.test_enabled = true,
       .write_enabled = false}, .color_blends = blends, .depth_bias = std::nullopt});
-    if (result.ok()) pipeline_format_ = format; return result;
+    if (result.ok()) {
+      pipeline_format_ = format;
+    }
+    return result;
   }
   granit::result on_render(granit::example::present_frame& frame) noexcept override {
     granit::window_state state; auto result = app_window().get_state(state);
@@ -133,7 +136,10 @@ private:
       .height = frame.swapchain.height, .load_operation = granit::attachment_load_operation::load,
       .encode_srgb = true, .frame_slot = recording.frame_slot()});
     if (result.ok()) result = recording.submit();
-    if (result.failed() && recording.valid()) static_cast<void>(recording.abort()); return result;
+    if (result.failed() && recording.valid()) {
+      static_cast<void>(recording.abort());
+    }
+    return result;
   }
   granit::example::tutorial::tutorial_runtime runtime_; granit::frame_context frame_context_;
   granit::shader_library shaders_; granit::shader vertex_shader_, fragment_shader_; granit::buffer objects_;

@@ -90,13 +90,46 @@ struct owned_object {
 
 namespace granit::asset_tools::detail {
 
+namespace {
+
+std::string library_error_text(granit::detail::shader_format::shader_library_error error) {
+  using enum granit::detail::shader_format::shader_library_error;
+  switch (error) {
+  case success:
+    return {};
+  case invalid_argument:
+    return "Shader Library 参数无效";
+  case invalid_shader_object:
+    return "Shader Object 无效";
+  case missing_payload:
+    return "Shader Object 缺少目标载荷";
+  case conflicting_payload:
+    return "Shader 载荷摘要冲突";
+  case conflicting_shader:
+    return "Shader 内容身份冲突";
+  case invalid_magic:
+    return "Shader Library 魔数无效";
+  case unsupported_schema:
+    return "Shader Library schema 不受支持";
+  case invalid_layout:
+    return "Shader Library 布局无效";
+  case digest_mismatch:
+    return "Shader Library 摘要不匹配";
+  }
+  return "未知 Shader Library 错误";
+}
+
+} // namespace
+
 granit_result link_shader_library(std::span<const std::filesystem::path> object_paths,
                                   std::span<const std::string> logical_names,
                                   std::string_view library_name,
                                   granit_shader_backend_flags target_backends,
                                   const std::filesystem::path& output_path,
-                                  bool& cache_hit) noexcept {
+                                  bool& cache_hit,
+                                  std::string& diagnostic) noexcept {
   cache_hit = false;
+  diagnostic.clear();
   if (object_paths.empty() || object_paths.size() != logical_names.size() || library_name.empty() ||
       output_path.empty() || target_backends == 0 ||
       (target_backends & ~GRANIT_SHADER_BACKEND_ALL_BITS) != 0)
@@ -129,10 +162,12 @@ granit_result link_shader_library(std::span<const std::filesystem::path> object_
       sources.push_back({object.manifest, object.wgsl, object.spirv, logical_names[index]});
     }
     std::vector<std::byte> library;
-    if (granit::detail::shader_format::encode_shader_library(
-            {sources, target_backends, library_name}, library) !=
-        granit::detail::shader_format::shader_library_error::success)
+    const auto encode_status = granit::detail::shader_format::encode_shader_library(
+        {sources, target_backends, library_name}, library);
+    if (encode_status != granit::detail::shader_format::shader_library_error::success) {
+      diagnostic = library_error_text(encode_status) + "\n";
       return GRANIT_ERROR_INVALID_ARGUMENT;
+    }
     if (std::ranges::equal(read_file(output_path), library)) {
       cache_hit = true;
       return GRANIT_SUCCESS;

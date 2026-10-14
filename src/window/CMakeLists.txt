@@ -121,6 +121,18 @@ if(GRANIT_ENABLE_WINDOW_SDL3 AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 granit_target_compile_warnings(granit_window)
 granit_target_output_directories(granit_window)
+if(WIN32 AND GRANIT_ENABLE_WINDOW_SDL3 AND TARGET "${GRANIT_SDL3_TARGET}")
+  # FetchContent 的 SDL3 共享库默认输出到 _deps；示例和 CTest 统一从 bin 启动，
+  # 因此必须显式把运行库部署到 Granit 自己的运行时目录。
+  add_custom_command(
+    TARGET granit_window
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:${GRANIT_SDL3_TARGET}>"
+            "$<TARGET_FILE_DIR:granit_window>"
+    VERBATIM
+  )
+endif()
 set_target_properties(
   granit_window
   PROPERTIES

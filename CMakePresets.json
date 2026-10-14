@@ -21,6 +21,8 @@
         "GRANIT_BUILD_TOOLS": true,
         "GRANIT_BUILD_ASSET_TOOLS": true,
         "GRANIT_DEPENDENCY_POLICY": "auto",
+        "GRANIT_SHADER_TOOLCHAIN_MODE": "auto",
+        "GRANIT_SHADER_TOOLCHAIN_CACHE_DIR": "${sourceDir}/vendor/cache",
         "GRANIT_WARNINGS_AS_ERRORS": true
       }
     },
@@ -153,6 +155,7 @@
         "GRANIT_BUILD_TOOLS": true,
         "GRANIT_BUILD_ASSET_TOOLS": true,
         "GRANIT_DEPENDENCY_POLICY": "auto",
+        "GRANIT_SHADER_TOOLCHAIN_CACHE_DIR": "${sourceDir}/vendor/cache",
         "GRANIT_WARNINGS_AS_ERRORS": true
       }
     },

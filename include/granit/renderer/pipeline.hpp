@@ -515,7 +515,8 @@ template <typename Function>
                   .reserved = 0};
     depth_bias_pointer = &depth_bias;
   }
-  const auto* formats = reinterpret_cast<const granit_texture_format*>(desc.color_formats.data());
+  const auto* color_formats =
+      reinterpret_cast<const granit_texture_format*>(desc.color_formats.data());
   const granit_graphics_pipeline_desc native{
       .struct_size = GRANIT_GRAPHICS_PIPELINE_DESC_SIZE,
       .reserved = 0,
@@ -523,7 +524,7 @@ template <typename Function>
       .vertex_shader = desc.vertex_shader.native_handle(),
       .fragment_shader = desc.fragment_shader.native_handle(),
       .color_format_count = static_cast<std::uint32_t>(desc.color_formats.size()),
-      .color_formats = formats,
+      .color_formats = color_formats,
       .depth_stencil_format = static_cast<granit_texture_format>(desc.depth_stencil_format),
       .sample_count = static_cast<granit_sample_count>(desc.samples),
       .reserved_2 = 0,

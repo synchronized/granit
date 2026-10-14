@@ -150,6 +150,21 @@ int main(int argc, char** argv) {
   if (std::filesystem::file_size(wgsl_sidecar, error) != wgsl.size() || error ||
       std::filesystem::file_size(spirv_sidecar, error) != spirv.size() || error)
     return 14;
+  std::vector<std::byte> native;
+  if (encode_shader_object({{}, spirv, reflection, cache_key, GRANIT_SHADER_BACKEND_VULKAN_BIT, 0,
+                            granit::shader_stage::compute, "main",
+                            granit::shader_profile::vulkan_native},
+                           native) != shader_object_error::success)
+    return 24;
+  const auto native_path = std::filesystem::path{argv[1]} / "native.grshaderobj";
+  cache_hit = true;
+  if (store_shader_object(native_path, native, {}, spirv, cache_hit) !=
+          shader_object_error::success ||
+      cache_hit)
+    return 25;
+  const auto native_sidecar = std::filesystem::path{native_path.string() + ".spv"};
+  if (std::filesystem::file_size(native_sidecar, error) != spirv.size() || error)
+    return 26;
   if (decode_shader_object(second, view) != shader_object_error::success)
     return 16;
   auto damaged_spirv = spirv;

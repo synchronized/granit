@@ -10,7 +10,8 @@ import sys
 import bpy
 
 
-GRID_SIZE = 4
+DEFAULT_COUNT = 16
+GRID_COLUMNS = 4
 IMAGE_SIZE = 32
 
 
@@ -29,8 +30,8 @@ def make_image(name: str, pixels: list[float], colorspace: str) -> bpy.types.Ima
   return image
 
 
-def make_material(index: int) -> bpy.types.Material:
-  hue = index / float(GRID_SIZE * GRID_SIZE)
+def make_material(index: int, count: int) -> bpy.types.Material:
+  hue = index / float(max(count, 1))
   red = 0.25 + 0.7 * abs(math.sin(hue * math.pi))
   green = 0.25 + 0.7 * abs(math.sin((hue + 0.33) * math.pi))
   blue = 0.25 + 0.7 * abs(math.sin((hue + 0.66) * math.pi))
@@ -71,9 +72,9 @@ def make_material(index: int) -> bpy.types.Material:
   return material
 
 
-def add_shape(index: int, material: bpy.types.Material) -> None:
-  x = (index % GRID_SIZE) * 2.4 - 3.6
-  y = (index // GRID_SIZE) * 2.4 - 3.6
+def add_shape(index: int, material: bpy.types.Material, columns: int, rows: int) -> None:
+  x = (index % columns) * 2.4 - (columns - 1) * 1.2
+  y = (index // columns) * 2.4 - (rows - 1) * 1.2
   shape = index % 4
   if shape == 0:
     bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=12, location=(x, y, 0.65))
@@ -95,13 +96,24 @@ def add_shape(index: int, material: bpy.types.Material) -> None:
 
 
 def main() -> None:
-  if len(sys.argv) < 2:
+  arguments = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
+  if not arguments:
     raise RuntimeError("需要输出目录参数")
-  output_dir = os.path.abspath(sys.argv[-1])
+  output_dir = os.path.abspath(arguments[-1])
+  count = DEFAULT_COUNT
+  if "--count" in arguments:
+    count_index = arguments.index("--count") + 1
+    if count_index >= len(arguments) - 1:
+      raise RuntimeError("--count 需要一个位于输出目录之前的整数")
+    count = int(arguments[count_index])
+  if count <= 0:
+    raise RuntimeError("材质数量必须大于 0")
+  columns = GRID_COLUMNS
+  rows = math.ceil(count / columns)
   os.makedirs(output_dir, exist_ok=True)
   clear_scene()
-  for index in range(GRID_SIZE * GRID_SIZE):
-    add_shape(index, make_material(index))
+  for index in range(count):
+    add_shape(index, make_material(index, count), columns, rows)
 
   bpy.ops.object.select_all(action="SELECT")
   bpy.ops.export_scene.gltf(

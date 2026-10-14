@@ -19,7 +19,8 @@ granit_result link_shader_library(std::span<const std::filesystem::path> object_
                                   std::string_view library_name,
                                   granit_shader_backend_flags target_backends,
                                   const std::filesystem::path& output_path,
-                                  bool& cache_hit) noexcept;
+                                  bool& cache_hit,
+                                  std::string& diagnostic) noexcept;
 
 } // namespace granit::asset_tools::detail
 

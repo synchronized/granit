@@ -28,20 +28,32 @@
 | `GRANIT_BUILD_INTEGRATION_IMGUI` | `OFF` | 构建 ImGui Draw Data 集成组件 |
 | `GRANIT_DEPENDENCY_POLICY` | `auto` | 第三方依赖默认获取策略：`system`（只用系统包）/ `auto`（先系统后下载）/ `download`（强制下载锁定版） |
 | `GRANIT_DEPENDENCY_SOURCE_CACHE_DIR` | `vendor/cache` | 下载型 SDL3/ImGui 的共享源码缓存；各 preset 的编译产物仍在自己的 `build/<preset>` 目录 |
+| `GRANIT_SHADER_TOOLCHAIN_MODE` | 开发 preset 为 `auto`；手动配置为 `system` | 先使用系统工具，缺失或不完整时从共享缓存获取锁定工具链；可设为 `off`、`system`、`auto` 或 `download` |
+| `GRANIT_SHADER_TOOLCHAIN_CACHE_DIR` | 开发 preset 为 `vendor/cache`；手动配置为 `build/toolchains` | 锁定 Shader Toolchain 的归档和已校验工具链缓存；编译产物仍在自己的 `build/<preset>` 目录 |
 | `GRANIT_ENABLE_XCB` | Linux 上 `ON` | 找到 XCB 开发头时启用私有 XCB Surface 后端 |
 | `GRANIT_ENABLE_WAYLAND` | Linux 上 `ON` | 找到 Wayland 协议工具时启用 Wayland 后端 |
 | `GRANIT_ENABLE_WARNINGS` | `ON` | 为 Granit 自有目标启用编译警告 |
 | `GRANIT_ENABLE_PEDANTIC_WARNINGS` | `OFF` | 启用 `-Wpedantic` 等严格标准扩展警告 |
 | `GRANIT_WARNINGS_AS_ERRORS` | `OFF` | 将 Granit 自有源码警告视为错误 |
 
-仓库提供的开发 presets 会将第三方依赖获取策略 `GRANIT_DEPENDENCY_POLICY` 设为 `auto`（缺失时
-下载锁定版本），并将 `GRANIT_WARNINGS_AS_ERRORS` 设为 `ON`，以便尽早发现问题。作为子项目手动
+仓库提供的开发 presets 会将第三方依赖获取策略 `GRANIT_DEPENDENCY_POLICY` 和 Shader 工具链模式
+设为 `auto`（缺失时下载锁定版本），并将 `GRANIT_WARNINGS_AS_ERRORS` 设为 `ON`，以便尽早发现问题。
+这样全新 Debug/Release preset 会共享同一套已校验工具链，不会因为本机没有系统 Tint 而跳过示例目标。
+作为子项目手动
 引入时，依赖策略与警告选项默认保持 `auto` / `OFF`；所有警告选项均为目标私有属性，不会传递给使用者。
 
 当 SDL3 或 ImGui 需要下载时，CMake 会把锁定版本的压缩包和解压后的源码保存到
-`vendor/cache`，后续 preset 直接复用这份源码。SDL3/ImGui 的目标文件、库文件和 CMake 生成文件
-仍位于当前 `build/<preset>`，因此 Windows、Emscripten、Debug、Release 和静态构建不会共享编译产物。
-缓存目录已加入 `.gitignore`；删除该目录即可强制重新下载。
+`vendor/cache/archives` 与 `vendor/cache/sources`，后续 preset 直接复用这份源码。Shader Toolchain
+使用同一个缓存根目录，但归档和已校验工具链分别位于 `vendor/cache/archives/shader-toolchain` 与
+`vendor/cache/toolchains/shader-toolchain`；`vendor/cache/extract/shader-toolchain` 只作为解压临时目录，
+成功后会删除。所有目标文件、库文件和 CMake 生成文件仍位于当前 `build/<preset>`，因此不同平台、
+Debug、Release 和静态构建不会共享编译产物。缓存目录已加入 `.gitignore`；删除对应缓存目录即可
+强制重新下载。
+
+缓存目录只保存可校验、可重新生成的下载内容，不是第三方源码的提交目录，也不进入安装包。锁定版本、
+归档名称和 SHA-256 的唯一权威来源是
+[`cmake/toolchain/GranitShaderToolchainLock.cmake`](../../cmake/toolchain/GranitShaderToolchainLock.cmake)；
+本页只说明使用和目录布局。
 
 Model Viewer 和 SDL3/ImGui 集成的组合配置见[模型查看器指南](model-viewer.md)；浏览器构建和
 平台验证见[浏览器 WebGPU 指南](webgpu-browser-example.md)。

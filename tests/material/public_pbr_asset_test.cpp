@@ -39,6 +39,20 @@ find_shader(const granit::detail::shader_format::shader_library_view& library,
   return *found;
 }
 
+const granit::detail::shader_format::shader_library_shader& find_ibl_fragment_shader(
+    const granit::detail::shader_format::shader_library_view& library) {
+  const auto found = std::ranges::find_if(library.shaders, [](const auto& shader) {
+    return shader.stage == granit::shader_stage::fragment &&
+           shader.reflection_json.find(
+               "\"group\": 3, \"binding\": 3, \"type\": \"uniform_buffer\"") !=
+               std::string_view::npos &&
+           shader.reflection_json.find("\"minimum_binding_size\": 16") !=
+               std::string_view::npos;
+  });
+  REQUIRE(found != library.shaders.end());
+  return *found;
+}
+
 void require_binding(std::string_view reflection, std::uint32_t group, std::uint32_t binding,
                      std::string_view type, std::uint64_t minimum_size) {
   const auto prefix = std::string{"\"group\": "} + std::to_string(group) +
@@ -46,11 +60,8 @@ void require_binding(std::string_view reflection, std::uint32_t group, std::uint
                       std::string{type} + "\"";
   const auto position = reflection.find(prefix);
   REQUIRE(position != std::string_view::npos);
-  const auto end = reflection.find('}', position);
-  REQUIRE(end != std::string_view::npos);
-  const auto entry = reflection.substr(position, end - position);
-  CHECK(entry.find("\"minimum_binding_size\": " + std::to_string(minimum_size)) !=
-        std::string_view::npos);
+  CHECK(reflection.find("\"minimum_binding_size\": " + std::to_string(minimum_size),
+                       position) != std::string_view::npos);
 }
 
 } // namespace
@@ -74,10 +85,10 @@ TEST_CASE("公共 PBR 片段资产固定材质和 IBL 契约") {
   granit::detail::shader_format::shader_library_view library;
   REQUIRE(granit::detail::shader_format::decode_shader_library(bytes, library) ==
           granit::detail::shader_format::shader_library_error::success);
-  const auto& shader = find_shader(library, granit::shader_stage::fragment);
+  const auto& shader = find_ibl_fragment_shader(library);
   CHECK(shader.entry_point == "fragment_main");
   require_binding(shader.reflection_json, 0, 0, "uniform_buffer", 128);
-  require_binding(shader.reflection_json, 1, 0, "uniform_buffer", 64);
+  require_binding(shader.reflection_json, 1, 0, "uniform_buffer", 96);
   for (std::uint32_t binding = 1; binding <= 5; ++binding)
     require_binding(shader.reflection_json, 1, binding, "sampled_texture", 0);
   for (std::uint32_t binding = 6; binding <= 10; ++binding)
@@ -147,9 +158,16 @@ TEST_CASE("公共 PBR 材质模板区分镂空和双面 Pipeline") {
   REQUIRE(opaque != nullptr);
   REQUIRE(mask != nullptr);
   REQUIRE(double_sided != nullptr);
+  const auto find_fragment_shader = [](const auto& variant) -> const auto& {
+    const auto found = std::ranges::find_if(variant.shaders, [](const auto& shader) {
+      return shader.stage == granit::material::package_shader_stage::fragment;
+    });
+    REQUIRE(found != variant.shaders.end());
+    return *found;
+  };
   CHECK(opaque->pipeline.primitive.cull_mode == GRANIT_CULL_MODE_BACK);
   CHECK(mask->pipeline.depth.write_enabled == 1);
-  CHECK(mask->shaders[1].asset_id != opaque->shaders[1].asset_id);
+  CHECK(find_fragment_shader(*mask).asset_id != find_fragment_shader(*opaque).asset_id);
   CHECK(double_sided->pipeline.primitive.cull_mode == GRANIT_CULL_MODE_NONE);
 }
 

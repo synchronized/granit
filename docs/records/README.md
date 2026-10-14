@@ -21,6 +21,8 @@
 
 ## 稳定化与跨平台
 
+- [2026-10-14 S-97D Resource Table/Bind Group 与 WebGPU 回归](2026-10-14-s97d-resource-table-bind-group-ab.md)
+
 - [2026-10-08 Granit v0.55.0 发布验收](2026-10-08-v0.55.0-release-acceptance.md)
 - [2026-10-09 Granit v0.56.0 发布验收](2026-10-09-v0.56.0-release-acceptance.md)
 - [2026-10-09 Granit v0.57.0 发布验收](2026-10-09-v0.57.0-release-acceptance.md)
@@ -133,3 +135,4 @@
 - [2026-10-12 v0.59.0 S-95 Resource Table 验收](2026-10-12-v0.59.0-s95-resource-table-acceptance.md)
 - [2026-10-12 v0.60.0 Resource Table 验收](2026-10-12-v0.60.0-resource-table-acceptance.md)
 - [2026-10-13 S-97D Resource Table 压力首轮](2026-10-13-s97d-resource-table-pressure.md)
+- [2026-10-14 S-97D Resource Table/Bind Group A/B 压力对照](2026-10-14-s97d-resource-table-bind-group-ab.md)
