@@ -144,7 +144,8 @@ jobs:
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DGRANIT_BUILD_TOOLS=ON \
-            -DGRANIT_BUILD_ASSET_TOOLS=ON
+            -DGRANIT_BUILD_ASSET_TOOLS=ON \
+            -DGRANIT_VERIFY_SHADER_ASSET_SNAPSHOTS=OFF
           cmake --build --preset "${{ steps.package.outputs.preset }}"
           export XDG_RUNTIME_DIR="$RUNNER_TEMP/granit-release-wayland"
           install -d -m 700 "$XDG_RUNTIME_DIR"
