@@ -72,7 +72,10 @@ private:
       .load_operation = granit::attachment_load_operation::load, .encode_srgb = true,
       .frame_slot = recording.frame_slot()});
     if (result.ok()) result = recording.submit();
-    if (result.failed() && recording.valid()) static_cast<void>(recording.abort()); return result;
+    if (result.failed() && recording.valid()) {
+      static_cast<void>(recording.abort());
+    }
+    return result;
   }
   granit::example::tutorial::tutorial_runtime runtime_; granit::frame_context frame_context_;
   granit::renderer_limits limits_{}; std::array<granit::texture_format_capabilities, formats.size()> capabilities_{};
