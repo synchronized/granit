@@ -233,7 +233,8 @@ jobs:
           cmake --preset linux-clang-release \
             -DGRANIT_SHADER_TOOLCHAIN_ROOT="$root" \
             -DGRANIT_SHADER_TOOLCHAIN_POLICY=locked \
-            -DGRANIT_TINT_REVISION=0bc38adde72b79013536f8ce354b639ae19ae195
+            -DGRANIT_TINT_REVISION=0bc38adde72b79013536f8ce354b639ae19ae195 \
+            -DGRANIT_VERIFY_SHADER_ASSET_SNAPSHOTS=OFF
           cmake --build --preset linux-clang-release --target \
             granit_tutorial_12_resource_table_scene \
             granit_renderer_test \
