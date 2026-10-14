@@ -130,6 +130,22 @@ Bind Group CPU 51009 μs、GPU 6.630 ms。该数据仅证明 Release 运行和�
 
 ## 限制与后续
 
+## Emscripten 与 Chrome WebGPU 回归
+
+在同一 Windows 主机使用 `emscripten-debug` 构建 Tutorial 02、09、10、12，并使用仓库内
+Playwright/Chrome 脚本验证：
+
+| 教程 | 结果 |
+|---|---|
+| Tutorial 02 | 多帧、Canvas、统一输入、Resize 通过 |
+| Tutorial 09 | 多帧、特性状态、Resize 通过 |
+| Tutorial 10 | 多帧、特性状态、Resize 通过 |
+| Tutorial 12 | 多帧、特性状态、Resize 通过 |
+
+四个教程均未报告 WebGPU validation error 或初始化诊断错误。该结果证明 WebGPU Bind Group 回退
+和近期 Storage Buffer/PBR 归档修复在当前 Chrome 环境可用；不替代 Linux Lavapipe 与其它浏览器
+驱动验证。
+
 - 当前仍尚未接入后端级创建/Descriptor 写入计数器；压力计时覆盖公共 API 创建路径，不等同于底层
   驱动 Descriptor 写入耗时；
 - 尚未完成真实 4/16/32 材质和 8/32/64 Draw 的多轮矩阵化压力报告；
