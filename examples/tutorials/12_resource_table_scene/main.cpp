@@ -41,6 +41,7 @@ public:
   void set_smoke_test(bool value) noexcept { smoke_test_ = value; }
   void set_stress_test(bool value) noexcept { stress_test_ = value; }
   void set_resource_table_stress(bool value) noexcept { resource_table_stress_ = value; }
+  void set_pressure_count(std::size_t value) noexcept { pressure_count_ = value; }
   [[nodiscard]] std::uint32_t feature_value() const noexcept {
     return static_cast<std::uint32_t>(model_scene_.materials.size());
   }
@@ -139,7 +140,7 @@ private:
     }
     if (result.ok() && stress_test_ && resource_table_stress_ && resource_table_available_) {
       const auto stress_begin = std::chrono::steady_clock::now();
-      stress_tables_.resize(64);
+      stress_tables_.resize(pressure_count_);
       for (auto& table : stress_tables_) {
         result = table.initialize(
             renderer_owner(),
@@ -181,7 +182,7 @@ private:
                                             .visibility = granit::shader_stage_flags::fragment}};
         result = pressure_bind_group_layout_.initialize(renderer_owner(), layout_entries);
         if (result.ok()) {
-          pressure_bind_groups_.resize(64);
+          pressure_bind_groups_.resize(pressure_count_);
           for (auto& group : pressure_bind_groups_) {
             const std::array entries{
                 granit::bind_group_entry{.binding = 0, .resource = texture_view},
@@ -206,7 +207,7 @@ private:
       const auto mode = resource_table_stress_ ? "resource_table" : "bind_group";
       const auto bind_group_materials =
           resource_table_stress_ ? 0U : static_cast<unsigned>(model_scene_.materials.size());
-      std::cout << "binding_pressure mode=" << mode
+      std::cout << "binding_pressure mode=" << mode << " pressure_count=" << pressure_count_
                 << " materials=" << model_scene_.materials.size()
                 << " draws=" << model_gpu_.draw_bindings().size()
                 << " bind_group_materials=" << bind_group_materials
@@ -378,6 +379,7 @@ private:
   bool smoke_test_{};
   bool stress_test_{};
   bool resource_table_stress_{true};
+  std::size_t pressure_count_{64};
   granit::result shutdown_reason_{granit::result::success};
 
   static const char* resource_table_support_name(granit::resource_table_support support) noexcept {
@@ -424,14 +426,28 @@ extern "C" EMSCRIPTEN_KEEPALIVE granit_result granit_tutorial_12_shutdown_result
 #endif
 
 int main(int argc, char** argv) {
-  const bool smoke = argc >= 2 && std::string_view{argv[1]} == "--smoke-test";
-  const bool resource_table_stress = argc >= 2 && std::string_view{argv[1]} == "--stress-test";
+  const auto argument = argc >= 2 ? std::string_view{argv[1]} : std::string_view{};
+  const bool smoke = argument == "--smoke-test";
+  const bool resource_table_stress = argument == "--stress-test" || argument == "--stress-test-4" ||
+                                     argument == "--stress-test-16" ||
+                                     argument == "--stress-test-32" ||
+                                     argument == "--stress-test-64";
   const bool bind_group_stress =
-      argc >= 2 && std::string_view{argv[1]} == "--bind-group-stress-test";
+      argument == "--bind-group-stress-test" || argument == "--bind-group-stress-test-4" ||
+      argument == "--bind-group-stress-test-16" || argument == "--bind-group-stress-test-32" ||
+      argument == "--bind-group-stress-test-64";
   const bool stress = resource_table_stress || bind_group_stress;
   app.set_smoke_test(smoke || stress);
   app.set_stress_test(stress);
   app.set_resource_table_stress(!bind_group_stress);
+  if (argument.ends_with("-4"))
+    app.set_pressure_count(4);
+  else if (argument.ends_with("-16"))
+    app.set_pressure_count(16);
+  else if (argument.ends_with("-32"))
+    app.set_pressure_count(32);
+  else
+    app.set_pressure_count(64);
   const auto result = app.run({.executable_path = argc > 0 ? argv[0] : "",
                                .title = "Granit Resource Table Scene",
                                .renderer = {.application_name = "Granit Resource Table",
