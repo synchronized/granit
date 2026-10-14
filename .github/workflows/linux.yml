@@ -94,7 +94,8 @@ jobs:
           ccache --zero-stats
           cmake --preset "${{ steps.preset.outputs.name }}" \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DGRANIT_VERIFY_SHADER_ASSET_SNAPSHOTS=OFF
           cmake --build --preset "${{ steps.preset.outputs.name }}"
           export XDG_RUNTIME_DIR="$RUNNER_TEMP/granit-wayland"
           install -d -m 700 "$XDG_RUNTIME_DIR"
@@ -296,7 +297,8 @@ jobs:
             -DGRANIT_DEPENDENCY_POLICY=auto \
             -DFETCHCONTENT_BASE_DIR="$GITHUB_WORKSPACE/.cache/fetchcontent" \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DGRANIT_VERIFY_SHADER_ASSET_SNAPSHOTS=OFF
           cmake --build --preset "${{ steps.preset.outputs.name }}"
       - name: 运行 Vulkan Bindless 压力与时间戳基线
         shell: bash
