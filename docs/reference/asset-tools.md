@@ -52,7 +52,8 @@ HLSL portable 路径需要资产构建机安装 DXC 与 Tint，但应用运行�
 - `auto` 是默认值，先执行 `system` 搜索，缺少完整 DXC/Tint 时下载锁定发布包；
 - `download` 忽略偶然发现的系统工具并使用锁定缓存包。显式 Root 在所有模式中优先。
 
-下载缓存由 `GRANIT_SHADER_TOOLCHAIN_CACHE_DIR` 指定，默认位于构建树。下载过程使用进程锁、临时
+下载缓存由 `GRANIT_SHADER_TOOLCHAIN_CACHE_DIR` 指定；仓库开发 preset 将它指向共享的
+`vendor/cache`，目录布局和源码依赖缓存说明见[构建与安装指南](../guides/build.md)。下载过程使用进程锁、临时
 归档、发布 SHA-256、包内逐文件清单校验和原子目录替换。安装 AssetTools 后可通过
 `granit_SHADER_TOOLCHAIN_MODULE` 引入同一 `GranitShaderToolchain.cmake` 模块。
 

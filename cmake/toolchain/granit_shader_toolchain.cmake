@@ -95,11 +95,17 @@ function(granit_find_shader_toolchain)
     set(GRANIT_DXC_EXECUTABLE "${granit_dxc_executable}" CACHE FILEPATH "DXC 可执行文件" FORCE)
   endif()
   if(NOT GRANIT_TINT_EXECUTABLE)
-    find_program(
-      granit_tint_executable
-      NAMES tint
-      HINTS "${granit_shader_toolchain_bin}"
-    )
+    if(granit_shader_toolchain_bin AND
+       EXISTS "${granit_shader_toolchain_bin}/tint${CMAKE_EXECUTABLE_SUFFIX}")
+      set(granit_tint_executable
+          "${granit_shader_toolchain_bin}/tint${CMAKE_EXECUTABLE_SUFFIX}")
+    else()
+      find_program(
+        granit_tint_executable
+        NAMES tint
+        HINTS "${granit_shader_toolchain_bin}"
+      )
+    endif()
     set(GRANIT_TINT_EXECUTABLE "${granit_tint_executable}" CACHE FILEPATH "Tint 可执行文件" FORCE)
   endif()
   set(granit_dxc_usable OFF)
@@ -147,17 +153,23 @@ function(granit_find_shader_toolchain)
     if(GRANIT_SHADER_TOOLCHAIN_POLICY STREQUAL "unchecked")
       set(granit_tint_usable ON)
       message(WARNING "Granit Shader Toolchain: Tint 未执行能力约束检查")
-    elseif(granit_tint_probe_text MATCHES "--input-format" AND
-       granit_tint_probe_text MATCHES "wgsl" AND
-       granit_tint_probe_text MATCHES "spirv" AND
-       granit_tint_probe_text MATCHES "--format")
-      set(granit_tint_usable ON)
-      message(
-        STATUS
-        "Granit Shader Toolchain: Tint ${GRANIT_SHADER_TOOLCHAIN_DAWN_VERSION} 能力可用"
-      )
     else()
-      message(STATUS "Granit Shader Toolchain: Tint 缺少锁定工作流要求的转换能力")
+      string(FIND "${granit_tint_probe_text}" "--input-format" granit_tint_input_format_offset)
+      string(FIND "${granit_tint_probe_text}" "wgsl" granit_tint_wgsl_offset)
+      string(FIND "${granit_tint_probe_text}" "spirv" granit_tint_spirv_offset)
+      string(FIND "${granit_tint_probe_text}" "--format" granit_tint_format_offset)
+      if(NOT granit_tint_input_format_offset EQUAL -1 AND
+         NOT granit_tint_wgsl_offset EQUAL -1 AND
+         NOT granit_tint_spirv_offset EQUAL -1 AND
+         NOT granit_tint_format_offset EQUAL -1)
+        set(granit_tint_usable ON)
+        message(
+          STATUS
+          "Granit Shader Toolchain: Tint ${GRANIT_SHADER_TOOLCHAIN_DAWN_VERSION} 能力可用"
+        )
+      else()
+        message(STATUS "Granit Shader Toolchain: Tint 缺少锁定工作流要求的转换能力")
+      endif()
     endif()
     if(GRANIT_SHADER_TOOLCHAIN_POLICY STREQUAL "locked" AND granit_tint_usable AND
        NOT GRANIT_TINT_REVISION STREQUAL GRANIT_SHADER_TOOLCHAIN_TINT_REVISION)
