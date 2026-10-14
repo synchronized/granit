@@ -3,6 +3,8 @@
 
 #include "application/application.h"
 #include "tutorial/tutorial_runtime.h"
+#include <granit/renderer/buffer.hpp>
+#include <granit/renderer/sampler.hpp>
 #include <granit/renderer/texture.hpp>
 #include <imgui.h>
 #include <array>
@@ -35,10 +37,27 @@ private:
       if (result.ok() && granit::get_texture_format_capabilities(renderer_owner(), row.format, capabilities).ok())
         capabilities_[format_count_++] = capabilities;
     }
+    if (result.ok()) {
+      const granit::texture_desc desc{.format = granit::texture_format::rgba8_unorm,
+        .usage = granit::texture_usage::sampled | granit::texture_usage::transfer_destination,
+        .width = 4, .height = 4, .mip_levels = 2};
+      mip_texture_result_ = mip_texture_.initialize(renderer_owner(), desc);
+      mip_texture_created_ = mip_texture_result_.ok();
+      sampler_result_ = sampler_.initialize(renderer_owner(), {.min_lod = 0.0F, .max_lod = 1.0F});
+      sampler_created_ = sampler_result_.ok();
+      const std::array<std::byte, sizeof(granit::draw_indirect_args)> indirect_data{};
+      indirect_buffer_result_ = indirect_buffer_.initialize(renderer_owner(),
+        {.size = indirect_data.size(), .usage = granit::buffer_usage::indirect},
+        indirect_data);
+      indirect_buffer_created_ = indirect_buffer_result_.ok();
+    }
     return result;
   }
   granit::result on_swapchain_changed(const granit::swapchain_info&) noexcept override { return granit::result::success; }
-  void on_shutdown(granit::result) noexcept override { runtime_.shutdown(); }
+  void on_shutdown(granit::result) noexcept override {
+    runtime_.shutdown(); static_cast<void>(indirect_buffer_.reset()); static_cast<void>(sampler_.reset());
+    static_cast<void>(mip_texture_.reset());
+  }
   granit::result on_window_event(const granit::window_event& event) noexcept override { runtime_.process(event); return granit::result::success; }
   granit::result on_input_event(const granit::input_event& event) noexcept override { runtime_.process(event); return granit::result::success; }
   granit::result on_render(granit::example::present_frame& frame) noexcept override {
@@ -49,6 +68,9 @@ private:
       ImGui::Text("Max color attachments: %u", limits_.max_color_attachments);
       ImGui::Text("Max anisotropy: %.1f", limits_.max_sampler_anisotropy);
       ImGui::Text("Timestamp queries: %s", limits_.supports_timestamp_queries() ? "yes" : "no");
+      ImGui::Text("2-level sampled texture: %s", mip_texture_created_ ? "created" : "unsupported");
+      ImGui::Text("Sampler: %s", sampler_created_ ? "created" : "unsupported");
+      ImGui::Text("Indirect buffer: %s", indirect_buffer_created_ ? "created" : "unsupported");
       ImGui::Separator();
       for (std::uint32_t index = 0; index < format_count_; ++index) {
         const auto& row = formats[index]; const auto& value = capabilities_[index];
@@ -79,7 +101,12 @@ private:
   }
   granit::example::tutorial::tutorial_runtime runtime_; granit::frame_context frame_context_;
   granit::renderer_limits limits_{}; std::array<granit::texture_format_capabilities, formats.size()> capabilities_{};
-  std::uint32_t format_count_{}; bool smoke_test_{};
+  granit::texture mip_texture_; granit::sampler sampler_; granit::buffer indirect_buffer_;
+  granit::result mip_texture_result_{granit::result::invalid_argument};
+  granit::result sampler_result_{granit::result::invalid_argument};
+  granit::result indirect_buffer_result_{granit::result::invalid_argument};
+  std::uint32_t format_count_{}; bool smoke_test_{}; bool mip_texture_created_{}; bool sampler_created_{};
+  bool indirect_buffer_created_{};
 };
 application app;
 } // namespace
