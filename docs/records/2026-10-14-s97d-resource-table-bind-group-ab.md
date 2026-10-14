@@ -35,6 +35,19 @@ Resource Table 压力入口另报告 64 个压力表和 64 次 sampler 更新；
 均成功返回。当前结果只是单机、单负载、Debug 构建的首轮观测，不能据此宣布 Resource Table
 在所有设备上更快。
 
+## 五轮重复测量
+
+同一 Windows Clang Debug、16 材质/16 Draw 负载下分别运行 5 次，取中位数：
+
+| 路径 | 场景初始化 p50 | Total GPU p50 |
+|---|---:|---:|
+| Resource Table | 117024 μs | 6.384 ms |
+| Bind Group | 115629 μs | 6.486 ms |
+
+在这组样本中 Resource Table 的 GPU p50 约快 1.6%，但 CPU 初始化 p50 约慢 1.2%。差异很小，且
+Resource Table 仍包含额外的 64 个压力表创建和更新，因此这只能作为当前设备上的观测，不能作为
+跨设备或产品默认路径的准入依据。
+
 ## 限制与后续
 
 - 当前 Bind Group 路径输出场景材质数量作为对照规模，尚未接入后端级创建/Descriptor 写入计数器；
