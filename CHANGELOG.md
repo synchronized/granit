@@ -8,6 +8,10 @@
 
 ## Unreleased
 
+后续版本内容暂未开始收集。
+
+## 0.61.0 - 2026-10-14
+
 - v0.61.0 Resource Table Vulkan 变体通过材质常量传递 5 个纹理和 5 个采样器数组索引；
 - Tutorial 12 已升级为 32 材质、32 Draw、64 张确定性纹理的真实多材质场景，并完成 Resource Table/
   Bind Group CPU/GPU 压力对照；Bind Group 继续是默认路径。
@@ -26,6 +30,8 @@
   未部署到示例 `bin` 目录的问题。
 - Chrome WebGPU Tutorial 02、09、10、12 的多帧、特性状态、输入/Canvas 和 Resize 验收通过；原生
   开发 preset 改为自动复用 `vendor/cache` 中已校验的 Shader Toolchain。
+- GitHub Actions 已补齐 Linux Lavapipe Resource Table/Bind Group 验收，并通过 Windows、Linux、Quick
+  Check 与 Emscripten 全套版本验证矩阵。
 
 ## 0.60.0 - 2026-10-12
 

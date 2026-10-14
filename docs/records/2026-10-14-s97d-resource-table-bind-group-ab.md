@@ -131,6 +131,17 @@ Bind Group CPU 51009 μs、GPU 6.630 ms。该数据仅证明 Release 运行和�
 随后完整构建 Release 测试目标并执行全套 CTest，结果为 **113/113 通过**，覆盖教程、Model Viewer
 核心、AssetTools、ABI、Vulkan 后端、RenderDoc 桥接、GPU smoke 和打包门禁。
 
+## Linux Lavapipe 与跨平台 CI 验收
+
+PR #137 的最终 Actions 运行（提交 `ca18c1ea`）通过 Windows、Linux、Quick Check 和 Emscripten。
+Linux Lavapipe 作业在 Vulkan 校验层开启时通过以下四项测试：Tutorial 12 Resource Table 场景、
+Vulkan Backend、Renderer Resources、GPU Offscreen Smoke；32 材质 Resource Table 与 Bind Group
+压力入口均正常退出。Chrome WebGPU 浏览器矩阵也通过 Model Viewer、Tutorial 02/04/05/06/07 和
+ImGui 等已配置项目。
+
+Linux 构建关闭跨平台 `.grshlib` 字节快照比较，只用于隔离运行时验收；默认配置仍开启快照比较，
+因此不会削弱同平台资产一致性门禁。
+
 ## 限制与后续
 
 ## Emscripten 与 Chrome WebGPU 回归
@@ -146,14 +157,17 @@ Playwright/Chrome 脚本验证：
 | Tutorial 12 | 多帧、特性状态、Resize 通过 |
 
 四个教程均未报告 WebGPU validation error 或初始化诊断错误。该结果证明 WebGPU Bind Group 回退
-和近期 Storage Buffer/PBR 归档修复在当前 Chrome 环境可用；不替代 Linux Lavapipe 与其它浏览器
-驱动验证。
+和近期 Storage Buffer/PBR 归档修复在当前 Chrome 环境可用；不替代其它浏览器驱动验证。
 
 - 当前仍尚未接入后端级创建/Descriptor 写入计数器；压力计时覆盖公共 API 创建路径，不等同于底层
   驱动 Descriptor 写入耗时；
 - 尚未完成真实 4/16/32 材质和 8/32/64 Draw 的多轮矩阵化压力报告；
-- 还需要 Linux Lavapipe、Release 构建和 WebGPU Bind Group 回退数据；
+- 本记录的性能数据仍是单机、单负载观测，不代表跨设备性能结论；
 - GPU timestamp 不可用时只保留 CPU 和资源统计，并明确标记 GPU 数据 unavailable。
+
+## 发布状态
+
+版本验收已完成，待合入 `main` 后执行 `v0.61.0` 发布门禁；本记录不在特性分支上创建标签或 Release。
 
 ## Linux Actions 首轮失败与修复
 
@@ -163,4 +177,4 @@ PR #137 的 `lavapipe-resource-table` 作业已确认能够安装并选择
 `vulkan_native` variant 写入后错误删除 `.spv`，导致 Library Builder 找不到 Vulkan 载荷。
 
 已修复为 portable/native 任一 Vulkan variant 都保留 SPIR-V sidecar，并补充 native sidecar 回归测试。
-修复后的 PR 运行结果尚未取得，因此 Linux Lavapipe 仍未计入版本通过证据。
+修复后 PR #137 的 Linux workflow 已通过，Linux Lavapipe 证据已纳入版本验收。
