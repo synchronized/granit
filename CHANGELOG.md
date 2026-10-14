@@ -8,11 +8,13 @@
 
 ## Unreleased
 
-- v0.61.0 Resource Table Vulkan 变体开始通过材质常量传递 5 个纹理和 5 个采样器数组索引；
-- 当前已完成多纹理真实索引采样验证，压力对照和跨平台收口仍在实施中。
+- v0.61.0 Resource Table Vulkan 变体通过材质常量传递 5 个纹理和 5 个采样器数组索引；
+- Tutorial 12 已升级为 32 材质、32 Draw、64 张确定性纹理的真实多材质场景，并完成 Resource Table/
+  Bind Group CPU/GPU 压力对照；Bind Group 继续是默认路径。
 - WebGPU 资源初始化已停止加载 Vulkan 专用 Resource Table Shader Library，并显式回退 Bind Group；
   Tutorial 02/12 的 Chrome 初始化和 Bind Group 回退路径已通过回归。
-- Tutorial 12 已增加可自动退出的 `--stress-test`，输出 64 个 Resource Table 创建和 64 次 sampler 更新的 CPU 压力计时；Bind Group 对照和 GPU 时间仍待完成。
+- Tutorial 12 已增加可自动退出的 Resource Table/Bind Group 对照入口，支持 4/16/32/64 档压力数量，
+  输出资源创建、场景初始化 CPU 时间和 Vulkan GPU Timestamp。
 - 示例资产部署新增目录级预加载，修复 Tutorial 12 的 Emscripten Windows 链接命令行过长问题。
 - 新增 `read_only_storage_buffer` 绑定类型；WebGPU Tutorial 09/10 的顶点 Storage Buffer 使用只读布局，
   避免 `read-write storage buffer` 可见性校验错误，同时保留 Vulkan 和计算管线的可写 Storage Buffer。
@@ -20,6 +22,10 @@
   纹理索引参数缺失和 `GRANIT_ERROR_INVALID_ARGUMENT` 的问题；Chrome 两个教程回归通过。
 
 - 补齐 Tutorial 09/10 的 WebGPU 浏览器验收导出，修复 Tutorial 10 Resize 时深度纹理未按新尺寸重建的问题。
+- Windows Clang Debug/Release 回归均通过；Release 全套 CTest 113/113 通过，并修复 SDL3 共享运行库
+  未部署到示例 `bin` 目录的问题。
+- Chrome WebGPU Tutorial 02、09、10、12 的多帧、特性状态、输入/Canvas 和 Resize 验收通过；原生
+  开发 preset 改为自动复用 `vendor/cache` 中已校验的 Shader Toolchain。
 
 ## 0.60.0 - 2026-10-12
 
