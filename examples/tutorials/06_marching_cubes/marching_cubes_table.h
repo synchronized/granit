@@ -9,7 +9,7 @@
 
 namespace tutorial_marching_cubes {
 
-// 由 VTK vtkMarchingCellsContourCases.cxx 的 HexahedronCases 固定生成。
+// VTK vtkMarchingCellsContourCases.cxx HexahedronCases triangle index table.
 inline constexpr std::array<std::int32_t, 256 * 16> triangle_table{
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0,  3,  8,  -1, -1, -1, -1, -1,
     -1, -1, -1, -1, -1, -1, -1, -1, 0,  9,  1,  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
