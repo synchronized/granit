@@ -27,6 +27,7 @@
 | `GRANIT_ENABLE_WINDOW_SDL3` | 跟随 `GRANIT_BUILD_EXAMPLES` | 在 Window component 中启用 SDL3 后端 |
 | `GRANIT_BUILD_INTEGRATION_IMGUI` | `OFF` | 构建 ImGui Draw Data 集成组件 |
 | `GRANIT_DEPENDENCY_POLICY` | `auto` | 第三方依赖默认获取策略：`system`（只用系统包）/ `auto`（先系统后下载）/ `download`（强制下载锁定版） |
+| `GRANIT_DEPENDENCY_SOURCE_CACHE_DIR` | `vendor/cache` | 下载型 SDL3/ImGui 的共享源码缓存；各 preset 的编译产物仍在自己的 `build/<preset>` 目录 |
 | `GRANIT_ENABLE_XCB` | Linux 上 `ON` | 找到 XCB 开发头时启用私有 XCB Surface 后端 |
 | `GRANIT_ENABLE_WAYLAND` | Linux 上 `ON` | 找到 Wayland 协议工具时启用 Wayland 后端 |
 | `GRANIT_ENABLE_WARNINGS` | `ON` | 为 Granit 自有目标启用编译警告 |
@@ -36,6 +37,11 @@
 仓库提供的开发 presets 会将第三方依赖获取策略 `GRANIT_DEPENDENCY_POLICY` 设为 `auto`（缺失时
 下载锁定版本），并将 `GRANIT_WARNINGS_AS_ERRORS` 设为 `ON`，以便尽早发现问题。作为子项目手动
 引入时，依赖策略与警告选项默认保持 `auto` / `OFF`；所有警告选项均为目标私有属性，不会传递给使用者。
+
+当 SDL3 或 ImGui 需要下载时，CMake 会把锁定版本的压缩包和解压后的源码保存到
+`vendor/cache`，后续 preset 直接复用这份源码。SDL3/ImGui 的目标文件、库文件和 CMake 生成文件
+仍位于当前 `build/<preset>`，因此 Windows、Emscripten、Debug、Release 和静态构建不会共享编译产物。
+缓存目录已加入 `.gitignore`；删除该目录即可强制重新下载。
 
 Model Viewer 和 SDL3/ImGui 集成的组合配置见[模型查看器指南](model-viewer.md)；浏览器构建和
 平台验证见[浏览器 WebGPU 指南](webgpu-browser-example.md)。

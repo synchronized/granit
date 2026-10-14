@@ -25,12 +25,65 @@ function(granit_dependency_policy dep out_policy)
   set(${out_policy} "${policy}" PARENT_SCOPE)
 endfunction()
 
+# 将锁定版本的源码保存到仓库级缓存。源码目录可被多个 preset 只读复用，目标和中间文件仍由
+# FetchContent 放在当前 CMake 构建目录中，避免不同编译器、平台和链接模式互相污染。
+function(granit_prepare_source_cache name commit url hash marker out_source_dir)
+  set(cache_root "${GRANIT_DEPENDENCY_SOURCE_CACHE_DIR}")
+  set(archive_dir "${cache_root}/archives")
+  set(extract_dir "${cache_root}/extract/${name}-${commit}")
+  set(source_dir "${cache_root}/sources/${name}/${commit}")
+  set(archive "${archive_dir}/${name}-${commit}.tar.gz")
+
+  if(NOT EXISTS "${source_dir}/${marker}")
+    file(REMOVE_RECURSE "${extract_dir}")
+    file(MAKE_DIRECTORY "${archive_dir}" "${extract_dir}")
+    set(archive_valid FALSE)
+    if(EXISTS "${archive}")
+      file(SHA256 "${archive}" archive_hash)
+      if(archive_hash STREQUAL "${hash}")
+        set(archive_valid TRUE)
+      else()
+        file(REMOVE "${archive}")
+      endif()
+    endif()
+    if(NOT archive_valid)
+      message(STATUS "正在下载 ${name} 源码到共享缓存：${cache_root}")
+      file(DOWNLOAD "${url}" "${archive}" EXPECTED_HASH "SHA256=${hash}" TLS_VERIFY ON)
+    endif()
+    execute_process(
+      COMMAND "${CMAKE_COMMAND}" -E tar xzf "${archive}"
+      WORKING_DIRECTORY "${extract_dir}"
+      RESULT_VARIABLE extract_result
+      ERROR_VARIABLE extract_error
+    )
+    if(NOT extract_result EQUAL 0)
+      message(FATAL_ERROR "解压 ${name} 共享源码缓存失败：${extract_error}")
+    endif()
+    file(GLOB extracted_entries LIST_DIRECTORIES TRUE "${extract_dir}/*")
+    list(LENGTH extracted_entries extracted_count)
+    if(NOT extracted_count EQUAL 1)
+      message(FATAL_ERROR "无法确定 ${name} 归档的源码根目录：${extract_dir}")
+    endif()
+    list(GET extracted_entries 0 extracted_source_dir)
+    file(MAKE_DIRECTORY "${cache_root}/sources/${name}")
+    file(RENAME "${extracted_source_dir}" "${source_dir}")
+    file(REMOVE_RECURSE "${extract_dir}")
+  endif()
+  set(${out_source_dir} "${source_dir}" PARENT_SCOPE)
+endfunction()
+
 # 下载锁定版本 SDL3。
 function(granit_fetch_sdl3)
   if(TARGET SDL3::SDL3)
     return()
   endif()
   include(FetchContent)
+  granit_prepare_source_cache(
+    "sdl3" "${GRANIT_SDL3_LOCKED_COMMIT}"
+    "https://github.com/libsdl-org/SDL/archive/${GRANIT_SDL3_LOCKED_COMMIT}.tar.gz"
+    "85aa3f7b01e91d9a0b2e8079b065c594e579c43d53d5671c8f68b20074cc896e"
+    "CMakeLists.txt" source_dir)
+  set(FETCHCONTENT_SOURCE_DIR_GRANIT_SDL3 "${source_dir}")
   set(SDL_TEST_LIBRARY OFF CACHE BOOL "" FORCE)
   set(SDL_TESTS OFF CACHE BOOL "" FORCE)
   set(SDL_EXAMPLES OFF CACHE BOOL "" FORCE)
@@ -57,6 +110,12 @@ function(granit_fetch_imgui)
     return()
   endif()
   include(FetchContent)
+  granit_prepare_source_cache(
+    "imgui" "${GRANIT_IMGUI_LOCKED_COMMIT}"
+    "https://github.com/ocornut/imgui/archive/${GRANIT_IMGUI_LOCKED_COMMIT}.tar.gz"
+    "c7bc489afefa2461c40a84812118e6dff86e7eadfc4b7e2f851a8c94ade8910d"
+    "imgui.cpp" source_dir)
+  set(FETCHCONTENT_SOURCE_DIR_GRANIT_IMGUI "${source_dir}")
   FetchContent_Declare(
     granit_imgui
     URL "https://github.com/ocornut/imgui/archive/${GRANIT_IMGUI_LOCKED_COMMIT}.tar.gz"
