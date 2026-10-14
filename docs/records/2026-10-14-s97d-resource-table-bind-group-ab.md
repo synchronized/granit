@@ -97,6 +97,16 @@ build/windows-clang-debug/bin/granit_tutorial_12_resource_table_scene.exe --bind
 两条路径均正常退出，且确认运行时实际读取了 32 材质场景。该结果仍是单机、Debug、单轮样本；
 其中额外压力资源叠加在真实 32 材质场景之上，不能单独解释为 Resource Table 的产品级收益。
 
+随后在同一环境下各重复运行 5 次，取中位数：
+
+| 路径 | 场景初始化 p50 | Total GPU p50 |
+|---|---:|---:|
+| Resource Table | 177610 μs | 6.728 ms |
+| Bind Group | 187022 μs | 6.747 ms |
+
+该样本中 Resource Table 的 CPU 初始化 p50 低约 5.0%，GPU 总时间低约 0.3%；差异仍处于单机
+Debug 测量范围，不能替代 Release、跨驱动和跨平台数据。
+
 ## 限制与后续
 
 - 当前仍尚未接入后端级创建/Descriptor 写入计数器；压力计时覆盖公共 API 创建路径，不等同于底层
