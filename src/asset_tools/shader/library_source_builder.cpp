@@ -382,12 +382,14 @@ extern "C" granit_result granit_asset_tools_shader_build_library_from_manifest(
     }
 
     bool library_hit = false;
+    std::string link_diagnostic;
     status = granit::asset_tools::detail::link_shader_library(
         object_paths, logical_names, manifest.name,
         static_cast<granit_shader_backend_flags>(manifest.target_backends),
-        copy_path(desc->output_path, desc->output_path_length), library_hit);
+        copy_path(desc->output_path, desc->output_path_length), library_hit, link_diagnostic);
     if (status != GRANIT_SUCCESS) {
-      return finish_with_result(value, status, "无法链接 Shader Library\n", result);
+      return finish_with_result(value, status, "无法链接 Shader Library\n" + link_diagnostic,
+                                result);
     }
 
     value->cache_hit = all_objects_hit && library_hit ? 1U : 0U;

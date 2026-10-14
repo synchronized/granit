@@ -118,11 +118,13 @@ shader_object_error store_shader_object(const std::filesystem::path& path,
     const auto wgsl_bytes = std::span{reinterpret_cast<const std::byte*>(wgsl.data()), wgsl.size()};
     const auto has_wgsl = find_shader_object_variant(view, shader_object_backend::webgpu,
                                                      shader_profile::portable) != nullptr;
-    const auto has_spirv = find_shader_object_variant(view, shader_object_backend::vulkan,
-                                                      shader_profile::portable) != nullptr;
     const auto has_native_spirv =
         find_shader_object_variant(view, shader_object_backend::vulkan,
                                    shader_profile::vulkan_native) != nullptr;
+    const auto has_spirv =
+        find_shader_object_variant(view, shader_object_backend::vulkan,
+                                   shader_profile::portable) != nullptr ||
+        has_native_spirv;
     if (std::ranges::equal(read_file(path), manifest) &&
         (!has_wgsl || std::ranges::equal(read_file(wgsl_path), wgsl_bytes)) &&
         (!(has_spirv || has_native_spirv) || std::ranges::equal(read_file(spirv_path), spirv)) &&

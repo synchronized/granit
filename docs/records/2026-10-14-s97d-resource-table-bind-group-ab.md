@@ -154,3 +154,13 @@ Playwright/Chrome 脚本验证：
 - 尚未完成真实 4/16/32 材质和 8/32/64 Draw 的多轮矩阵化压力报告；
 - 还需要 Linux Lavapipe、Release 构建和 WebGPU Bind Group 回退数据；
 - GPU timestamp 不可用时只保留 CPU 和资源统计，并明确标记 GPU 数据 unavailable。
+
+## Linux Actions 首轮失败与修复
+
+PR #137 的 `lavapipe-resource-table` 作业已确认能够安装并选择
+`/usr/share/vulkan/icd.d/lvp_icd.json`，但首次冷构建在链接 `pbr_resource_table.grshlib` 时失败。
+根因是 Shader Object 缓存层只把 `portable` Vulkan variant 计入 SPIR-V sidecar 判定；
+`vulkan_native` variant 写入后错误删除 `.spv`，导致 Library Builder 找不到 Vulkan 载荷。
+
+已修复为 portable/native 任一 Vulkan variant 都保留 SPIR-V sidecar，并补充 native sidecar 回归测试。
+修复后的 PR 运行结果尚未取得，因此 Linux Lavapipe 仍未计入版本通过证据。
