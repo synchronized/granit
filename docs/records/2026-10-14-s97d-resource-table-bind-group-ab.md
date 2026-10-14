@@ -107,6 +107,27 @@ build/windows-clang-debug/bin/granit_tutorial_12_resource_table_scene.exe --bind
 该样本中 Resource Table 的 CPU 初始化 p50 低约 5.0%，GPU 总时间低约 0.3%；差异仍处于单机
 Debug 测量范围，不能替代 Release、跨驱动和跨平台数据。
 
+## Windows Clang Release 收口
+
+Release 构建最初可以完成链接，但 CTest 启动 Tutorial 12 时报告 `0xc0000135`。原因是 FetchContent
+构建的 `SDL3.dll` 留在 `_deps/granit_sdl3-build`，没有进入 Granit 统一的 `bin` 运行目录。已在
+`granit_window` 的 POST_BUILD 部署步骤中补齐复制，避免 Debug 构建目录已有残留 DLL 掩盖问题。
+
+修复后执行：
+
+```powershell
+cmake --preset windows-clang-release `
+  -DGRANIT_SHADER_TOOLCHAIN_ROOT=<vendor-cache-toolchain> `
+  -DGRANIT_DXC_EXECUTABLE=<toolchain-bin-dxc> `
+  -DGRANIT_TINT_EXECUTABLE=<toolchain-bin-tint>
+cmake --build --preset windows-clang-release --target granit_tutorial_12_resource_table_scene
+ctest --preset windows-clang-release --output-on-failure `
+  -R "granit\.tutorial\.12_resource_table_scene|granit\.documentation\.links"
+```
+
+结果为 CTest 2/2 通过；Release 单轮压力结果为 Resource Table CPU 22986 μs、GPU 6.608 ms，
+Bind Group CPU 51009 μs、GPU 6.630 ms。该数据仅证明 Release 运行和部署正常，不作为跨设备性能结论。
+
 ## 限制与后续
 
 - 当前仍尚未接入后端级创建/Descriptor 写入计数器；压力计时覆盖公共 API 创建路径，不等同于底层
