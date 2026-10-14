@@ -8,6 +8,7 @@ option(GRANIT_BUILD_INTEGRATION_SDL3 "构建 SDL3 可选集成组件" OFF)
 option(GRANIT_ENABLE_WINDOW_SDL3 "在 Window component 中启用 SDL3 后端" ${GRANIT_BUILD_EXAMPLES})
 option(GRANIT_BUILD_INTEGRATION_IMGUI "构建 ImGui 可选集成组件" OFF)
 option(GRANIT_BUILD_WEB_IMGUI_EXAMPLE "构建浏览器 SDL3 + ImGui 示例" ON)
+option(GRANIT_VERIFY_SHADER_ASSET_SNAPSHOTS "校验源码生成 Shader 资产与嵌入快照一致" ON)
 option(GRANIT_ENABLE_XCB "在 Linux 上启用 XCB Surface 与 Window 后端" ON)
 option(GRANIT_ENABLE_WAYLAND "在 Linux 上启用 Wayland Surface 与 Window 后端" ON)
 

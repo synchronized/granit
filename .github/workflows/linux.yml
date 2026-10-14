@@ -47,7 +47,8 @@ jobs:
             -DGRANIT_BUILD_TOOLS=ON \
             -DGRANIT_SHADER_TOOLCHAIN_ROOT="$root" \
             -DGRANIT_SHADER_TOOLCHAIN_POLICY=locked \
-            -DGRANIT_TINT_REVISION=0bc38adde72b79013536f8ce354b639ae19ae195
+            -DGRANIT_TINT_REVISION=0bc38adde72b79013536f8ce354b639ae19ae195 \
+            -DGRANIT_VERIFY_SHADER_ASSET_SNAPSHOTS=OFF
           cmake --build build/shader-toolchain-test --target \
             granit_asset_tools_shader_hlsl_api_test
           ctest --test-dir build/shader-toolchain-test \
