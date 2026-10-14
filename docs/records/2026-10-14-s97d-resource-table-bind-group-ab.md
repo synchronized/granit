@@ -128,6 +128,9 @@ ctest --preset windows-clang-release --output-on-failure `
 结果为 CTest 2/2 通过；Release 单轮压力结果为 Resource Table CPU 22986 μs、GPU 6.608 ms，
 Bind Group CPU 51009 μs、GPU 6.630 ms。该数据仅证明 Release 运行和部署正常，不作为跨设备性能结论。
 
+随后完整构建 Release 测试目标并执行全套 CTest，结果为 **113/113 通过**，覆盖教程、Model Viewer
+核心、AssetTools、ABI、Vulkan 后端、RenderDoc 桥接、GPU smoke 和打包门禁。
+
 ## 限制与后续
 
 ## Emscripten 与 Chrome WebGPU 回归
