@@ -11,10 +11,12 @@
 
 #include <granit/pipeline/render_pipeline.hpp>
 #include <granit/pipeline/scene.hpp>
+#include <granit/renderer/pipeline.hpp>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/resource_table.hpp>
 #include <imgui.h>
 
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
@@ -161,6 +163,44 @@ private:
                   << " sampler_updates=" << stress_tables_.size()
                   << " elapsed_us=" << stress_elapsed_us_ << '\n';
       }
+    } else if (result.ok() && stress_test_ && !resource_table_stress_) {
+      const auto stress_begin = std::chrono::steady_clock::now();
+      granit::texture_view_ref texture_view;
+      granit::sampler_ref texture_sampler;
+      result = model_gpu_.texture_binding(model_scene_.materials.front().base_color_texture, true,
+                                          texture_view, texture_sampler);
+      if (result.ok()) {
+        const std::array layout_entries{
+            granit::bind_group_layout_entry{.binding = 0,
+                                            .type = granit::binding_type::sampled_texture,
+                                            .array_count = 1,
+                                            .visibility = granit::shader_stage_flags::fragment},
+            granit::bind_group_layout_entry{.binding = 1,
+                                            .type = granit::binding_type::sampler,
+                                            .array_count = 1,
+                                            .visibility = granit::shader_stage_flags::fragment}};
+        result = pressure_bind_group_layout_.initialize(renderer_owner(), layout_entries);
+        if (result.ok()) {
+          pressure_bind_groups_.resize(64);
+          for (auto& group : pressure_bind_groups_) {
+            const std::array entries{
+                granit::bind_group_entry{.binding = 0, .resource = texture_view},
+                granit::bind_group_entry{.binding = 1, .resource = texture_sampler}};
+            result = group.initialize(renderer(), pressure_bind_group_layout_.ref(), entries);
+            if (result.failed())
+              break;
+          }
+        }
+      }
+      bind_group_pressure_elapsed_us_ =
+          static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(
+                                         std::chrono::steady_clock::now() - stress_begin)
+                                         .count());
+      if (result.ok()) {
+        std::cout << "bind_group_pressure groups=" << pressure_bind_groups_.size()
+                  << " resource_entries=" << pressure_bind_groups_.size() * 2
+                  << " elapsed_us=" << bind_group_pressure_elapsed_us_ << '\n';
+      }
     }
     if (result.ok() && stress_test_) {
       const auto mode = resource_table_stress_ ? "resource_table" : "bind_group";
@@ -171,6 +211,7 @@ private:
                 << " draws=" << model_gpu_.draw_bindings().size()
                 << " bind_group_materials=" << bind_group_materials
                 << " resource_table_updates=" << resource_table_update_count_
+                << " bind_group_pressure_groups=" << pressure_bind_groups_.size()
                 << " scene_initialize_us=" << scene_initialize_elapsed_us_ << '\n';
     }
     if (result.ok() &&
@@ -188,6 +229,8 @@ private:
     runtime_.shutdown();
     static_cast<void>(scene_.reset());
     static_cast<void>(pipeline_.reset());
+    pressure_bind_groups_.clear();
+    static_cast<void>(pressure_bind_group_layout_.reset());
     model_gpu_.reset();
   }
 
@@ -314,6 +357,8 @@ private:
   bool resource_table_available_{};
   granit::resource_table table_;
   std::vector<granit::resource_table> stress_tables_;
+  granit::bind_group_layout pressure_bind_group_layout_;
+  std::vector<granit::bind_group> pressure_bind_groups_;
   granit::sampler sampler_;
   granit::example::assets::asset_handle<granit::example::gltf::scene> model_asset_;
   granit::example::gltf::scene model_scene_;
@@ -325,6 +370,7 @@ private:
   granit_handle resource_table_texture_{GRANIT_NULL_HANDLE};
   granit_handle resource_table_sampler_{GRANIT_NULL_HANDLE};
   std::uint64_t stress_elapsed_us_{};
+  std::uint64_t bind_group_pressure_elapsed_us_{};
   std::uint64_t scene_initialize_elapsed_us_{};
   std::size_t resource_table_update_count_{};
   std::uint64_t gpu_sample_sequence_{};
