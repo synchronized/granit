@@ -30,8 +30,12 @@ Vulkan 内部实验。
 
 ## 当前计划
 
-[v0.61.0](versions/v0.61.0.md) 由 [S-97](plans/S-97-0.61.0-resource-table-shader-and-multimaterial-scene.md)
-规划：实现 Vulkan Resource Table Shader 实际纹理采样，升级 Tutorial 12 的多材质场景和压力对照，
+[v0.62.0](versions/v0.62.0.md) 由 [S-98](plans/S-98-0.62.0-interactive-feature-tutorials.md)
+规划：将 Tutorial 09～11 升级为 Particle Generator、Transparency Gallery 和 Capabilities Inspector，
+并保持固定 Smoke、跨后端验证和无新增公共 ABI。
+
+[v0.61.0](versions/v0.61.0.md) 已由 [S-97](plans/S-97-0.61.0-resource-table-shader-and-multimaterial-scene.md)
+完成并发布：实现 Vulkan Resource Table Shader 实际纹理采样，升级 Tutorial 12 的多材质场景和压力对照，
 并保持 WebGPU Bind Group 回退与 Bind Group 默认路径。
 
 [v0.60.0](versions/v0.60.0.md) 已由 [S-96](plans/S-96-0.60.0-resource-table-shader-and-pressure.md)
