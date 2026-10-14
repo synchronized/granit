@@ -1,9 +1,21 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-struct particle {
-  float4 position_size;
+struct scene_uniforms {
+  float4x4 view_projection;
+};
+
+struct particle_instance {
+  float4 position_scale;
   float4 color;
+  float4 shape_scale_rotation;
+};
+
+[[vk::binding(0, 0)]] ConstantBuffer<scene_uniforms> scene;
+StructuredBuffer<particle_instance> particles : register(t1, space0);
+
+struct vertex_input {
+  float3 position : POSITION;
 };
 
 struct vertex_output {
@@ -11,22 +23,22 @@ struct vertex_output {
   float4 color : COLOR0;
 };
 
-StructuredBuffer<particle> particles : register(t0, space0);
-
-vertex_output vertex_main(uint vertex_id : SV_VertexID) {
-  const uint particle_id = vertex_id / 6;
-  const uint corner_id = vertex_id % 6;
-  const float2 corners[6] = {
-      float2(-1.0, -1.0), float2(1.0, -1.0), float2(1.0, 1.0),
-      float2(-1.0, -1.0), float2(1.0, 1.0), float2(-1.0, 1.0)};
-  const particle value = particles[particle_id];
+vertex_output vertex_main(vertex_input input, uint instance_id : SV_InstanceID) {
+  const particle_instance particle = particles[instance_id];
+  const float angle = particle.shape_scale_rotation.w;
+  const float sine = sin(angle);
+  const float cosine = cos(angle);
+  const float3 scaled = input.position * particle.shape_scale_rotation.xyz;
+  const float3 rotated = float3(cosine * scaled.x + sine * scaled.z, scaled.y,
+                                -sine * scaled.x + cosine * scaled.z);
+  const float3 world_position = particle.position_scale.xyz +
+                                rotated * particle.position_scale.w;
   vertex_output output;
-  output.position = float4(value.position_size.xy + corners[corner_id] * value.position_size.z, 0.0, 1.0);
-  output.color = value.color;
+  output.position = mul(scene.view_projection, float4(world_position, 1.0));
+  output.color = particle.color;
   return output;
 }
 
 float4 fragment_main(vertex_output input) : SV_Target0 {
-  const float distance_to_center = length(input.position.xy - floor(input.position.xy));
-  return float4(input.color.rgb, input.color.a * saturate(1.0 - distance_to_center * 1.4));
+  return input.color;
 }
