@@ -8,6 +8,12 @@
 
 ## Unreleased
 
+- Tutorial 09 升级为 Particle Generator：使用实例化 Mesh、Storage Buffer 和 ImGui 参数面板展示
+  球体、正方体、长方体粒子及生命周期；
+- Tutorial 10 升级为 Transparency Gallery：使用轨道相机和共享立方体 Mesh 展示 Opaque、Mask、
+  Blend 与对象级透明边界；
+- Tutorial 11 增加 mip 纹理、Sampler 和 Indirect Buffer 的实际创建探测，并显示不支持结果。
+
 ## 0.61.0 - 2026-10-14
 
 - v0.61.0 Resource Table Vulkan 变体通过材质常量传递 5 个纹理和 5 个采样器数组索引；
