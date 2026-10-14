@@ -72,9 +72,9 @@ def make_material(index: int, count: int) -> bpy.types.Material:
   return material
 
 
-def add_shape(index: int, material: bpy.types.Material, columns: int) -> None:
+def add_shape(index: int, material: bpy.types.Material, columns: int, rows: int) -> None:
   x = (index % columns) * 2.4 - (columns - 1) * 1.2
-  y = (index // columns) * 2.4 - 3.6
+  y = (index // columns) * 2.4 - (rows - 1) * 1.2
   shape = index % 4
   if shape == 0:
     bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=12, location=(x, y, 0.65))
@@ -109,10 +109,11 @@ def main() -> None:
   if count <= 0:
     raise RuntimeError("材质数量必须大于 0")
   columns = GRID_COLUMNS
+  rows = math.ceil(count / columns)
   os.makedirs(output_dir, exist_ok=True)
   clear_scene()
   for index in range(count):
-    add_shape(index, make_material(index, count), columns)
+    add_shape(index, make_material(index, count), columns, rows)
 
   bpy.ops.object.select_all(action="SELECT")
   bpy.ops.export_scene.gltf(

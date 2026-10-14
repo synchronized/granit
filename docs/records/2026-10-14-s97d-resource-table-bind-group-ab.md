@@ -8,7 +8,7 @@
 - 日期：2026-10-14
 - 计划：[S-97](../plans/S-97-0.61.0-resource-table-shader-and-multimaterial-scene.md)
 - 环境：Windows Clang Debug、Vulkan 后端、当前默认设备
-- 负载：Tutorial 12，16 个材质、16 个 Draw
+- 负载：Tutorial 12，32 个材质、32 个 Draw
 
 ## 验证方式
 
@@ -72,10 +72,35 @@ Resource Table 压力入口另报告 64 个压力表和 64 次 sampler 更新；
 参考价值，但仍需多轮 p50/p95、Release 构建和跨平台验证。这里的数量是额外资源对象压力，不能
 等同于场景材质数或 Draw 数。
 
+## 真实 32 材质场景首轮
+
+Tutorial 12 的权威资产已由仓库内生成器重新生成：
+
+```powershell
+blender --background --python tools/generate_resource_table_gallery.py -- `
+  --count 32 examples/assets/tutorials/12_resource_table_scene
+```
+
+该资产包含 32 个对象、32 个材质、32 张 BaseColor 纹理和 32 张
+MetallicRoughness 纹理。两条路径在同一资产上各运行一次：
+
+```powershell
+build/windows-clang-debug/bin/granit_tutorial_12_resource_table_scene.exe --stress-test-32
+build/windows-clang-debug/bin/granit_tutorial_12_resource_table_scene.exe --bind-group-stress-test-32
+```
+
+| 路径 | 材质/Draw | 额外压力资源 | 场景初始化 | Total GPU |
+|---|---:|---:|---:|---:|
+| Resource Table | 32 / 32 | 32 个表、66 次资源表更新 | 185338 μs | 6.615390 ms |
+| Bind Group | 32 / 32 | 32 个组、64 个条目 | 182193 μs | 6.618390 ms |
+
+两条路径均正常退出，且确认运行时实际读取了 32 材质场景。该结果仍是单机、Debug、单轮样本；
+其中额外压力资源叠加在真实 32 材质场景之上，不能单独解释为 Resource Table 的产品级收益。
+
 ## 限制与后续
 
 - 当前仍尚未接入后端级创建/Descriptor 写入计数器；压力计时覆盖公共 API 创建路径，不等同于底层
   驱动 Descriptor 写入耗时；
-- 尚未完成 4/16/32 材质和 8/32/64 Draw 的矩阵化压力报告；
+- 尚未完成真实 4/16/32 材质和 8/32/64 Draw 的多轮矩阵化压力报告；
 - 还需要 Linux Lavapipe、Release 构建和 WebGPU Bind Group 回退数据；
 - GPU timestamp 不可用时只保留 CPU 和资源统计，并明确标记 GPU 数据 unavailable。
