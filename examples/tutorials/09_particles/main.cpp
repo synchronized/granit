@@ -40,6 +40,7 @@ constexpr std::uint32_t continuous_emission = 1;
 constexpr float pi = 3.14159265F;
 constexpr std::array<float, 3> emitter_position{0.0F, -2.2F, 0.0F};
 constexpr std::array<float, 3> light_position{1.8F, -3.0F, -2.2F};
+constexpr std::array<float, 3> light_direction{0.45F, -0.75F, -0.55F};
 
 struct particle_state {
   std::array<float, 4> position{};
@@ -60,10 +61,11 @@ struct particle_instance {
 
 struct scene_uniforms {
   matrix4 view_projection;
+  std::array<float, 4> light_direction;
 };
 
 static_assert(sizeof(particle_instance) == sizeof(float) * 16);
-static_assert(sizeof(scene_uniforms) == sizeof(float) * 16);
+static_assert(sizeof(scene_uniforms) == sizeof(float) * 20);
 
 int report_failure(std::string_view operation, granit::result result) {
   std::cerr << operation << " failed: " << result.message() << '\n';
@@ -446,7 +448,7 @@ private:
 
     append_gizmo_sphere(lines, line_count, light_position, 0.12F, light_color);
     append_gizmo_line(lines, line_count, {}, light_position, light_color, 2.0F);
-    append_gizmo_arrow(lines, line_count, {}, light_position, 1.0F, light_color);
+    append_gizmo_arrow(lines, line_count, {}, light_direction, 1.0F, light_color);
     return debug_draw_.append_lines(std::span{lines}.first(line_count));
   }
 
@@ -652,7 +654,9 @@ private:
       return result;
     granit::frame_recording recording;
     result = frame_context_.begin(frame.acquired, recording);
-    scene_uniforms uniforms{.view_projection = matrices.view_projection};
+    scene_uniforms uniforms{.view_projection = matrices.view_projection,
+                            .light_direction = {light_direction[0], light_direction[1],
+                                                light_direction[2], 0.0F}};
     const auto uniform_offset = uniform_stride_ * recording.frame_slot();
     if (result.ok())
       result = particle_buffer_.write(0, std::as_bytes(std::span{particle_instances_}));
