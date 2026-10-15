@@ -248,10 +248,16 @@ private:
       const auto z = position[2] - camera_position.z;
       return x * x + y * y + z * z;
     };
-    std::sort(blend.begin(), blend.begin() + static_cast<std::ptrdiff_t>(blend_count),
-              [&](std::size_t left, std::size_t right) {
-                return distance_squared(left) > distance_squared(right);
-              });
+    // 透明实例数量很小，使用插入排序避免 GCC 对固定数组的 std::sort 范围产生误报。
+    for (std::size_t index = 1; index < blend_count; ++index) {
+      const auto value = blend[index];
+      auto position = index;
+      while (position > 0 && distance_squared(blend[position - 1]) < distance_squared(value)) {
+        blend[position] = blend[position - 1];
+        --position;
+      }
+      blend[position] = value;
+    }
     std::size_t output = 0;
     for (std::size_t index = 0; index < solid_count; ++index)
       draw_instances_[output++] = instances_[solid[index]];
@@ -303,7 +309,9 @@ private:
         result = create_pipeline();
       }
       ImGui::Text("OIT: unsupported; Blend uses object-center sorting");
-      if (ImGui::Button("Reset camera")) camera_.reset(); result = runtime_.end_frame();
+      if (ImGui::Button("Reset camera"))
+        camera_.reset();
+      result = runtime_.end_frame();
     }
     if (result.failed()) return result;
     const auto input = camera_input_.finish(runtime_.wants_mouse(), runtime_.wants_keyboard());
