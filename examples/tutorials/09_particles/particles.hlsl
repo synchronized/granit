@@ -4,6 +4,7 @@
 struct scene_uniforms {
   float4x4 view_projection;
   float4 light_direction;
+  float4 ambient;
 };
 
 struct particle_instance {
@@ -55,6 +56,6 @@ vertex_output vertex_main(vertex_input input, uint instance_id : SV_InstanceID) 
 float4 fragment_main(vertex_output input) : SV_Target0 {
   const float3 normal = normalize(input.normal);
   const float diffuse = max(dot(normal, normalize(scene.light_direction.xyz)), 0.0);
-  const float lighting = 0.22 + diffuse * 0.78;
+  const float lighting = scene.ambient.x + diffuse * (1.0 - scene.ambient.x);
   return float4(input.color.rgb * lighting, input.color.a);
 }

@@ -62,10 +62,11 @@ struct particle_instance {
 struct scene_uniforms {
   matrix4 view_projection;
   std::array<float, 4> light_direction;
+  std::array<float, 4> ambient;
 };
 
 static_assert(sizeof(particle_instance) == sizeof(float) * 16);
-static_assert(sizeof(scene_uniforms) == sizeof(float) * 20);
+static_assert(sizeof(scene_uniforms) == sizeof(float) * 24);
 
 int report_failure(std::string_view operation, granit::result result) {
   std::cerr << operation << " failed: " << result.message() << '\n';
@@ -628,6 +629,7 @@ private:
       ImGui::SliderFloat3("Direction", direction_.data(), -1.0F, 1.0F);
       ImGui::SliderFloat3("Acceleration", acceleration_.data(), -2.0F, 2.0F);
       ImGui::SliderFloat3("Angular speed", angular_speed_.data(), 0.0F, 12.0F);
+      ImGui::SliderFloat("Ambient", &ambient_strength_, 0.0F, 0.3F);
       ImGui::Checkbox("Gizmos", &gizmos_);
       ImGui::SliderFloat("Lifetime", &lifetime_, 0.25F, 8.0F);
       ImGui::SliderFloat("Size", &particle_size_, 0.05F, 0.45F);
@@ -656,7 +658,9 @@ private:
     result = frame_context_.begin(frame.acquired, recording);
     scene_uniforms uniforms{.view_projection = matrices.view_projection,
                             .light_direction = {light_direction[0], light_direction[1],
-                                                light_direction[2], 0.0F}};
+                                                light_direction[2], 0.0F},
+                            .ambient = {ambient_strength_, ambient_strength_, ambient_strength_,
+                                        0.0F}};
     const auto uniform_offset = uniform_stride_ * recording.frame_slot();
     if (result.ok())
       result = particle_buffer_.write(0, std::as_bytes(std::span{particle_instances_}));
@@ -764,6 +768,7 @@ private:
   float emission_accumulator_{};
   float lifetime_{4.0F};
   float particle_size_{0.18F};
+  float ambient_strength_{0.06F};
   bool animate_{true};
   bool fade_{true};
   bool gizmos_{true};
