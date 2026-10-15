@@ -5,6 +5,7 @@ struct scene_uniforms {
   float4x4 view_projection;
   float4 light_direction;
   float4 ambient;
+  float4 debug;
 };
 
 struct particle_instance {
@@ -54,8 +55,9 @@ vertex_output vertex_main(vertex_input input, uint instance_id : SV_InstanceID) 
 }
 
 float4 fragment_main(vertex_output input) : SV_Target0 {
-  // 教程 Mesh 的法线约定与光照输入方向相反，统一转换为外向表面法线。
-  const float3 normal = normalize(-input.normal);
+  const float3 normal = normalize(input.normal);
+  if (scene.debug.x > 0.5)
+    return float4(normal * 0.5 + 0.5, 1.0);
   const float diffuse = max(dot(normal, normalize(scene.light_direction.xyz)), 0.0);
   const float lighting = scene.ambient.x + diffuse * (1.0 - scene.ambient.x);
   return float4(input.color.rgb * lighting, input.color.a);
