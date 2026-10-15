@@ -54,7 +54,8 @@ vertex_output vertex_main(vertex_input input, uint instance_id : SV_InstanceID) 
 }
 
 float4 fragment_main(vertex_output input) : SV_Target0 {
-  const float3 normal = normalize(input.normal);
+  // 教程 Mesh 的法线约定与光照输入方向相反，统一转换为外向表面法线。
+  const float3 normal = normalize(-input.normal);
   const float diffuse = max(dot(normal, normalize(scene.light_direction.xyz)), 0.0);
   const float lighting = scene.ambient.x + diffuse * (1.0 - scene.ambient.x);
   return float4(input.color.rgb * lighting, input.color.a);
