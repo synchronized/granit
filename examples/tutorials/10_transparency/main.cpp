@@ -37,8 +37,9 @@ struct scene_uniforms {
   matrix4 view_projection;
   std::array<float, 4> light_direction;
   std::array<float, 4> ambient;
+  std::array<float, 4> debug;
 };
-static_assert(sizeof(scene_uniforms) == sizeof(float) * 24);
+static_assert(sizeof(scene_uniforms) == sizeof(float) * 28);
 constexpr std::uint32_t object_count = 6;
 
 std::array<float, 3> normalized_or_up(const std::array<float, 3>& value) noexcept {
@@ -283,6 +284,7 @@ private:
       ImGui::SliderFloat3("Light direction", light_direction_.data(), -1.0F, 1.0F);
       ImGui::SliderFloat("Ambient", &ambient_strength_, 0.0F, 1.0F);
       ImGui::Checkbox("Light gizmo", &light_gizmo_);
+      ImGui::Checkbox("Normal debug", &normal_debug_);
       ImGui::Text("OIT: unsupported; Blend uses object-center sorting");
       if (ImGui::Button("Reset camera")) camera_.reset(); result = runtime_.end_frame();
     }
@@ -297,7 +299,8 @@ private:
     const scene_uniforms uniforms{
         .view_projection = matrices.view_projection,
         .light_direction = {light_direction_[0], light_direction_[1], light_direction_[2], 0.0F},
-        .ambient = {ambient_strength_, ambient_strength_, ambient_strength_, 0.0F}};
+        .ambient = {ambient_strength_, ambient_strength_, ambient_strength_, 0.0F},
+        .debug = {normal_debug_ ? 1.0F : 0.0F, 0.0F, 0.0F, 0.0F}};
     granit::frame_recording recording; if (result.ok()) result = frame_context_.begin(frame.acquired, recording);
     const auto uniform_offset = uniform_stride_ * recording.frame_slot();
     if (result.ok()) result = instance_buffer_.write(0, std::as_bytes(std::span{draw_instances_}));
@@ -353,7 +356,7 @@ private:
   granit::mesh mesh_; granit::texture depth_; granit::texture_view depth_view_; granit::bind_group_layout layout_; granit::pipeline_layout pipeline_layout_; granit::bind_group group_; granit::graphics_pipeline pipeline_, blend_pipeline_;
   std::array<instance_data, object_count> instances_{}; std::array<instance_data, object_count> draw_instances_{}; granit::texture_format pipeline_format_{granit::texture_format::undefined};
   std::array<float, 3> light_direction_{0.35F, 0.8F, 0.45F}; float ambient_strength_{0.12F};
-  std::uint64_t uniform_stride_{}; std::uint32_t solid_instance_count_{}; std::uint32_t blend_instance_count_{}; bool smoke_test_{}; bool auto_orbit_{}; bool light_gizmo_{true};
+  std::uint64_t uniform_stride_{}; std::uint32_t solid_instance_count_{}; std::uint32_t blend_instance_count_{}; bool smoke_test_{}; bool auto_orbit_{}; bool light_gizmo_{true}; bool normal_debug_{};
 };
 application app;
 } // namespace
