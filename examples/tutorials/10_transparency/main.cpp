@@ -109,7 +109,8 @@ public:
 private:
   granit::result on_initialize() noexcept override {
     auto result = runtime_.initialize(renderer_owner());
-    if (result.ok()) result = debug_draw_.initialize(renderer_owner(), {.initial_line_capacity = 64});
+    if (result.ok())
+      result = debug_draw_.initialize(renderer_owner(), {.initial_line_capacity = 64});
     if (result.ok()) result = frame_context_.initialize(renderer());
     if (result.ok()) result = shaders_.initialize(renderer(), tutorial_transparency::shader_archive());
     if (result.ok()) result = shaders_.create_shader("transparency.vertex", vertex_shader_);
@@ -194,13 +195,21 @@ private:
     result = pipeline_.reset();
     if (result.ok()) result = blend_pipeline_.reset();
     const auto format = presentation_info().format;
-    const std::array vertex_layouts{
-      granit::vertex_buffer_layout{.stride = sizeof(tutorial_transparency::vertex), .attributes = std::array{
+    // vertex_buffer_layout 保存属性 span；属性数组必须存活到 pipeline 初始化调用完成。
+    const std::array attributes{
         granit::vertex_attribute{.location = 0, .format = granit::vertex_format::float32x3},
-        granit::vertex_attribute{.location = 1, .format = granit::vertex_format::float32x3, .offset = sizeof(float) * 3}}},
-      granit::vertex_buffer_layout{.stride = sizeof(instance_data), .step_mode = granit::vertex_step_mode::instance,
-        .attributes = std::array{granit::vertex_attribute{.location = 2, .format = granit::vertex_format::float32x4},
-                                 granit::vertex_attribute{.location = 3, .format = granit::vertex_format::float32x4, .offset = sizeof(float) * 4}}}};
+        granit::vertex_attribute{.location = 1, .format = granit::vertex_format::float32x3,
+                                 .offset = sizeof(float) * 3}};
+    const std::array instance_attributes{
+        granit::vertex_attribute{.location = 2, .format = granit::vertex_format::float32x4},
+        granit::vertex_attribute{.location = 3, .format = granit::vertex_format::float32x4,
+                                 .offset = sizeof(float) * 4}};
+    const std::array vertex_layouts{
+        granit::vertex_buffer_layout{.stride = sizeof(tutorial_transparency::vertex),
+                                     .attributes = attributes},
+        granit::vertex_buffer_layout{.stride = sizeof(instance_data),
+                                     .step_mode = granit::vertex_step_mode::instance,
+                                     .attributes = instance_attributes}};
     const std::array blends{granit::color_blend_state{.enabled = true,
       .source_color_factor = granit::blend_factor::source_alpha,
       .destination_color_factor = granit::blend_factor::one_minus_source_alpha, .source_alpha_factor = granit::blend_factor::one,
@@ -208,7 +217,7 @@ private:
     if (result.ok()) result = pipeline_.initialize(renderer_owner(), {.layout = pipeline_layout_.ref(), .vertex_shader = vertex_shader_.ref(),
       .fragment_shader = fragment_shader_.ref(), .color_formats = std::span{&format, 1}, .depth_stencil_format = granit::texture_format::d32_float,
       .vertex_buffers = vertex_layouts, .primitive = {.cull = pipeline_cull_none_ ? granit::cull_mode::none : granit::cull_mode::back}, .depth = granit::depth_state{.test_enabled = true, .write_enabled = true},
-      .color_blends = {}, .depth_bias = std::nullopt});
+      .color_blends = blends, .depth_bias = std::nullopt});
     if (result.ok()) result = blend_pipeline_.initialize(renderer_owner(), {.layout = pipeline_layout_.ref(), .vertex_shader = vertex_shader_.ref(),
       .fragment_shader = fragment_shader_.ref(), .color_formats = std::span{&format, 1}, .depth_stencil_format = granit::texture_format::d32_float,
       .vertex_buffers = vertex_layouts, .primitive = {.cull = pipeline_cull_none_ ? granit::cull_mode::none : granit::cull_mode::back}, .depth = granit::depth_state{.test_enabled = true, .write_enabled = false},
