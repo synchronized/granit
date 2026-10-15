@@ -659,6 +659,7 @@ private:
         reset_particles();
       ImGui::Text("Active particles: %u / %u", active_count_, particle_count_);
       ImGui::Text("Draw instances: %u", smoke_test_ ? smoke_particles : particle_count_);
+      ImGui::Text("Camera world Y: %.2f", camera_world_y_);
       result = runtime_.end_frame();
     }
     if (result.failed())
@@ -669,6 +670,7 @@ private:
     granit::example::camera::camera_matrices matrices;
     if (!camera_.matrices(frame.swapchain.width, frame.swapchain.height, matrices))
       return granit::result::invalid_argument;
+    camera_world_y_ = matrices.position.y;
     update_particles(frame.delta_seconds);
     sort_particles(matrices.position);
     result = update_gizmos();
@@ -797,6 +799,7 @@ private:
   bool gizmos_{true};
   bool normal_debug_{};
   bool diffuse_debug_{};
+  float camera_world_y_{};
   bool smoke_test_{};
   std::array<bool, maximum_particles> active_particles_{};
 };
