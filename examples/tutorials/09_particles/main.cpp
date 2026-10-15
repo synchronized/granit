@@ -42,21 +42,22 @@ struct particle_state {
   std::array<float, 4> color{};
   float lifetime{};
   float age{};
-  float rotation{};
-  float angular_velocity{};
+  std::array<float, 3> rotation{};
+  std::array<float, 3> angular_velocity{};
 };
 
 struct particle_instance {
   std::array<float, 4> position_scale{};
   std::array<float, 4> color{};
-  std::array<float, 4> shape_scale_rotation{};
+  std::array<float, 4> shape_scale{};
+  std::array<float, 4> rotation{};
 };
 
 struct scene_uniforms {
   matrix4 view_projection;
 };
 
-static_assert(sizeof(particle_instance) == sizeof(float) * 12);
+static_assert(sizeof(particle_instance) == sizeof(float) * 16);
 static_assert(sizeof(scene_uniforms) == sizeof(float) * 16);
 
 int report_failure(std::string_view operation, granit::result result) {
@@ -140,7 +141,7 @@ private:
     for (std::uint32_t index = 0; index < maximum_particles; ++index) {
       const auto velocity = initial_velocity(index);
       const float hue = static_cast<float>(index % 9) / 8.0F;
-      const float rotation_direction = random_component(index, 71U) < 0.0F ? -1.0F : 1.0F;
+      const auto angular_velocity = initial_angular_velocity(index);
       particles_[index] = {
           .position = {0.0F, -2.2F, 0.0F, 1.0F},
           .velocity = {velocity[0], velocity[1], velocity[2], 0.0F},
@@ -148,8 +149,10 @@ private:
                     0.75F},
           .lifetime = lifetime_,
           .age = hue * 1.2F,
-          .rotation = random_component(index, 83U) * 3.14159265F,
-          .angular_velocity = rotation_direction * angular_speed_,
+          .rotation = {random_component(index, 83U) * 3.14159265F,
+                       random_component(index, 89U) * 3.14159265F,
+                       random_component(index, 97U) * 3.14159265F},
+          .angular_velocity = angular_velocity,
       };
     }
     elapsed_ = 0.0F;
@@ -183,6 +186,13 @@ private:
     return velocity;
   }
 
+  [[nodiscard]] std::array<float, 3> initial_angular_velocity(
+      std::uint32_t index) const noexcept {
+    return {random_component(index, 71U) < 0.0F ? -angular_speed_[0] : angular_speed_[0],
+            random_component(index, 73U) < 0.0F ? -angular_speed_[1] : angular_speed_[1],
+            random_component(index, 79U) < 0.0F ? -angular_speed_[2] : angular_speed_[2]};
+  }
+
   void update_particles(float delta_seconds) noexcept {
     const auto count = smoke_test_ ? smoke_particles : particle_count_;
     const auto step = smoke_test_ ? 0.75F : std::min(delta_seconds, 0.05F);
@@ -194,16 +204,22 @@ private:
         particle.position = {0.0F, -2.4F, 0.0F, 1.0F};
         const auto velocity = initial_velocity(index);
         particle.velocity = {velocity[0], velocity[1], velocity[2], 0.0F};
-        particle.rotation = random_component(index, 83U) * 3.14159265F;
+        particle.rotation = {random_component(index, 83U) * 3.14159265F,
+                             random_component(index, 89U) * 3.14159265F,
+                             random_component(index, 97U) * 3.14159265F};
       }
       if (animate_ || smoke_test_) {
         particle.velocity[0] += direction_[0] * step;
-        particle.velocity[1] += (direction_[1] + acceleration_) * step;
-        particle.velocity[2] += direction_[2] * step;
+        for (std::size_t axis = 0; axis < 3; ++axis)
+          particle.velocity[axis] += (direction_[axis] + acceleration_[axis]) * step;
         for (std::size_t axis = 0; axis < 3; ++axis)
           particle.position[axis] += particle.velocity[axis] * step;
-        particle.angular_velocity = particle.angular_velocity < 0.0F ? -angular_speed_ : angular_speed_;
-        particle.rotation += particle.angular_velocity * step;
+        for (std::size_t axis = 0; axis < 3; ++axis) {
+          particle.angular_velocity[axis] = particle.angular_velocity[axis] < 0.0F
+                                                ? -angular_speed_[axis]
+                                                : angular_speed_[axis];
+          particle.rotation[axis] += particle.angular_velocity[axis] * step;
+        }
       }
       const float life = std::clamp(1.0F - particle.age / particle.lifetime, 0.0F, 1.0F);
       particle_instances_[index] = {
@@ -212,10 +228,10 @@ private:
           .color = {particle.color[0] * particle_color_[0], particle.color[1] * particle_color_[1],
                     particle.color[2] * particle_color_[2],
                     particle.color[3] * particle_color_[3] * (fade_ ? life : 1.0F)},
-          .shape_scale_rotation = {shape_ == box_shape ? 0.7F : 1.0F,
-                                   shape_ == box_shape ? 1.35F : 1.0F,
-                                   shape_ == box_shape ? 0.7F : 1.0F,
-                                   particle.rotation},
+          .shape_scale = {shape_ == box_shape ? 0.7F : 1.0F,
+                          shape_ == box_shape ? 1.35F : 1.0F,
+                          shape_ == box_shape ? 0.7F : 1.0F, 0.0F},
+          .rotation = {particle.rotation[0], particle.rotation[1], particle.rotation[2], 0.0F},
       };
     }
     elapsed_ += smoke_test_ ? 0.0F : delta_seconds;
@@ -377,8 +393,8 @@ private:
         shape_ = static_cast<std::uint32_t>(selected_shape);
       ImGui::ColorEdit4("Color", particle_color_.data());
       ImGui::SliderFloat3("Direction", direction_.data(), -1.0F, 1.0F);
-      ImGui::SliderFloat("Acceleration", &acceleration_, -2.0F, 2.0F);
-      ImGui::SliderFloat("Angular speed", &angular_speed_, 0.0F, 12.0F);
+      ImGui::SliderFloat3("Acceleration", acceleration_.data(), -2.0F, 2.0F);
+      ImGui::SliderFloat3("Angular speed", angular_speed_.data(), 0.0F, 12.0F);
       ImGui::SliderFloat("Lifetime", &lifetime_, 0.25F, 8.0F);
       ImGui::SliderFloat("Size", &particle_size_, 0.05F, 0.45F);
       ImGui::Checkbox("Fade out", &fade_);
@@ -481,8 +497,8 @@ private:
   std::uint32_t shape_{sphere_shape};
   std::array<float, 4> particle_color_{1.0F, 1.0F, 1.0F, 1.0F};
   std::array<float, 3> direction_{0.0F, 0.15F, 0.0F};
-  float acceleration_{};
-  float angular_speed_{2.5F};
+  std::array<float, 3> acceleration_{};
+  std::array<float, 3> angular_speed_{2.5F, 2.5F, 2.5F};
   float lifetime_{4.0F};
   float particle_size_{0.18F};
   float elapsed_{};
