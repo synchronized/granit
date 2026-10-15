@@ -543,7 +543,8 @@ private:
     const std::array entries{
         granit::bind_group_layout_entry{.binding = 0,
                                         .type = granit::binding_type::dynamic_uniform_buffer,
-                                        .visibility = granit::shader_stage_flags::vertex},
+                                        .visibility = granit::shader_stage_flags::vertex |
+                                                      granit::shader_stage_flags::fragment},
         granit::bind_group_layout_entry{.binding = 1,
                                         .type = granit::binding_type::read_only_storage_buffer,
                                         .visibility = granit::shader_stage_flags::vertex},
