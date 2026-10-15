@@ -37,6 +37,7 @@ constexpr std::uint32_t sphere_shape = 0;
 constexpr std::uint32_t cube_shape = 1;
 constexpr std::uint32_t box_shape = 2;
 constexpr std::uint32_t continuous_emission = 1;
+constexpr float pi = 3.14159265F;
 constexpr std::array<float, 3> emitter_position{0.0F, -2.2F, 0.0F};
 constexpr std::array<float, 3> light_position{-1.8F, 3.0F, 2.2F};
 
@@ -75,7 +76,7 @@ constexpr std::uint32_t rgba8(std::uint8_t red, std::uint8_t green, std::uint8_t
          (static_cast<std::uint32_t>(blue) << 16U) | (static_cast<std::uint32_t>(alpha) << 24U);
 }
 
-void append_gizmo_line(std::array<granit::debug_draw_line, 32>& lines, std::size_t& count,
+void append_gizmo_line(std::array<granit::debug_draw_line, 128>& lines, std::size_t& count,
                        const std::array<float, 3>& start, const std::array<float, 3>& end,
                        std::uint32_t color, float width = 2.0F) noexcept {
   if (count >= lines.size())
@@ -85,19 +86,46 @@ void append_gizmo_line(std::array<granit::debug_draw_line, 32>& lines, std::size
       .end = {.x = end[0], .y = end[1], .z = end[2], .color = color},
       .width = width,
       .space = granit::debug_draw_space::world,
-      .depth_mode = granit::debug_draw_depth_mode::disabled,
+      .depth_mode = granit::debug_draw_depth_mode::test,
   };
 }
 
-void append_gizmo_cross(std::array<granit::debug_draw_line, 32>& lines, std::size_t& count,
-                        const std::array<float, 3>& center, float size,
-                        std::uint32_t color) noexcept {
-  append_gizmo_line(lines, count, {center[0] - size, center[1], center[2]},
-                    {center[0] + size, center[1], center[2]}, color);
-  append_gizmo_line(lines, count, {center[0], center[1] - size, center[2]},
-                    {center[0], center[1] + size, center[2]}, color);
-  append_gizmo_line(lines, count, {center[0], center[1], center[2] - size},
-                    {center[0], center[1], center[2] + size}, color);
+void append_gizmo_sphere(std::array<granit::debug_draw_line, 128>& lines, std::size_t& count,
+                         const std::array<float, 3>& center, float radius,
+                         std::uint32_t color) noexcept {
+  constexpr std::size_t segments = 16;
+  for (std::size_t segment = 0; segment < segments; ++segment) {
+    const auto first = static_cast<float>(segment) / static_cast<float>(segments) * 2.0F * pi;
+    const auto second = static_cast<float>(segment + 1) / static_cast<float>(segments) * 2.0F * pi;
+    append_gizmo_line(lines, count,
+                      {center[0] + std::cos(first) * radius, center[1] + std::sin(first) * radius,
+                       center[2]},
+                      {center[0] + std::cos(second) * radius,
+                       center[1] + std::sin(second) * radius, center[2]},
+                      color);
+    append_gizmo_line(lines, count,
+                      {center[0] + std::cos(first) * radius, center[1],
+                       center[2] + std::sin(first) * radius},
+                      {center[0] + std::cos(second) * radius, center[1],
+                       center[2] + std::sin(second) * radius},
+                      color);
+    append_gizmo_line(lines, count,
+                      {center[0], center[1] + std::cos(first) * radius,
+                       center[2] + std::sin(first) * radius},
+                      {center[0], center[1] + std::cos(second) * radius,
+                       center[2] + std::sin(second) * radius},
+                      color);
+  }
+}
+
+void append_gizmo_axes(std::array<granit::debug_draw_line, 128>& lines, std::size_t& count,
+                       const std::array<float, 3>& center, float size) noexcept {
+  append_gizmo_line(lines, count, center,
+                    {center[0] + size, center[1], center[2]}, rgba8(240, 64, 64), 2.5F);
+  append_gizmo_line(lines, count, center,
+                    {center[0], center[1] + size, center[2]}, rgba8(64, 240, 96), 2.5F);
+  append_gizmo_line(lines, count, center,
+                    {center[0], center[1], center[2] + size}, rgba8(64, 128, 255), 2.5F);
 }
 
 std::array<float, 3> normalized_or_up(const std::array<float, 3>& value) noexcept {
@@ -107,7 +135,7 @@ std::array<float, 3> normalized_or_up(const std::array<float, 3>& value) noexcep
   return {value[0] / length, value[1] / length, value[2] / length};
 }
 
-void append_gizmo_arrow(std::array<granit::debug_draw_line, 32>& lines, std::size_t& count,
+void append_gizmo_arrow(std::array<granit::debug_draw_line, 128>& lines, std::size_t& count,
                         const std::array<float, 3>& start, const std::array<float, 3>& vector,
                         float scale, std::uint32_t color) noexcept {
   const auto direction = normalized_or_up(vector);
@@ -142,7 +170,7 @@ private:
   granit::result on_initialize() noexcept override {
     auto result = runtime_.initialize(renderer_owner());
     if (result.ok())
-      result = debug_draw_.initialize(renderer_owner(), {.initial_line_capacity = 32});
+      result = debug_draw_.initialize(renderer_owner(), {.initial_line_capacity = 128});
     if (result.ok())
       result = create_depth_target();
     if (result.ok())
@@ -401,13 +429,14 @@ private:
     if (result.failed() || !gizmos_)
       return result;
 
-    std::array<granit::debug_draw_line, 32> lines{};
+    std::array<granit::debug_draw_line, 128> lines{};
     std::size_t line_count = 0;
     const auto emitter_color = rgba8(255, 64, 224);
     const auto direction_color = rgba8(64, 224, 255);
     const auto acceleration_color = rgba8(255, 160, 32);
     const auto light_color = rgba8(255, 240, 64);
-    append_gizmo_cross(lines, line_count, emitter_position, 0.18F, emitter_color);
+    append_gizmo_sphere(lines, line_count, emitter_position, 0.14F, emitter_color);
+    append_gizmo_axes(lines, line_count, emitter_position, 0.42F);
     append_gizmo_arrow(lines, line_count, emitter_position, direction_, 1.25F, direction_color);
     if (acceleration_[0] * acceleration_[0] + acceleration_[1] * acceleration_[1] +
             acceleration_[2] * acceleration_[2] >
@@ -415,7 +444,7 @@ private:
       append_gizmo_arrow(lines, line_count, emitter_position, acceleration_, 0.9F,
                          acceleration_color);
 
-    append_gizmo_cross(lines, line_count, light_position, 0.16F, light_color);
+    append_gizmo_sphere(lines, line_count, light_position, 0.12F, light_color);
     const std::array<float, 3> light_target{};
     append_gizmo_arrow(lines, line_count, light_position,
                        {light_target[0] - light_position[0], light_target[1] - light_position[1],
