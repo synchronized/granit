@@ -145,7 +145,21 @@ private:
     emission_accumulator_ = 0.0F;
     for (std::uint32_t index = 0; index < maximum_particles; ++index)
       hide_particle(index);
-    emit_particles(smoke_test_ ? smoke_particles : particle_count_);
+    if (smoke_test_)
+      emit_particles(smoke_particles);
+  }
+
+  void set_particle_capacity(std::uint32_t capacity) noexcept {
+    if (capacity < particle_count_) {
+      for (std::uint32_t index = capacity; index < particle_count_; ++index) {
+        if (active_particles_[index]) {
+          active_particles_[index] = false;
+          --active_count_;
+        }
+        hide_particle(index);
+      }
+    }
+    particle_count_ = capacity;
   }
 
   void emit_particles(std::uint32_t count) noexcept {
@@ -439,8 +453,7 @@ private:
       int count = static_cast<int>(particle_count_);
       ImGui::SliderInt("Particles", &count, 1, static_cast<int>(maximum_particles));
       if (static_cast<std::uint32_t>(count) != particle_count_) {
-        particle_count_ = static_cast<std::uint32_t>(count);
-        reset_particles();
+        set_particle_capacity(static_cast<std::uint32_t>(count));
       }
       const char* emission_modes[] = {"Burst", "Continuous"};
       int selected_emission_mode = static_cast<int>(emission_mode_);
