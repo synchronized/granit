@@ -100,8 +100,10 @@ private:
     if (result.ok()) {
       ImGui::SeparatorText("Renderer");
       ImGui::Text("Adapter: %s", renderer_info_.adapter_name.c_str());
-      ImGui::Text("Uniform alignment: %llu", limits_.uniform_buffer_offset_alignment);
-      ImGui::Text("Max uniform binding: %llu", limits_.max_uniform_buffer_binding_size);
+      ImGui::Text("Uniform alignment: %llu",
+                  static_cast<unsigned long long>(limits_.uniform_buffer_offset_alignment));
+      ImGui::Text("Max uniform binding: %llu",
+                  static_cast<unsigned long long>(limits_.max_uniform_buffer_binding_size));
       ImGui::Text("Max color attachments: %u", limits_.max_color_attachments);
       ImGui::Text("Max anisotropy: %.1f", limits_.max_sampler_anisotropy);
       ImGui::Text("Framebuffer sample mask: 0x%X", limits_.framebuffer_sample_counts);
