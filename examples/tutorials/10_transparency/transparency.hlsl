@@ -1,24 +1,40 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-struct object_data { float4 position_size; float4 color_mode; };
-StructuredBuffer<object_data> objects : register(t0, space0);
-struct output_data { float4 position : SV_Position; float4 color : COLOR0; };
+struct scene_uniforms {
+  float4x4 view_projection;
+  float4 light_direction;
+  float4 ambient;
+  float4 debug;
+};
+ConstantBuffer<scene_uniforms> scene : register(b0, space0);
+struct input_data {
+  float3 position : POSITION;
+  float3 normal : NORMAL;
+  float4 transform : TEXCOORD0;
+  float4 color_mode : TEXCOORD1;
+};
+struct output_data {
+  float4 position : SV_Position;
+  float4 color : COLOR0;
+  float3 normal : NORMAL;
+  float mode : TEXCOORD0;
+};
 
-output_data vertex_main(uint vertex_id : SV_VertexID) {
-  uint object_id = vertex_id / 6;
-  uint corner_id = vertex_id % 6;
-  const float2 corners[6] = {float2(-1,-1), float2(1,-1), float2(1,1),
-                             float2(-1,-1), float2(1,1), float2(-1,1)};
-  object_data object = objects[object_id];
+output_data vertex_main(input_data input) {
   output_data output;
-  output.position = float4(object.position_size.xy + corners[corner_id] * object.position_size.z,
-                           object.position_size.w, 1.0);
-  output.color = object.color_mode;
+  output.position = mul(scene.view_projection, float4(input.position * input.transform.w + input.transform.xyz, 1.0));
+  output.color = float4(input.color_mode.rgb, input.color_mode.a == 2.0 ? 0.45 : 1.0);
+  output.normal = input.normal;
+  output.mode = input.color_mode.a;
   return output;
 }
 
 float4 fragment_main(output_data input) : SV_Target0 {
-  if (input.color.a < 0.5) discard;
-  return input.color;
+  if (scene.debug.y < 0.5 && input.mode == 1.0 && frac((input.position.x + input.position.y) * 0.08) < 0.35) discard;
+  const float diffuse = max(dot(normalize(input.normal), normalize(scene.light_direction.xyz)), 0.0);
+  if (scene.debug.x > 0.5) return float4(normalize(input.normal) * 0.5 + 0.5, 1.0);
+  if (scene.debug.z > 0.5) return float4(diffuse.xxx, 1.0);
+  const float lighting = scene.ambient.x + diffuse * (1.0 - scene.ambient.x);
+  return float4(input.color.rgb * lighting, scene.debug.y > 0.5 ? 1.0 : input.color.a);
 }

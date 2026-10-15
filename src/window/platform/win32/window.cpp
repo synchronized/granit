@@ -129,6 +129,8 @@ void ensure_window_class() {
     WNDCLASSW window_class{};
     window_class.lpfnWndProc = window_proc;
     window_class.hInstance = GetModuleHandleW(nullptr);
+    // 显式设置窗口光标，避免继承启动进程或系统当前的等待光标。
+    window_class.hCursor = LoadCursorW(nullptr, MAKEINTRESOURCEW(32512));
     window_class.lpszClassName = window_class_name;
     window_class_registered =
         RegisterClassW(&window_class) != 0 || GetLastError() == ERROR_CLASS_ALREADY_EXISTS;

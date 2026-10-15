@@ -19,13 +19,13 @@ add_custom_command(OUTPUT "${include_file}"
           -P "${PROJECT_SOURCE_DIR}/cmake/assets/embed_binary.cmake"
   DEPENDS "${library}" "${PROJECT_SOURCE_DIR}/cmake/assets/embed_binary.cmake"
   COMMENT "内嵌 10 Transparency Shader Library" VERBATIM)
-add_executable(granit_tutorial_10_transparency main.cpp shader_archive.cpp shader_archive.h "${include_file}")
+add_executable(granit_tutorial_10_transparency main.cpp model_data.hpp shader_archive.cpp shader_archive.h "${include_file}")
 if(NOT EMSCRIPTEN)
   add_dependencies(granit_tutorial_10_transparency granit_tutorial_10_shader_library)
 endif()
 target_include_directories(granit_tutorial_10_transparency PRIVATE "${gen}")
 target_compile_features(granit_tutorial_10_transparency PRIVATE cxx_std_20)
-target_link_libraries(granit_tutorial_10_transparency PRIVATE granit_example_application granit_example_tutorial granit::render_pipeline)
+target_link_libraries(granit_tutorial_10_transparency PRIVATE granit_example_application granit_example_camera granit_example_tutorial granit::render_pipeline)
 granit_target_compile_warnings(granit_tutorial_10_transparency)
 granit_target_output_directories(granit_tutorial_10_transparency)
 if(EMSCRIPTEN)

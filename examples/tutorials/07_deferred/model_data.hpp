@@ -4,31 +4,13 @@
 #ifndef GRANIT_EXAMPLES_TUTORIALS_07_DEFERRED_MODEL_DATA_HPP_
 #define GRANIT_EXAMPLES_TUTORIALS_07_DEFERRED_MODEL_DATA_HPP_
 
-#include <array>
-#include <cstdint>
+#include "geometry/primitives.hpp"
 
 namespace tutorial_deferred {
 
-struct vertex {
-  float position[3];
-  float normal[3];
-};
-
-inline constexpr std::array<vertex, 24> vertices{{
-    {{-1, -1, -1}, {0, 0, -1}}, {{1, -1, -1}, {0, 0, -1}}, {{1, 1, -1}, {0, 0, -1}},
-    {{-1, 1, -1}, {0, 0, -1}},  {{-1, -1, 1}, {0, 0, 1}},  {{1, -1, 1}, {0, 0, 1}},
-    {{1, 1, 1}, {0, 0, 1}},     {{-1, 1, 1}, {0, 0, 1}},   {{-1, -1, -1}, {-1, 0, 0}},
-    {{-1, -1, 1}, {-1, 0, 0}},  {{-1, 1, 1}, {-1, 0, 0}},  {{-1, 1, -1}, {-1, 0, 0}},
-    {{1, -1, -1}, {1, 0, 0}},   {{1, 1, -1}, {1, 0, 0}},   {{1, 1, 1}, {1, 0, 0}},
-    {{1, -1, 1}, {1, 0, 0}},    {{-1, 1, -1}, {0, 1, 0}},  {{-1, 1, 1}, {0, 1, 0}},
-    {{1, 1, 1}, {0, 1, 0}},     {{1, 1, -1}, {0, 1, 0}},   {{-1, -1, -1}, {0, -1, 0}},
-    {{1, -1, -1}, {0, -1, 0}},  {{1, -1, 1}, {0, -1, 0}},  {{-1, -1, 1}, {0, -1, 0}},
-}};
-
-inline constexpr std::array<std::uint16_t, 36> indices{
-    0,  2,  1,  0,  3,  2,  4,  5,  6,  4,  6,  7,  8,  9,  10, 8,  10, 11,
-    12, 13, 14, 12, 14, 15, 16, 17, 18, 16, 18, 19, 20, 21, 22, 20, 22, 23,
-};
+using vertex = granit::example::geometry::normal_vertex;
+inline constexpr auto& vertices = granit::example::geometry::cube_vertices;
+inline constexpr auto& indices = granit::example::geometry::cube_indices;
 
 } // namespace tutorial_deferred
 

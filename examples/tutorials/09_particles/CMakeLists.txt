@@ -31,7 +31,7 @@ add_custom_command(
   VERBATIM
 )
 
-add_executable(granit_tutorial_09_particles main.cpp shader_archive.cpp shader_archive.h
+add_executable(granit_tutorial_09_particles main.cpp model_data.hpp shader_archive.cpp shader_archive.h
                "${tutorial_shader_include}")
 if(NOT EMSCRIPTEN)
   add_dependencies(granit_tutorial_09_particles granit_tutorial_09_shader_library)
@@ -39,7 +39,7 @@ endif()
 target_include_directories(granit_tutorial_09_particles PRIVATE "${tutorial_generated_dir}")
 target_compile_features(granit_tutorial_09_particles PRIVATE cxx_std_20)
 target_link_libraries(granit_tutorial_09_particles PRIVATE granit_example_application
-                      granit_example_tutorial granit::render_pipeline)
+                      granit_example_camera granit_example_tutorial granit::render_pipeline)
 granit_target_compile_warnings(granit_tutorial_09_particles)
 granit_target_output_directories(granit_tutorial_09_particles)
 
