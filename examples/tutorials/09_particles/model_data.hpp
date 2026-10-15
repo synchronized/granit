@@ -31,7 +31,7 @@ inline constexpr auto indices = [] {
   for (std::uint32_t index = 0; index < sphere_indices.size(); ++index)
     result[index] = sphere_indices[index];
   for (std::uint32_t index = 0; index < cube_indices.size(); ++index)
-    result[sphere_indices.size() + index] = static_cast<std::uint16_t>(26 + cube_indices[index]);
+    result[sphere_indices.size() + index] = cube_indices[index];
   return result;
 }();
 
