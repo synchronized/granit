@@ -599,7 +599,7 @@ private:
         .destination_color_factor = granit::blend_factor::one_minus_source_alpha,
         .source_alpha_factor = granit::blend_factor::one,
         .destination_alpha_factor = granit::blend_factor::one_minus_source_alpha}};
-    const auto make_desc = [&](bool write_depth) {
+    const auto make_desc = [&](bool write_depth, granit::cull_mode cull) {
       return granit::graphics_pipeline_desc{
           .layout = pipeline_layout_.ref(),
           .vertex_shader = vertex_shader_.ref(),
@@ -607,14 +607,14 @@ private:
           .color_formats = std::span{&format, 1},
           .depth_stencil_format = granit::texture_format::d32_float,
           .vertex_buffers = vertex_buffers,
-          .primitive = {.cull = granit::cull_mode::back},
+          .primitive = {.cull = cull},
           .depth = granit::depth_state{.test_enabled = true, .write_enabled = write_depth},
           .color_blends = blends,
           .depth_bias = std::nullopt};
     };
-    result = pipeline_.initialize(renderer_owner(), make_desc(false));
+    result = pipeline_.initialize(renderer_owner(), make_desc(false, granit::cull_mode::back));
     if (result.ok())
-      result = debug_pipeline_.initialize(renderer_owner(), make_desc(true));
+      result = debug_pipeline_.initialize(renderer_owner(), make_desc(true, granit::cull_mode::none));
     if (result.ok())
       pipeline_format_ = format;
     return result;
