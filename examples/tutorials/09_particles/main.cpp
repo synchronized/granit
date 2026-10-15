@@ -659,6 +659,7 @@ private:
       ImGui::SliderFloat("Ambient", &ambient_strength_, 0.0F, 0.3F);
       ImGui::Checkbox("Normal debug", &normal_debug_);
       ImGui::Checkbox("Diffuse debug", &diffuse_debug_);
+      ImGui::Checkbox("Light direction debug", &light_direction_debug_);
       ImGui::Checkbox("Gizmos", &gizmos_);
       ImGui::SliderFloat("Lifetime", &lifetime_, 0.25F, 8.0F);
       ImGui::SliderFloat("Size", &particle_size_, 0.05F, 0.45F);
@@ -693,7 +694,8 @@ private:
                             .ambient = {ambient_strength_, ambient_strength_, ambient_strength_,
                                         0.0F},
                             .debug = {normal_debug_ ? 1.0F : 0.0F,
-                                      diffuse_debug_ ? 1.0F : 0.0F, 0.0F, 0.0F}};
+                                      diffuse_debug_ ? 1.0F : 0.0F,
+                                      light_direction_debug_ ? 1.0F : 0.0F, 0.0F}};
     const auto uniform_offset = uniform_stride_ * recording.frame_slot();
     if (result.ok())
       result = particle_buffer_.write(0, std::as_bytes(std::span{particle_instances_}));
@@ -720,7 +722,9 @@ private:
       result = recorder.set_viewports(0, std::span{&viewport, 1});
     if (result.ok())
       result = recorder.set_scissors(0, std::span{&scissor, 1});
-    const auto& active_pipeline = normal_debug_ || diffuse_debug_ ? debug_pipeline_ : pipeline_;
+    const auto& active_pipeline = normal_debug_ || diffuse_debug_ || light_direction_debug_
+                                      ? debug_pipeline_
+                                      : pipeline_;
     if (result.ok())
       result = recorder.bind_graphics_pipeline(active_pipeline);
     if (result.ok())
@@ -810,6 +814,7 @@ private:
   bool gizmos_{true};
   bool normal_debug_{};
   bool diffuse_debug_{};
+  bool light_direction_debug_{};
   float camera_world_y_{};
   bool smoke_test_{};
   std::array<bool, maximum_particles> active_particles_{};

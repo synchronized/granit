@@ -22,8 +22,9 @@
 - 面板默认开启 Gizmo：发射器使用线框球并附带红/绿/蓝 XYZ 轴，方向光使用黄色方形发射面和
   向下箭头；面板单独提供 Opacity（默认 0.4）和 Ambient（默认 0.06），可将 Ambient 调到 0
   检查纯方向光；Normal debug 会将原始法线编码为 RGB，Diffuse debug 会直接显示
-  `max(dot(normal, light_direction), 0)` 的灰度结果，二者都以不透明方式显示，用于区分网格
-  法线、光照方向和颜色混合问题，正常演示时应关闭；
+  `max(dot(normal, light_direction), 0)` 的灰度结果，Light direction debug 会显示片元阶段
+  实际收到的方向，三者都以不透明方式显示，用于区分网格法线、光照方向和颜色混合问题，正常
+  演示时应关闭；
   调试线参与深度测试，关闭后不录制；
 - 验证 Alpha 混合与跨后端资源绑定；
 - Smoke 模式固定数量和时间，便于桌面与浏览器回归。

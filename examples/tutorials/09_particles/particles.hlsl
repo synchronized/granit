@@ -58,6 +58,8 @@ float4 fragment_main(vertex_output input) : SV_Target0 {
   const float3 normal = normalize(input.normal);
   if (scene.debug.x > 0.5)
     return float4(normal * 0.5 + 0.5, 1.0);
+  if (scene.debug.z > 0.5)
+    return float4(normalize(scene.light_direction.xyz) * 0.5 + 0.5, 1.0);
   const float diffuse = max(dot(normal, normalize(scene.light_direction.xyz)), 0.0);
   if (scene.debug.y > 0.5)
     return float4(diffuse, diffuse, diffuse, 1.0);
