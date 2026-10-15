@@ -39,7 +39,7 @@ constexpr std::uint32_t box_shape = 2;
 constexpr std::uint32_t continuous_emission = 1;
 constexpr float pi = 3.14159265F;
 constexpr std::array<float, 3> emitter_position{0.0F, -2.2F, 0.0F};
-constexpr std::array<float, 3> light_position{-1.8F, 3.0F, 2.2F};
+constexpr std::array<float, 3> light_position{1.8F, -3.0F, -2.2F};
 
 struct particle_state {
   std::array<float, 4> position{};
