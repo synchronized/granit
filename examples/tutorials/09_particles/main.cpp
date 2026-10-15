@@ -448,8 +448,12 @@ private:
                          acceleration_color);
 
     append_gizmo_sphere(lines, line_count, light_position, 0.12F, light_color);
-    append_gizmo_line(lines, line_count, {}, light_position, light_color, 2.0F);
-    append_gizmo_arrow(lines, line_count, {}, light_direction, 1.0F, light_color);
+    append_gizmo_line(lines, line_count, light_position, emitter_position, light_color, 2.0F);
+    append_gizmo_arrow(lines, line_count, light_position,
+                       {emitter_position[0] - light_position[0],
+                        emitter_position[1] - light_position[1],
+                        emitter_position[2] - light_position[2]},
+                       1.0F, light_color);
     return debug_draw_.append_lines(std::span{lines}.first(line_count));
   }
 
