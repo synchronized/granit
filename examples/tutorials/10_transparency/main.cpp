@@ -11,6 +11,7 @@
 #include <granit/pipeline/mesh.hpp>
 #include <imgui.h>
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -30,7 +31,12 @@ struct instance_data {
   std::array<float, 4> transform;
   std::array<float, 4> color_mode;
 };
-struct scene_uniforms { matrix4 view_projection; };
+struct scene_uniforms {
+  matrix4 view_projection;
+  std::array<float, 4> light_direction;
+  std::array<float, 4> ambient;
+};
+static_assert(sizeof(scene_uniforms) == sizeof(float) * 24);
 constexpr std::uint32_t object_count = 6;
 
 int failure(std::string_view operation, granit::result result) {
@@ -85,13 +91,16 @@ private:
     if (result.ok()) result = upload.initialize(renderer_owner());
     if (result.ok()) result = upload.write_buffer(vertex_buffer_.ref(), 0, std::as_bytes(std::span{tutorial_transparency::vertices}));
     if (result.ok()) result = upload.write_buffer(index_buffer_.ref(), 0, std::as_bytes(std::span{tutorial_transparency::indices}));
-    if (result.ok()) result = upload.write_buffer(instance_buffer_.ref(), 0, std::as_bytes(std::span{instances_}));
+    draw_instances_ = instances_;
+    if (result.ok()) result = upload.write_buffer(instance_buffer_.ref(), 0, std::as_bytes(std::span{draw_instances_}));
     if (result.ok()) result = upload.submit();
     if (result.ok()) {
-      const std::array attributes{granit::vertex_attribute{.location = 0, .format = granit::vertex_format::float32x3}};
+      const std::array attributes{
+          granit::vertex_attribute{.location = 0, .format = granit::vertex_format::float32x3},
+          granit::vertex_attribute{.location = 1, .format = granit::vertex_format::float32x3, .offset = sizeof(float) * 3}};
       const std::array instance_attributes{
-          granit::vertex_attribute{.location = 1, .format = granit::vertex_format::float32x4},
-          granit::vertex_attribute{.location = 2, .format = granit::vertex_format::float32x4, .offset = sizeof(float) * 4}};
+          granit::vertex_attribute{.location = 2, .format = granit::vertex_format::float32x4},
+          granit::vertex_attribute{.location = 3, .format = granit::vertex_format::float32x4, .offset = sizeof(float) * 4}};
       const std::array bindings{
           granit::mesh_vertex_buffer{.buffer = vertex_buffer_.ref(), .layout = {.stride = sizeof(tutorial_transparency::vertex), .attributes = attributes}},
           granit::mesh_vertex_buffer{.buffer = instance_buffer_.ref(), .layout = {.stride = sizeof(instance_data), .step_mode = granit::vertex_step_mode::instance, .attributes = instance_attributes}}};
@@ -103,7 +112,7 @@ private:
 
   granit::result initialize_layout() noexcept {
     const std::array entries{granit::bind_group_layout_entry{.binding = 0, .type = granit::binding_type::dynamic_uniform_buffer,
-      .visibility = granit::shader_stage_flags::vertex}};
+      .visibility = granit::shader_stage_flags::vertex | granit::shader_stage_flags::fragment}};
     auto result = layout_.initialize(renderer_owner(), entries);
     const std::array layouts{layout_.ref()};
     if (result.ok()) result = pipeline_layout_.initialize(renderer_owner(), layouts);
@@ -125,16 +134,23 @@ private:
     auto result = create_depth();
     if (result.failed()) return result;
     result = pipeline_.reset();
+    if (result.ok()) result = blend_pipeline_.reset();
     const auto format = presentation_info().format;
     const std::array vertex_layouts{
-      granit::vertex_buffer_layout{.stride = sizeof(tutorial_transparency::vertex), .attributes = std::array{granit::vertex_attribute{.location = 0, .format = granit::vertex_format::float32x3}}},
+      granit::vertex_buffer_layout{.stride = sizeof(tutorial_transparency::vertex), .attributes = std::array{
+        granit::vertex_attribute{.location = 0, .format = granit::vertex_format::float32x3},
+        granit::vertex_attribute{.location = 1, .format = granit::vertex_format::float32x3, .offset = sizeof(float) * 3}}},
       granit::vertex_buffer_layout{.stride = sizeof(instance_data), .step_mode = granit::vertex_step_mode::instance,
-        .attributes = std::array{granit::vertex_attribute{.location = 1, .format = granit::vertex_format::float32x4},
-                                 granit::vertex_attribute{.location = 2, .format = granit::vertex_format::float32x4, .offset = sizeof(float) * 4}}}};
+        .attributes = std::array{granit::vertex_attribute{.location = 2, .format = granit::vertex_format::float32x4},
+                                 granit::vertex_attribute{.location = 3, .format = granit::vertex_format::float32x4, .offset = sizeof(float) * 4}}}};
     const std::array blends{granit::color_blend_state{.source_color_factor = granit::blend_factor::source_alpha,
       .destination_color_factor = granit::blend_factor::one_minus_source_alpha, .source_alpha_factor = granit::blend_factor::one,
       .destination_alpha_factor = granit::blend_factor::one_minus_source_alpha}};
     if (result.ok()) result = pipeline_.initialize(renderer_owner(), {.layout = pipeline_layout_.ref(), .vertex_shader = vertex_shader_.ref(),
+      .fragment_shader = fragment_shader_.ref(), .color_formats = std::span{&format, 1}, .depth_stencil_format = granit::texture_format::d32_float,
+      .vertex_buffers = vertex_layouts, .primitive = {.cull = granit::cull_mode::back}, .depth = granit::depth_state{.test_enabled = true, .write_enabled = true},
+      .color_blends = {}, .depth_bias = std::nullopt});
+    if (result.ok()) result = blend_pipeline_.initialize(renderer_owner(), {.layout = pipeline_layout_.ref(), .vertex_shader = vertex_shader_.ref(),
       .fragment_shader = fragment_shader_.ref(), .color_formats = std::span{&format, 1}, .depth_stencil_format = granit::texture_format::d32_float,
       .vertex_buffers = vertex_layouts, .primitive = {.cull = granit::cull_mode::back}, .depth = granit::depth_state{.test_enabled = true, .write_enabled = false},
       .color_blends = blends, .depth_bias = std::nullopt});
@@ -145,8 +161,40 @@ private:
   granit::result on_swapchain_changed(const granit::swapchain_info& info) noexcept override {
     return info.format == pipeline_format_ ? create_depth() : create_pipeline();
   }
+
+  void sort_instances(const granit::math::float3& camera_position) noexcept {
+    std::array<std::size_t, object_count> solid{};
+    std::array<std::size_t, object_count> blend{};
+    std::size_t solid_count = 0;
+    std::size_t blend_count = 0;
+    for (std::size_t index = 0; index < object_count; ++index) {
+      if (instances_[index].color_mode[3] == 2.0F)
+        blend[blend_count++] = index;
+      else
+        solid[solid_count++] = index;
+    }
+    const auto distance_squared = [&](std::size_t index) {
+      const auto& position = instances_[index].transform;
+      const auto x = position[0] - camera_position.x;
+      const auto y = position[1] - camera_position.y;
+      const auto z = position[2] - camera_position.z;
+      return x * x + y * y + z * z;
+    };
+    std::sort(blend.begin(), blend.begin() + static_cast<std::ptrdiff_t>(blend_count),
+              [&](std::size_t left, std::size_t right) {
+                return distance_squared(left) > distance_squared(right);
+              });
+    std::size_t output = 0;
+    for (std::size_t index = 0; index < solid_count; ++index)
+      draw_instances_[output++] = instances_[solid[index]];
+    for (std::size_t index = 0; index < blend_count; ++index)
+      draw_instances_[output++] = instances_[blend[index]];
+    solid_instance_count_ = static_cast<std::uint32_t>(solid_count);
+    blend_instance_count_ = static_cast<std::uint32_t>(blend_count);
+  }
+
   void on_shutdown(granit::result) noexcept override {
-    runtime_.shutdown(); static_cast<void>(pipeline_.reset()); static_cast<void>(group_.reset()); static_cast<void>(pipeline_layout_.reset());
+    runtime_.shutdown(); static_cast<void>(pipeline_.reset()); static_cast<void>(blend_pipeline_.reset()); static_cast<void>(group_.reset()); static_cast<void>(pipeline_layout_.reset());
     static_cast<void>(layout_.reset()); static_cast<void>(uniform_buffer_.reset()); static_cast<void>(mesh_.reset());
     static_cast<void>(instance_buffer_.reset()); static_cast<void>(index_buffer_.reset()); static_cast<void>(vertex_buffer_.reset());
     static_cast<void>(depth_view_.reset()); static_cast<void>(depth_.reset()); static_cast<void>(fragment_shader_.reset());
@@ -160,7 +208,9 @@ private:
     if (result.ok()) result = runtime_.begin_frame(state, frame.delta_seconds, {.name = "10 Transparency Gallery", .description = "Opaque, mask, blend and object sorting", .frame = rendered_frames()});
     if (result.ok()) {
       ImGui::Checkbox("Auto orbit", &auto_orbit_); ImGui::Text("Opaque: 1  Mask: 2  Blend: 3");
-      ImGui::Text("OIT: unsupported; object sorting is fixed by scene order");
+      ImGui::SliderFloat3("Light direction", light_direction_.data(), -1.0F, 1.0F);
+      ImGui::SliderFloat("Ambient", &ambient_strength_, 0.0F, 1.0F);
+      ImGui::Text("OIT: unsupported; Blend uses object-center sorting");
       if (ImGui::Button("Reset camera")) camera_.reset(); result = runtime_.end_frame();
     }
     if (result.failed()) return result;
@@ -169,9 +219,14 @@ private:
     if (!camera_.update(input, frame.swapchain.width, frame.swapchain.height)) return granit::result::invalid_argument;
     granit::example::camera::camera_matrices matrices;
     if (!camera_.matrices(frame.swapchain.width, frame.swapchain.height, matrices)) return granit::result::invalid_argument;
-    const scene_uniforms uniforms{.view_projection = matrices.view_projection};
+    sort_instances(matrices.position);
+    const scene_uniforms uniforms{
+        .view_projection = matrices.view_projection,
+        .light_direction = {light_direction_[0], light_direction_[1], light_direction_[2], 0.0F},
+        .ambient = {ambient_strength_, ambient_strength_, ambient_strength_, 0.0F}};
     granit::frame_recording recording; if (result.ok()) result = frame_context_.begin(frame.acquired, recording);
     const auto uniform_offset = uniform_stride_ * recording.frame_slot();
+    if (result.ok()) result = instance_buffer_.write(0, std::as_bytes(std::span{draw_instances_}));
     if (result.ok()) result = uniform_buffer_.write(uniform_offset, std::as_bytes(std::span{&uniforms, 1}));
     const granit::viewport viewport{0, 0, static_cast<float>(frame.swapchain.width), static_cast<float>(frame.swapchain.height), 0, 1};
     const granit::scissor scissor{0, 0, frame.swapchain.width, frame.swapchain.height};
@@ -186,7 +241,12 @@ private:
     const std::array offsets{static_cast<std::uint32_t>(uniform_offset)};
     if (result.ok()) result = recorder.bind_graphics_group(pipeline_layout_, 0, group_, offsets);
     if (result.ok()) result = recorder.begin_rendering(rendering);
-    if (result.ok()) result = mesh_.draw(recorder, {.instance_count = object_count});
+    if (result.ok()) result = mesh_.draw(recorder, {.instance_count = solid_instance_count_});
+    if (result.ok() && blend_instance_count_ != 0)
+      result = recorder.bind_graphics_pipeline(blend_pipeline_);
+    if (result.ok() && blend_instance_count_ != 0)
+      result = mesh_.draw(recorder, {.instance_count = blend_instance_count_,
+                                     .first_instance = solid_instance_count_});
     if (result.ok()) result = recorder.end_rendering();
     if (result.ok()) result = runtime_.canvas().record(recorder, {.color = frame.backbuffer.view, .color_format = frame.swapchain.format,
       .width = frame.swapchain.width, .height = frame.swapchain.height, .load_operation = granit::attachment_load_operation::load,
@@ -199,9 +259,10 @@ private:
   granit::example::tutorial::tutorial_runtime runtime_; granit::example::camera::orbit_camera camera_;
   granit::example::camera::orbit_camera_input_accumulator camera_input_; granit::frame_context frame_context_;
   granit::shader_library shaders_; granit::shader vertex_shader_, fragment_shader_; granit::buffer vertex_buffer_, index_buffer_, instance_buffer_, uniform_buffer_;
-  granit::mesh mesh_; granit::texture depth_; granit::texture_view depth_view_; granit::bind_group_layout layout_; granit::pipeline_layout pipeline_layout_; granit::bind_group group_; granit::graphics_pipeline pipeline_;
-  std::array<instance_data, object_count> instances_{}; granit::texture_format pipeline_format_{granit::texture_format::undefined};
-  std::uint64_t uniform_stride_{}; bool smoke_test_{}; bool auto_orbit_{};
+  granit::mesh mesh_; granit::texture depth_; granit::texture_view depth_view_; granit::bind_group_layout layout_; granit::pipeline_layout pipeline_layout_; granit::bind_group group_; granit::graphics_pipeline pipeline_, blend_pipeline_;
+  std::array<instance_data, object_count> instances_{}; std::array<instance_data, object_count> draw_instances_{}; granit::texture_format pipeline_format_{granit::texture_format::undefined};
+  std::array<float, 3> light_direction_{0.35F, 0.8F, 0.45F}; float ambient_strength_{0.12F};
+  std::uint64_t uniform_stride_{}; std::uint32_t solid_instance_count_{}; std::uint32_t blend_instance_count_{}; bool smoke_test_{}; bool auto_orbit_{};
 };
 application app;
 } // namespace
