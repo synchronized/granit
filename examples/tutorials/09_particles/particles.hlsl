@@ -3,7 +3,7 @@
 
 struct scene_uniforms {
   float4x4 view_projection;
-  float4 light_position;
+  float4 light_direction;
   float4 ambient;
 };
 
@@ -26,7 +26,6 @@ struct vertex_output {
   float4 position : SV_Position;
   float4 color : COLOR0;
   float3 normal : NORMAL;
-  float3 world_position : TEXCOORD0;
 };
 
 float3 rotate_vector(float3 value, float3 rotation) {
@@ -51,17 +50,12 @@ vertex_output vertex_main(vertex_input input, uint instance_id : SV_InstanceID) 
   output.position = mul(scene.view_projection, float4(world_position, 1.0));
   output.color = particle.color;
   output.normal = rotate_vector(input.normal, particle.rotation.xyz);
-  output.world_position = world_position;
   return output;
 }
 
 float4 fragment_main(vertex_output input) : SV_Target0 {
   const float3 normal = normalize(input.normal);
-  const float3 to_light = scene.light_position.xyz - input.world_position;
-  const float distance = max(length(to_light), 0.0001);
-  const float3 light_direction = to_light / distance;
-  const float attenuation = 1.0 / (1.0 + distance * distance * 0.04);
-  const float diffuse = max(dot(normal, light_direction), 0.0) * attenuation;
+  const float diffuse = max(dot(normal, normalize(scene.light_direction.xyz)), 0.0);
   const float lighting = scene.ambient.x + diffuse * (1.0 - scene.ambient.x);
   return float4(input.color.rgb * lighting, input.color.a);
 }

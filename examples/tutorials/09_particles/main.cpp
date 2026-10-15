@@ -39,7 +39,9 @@ constexpr std::uint32_t box_shape = 2;
 constexpr std::uint32_t continuous_emission = 1;
 constexpr float pi = 3.14159265F;
 constexpr std::array<float, 3> emitter_position{0.0F, -2.2F, 0.0F};
-constexpr std::array<float, 3> light_position{1.8F, -3.0F, -2.2F};
+constexpr std::array<float, 3> light_plane_position{0.0F, 2.5F, 0.0F};
+constexpr std::array<float, 3> light_travel_direction{0.0F, -1.0F, 0.0F};
+constexpr std::array<float, 3> light_direction{0.0F, 1.0F, 0.0F};
 
 struct particle_state {
   std::array<float, 4> position{};
@@ -60,7 +62,7 @@ struct particle_instance {
 
 struct scene_uniforms {
   matrix4 view_projection;
-  std::array<float, 4> light_position;
+  std::array<float, 4> light_direction;
   std::array<float, 4> ambient;
 };
 
@@ -128,6 +130,21 @@ void append_gizmo_axes(std::array<granit::debug_draw_line, 128>& lines, std::siz
                     {center[0], center[1] + size, center[2]}, rgba8(64, 240, 96), 2.5F);
   append_gizmo_line(lines, count, center,
                     {center[0], center[1], center[2] + size}, rgba8(64, 128, 255), 2.5F);
+}
+
+void append_gizmo_square(std::array<granit::debug_draw_line, 128>& lines, std::size_t& count,
+                         const std::array<float, 3>& center, float half_size,
+                         std::uint32_t color) noexcept {
+  const std::array<float, 3> top_left{center[0] - half_size, center[1], center[2] - half_size};
+  const std::array<float, 3> top_right{center[0] + half_size, center[1], center[2] - half_size};
+  const std::array<float, 3> bottom_right{center[0] + half_size, center[1],
+                                          center[2] + half_size};
+  const std::array<float, 3> bottom_left{center[0] - half_size, center[1],
+                                         center[2] + half_size};
+  append_gizmo_line(lines, count, top_left, top_right, color, 2.5F);
+  append_gizmo_line(lines, count, top_right, bottom_right, color, 2.5F);
+  append_gizmo_line(lines, count, bottom_right, bottom_left, color, 2.5F);
+  append_gizmo_line(lines, count, bottom_left, top_left, color, 2.5F);
 }
 
 std::array<float, 3> normalized_or_up(const std::array<float, 3>& value) noexcept {
@@ -446,13 +463,9 @@ private:
       append_gizmo_arrow(lines, line_count, emitter_position, acceleration_, 0.9F,
                          acceleration_color);
 
-    append_gizmo_sphere(lines, line_count, light_position, 0.12F, light_color);
-    append_gizmo_line(lines, line_count, light_position, emitter_position, light_color, 2.0F);
-    append_gizmo_arrow(lines, line_count, light_position,
-                       {emitter_position[0] - light_position[0],
-                        emitter_position[1] - light_position[1],
-                        emitter_position[2] - light_position[2]},
-                       1.0F, light_color);
+    append_gizmo_square(lines, line_count, light_plane_position, 0.42F, light_color);
+    append_gizmo_arrow(lines, line_count, light_plane_position, light_travel_direction, 1.0F,
+                       light_color);
     return debug_draw_.append_lines(std::span{lines}.first(line_count));
   }
 
@@ -661,8 +674,8 @@ private:
     granit::frame_recording recording;
     result = frame_context_.begin(frame.acquired, recording);
     scene_uniforms uniforms{.view_projection = matrices.view_projection,
-                            .light_position = {light_position[0], light_position[1],
-                                               light_position[2], 1.0F},
+                            .light_direction = {light_direction[0], light_direction[1],
+                                                light_direction[2], 0.0F},
                             .ambient = {ambient_strength_, ambient_strength_, ambient_strength_,
                                         0.0F}};
     const auto uniform_offset = uniform_stride_ * recording.frame_slot();
