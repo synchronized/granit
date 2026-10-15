@@ -8,11 +8,13 @@
 #include "shader_archive.h"
 #include "tutorial/tutorial_runtime.h"
 
+#include <granit/pipeline/debug_draw_list.hpp>
 #include <granit/pipeline/mesh.hpp>
 #include <imgui.h>
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
@@ -39,6 +41,60 @@ struct scene_uniforms {
 static_assert(sizeof(scene_uniforms) == sizeof(float) * 24);
 constexpr std::uint32_t object_count = 6;
 
+std::array<float, 3> normalized_or_up(const std::array<float, 3>& value) noexcept {
+  const auto length = std::sqrt(value[0] * value[0] + value[1] * value[1] + value[2] * value[2]);
+  if (length < 0.0001F)
+    return {0.0F, 1.0F, 0.0F};
+  return {value[0] / length, value[1] / length, value[2] / length};
+}
+
+void append_gizmo_line(std::array<granit::debug_draw_line, 64>& lines, std::size_t& count,
+                       const std::array<float, 3>& start, const std::array<float, 3>& end,
+                       std::uint32_t color, float width = 2.5F) noexcept {
+  if (count >= lines.size())
+    return;
+  lines[count++] = {
+      .start = {.x = start[0], .y = start[1], .z = start[2], .color = color},
+      .end = {.x = end[0], .y = end[1], .z = end[2], .color = color},
+      .width = width,
+      .space = granit::debug_draw_space::world,
+      .depth_mode = granit::debug_draw_depth_mode::test,
+  };
+}
+
+void append_gizmo_square(std::array<granit::debug_draw_line, 64>& lines, std::size_t& count,
+                         const std::array<float, 3>& center, float half_size,
+                         std::uint32_t color) noexcept {
+  const std::array<float, 3> top_left{center[0] - half_size, center[1], center[2] - half_size};
+  const std::array<float, 3> top_right{center[0] + half_size, center[1], center[2] - half_size};
+  const std::array<float, 3> bottom_right{center[0] + half_size, center[1], center[2] + half_size};
+  const std::array<float, 3> bottom_left{center[0] - half_size, center[1], center[2] + half_size};
+  append_gizmo_line(lines, count, top_left, top_right, color);
+  append_gizmo_line(lines, count, top_right, bottom_right, color);
+  append_gizmo_line(lines, count, bottom_right, bottom_left, color);
+  append_gizmo_line(lines, count, bottom_left, top_left, color);
+}
+
+void append_gizmo_arrow(std::array<granit::debug_draw_line, 64>& lines, std::size_t& count,
+                        const std::array<float, 3>& start, const std::array<float, 3>& vector,
+                        float scale, std::uint32_t color) noexcept {
+  const auto direction = normalized_or_up(vector);
+  const std::array<float, 3> end{start[0] + direction[0] * scale,
+                                 start[1] + direction[1] * scale,
+                                 start[2] + direction[2] * scale};
+  append_gizmo_line(lines, count, start, end, color);
+  const auto side = normalized_or_up({-direction[1], direction[0], 0.0F});
+  const std::array<float, 3> head_base{end[0] - direction[0] * 0.18F,
+                                       end[1] - direction[1] * 0.18F,
+                                       end[2] - direction[2] * 0.18F};
+  append_gizmo_line(lines, count, end,
+                    {head_base[0] + side[0] * 0.08F, head_base[1] + side[1] * 0.08F,
+                     head_base[2] + side[2] * 0.08F}, color);
+  append_gizmo_line(lines, count, end,
+                    {head_base[0] - side[0] * 0.08F, head_base[1] - side[1] * 0.08F,
+                     head_base[2] - side[2] * 0.08F}, color);
+}
+
 int failure(std::string_view operation, granit::result result) {
   std::cerr << operation << " failed: " << result.message() << '\n';
   return 1;
@@ -52,6 +108,7 @@ public:
 private:
   granit::result on_initialize() noexcept override {
     auto result = runtime_.initialize(renderer_owner());
+    if (result.ok()) result = debug_draw_.initialize(renderer_owner(), {.initial_line_capacity = 64});
     if (result.ok()) result = frame_context_.initialize(renderer());
     if (result.ok()) result = shaders_.initialize(renderer(), tutorial_transparency::shader_archive());
     if (result.ok()) result = shaders_.create_shader("transparency.vertex", vertex_shader_);
@@ -193,8 +250,23 @@ private:
     blend_instance_count_ = static_cast<std::uint32_t>(blend_count);
   }
 
+  granit::result update_light_gizmo() noexcept {
+    auto result = debug_draw_.clear();
+    if (result.failed() || !light_gizmo_)
+      return result;
+    constexpr std::array<float, 3> light_position{0.0F, 3.0F, 0.0F};
+    const auto direction = normalized_or_up(light_direction_);
+    const std::array<float, 3> light_travel_direction{-direction[0], -direction[1], -direction[2]};
+    std::array<granit::debug_draw_line, 64> lines{};
+    std::size_t line_count = 0;
+    constexpr std::uint32_t light_color = 0xffffe040;
+    append_gizmo_square(lines, line_count, light_position, 0.55F, light_color);
+    append_gizmo_arrow(lines, line_count, light_position, light_travel_direction, 1.15F, light_color);
+    return debug_draw_.append_lines(std::span{lines}.first(line_count));
+  }
+
   void on_shutdown(granit::result) noexcept override {
-    runtime_.shutdown(); static_cast<void>(pipeline_.reset()); static_cast<void>(blend_pipeline_.reset()); static_cast<void>(group_.reset()); static_cast<void>(pipeline_layout_.reset());
+    static_cast<void>(debug_draw_.destroy()); runtime_.shutdown(); static_cast<void>(pipeline_.reset()); static_cast<void>(blend_pipeline_.reset()); static_cast<void>(group_.reset()); static_cast<void>(pipeline_layout_.reset());
     static_cast<void>(layout_.reset()); static_cast<void>(uniform_buffer_.reset()); static_cast<void>(mesh_.reset());
     static_cast<void>(instance_buffer_.reset()); static_cast<void>(index_buffer_.reset()); static_cast<void>(vertex_buffer_.reset());
     static_cast<void>(depth_view_.reset()); static_cast<void>(depth_.reset()); static_cast<void>(fragment_shader_.reset());
@@ -210,6 +282,7 @@ private:
       ImGui::Checkbox("Auto orbit", &auto_orbit_); ImGui::Text("Opaque: 1  Mask: 2  Blend: 3");
       ImGui::SliderFloat3("Light direction", light_direction_.data(), -1.0F, 1.0F);
       ImGui::SliderFloat("Ambient", &ambient_strength_, 0.0F, 1.0F);
+      ImGui::Checkbox("Light gizmo", &light_gizmo_);
       ImGui::Text("OIT: unsupported; Blend uses object-center sorting");
       if (ImGui::Button("Reset camera")) camera_.reset(); result = runtime_.end_frame();
     }
@@ -219,6 +292,7 @@ private:
     if (!camera_.update(input, frame.swapchain.width, frame.swapchain.height)) return granit::result::invalid_argument;
     granit::example::camera::camera_matrices matrices;
     if (!camera_.matrices(frame.swapchain.width, frame.swapchain.height, matrices)) return granit::result::invalid_argument;
+    if (result.ok()) result = update_light_gizmo();
     sort_instances(matrices.position);
     const scene_uniforms uniforms{
         .view_projection = matrices.view_projection,
@@ -248,6 +322,22 @@ private:
       result = mesh_.draw(recorder, {.instance_count = blend_instance_count_,
                                      .first_instance = solid_instance_count_});
     if (result.ok()) result = recorder.end_rendering();
+    if (result.ok() && light_gizmo_) {
+      const bool encode_srgb = frame.swapchain.format == granit::texture_format::rgba8_unorm ||
+                               frame.swapchain.format == granit::texture_format::bgra8_unorm;
+      result = debug_draw_.record_world(
+          recorder,
+          {.color = frame.backbuffer.view,
+           .color_format = frame.swapchain.format,
+           .depth = depth_view_.ref(),
+           .depth_format = granit::texture_format::d32_float,
+           .width = frame.swapchain.width,
+           .height = frame.swapchain.height,
+           .view_projection = matrices.view_projection,
+           .color_load_operation = granit::attachment_load_operation::load,
+           .depth_load_operation = granit::attachment_load_operation::load,
+           .encode_srgb = encode_srgb});
+    }
     if (result.ok()) result = runtime_.canvas().record(recorder, {.color = frame.backbuffer.view, .color_format = frame.swapchain.format,
       .width = frame.swapchain.width, .height = frame.swapchain.height, .load_operation = granit::attachment_load_operation::load,
       .encode_srgb = true, .frame_slot = recording.frame_slot()});
@@ -258,11 +348,12 @@ private:
 
   granit::example::tutorial::tutorial_runtime runtime_; granit::example::camera::orbit_camera camera_;
   granit::example::camera::orbit_camera_input_accumulator camera_input_; granit::frame_context frame_context_;
+  granit::debug_draw_list debug_draw_;
   granit::shader_library shaders_; granit::shader vertex_shader_, fragment_shader_; granit::buffer vertex_buffer_, index_buffer_, instance_buffer_, uniform_buffer_;
   granit::mesh mesh_; granit::texture depth_; granit::texture_view depth_view_; granit::bind_group_layout layout_; granit::pipeline_layout pipeline_layout_; granit::bind_group group_; granit::graphics_pipeline pipeline_, blend_pipeline_;
   std::array<instance_data, object_count> instances_{}; std::array<instance_data, object_count> draw_instances_{}; granit::texture_format pipeline_format_{granit::texture_format::undefined};
   std::array<float, 3> light_direction_{0.35F, 0.8F, 0.45F}; float ambient_strength_{0.12F};
-  std::uint64_t uniform_stride_{}; std::uint32_t solid_instance_count_{}; std::uint32_t blend_instance_count_{}; bool smoke_test_{}; bool auto_orbit_{};
+  std::uint64_t uniform_stride_{}; std::uint32_t solid_instance_count_{}; std::uint32_t blend_instance_count_{}; bool smoke_test_{}; bool auto_orbit_{}; bool light_gizmo_{true};
 };
 application app;
 } // namespace
