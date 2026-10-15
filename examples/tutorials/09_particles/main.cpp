@@ -40,7 +40,6 @@ constexpr std::uint32_t continuous_emission = 1;
 constexpr float pi = 3.14159265F;
 constexpr std::array<float, 3> emitter_position{0.0F, -2.2F, 0.0F};
 constexpr std::array<float, 3> light_position{1.8F, -3.0F, -2.2F};
-constexpr std::array<float, 3> light_direction{0.45F, -0.75F, -0.55F};
 
 struct particle_state {
   std::array<float, 4> position{};
@@ -61,7 +60,7 @@ struct particle_instance {
 
 struct scene_uniforms {
   matrix4 view_projection;
-  std::array<float, 4> light_direction;
+  std::array<float, 4> light_position;
   std::array<float, 4> ambient;
 };
 
@@ -662,8 +661,8 @@ private:
     granit::frame_recording recording;
     result = frame_context_.begin(frame.acquired, recording);
     scene_uniforms uniforms{.view_projection = matrices.view_projection,
-                            .light_direction = {light_direction[0], light_direction[1],
-                                                light_direction[2], 0.0F},
+                            .light_position = {light_position[0], light_position[1],
+                                               light_position[2], 1.0F},
                             .ambient = {ambient_strength_, ambient_strength_, ambient_strength_,
                                         0.0F}};
     const auto uniform_offset = uniform_stride_ * recording.frame_slot();
