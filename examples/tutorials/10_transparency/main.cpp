@@ -201,7 +201,8 @@ private:
       granit::vertex_buffer_layout{.stride = sizeof(instance_data), .step_mode = granit::vertex_step_mode::instance,
         .attributes = std::array{granit::vertex_attribute{.location = 2, .format = granit::vertex_format::float32x4},
                                  granit::vertex_attribute{.location = 3, .format = granit::vertex_format::float32x4, .offset = sizeof(float) * 4}}}};
-    const std::array blends{granit::color_blend_state{.source_color_factor = granit::blend_factor::source_alpha,
+    const std::array blends{granit::color_blend_state{.enabled = true,
+      .source_color_factor = granit::blend_factor::source_alpha,
       .destination_color_factor = granit::blend_factor::one_minus_source_alpha, .source_alpha_factor = granit::blend_factor::one,
       .destination_alpha_factor = granit::blend_factor::one_minus_source_alpha}};
     if (result.ok()) result = pipeline_.initialize(renderer_owner(), {.layout = pipeline_layout_.ref(), .vertex_shader = vertex_shader_.ref(),
