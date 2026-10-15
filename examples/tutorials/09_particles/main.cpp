@@ -137,13 +137,11 @@ private:
 
   void reset_particles() noexcept {
     for (std::uint32_t index = 0; index < maximum_particles; ++index) {
-      const float column = static_cast<float>(index % 16);
-      const float row = static_cast<float>(index / 16);
-      const float angle = static_cast<float>(index) * 0.37F;
+      const auto velocity = initial_velocity(index);
       const float hue = static_cast<float>(index % 9) / 8.0F;
       particles_[index] = {
-          .position = {(column - 7.5F) * 0.42F, (row - 7.5F) * 0.27F, std::sin(angle) * 0.9F, 1.0F},
-          .velocity = {std::cos(angle) * 0.18F, 0.25F + hue * 0.2F, std::sin(angle) * 0.18F, 0.0F},
+          .position = {0.0F, -2.2F, 0.0F, 1.0F},
+          .velocity = {velocity[0], velocity[1], velocity[2], 0.0F},
           .color = {0.25F + hue * 0.7F, 0.35F + (1.0F - hue) * 0.5F, 1.0F - hue * 0.35F,
                     0.75F},
           .lifetime = lifetime_,
@@ -152,6 +150,34 @@ private:
       };
     }
     elapsed_ = 0.0F;
+  }
+
+  [[nodiscard]] static float random_component(std::uint32_t index, std::uint32_t salt) noexcept {
+    std::uint32_t value = index * 747796405U + salt * 2891336453U + 1013904223U;
+    value ^= value >> 16U;
+    value *= 2246822519U;
+    value ^= value >> 13U;
+    return static_cast<float>(value & 0xffffU) / 32767.5F - 1.0F;
+  }
+
+  [[nodiscard]] std::array<float, 3> initial_velocity(std::uint32_t index) const noexcept {
+    std::array<float, 3> base = direction_;
+    const auto length = std::sqrt(base[0] * base[0] + base[1] * base[1] + base[2] * base[2]);
+    if (length < 0.0001F)
+      base = {0.0F, 1.0F, 0.0F};
+    else
+      for (auto& component : base)
+        component /= length;
+    std::array<float, 3> velocity{
+        base[0] + random_component(index, 11U) * 0.65F,
+        base[1] + random_component(index, 23U) * 0.65F,
+        base[2] + random_component(index, 37U) * 0.65F};
+    const auto velocity_length = std::sqrt(velocity[0] * velocity[0] + velocity[1] * velocity[1] +
+                                           velocity[2] * velocity[2]);
+    for (auto& component : velocity)
+      component = component / velocity_length * (0.45F +
+        (random_component(index, 53U) + 1.0F) * 0.18F);
+    return velocity;
   }
 
   void update_particles(float delta_seconds) noexcept {
@@ -163,8 +189,8 @@ private:
       if (particle.age >= particle.lifetime) {
         particle.age = std::fmod(particle.age, particle.lifetime);
         particle.position = {0.0F, -2.4F, 0.0F, 1.0F};
-        const float angle = static_cast<float>(index) * 0.37F + elapsed_;
-        particle.velocity = {std::cos(angle) * 0.18F, 0.55F, std::sin(angle) * 0.18F, 0.0F};
+        const auto velocity = initial_velocity(index);
+        particle.velocity = {velocity[0], velocity[1], velocity[2], 0.0F};
       }
       if (animate_ || smoke_test_) {
         particle.velocity[0] += direction_[0] * step;
