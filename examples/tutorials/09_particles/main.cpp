@@ -9,6 +9,7 @@
 #include "tutorial/tutorial_runtime.h"
 
 #include <granit/math/types.hpp>
+#include <granit/pipeline/debug_draw_list.hpp>
 #include <granit/pipeline/mesh.hpp>
 #include <imgui.h>
 
@@ -36,6 +37,8 @@ constexpr std::uint32_t sphere_shape = 0;
 constexpr std::uint32_t cube_shape = 1;
 constexpr std::uint32_t box_shape = 2;
 constexpr std::uint32_t continuous_emission = 1;
+constexpr std::array<float, 3> emitter_position{0.0F, -2.2F, 0.0F};
+constexpr std::array<float, 3> light_position{-1.8F, 3.0F, 2.2F};
 
 struct particle_state {
   std::array<float, 4> position{};
@@ -66,6 +69,69 @@ int report_failure(std::string_view operation, granit::result result) {
   return 1;
 }
 
+constexpr std::uint32_t rgba8(std::uint8_t red, std::uint8_t green, std::uint8_t blue,
+                              std::uint8_t alpha = 255) noexcept {
+  return static_cast<std::uint32_t>(red) | (static_cast<std::uint32_t>(green) << 8U) |
+         (static_cast<std::uint32_t>(blue) << 16U) | (static_cast<std::uint32_t>(alpha) << 24U);
+}
+
+void append_gizmo_line(std::array<granit::debug_draw_line, 32>& lines, std::size_t& count,
+                       const std::array<float, 3>& start, const std::array<float, 3>& end,
+                       std::uint32_t color, float width = 2.0F) noexcept {
+  if (count >= lines.size())
+    return;
+  lines[count++] = {
+      .start = {.x = start[0], .y = start[1], .z = start[2], .color = color},
+      .end = {.x = end[0], .y = end[1], .z = end[2], .color = color},
+      .width = width,
+      .space = granit::debug_draw_space::world,
+      .depth_mode = granit::debug_draw_depth_mode::disabled,
+  };
+}
+
+void append_gizmo_cross(std::array<granit::debug_draw_line, 32>& lines, std::size_t& count,
+                        const std::array<float, 3>& center, float size,
+                        std::uint32_t color) noexcept {
+  append_gizmo_line(lines, count, {center[0] - size, center[1], center[2]},
+                    {center[0] + size, center[1], center[2]}, color);
+  append_gizmo_line(lines, count, {center[0], center[1] - size, center[2]},
+                    {center[0], center[1] + size, center[2]}, color);
+  append_gizmo_line(lines, count, {center[0], center[1], center[2] - size},
+                    {center[0], center[1], center[2] + size}, color);
+}
+
+std::array<float, 3> normalized_or_up(const std::array<float, 3>& value) noexcept {
+  const auto length = std::sqrt(value[0] * value[0] + value[1] * value[1] + value[2] * value[2]);
+  if (length < 0.0001F)
+    return {0.0F, 1.0F, 0.0F};
+  return {value[0] / length, value[1] / length, value[2] / length};
+}
+
+void append_gizmo_arrow(std::array<granit::debug_draw_line, 32>& lines, std::size_t& count,
+                        const std::array<float, 3>& start, const std::array<float, 3>& vector,
+                        float scale, std::uint32_t color) noexcept {
+  const auto direction = normalized_or_up(vector);
+  const std::array<float, 3> end{start[0] + direction[0] * scale,
+                                 start[1] + direction[1] * scale,
+                                 start[2] + direction[2] * scale};
+  append_gizmo_line(lines, count, start, end, color, 2.5F);
+  const std::array<float, 3> side{-direction[1], direction[0], 0.0F};
+  const auto side_direction = normalized_or_up(side);
+  constexpr float head_length = 0.18F;
+  constexpr float head_width = 0.08F;
+  const std::array<float, 3> head_base{end[0] - direction[0] * head_length,
+                                       end[1] - direction[1] * head_length,
+                                       end[2] - direction[2] * head_length};
+  const std::array<float, 3> left{head_base[0] + side_direction[0] * head_width,
+                                  head_base[1] + side_direction[1] * head_width,
+                                  head_base[2] + side_direction[2] * head_width};
+  const std::array<float, 3> right{head_base[0] - side_direction[0] * head_width,
+                                   head_base[1] - side_direction[1] * head_width,
+                                   head_base[2] - side_direction[2] * head_width};
+  append_gizmo_line(lines, count, end, left, color, 2.5F);
+  append_gizmo_line(lines, count, end, right, color, 2.5F);
+}
+
 class tutorial_application final : public granit::example::application {
 public:
   void set_smoke_test(bool enabled) noexcept { smoke_test_ = enabled; }
@@ -75,6 +141,8 @@ public:
 private:
   granit::result on_initialize() noexcept override {
     auto result = runtime_.initialize(renderer_owner());
+    if (result.ok())
+      result = debug_draw_.initialize(renderer_owner(), {.initial_line_capacity = 32});
     if (result.ok())
       result = create_depth_target();
     if (result.ok())
@@ -107,6 +175,7 @@ private:
   }
 
   void on_shutdown(granit::result) noexcept override {
+    static_cast<void>(debug_draw_.destroy());
     runtime_.shutdown();
     static_cast<void>(pipeline_.reset());
     static_cast<void>(resource_group_.reset());
@@ -327,6 +396,34 @@ private:
     }
   }
 
+  granit::result update_gizmos() noexcept {
+    auto result = debug_draw_.clear();
+    if (result.failed() || !gizmos_)
+      return result;
+
+    std::array<granit::debug_draw_line, 32> lines{};
+    std::size_t line_count = 0;
+    const auto emitter_color = rgba8(255, 64, 224);
+    const auto direction_color = rgba8(64, 224, 255);
+    const auto acceleration_color = rgba8(255, 160, 32);
+    const auto light_color = rgba8(255, 240, 64);
+    append_gizmo_cross(lines, line_count, emitter_position, 0.18F, emitter_color);
+    append_gizmo_arrow(lines, line_count, emitter_position, direction_, 1.25F, direction_color);
+    if (acceleration_[0] * acceleration_[0] + acceleration_[1] * acceleration_[1] +
+            acceleration_[2] * acceleration_[2] >
+        0.0001F)
+      append_gizmo_arrow(lines, line_count, emitter_position, acceleration_, 0.9F,
+                         acceleration_color);
+
+    append_gizmo_cross(lines, line_count, light_position, 0.16F, light_color);
+    const std::array<float, 3> light_target{};
+    append_gizmo_arrow(lines, line_count, light_position,
+                       {light_target[0] - light_position[0], light_target[1] - light_position[1],
+                        light_target[2] - light_position[2]},
+                       1.0F, light_color);
+    return debug_draw_.append_lines(std::span{lines}.first(line_count));
+  }
+
   granit::result initialize_buffers() noexcept {
     auto result = vertex_buffer_.initialize(
         renderer_owner(), {.size = sizeof(tutorial_particles::vertices),
@@ -503,6 +600,7 @@ private:
       ImGui::SliderFloat3("Direction", direction_.data(), -1.0F, 1.0F);
       ImGui::SliderFloat3("Acceleration", acceleration_.data(), -2.0F, 2.0F);
       ImGui::SliderFloat3("Angular speed", angular_speed_.data(), 0.0F, 12.0F);
+      ImGui::Checkbox("Gizmos", &gizmos_);
       ImGui::SliderFloat("Lifetime", &lifetime_, 0.25F, 8.0F);
       ImGui::SliderFloat("Size", &particle_size_, 0.05F, 0.45F);
       ImGui::Checkbox("Fade out", &fade_);
@@ -523,6 +621,9 @@ private:
       return granit::result::invalid_argument;
     update_particles(frame.delta_seconds);
     sort_particles(matrices.position);
+    result = update_gizmos();
+    if (result.failed())
+      return result;
     granit::frame_recording recording;
     result = frame_context_.begin(frame.acquired, recording);
     scene_uniforms uniforms{.view_projection = matrices.view_projection};
@@ -566,6 +667,22 @@ private:
           recorder, {.instance_count = smoke_test_ ? smoke_particles : particle_count_});
     if (result.ok())
       result = recorder.end_rendering();
+    if (result.ok() && gizmos_) {
+      const bool encode_srgb = frame.swapchain.format == granit::texture_format::rgba8_unorm ||
+                               frame.swapchain.format == granit::texture_format::bgra8_unorm;
+      result = debug_draw_.record_world(
+          recorder,
+          {.color = frame.backbuffer.view,
+           .color_format = frame.swapchain.format,
+           .depth = depth_view_.ref(),
+           .depth_format = granit::texture_format::d32_float,
+           .width = frame.swapchain.width,
+           .height = frame.swapchain.height,
+           .view_projection = matrices.view_projection,
+           .color_load_operation = granit::attachment_load_operation::load,
+           .depth_load_operation = granit::attachment_load_operation::load,
+           .encode_srgb = encode_srgb});
+    }
     if (result.ok()) {
       const bool encode_srgb = frame.swapchain.format == granit::texture_format::rgba8_unorm ||
                                frame.swapchain.format == granit::texture_format::bgra8_unorm;
@@ -588,6 +705,7 @@ private:
   granit::example::camera::orbit_camera camera_;
   granit::example::camera::orbit_camera_input_accumulator camera_input_;
   granit::frame_context frame_context_;
+  granit::debug_draw_list debug_draw_;
   granit::shader_library shader_library_;
   granit::shader vertex_shader_, fragment_shader_;
   granit::buffer vertex_buffer_, index_buffer_, particle_buffer_, uniform_buffer_;
@@ -618,6 +736,7 @@ private:
   float particle_size_{0.18F};
   bool animate_{true};
   bool fade_{true};
+  bool gizmos_{true};
   bool smoke_test_{};
   std::array<bool, maximum_particles> active_particles_{};
 };
