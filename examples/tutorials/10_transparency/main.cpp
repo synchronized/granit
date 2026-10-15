@@ -206,11 +206,11 @@ private:
       .destination_alpha_factor = granit::blend_factor::one_minus_source_alpha}};
     if (result.ok()) result = pipeline_.initialize(renderer_owner(), {.layout = pipeline_layout_.ref(), .vertex_shader = vertex_shader_.ref(),
       .fragment_shader = fragment_shader_.ref(), .color_formats = std::span{&format, 1}, .depth_stencil_format = granit::texture_format::d32_float,
-      .vertex_buffers = vertex_layouts, .primitive = {.cull = granit::cull_mode::back}, .depth = granit::depth_state{.test_enabled = true, .write_enabled = true},
+      .vertex_buffers = vertex_layouts, .primitive = {.cull = pipeline_cull_none_ ? granit::cull_mode::none : granit::cull_mode::back}, .depth = granit::depth_state{.test_enabled = true, .write_enabled = true},
       .color_blends = {}, .depth_bias = std::nullopt});
     if (result.ok()) result = blend_pipeline_.initialize(renderer_owner(), {.layout = pipeline_layout_.ref(), .vertex_shader = vertex_shader_.ref(),
       .fragment_shader = fragment_shader_.ref(), .color_formats = std::span{&format, 1}, .depth_stencil_format = granit::texture_format::d32_float,
-      .vertex_buffers = vertex_layouts, .primitive = {.cull = granit::cull_mode::back}, .depth = granit::depth_state{.test_enabled = true, .write_enabled = false},
+      .vertex_buffers = vertex_layouts, .primitive = {.cull = pipeline_cull_none_ ? granit::cull_mode::none : granit::cull_mode::back}, .depth = granit::depth_state{.test_enabled = true, .write_enabled = false},
       .color_blends = blends, .depth_bias = std::nullopt});
     if (result.ok()) pipeline_format_ = format;
     return result;
@@ -287,6 +287,11 @@ private:
       ImGui::Checkbox("Normal debug", &normal_debug_);
       ImGui::Checkbox("Diffuse debug", &diffuse_debug_);
       ImGui::Checkbox("Opaque only debug", &opaque_only_debug_);
+      ImGui::Checkbox("Cull none debug", &cull_none_debug_);
+      if (result.ok() && cull_none_debug_ != pipeline_cull_none_) {
+        pipeline_cull_none_ = cull_none_debug_;
+        result = create_pipeline();
+      }
       ImGui::Text("OIT: unsupported; Blend uses object-center sorting");
       if (ImGui::Button("Reset camera")) camera_.reset(); result = runtime_.end_frame();
     }
@@ -359,7 +364,7 @@ private:
   granit::mesh mesh_; granit::texture depth_; granit::texture_view depth_view_; granit::bind_group_layout layout_; granit::pipeline_layout pipeline_layout_; granit::bind_group group_; granit::graphics_pipeline pipeline_, blend_pipeline_;
   std::array<instance_data, object_count> instances_{}; std::array<instance_data, object_count> draw_instances_{}; granit::texture_format pipeline_format_{granit::texture_format::undefined};
   std::array<float, 3> light_direction_{0.35F, 0.8F, 0.45F}; float ambient_strength_{0.12F};
-  std::uint64_t uniform_stride_{}; std::uint32_t solid_instance_count_{}; std::uint32_t blend_instance_count_{}; bool smoke_test_{}; bool auto_orbit_{}; bool light_gizmo_{true}; bool normal_debug_{}; bool diffuse_debug_{}; bool opaque_only_debug_{};
+  std::uint64_t uniform_stride_{}; std::uint32_t solid_instance_count_{}; std::uint32_t blend_instance_count_{}; bool smoke_test_{}; bool auto_orbit_{}; bool light_gizmo_{true}; bool normal_debug_{}; bool diffuse_debug_{}; bool opaque_only_debug_{}; bool cull_none_debug_{}; bool pipeline_cull_none_{};
 };
 application app;
 } // namespace

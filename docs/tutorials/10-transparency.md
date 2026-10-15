@@ -15,6 +15,7 @@
 `Diffuse debug` 会用灰度直接显示 `normal · light_direction`，排除材质颜色造成的视觉误判。
 `Opaque only debug` 会关闭 Mask 丢弃和 Blend 排序，强制所有对象走深度写入的不透明路径，用于
 区分透明效果与深度/绕序问题。
+`Cull none debug` 会临时关闭背面剔除并重建管线，用于判断缺面是否由索引绕序造成。
 
 ```powershell
 cmake --preset windows-clang-debug
