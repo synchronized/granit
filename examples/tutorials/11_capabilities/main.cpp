@@ -13,6 +13,10 @@
 #include <span>
 #include <string_view>
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten/emscripten.h>
+#endif
+
 namespace {
 struct format_row {
   const char* name;
@@ -31,6 +35,8 @@ int failure(std::string_view operation, granit::result result) {
 class application final : public granit::example::application {
 public:
   void set_smoke_test(bool value) noexcept { smoke_test_ = value; }
+  [[nodiscard]] std::uint32_t canvas_items() const noexcept { return runtime_.canvas_items(); }
+  [[nodiscard]] std::uint32_t format_count() const noexcept { return format_count_; }
 
 private:
   granit::result on_initialize() noexcept override {
@@ -189,6 +195,25 @@ private:
 };
 application app;
 } // namespace
+
+#if defined(__EMSCRIPTEN__)
+extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_11_rendered_frames() noexcept {
+  return app.rendered_frames();
+}
+extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_11_recreate_count() noexcept {
+  return app.completed_recreates();
+}
+extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_11_feature_value() noexcept {
+  return app.format_count();
+}
+extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_11_canvas_items() noexcept {
+  return app.canvas_items();
+}
+extern "C" EMSCRIPTEN_KEEPALIVE int granit_tutorial_11_ready() noexcept {
+  return app.ready() ? 1 : 0;
+}
+#endif
+
 int main(int argc, char** argv) {
   const bool smoke = argc == 2 && std::string_view{argv[1]} == "--smoke-test";
   app.set_smoke_test(smoke);
