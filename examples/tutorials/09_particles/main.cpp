@@ -35,6 +35,7 @@ constexpr std::uint32_t smoke_particles = 64;
 constexpr std::uint32_t sphere_shape = 0;
 constexpr std::uint32_t cube_shape = 1;
 constexpr std::uint32_t box_shape = 2;
+constexpr std::uint32_t continuous_emission = 1;
 
 struct particle_state {
   std::array<float, 4> position{};
@@ -138,7 +139,35 @@ private:
   }
 
   void reset_particles() noexcept {
-    for (std::uint32_t index = 0; index < maximum_particles; ++index) {
+    active_particles_.fill(false);
+    active_count_ = 0;
+    next_particle_ = 0;
+    emission_accumulator_ = 0.0F;
+    for (std::uint32_t index = 0; index < maximum_particles; ++index)
+      hide_particle(index);
+    emit_particles(smoke_test_ ? smoke_particles : particle_count_);
+  }
+
+  void emit_particles(std::uint32_t count) noexcept {
+    for (std::uint32_t emitted = 0; emitted < count; ++emitted) {
+      std::uint32_t candidate = next_particle_;
+      bool found = false;
+      for (std::uint32_t offset = 0; offset < maximum_particles; ++offset) {
+        candidate = (next_particle_ + offset) % maximum_particles;
+        if (!active_particles_[candidate]) {
+          found = true;
+          break;
+        }
+      }
+      if (!found)
+        return;
+      spawn_particle(candidate);
+      next_particle_ = (candidate + 1) % maximum_particles;
+    }
+  }
+
+  void spawn_particle(std::uint32_t index) noexcept {
+    {
       const auto velocity = initial_velocity(index);
       const float hue = static_cast<float>(index % 9) / 8.0F;
       const auto angular_velocity = initial_angular_velocity(index);
@@ -148,14 +177,20 @@ private:
           .color = {0.25F + hue * 0.7F, 0.35F + (1.0F - hue) * 0.5F, 1.0F - hue * 0.35F,
                     0.75F},
           .lifetime = lifetime_,
-          .age = hue * 1.2F,
+          .age = 0.0F,
           .rotation = {random_component(index, 83U) * 3.14159265F,
                        random_component(index, 89U) * 3.14159265F,
                        random_component(index, 97U) * 3.14159265F},
           .angular_velocity = angular_velocity,
       };
+      active_particles_[index] = true;
+      ++active_count_;
     }
-    elapsed_ = 0.0F;
+  }
+
+  void hide_particle(std::uint32_t index) noexcept {
+    particle_instances_[index] = {};
+    particle_instances_[index].color[3] = 0.0F;
   }
 
   [[nodiscard]] static float random_component(std::uint32_t index, std::uint32_t salt) noexcept {
@@ -194,19 +229,33 @@ private:
   }
 
   void update_particles(float delta_seconds) noexcept {
-    const auto count = smoke_test_ ? smoke_particles : particle_count_;
     const auto step = smoke_test_ ? 0.75F : std::min(delta_seconds, 0.05F);
-    for (std::uint32_t index = 0; index < count; ++index) {
+    const auto simulation_count = smoke_test_ ? smoke_particles : particle_count_;
+    if (!smoke_test_ && emission_mode_ == continuous_emission) {
+      emission_accumulator_ += delta_seconds * emission_rate_;
+      const auto count = static_cast<std::uint32_t>(emission_accumulator_);
+      emission_accumulator_ -= static_cast<float>(count);
+      emit_particles(count);
+    }
+    for (std::uint32_t index = 0; index < simulation_count; ++index) {
+      if (!active_particles_[index]) {
+        hide_particle(index);
+        continue;
+      }
       auto& particle = particles_[index];
       particle.age += step;
       if (particle.age >= particle.lifetime) {
-        particle.age = std::fmod(particle.age, particle.lifetime);
-        particle.position = {0.0F, -2.4F, 0.0F, 1.0F};
-        const auto velocity = initial_velocity(index);
-        particle.velocity = {velocity[0], velocity[1], velocity[2], 0.0F};
-        particle.rotation = {random_component(index, 83U) * 3.14159265F,
-                             random_component(index, 89U) * 3.14159265F,
-                             random_component(index, 97U) * 3.14159265F};
+        if (smoke_test_) {
+          active_particles_[index] = false;
+          --active_count_;
+          hide_particle(index);
+          spawn_particle(index);
+          continue;
+        }
+        active_particles_[index] = false;
+        --active_count_;
+        hide_particle(index);
+        continue;
       }
       if (animate_ || smoke_test_) {
         particle.velocity[0] += direction_[0] * step;
@@ -234,7 +283,6 @@ private:
           .rotation = {particle.rotation[0], particle.rotation[1], particle.rotation[2], 0.0F},
       };
     }
-    elapsed_ += smoke_test_ ? 0.0F : delta_seconds;
   }
 
   granit::result initialize_buffers() noexcept {
@@ -386,7 +434,22 @@ private:
     if (result.ok()) {
       int count = static_cast<int>(particle_count_);
       ImGui::SliderInt("Particles", &count, 1, static_cast<int>(maximum_particles));
-      particle_count_ = static_cast<std::uint32_t>(count);
+      if (static_cast<std::uint32_t>(count) != particle_count_) {
+        particle_count_ = static_cast<std::uint32_t>(count);
+        reset_particles();
+      }
+      const char* emission_modes[] = {"Burst", "Continuous"};
+      int selected_emission_mode = static_cast<int>(emission_mode_);
+      if (ImGui::Combo("Emission mode", &selected_emission_mode, emission_modes, 2)) {
+        emission_mode_ = static_cast<std::uint32_t>(selected_emission_mode);
+        reset_particles();
+      }
+      ImGui::SliderFloat("Emission rate", &emission_rate_, 1.0F, 256.0F);
+      int burst_count = static_cast<int>(burst_count_);
+      ImGui::SliderInt("Burst count", &burst_count, 1, static_cast<int>(maximum_particles));
+      burst_count_ = static_cast<std::uint32_t>(burst_count);
+      if (ImGui::Button("Emit burst"))
+        emit_particles(burst_count_);
       const char* shapes[] = {"Sphere", "Cube", "Box"};
       int selected_shape = static_cast<int>(shape_);
       if (ImGui::Combo("Shape", &selected_shape, shapes, 3))
@@ -401,7 +464,7 @@ private:
       ImGui::Checkbox("Animate", &animate_);
       if (ImGui::Button("Reset particles"))
         reset_particles();
-      ImGui::Text("Storage particles: %u / %u", particle_count_, maximum_particles);
+      ImGui::Text("Active particles: %u / %u", active_count_, particle_count_);
       ImGui::Text("Draw instances: %u", smoke_test_ ? smoke_particles : particle_count_);
       result = runtime_.end_frame();
     }
@@ -494,17 +557,23 @@ private:
   granit::texture_format pipeline_format_{granit::texture_format::undefined};
   std::uint64_t uniform_stride_{};
   std::uint32_t particle_count_{maximum_particles};
+  std::uint32_t active_count_{};
+  std::uint32_t next_particle_{};
+  std::uint32_t emission_mode_{continuous_emission};
+  std::uint32_t burst_count_{32};
   std::uint32_t shape_{sphere_shape};
   std::array<float, 4> particle_color_{1.0F, 1.0F, 1.0F, 1.0F};
   std::array<float, 3> direction_{0.0F, 0.15F, 0.0F};
   std::array<float, 3> acceleration_{};
   std::array<float, 3> angular_speed_{2.5F, 2.5F, 2.5F};
+  float emission_rate_{32.0F};
+  float emission_accumulator_{};
   float lifetime_{4.0F};
   float particle_size_{0.18F};
-  float elapsed_{};
   bool animate_{true};
   bool fade_{true};
   bool smoke_test_{};
+  std::array<bool, maximum_particles> active_particles_{};
 };
 
 tutorial_application application;
