@@ -52,8 +52,8 @@ inline constexpr std::array<std::uint16_t, 180> indices = [] {
   for (std::uint32_t segment = 0; segment < 8; ++segment) {
     const auto next = (segment + 1) % 8;
     result[output++] = 0;
-    result[output++] = static_cast<std::uint16_t>(1 + next);
     result[output++] = static_cast<std::uint16_t>(1 + segment);
+    result[output++] = static_cast<std::uint16_t>(1 + next);
   }
   for (std::uint32_t ring = 0; ring < 2; ++ring) {
     const auto first = 1 + ring * 8;
@@ -61,18 +61,18 @@ inline constexpr std::array<std::uint16_t, 180> indices = [] {
     for (std::uint32_t segment = 0; segment < 8; ++segment) {
       const auto next = (segment + 1) % 8;
       result[output++] = static_cast<std::uint16_t>(first + segment);
-      result[output++] = static_cast<std::uint16_t>(second + next);
       result[output++] = static_cast<std::uint16_t>(second + segment);
-      result[output++] = static_cast<std::uint16_t>(first + segment);
-      result[output++] = static_cast<std::uint16_t>(first + next);
       result[output++] = static_cast<std::uint16_t>(second + next);
+      result[output++] = static_cast<std::uint16_t>(first + segment);
+      result[output++] = static_cast<std::uint16_t>(second + next);
+      result[output++] = static_cast<std::uint16_t>(first + next);
     }
   }
   for (std::uint32_t segment = 0; segment < 8; ++segment) {
     const auto next = (segment + 1) % 8;
     result[output++] = 25;
-    result[output++] = static_cast<std::uint16_t>(17 + segment);
     result[output++] = static_cast<std::uint16_t>(17 + next);
+    result[output++] = static_cast<std::uint16_t>(17 + segment);
   }
   constexpr std::array<std::uint16_t, 36> cube_indices{
       0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7, 0, 4, 7, 0, 7, 3,
