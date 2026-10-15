@@ -7,6 +7,7 @@
 共享低面数 Mesh 绘制球体、正方体或长方体，并通过 Alpha 混合绘制。它是 S-98B 的交互式能力
 示例，完整源码位于
 [`examples/tutorials/09_particles`](../../examples/tutorials/09_particles)。
+自定义 Mesh 的正面绕序遵循[坐标系统与正面剔除约定](../reference/coordinates.md#三角形正面绕序与背面剔除)。
 
 ## 验证目标
 
