@@ -75,8 +75,8 @@ inline constexpr std::array<std::uint16_t, 180> indices = [] {
     result[output++] = static_cast<std::uint16_t>(17 + segment);
   }
   constexpr std::array<std::uint16_t, 36> cube_indices{
-      0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7, 0, 4, 7, 0, 7, 3,
-      1, 2, 6, 1, 6, 5, 3, 7, 6, 3, 6, 2, 0, 1, 5, 0, 5, 4,
+      26, 28, 27, 26, 29, 28, 30, 31, 32, 30, 32, 33, 26, 30, 33, 26, 33, 29,
+      27, 28, 32, 27, 32, 31, 29, 33, 32, 29, 32, 28, 26, 27, 31, 26, 31, 30,
   };
   for (const auto index : cube_indices)
     result[output++] = index;
