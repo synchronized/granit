@@ -11,7 +11,8 @@
 ## 验证目标
 
 - 动态更新 GPU Storage Buffer，不创建 Particle 专用公共 API；
-- 使用实例化绘制和共享 Mesh 生成可变数量的三维粒子；
+- 使用实例化绘制和共享 Mesh 生成可变数量的三维粒子；Sphere 使用带法线的低面数 UV 网格，
+  并通过教程内置方向光显示基本的面间明暗；
 - 粒子从固定发射点出发，使用固定种子生成可复现的随机方向和三轴正负角速度；面板中的
   Direction、Acceleration 和 Angular speed 都是三维控制量；
 - 支持 Burst 单次发射和 Continuous 持续发射，使用固定大小的粒子池回收生命周期结束的粒子；

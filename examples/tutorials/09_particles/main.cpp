@@ -332,7 +332,9 @@ private:
 
   granit::result initialize_meshes() noexcept {
     const std::array attributes{
-        granit::vertex_attribute{.location = 0, .format = granit::vertex_format::float32x3}};
+        granit::vertex_attribute{.location = 0, .format = granit::vertex_format::float32x3},
+        granit::vertex_attribute{.location = 1, .format = granit::vertex_format::float32x3,
+                                 .offset = sizeof(float) * 3}};
     const std::array buffers{granit::mesh_vertex_buffer{
         .buffer = vertex_buffer_.ref(),
         .layout = {.stride = sizeof(tutorial_particles::vertex), .attributes = attributes}}};
@@ -340,15 +342,15 @@ private:
         renderer_owner(), {.vertex_buffers = buffers,
                             .index_buffer = index_buffer_.ref(),
                             .index_format = granit::index_type::uint16,
-                            .index_count = 24});
+                            .index_count = 144});
     if (result.ok())
       result = meshes_[cube_shape].initialize(
           renderer_owner(), {.vertex_buffers = buffers,
                               .index_buffer = index_buffer_.ref(),
                               .index_format = granit::index_type::uint16,
                               .index_count = 36,
-                              .first_index = 24,
-                              .vertex_offset = 6});
+                              .first_index = 144,
+                              .vertex_offset = 26});
     return result;
   }
 
@@ -397,7 +399,9 @@ private:
       return result;
     const auto format = presentation_info().format;
     const std::array attributes{
-        granit::vertex_attribute{.location = 0, .format = granit::vertex_format::float32x3}};
+        granit::vertex_attribute{.location = 0, .format = granit::vertex_format::float32x3},
+        granit::vertex_attribute{.location = 1, .format = granit::vertex_format::float32x3,
+                                 .offset = sizeof(float) * 3}};
     const std::array vertex_buffers{granit::vertex_buffer_layout{
         .stride = sizeof(tutorial_particles::vertex), .attributes = attributes}};
     const std::array blends{granit::color_blend_state{
