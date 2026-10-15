@@ -299,6 +299,34 @@ private:
     }
   }
 
+  void sort_particles(const granit::math::float3& camera_position) noexcept {
+    const auto draw_count = smoke_test_ ? smoke_particles : particle_count_;
+    std::array<std::uint32_t, maximum_particles> order{};
+    std::uint32_t active_count = 0;
+    for (std::uint32_t index = 0; index < draw_count; ++index) {
+      if (active_particles_[index])
+        order[active_count++] = index;
+    }
+    const auto distance_squared = [&](std::uint32_t index) {
+      const auto& position = particles_[index].position;
+      const auto x = position[0] - camera_position.x;
+      const auto y = position[1] - camera_position.y;
+      const auto z = position[2] - camera_position.z;
+      return x * x + y * y + z * z;
+    };
+    std::sort(order.begin(), order.begin() + active_count,
+              [&](std::uint32_t left, std::uint32_t right) {
+                return distance_squared(left) > distance_squared(right);
+              });
+    const auto unsorted = particle_instances_;
+    for (std::uint32_t output = 0; output < draw_count; ++output) {
+      if (output < active_count)
+        particle_instances_[output] = unsorted[order[output]];
+      else
+        hide_particle(output);
+    }
+  }
+
   granit::result initialize_buffers() noexcept {
     auto result = vertex_buffer_.initialize(
         renderer_owner(), {.size = sizeof(tutorial_particles::vertices),
@@ -494,6 +522,7 @@ private:
     if (!camera_.matrices(frame.swapchain.width, frame.swapchain.height, matrices))
       return granit::result::invalid_argument;
     update_particles(frame.delta_seconds);
+    sort_particles(matrices.position);
     granit::frame_recording recording;
     result = frame_context_.begin(frame.acquired, recording);
     scene_uniforms uniforms{.view_projection = matrices.view_projection};
