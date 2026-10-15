@@ -42,7 +42,8 @@ struct particle_state {
   std::array<float, 4> color{};
   float lifetime{};
   float age{};
-  std::array<float, 2> reserved{};
+  float rotation{};
+  float angular_velocity{};
 };
 
 struct particle_instance {
@@ -139,6 +140,7 @@ private:
     for (std::uint32_t index = 0; index < maximum_particles; ++index) {
       const auto velocity = initial_velocity(index);
       const float hue = static_cast<float>(index % 9) / 8.0F;
+      const float rotation_direction = random_component(index, 71U) < 0.0F ? -1.0F : 1.0F;
       particles_[index] = {
           .position = {0.0F, -2.2F, 0.0F, 1.0F},
           .velocity = {velocity[0], velocity[1], velocity[2], 0.0F},
@@ -146,7 +148,8 @@ private:
                     0.75F},
           .lifetime = lifetime_,
           .age = hue * 1.2F,
-          .reserved = {},
+          .rotation = random_component(index, 83U) * 3.14159265F,
+          .angular_velocity = rotation_direction * angular_speed_,
       };
     }
     elapsed_ = 0.0F;
@@ -191,6 +194,7 @@ private:
         particle.position = {0.0F, -2.4F, 0.0F, 1.0F};
         const auto velocity = initial_velocity(index);
         particle.velocity = {velocity[0], velocity[1], velocity[2], 0.0F};
+        particle.rotation = random_component(index, 83U) * 3.14159265F;
       }
       if (animate_ || smoke_test_) {
         particle.velocity[0] += direction_[0] * step;
@@ -198,6 +202,8 @@ private:
         particle.velocity[2] += direction_[2] * step;
         for (std::size_t axis = 0; axis < 3; ++axis)
           particle.position[axis] += particle.velocity[axis] * step;
+        particle.angular_velocity = particle.angular_velocity < 0.0F ? -angular_speed_ : angular_speed_;
+        particle.rotation += particle.angular_velocity * step;
       }
       const float life = std::clamp(1.0F - particle.age / particle.lifetime, 0.0F, 1.0F);
       particle_instances_[index] = {
@@ -209,7 +215,7 @@ private:
           .shape_scale_rotation = {shape_ == box_shape ? 0.7F : 1.0F,
                                    shape_ == box_shape ? 1.35F : 1.0F,
                                    shape_ == box_shape ? 0.7F : 1.0F,
-                                   static_cast<float>(index) * 0.13F + elapsed_},
+                                   particle.rotation},
       };
     }
     elapsed_ += smoke_test_ ? 0.0F : delta_seconds;
@@ -372,6 +378,7 @@ private:
       ImGui::ColorEdit4("Color", particle_color_.data());
       ImGui::SliderFloat3("Direction", direction_.data(), -1.0F, 1.0F);
       ImGui::SliderFloat("Acceleration", &acceleration_, -2.0F, 2.0F);
+      ImGui::SliderFloat("Angular speed", &angular_speed_, 0.0F, 12.0F);
       ImGui::SliderFloat("Lifetime", &lifetime_, 0.25F, 8.0F);
       ImGui::SliderFloat("Size", &particle_size_, 0.05F, 0.45F);
       ImGui::Checkbox("Fade out", &fade_);
@@ -475,6 +482,7 @@ private:
   std::array<float, 4> particle_color_{1.0F, 1.0F, 1.0F, 1.0F};
   std::array<float, 3> direction_{0.0F, 0.15F, 0.0F};
   float acceleration_{};
+  float angular_speed_{2.5F};
   float lifetime_{4.0F};
   float particle_size_{0.18F};
   float elapsed_{};
