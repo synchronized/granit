@@ -31,9 +31,9 @@ output_data vertex_main(input_data input) {
 }
 
 float4 fragment_main(output_data input) : SV_Target0 {
-  if (input.mode == 1.0 && frac((input.position.x + input.position.y) * 0.08) < 0.35) discard;
+  if (scene.debug.y < 0.5 && input.mode == 1.0 && frac((input.position.x + input.position.y) * 0.08) < 0.35) discard;
   if (scene.debug.x > 0.5) return float4(normalize(input.normal) * 0.5 + 0.5, 1.0);
   const float diffuse = max(dot(normalize(input.normal), normalize(scene.light_direction.xyz)), 0.0);
   const float lighting = scene.ambient.x + diffuse * (1.0 - scene.ambient.x);
-  return float4(input.color.rgb * lighting, input.color.a);
+  return float4(input.color.rgb * lighting, scene.debug.y > 0.5 ? 1.0 : input.color.a);
 }
