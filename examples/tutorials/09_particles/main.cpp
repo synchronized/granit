@@ -649,6 +649,7 @@ private:
       ImGui::SliderFloat3("Angular speed", angular_speed_.data(), 0.0F, 12.0F);
       ImGui::SliderFloat("Ambient", &ambient_strength_, 0.0F, 0.3F);
       ImGui::Checkbox("Normal debug", &normal_debug_);
+      ImGui::Checkbox("Diffuse debug", &diffuse_debug_);
       ImGui::Checkbox("Gizmos", &gizmos_);
       ImGui::SliderFloat("Lifetime", &lifetime_, 0.25F, 8.0F);
       ImGui::SliderFloat("Size", &particle_size_, 0.05F, 0.45F);
@@ -680,7 +681,8 @@ private:
                                                 light_direction[2], 0.0F},
                             .ambient = {ambient_strength_, ambient_strength_, ambient_strength_,
                                         0.0F},
-                            .debug = {normal_debug_ ? 1.0F : 0.0F, 0.0F, 0.0F, 0.0F}};
+                            .debug = {normal_debug_ ? 1.0F : 0.0F,
+                                      diffuse_debug_ ? 1.0F : 0.0F, 0.0F, 0.0F}};
     const auto uniform_offset = uniform_stride_ * recording.frame_slot();
     if (result.ok())
       result = particle_buffer_.write(0, std::as_bytes(std::span{particle_instances_}));
@@ -794,6 +796,7 @@ private:
   bool fade_{true};
   bool gizmos_{true};
   bool normal_debug_{};
+  bool diffuse_debug_{};
   bool smoke_test_{};
   std::array<bool, maximum_particles> active_particles_{};
 };
