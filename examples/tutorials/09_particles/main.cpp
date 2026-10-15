@@ -612,7 +612,9 @@ private:
           .color_blends = blends,
           .depth_bias = std::nullopt};
     };
-    result = pipeline_.initialize(renderer_owner(), make_desc(false, granit::cull_mode::back));
+    auto particle_desc = make_desc(false, granit::cull_mode::back);
+    particle_desc.primitive.front = granit::front_face::clockwise;
+    result = pipeline_.initialize(renderer_owner(), particle_desc);
     if (result.ok())
       result = debug_pipeline_.initialize(renderer_owner(), make_desc(true, granit::cull_mode::none));
     if (result.ok())
