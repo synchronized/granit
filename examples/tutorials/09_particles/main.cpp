@@ -226,6 +226,7 @@ private:
     static_cast<void>(debug_draw_.destroy());
     runtime_.shutdown();
     static_cast<void>(pipeline_.reset());
+    static_cast<void>(debug_pipeline_.reset());
     static_cast<void>(resource_group_.reset());
     static_cast<void>(pipeline_layout_.reset());
     static_cast<void>(resource_layout_.reset());
@@ -583,6 +584,9 @@ private:
     auto result = pipeline_.reset();
     if (result.failed())
       return result;
+    result = debug_pipeline_.reset();
+    if (result.failed())
+      return result;
     const auto format = presentation_info().format;
     const std::array attributes{
         granit::vertex_attribute{.location = 0, .format = granit::vertex_format::float32x3},
@@ -595,18 +599,22 @@ private:
         .destination_color_factor = granit::blend_factor::one_minus_source_alpha,
         .source_alpha_factor = granit::blend_factor::one,
         .destination_alpha_factor = granit::blend_factor::one_minus_source_alpha}};
-    result = pipeline_.initialize(
-        renderer_owner(), {.layout = pipeline_layout_.ref(),
-                            .vertex_shader = vertex_shader_.ref(),
-                            .fragment_shader = fragment_shader_.ref(),
-                            .color_formats = std::span{&format, 1},
-                            .depth_stencil_format = granit::texture_format::d32_float,
-                            .vertex_buffers = vertex_buffers,
-                            .primitive = {.cull = granit::cull_mode::back},
-                            .depth = granit::depth_state{.test_enabled = true,
-                                                         .write_enabled = false},
-                            .color_blends = blends,
-                            .depth_bias = std::nullopt});
+    const auto make_desc = [&](bool write_depth) {
+      return granit::graphics_pipeline_desc{
+          .layout = pipeline_layout_.ref(),
+          .vertex_shader = vertex_shader_.ref(),
+          .fragment_shader = fragment_shader_.ref(),
+          .color_formats = std::span{&format, 1},
+          .depth_stencil_format = granit::texture_format::d32_float,
+          .vertex_buffers = vertex_buffers,
+          .primitive = {.cull = granit::cull_mode::back},
+          .depth = granit::depth_state{.test_enabled = true, .write_enabled = write_depth},
+          .color_blends = blends,
+          .depth_bias = std::nullopt};
+    };
+    result = pipeline_.initialize(renderer_owner(), make_desc(false));
+    if (result.ok())
+      result = debug_pipeline_.initialize(renderer_owner(), make_desc(true));
     if (result.ok())
       pipeline_format_ = format;
     return result;
@@ -712,8 +720,9 @@ private:
       result = recorder.set_viewports(0, std::span{&viewport, 1});
     if (result.ok())
       result = recorder.set_scissors(0, std::span{&scissor, 1});
+    const auto& active_pipeline = normal_debug_ || diffuse_debug_ ? debug_pipeline_ : pipeline_;
     if (result.ok())
-      result = recorder.bind_graphics_pipeline(pipeline_);
+      result = recorder.bind_graphics_pipeline(active_pipeline);
     if (result.ok())
       result = meshes_[mesh_index].bind(recorder);
     const std::array dynamic_offsets{static_cast<std::uint32_t>(uniform_offset)};
@@ -777,6 +786,7 @@ private:
   granit::pipeline_layout pipeline_layout_;
   granit::bind_group resource_group_;
   granit::graphics_pipeline pipeline_;
+  granit::graphics_pipeline debug_pipeline_;
   granit::texture_format pipeline_format_{granit::texture_format::undefined};
   std::uint64_t uniform_stride_{};
   std::uint32_t particle_count_{maximum_particles};
