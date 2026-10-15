@@ -289,7 +289,7 @@ private:
           .position = {0.0F, -2.2F, 0.0F, 1.0F},
           .velocity = {velocity[0], velocity[1], velocity[2], 0.0F},
           .color = {0.25F + hue * 0.7F, 0.35F + (1.0F - hue) * 0.5F, 1.0F - hue * 0.35F,
-                    0.75F},
+                    1.0F},
           .lifetime = lifetime_,
           .age = 0.0F,
           .rotation = {random_component(index, 83U) * 3.14159265F,
@@ -390,7 +390,7 @@ private:
                              particle_size_},
           .color = {particle.color[0] * particle_color_[0], particle.color[1] * particle_color_[1],
                     particle.color[2] * particle_color_[2],
-                    particle.color[3] * particle_color_[3] * (fade_ ? life : 1.0F)},
+                    particle.color[3] * opacity_ * (fade_ ? life : 1.0F)},
           .shape_scale = {shape_ == box_shape ? 0.7F : 1.0F,
                           shape_ == box_shape ? 1.35F : 1.0F,
                           shape_ == box_shape ? 0.7F : 1.0F, 0.0F},
@@ -625,7 +625,8 @@ private:
       int selected_shape = static_cast<int>(shape_);
       if (ImGui::Combo("Shape", &selected_shape, shapes, 3))
         shape_ = static_cast<std::uint32_t>(selected_shape);
-      ImGui::ColorEdit4("Color", particle_color_.data());
+      ImGui::ColorEdit3("Color", particle_color_.data());
+      ImGui::SliderFloat("Opacity", &opacity_, 0.05F, 1.0F);
       ImGui::SliderFloat3("Direction", direction_.data(), -1.0F, 1.0F);
       ImGui::SliderFloat3("Acceleration", acceleration_.data(), -2.0F, 2.0F);
       ImGui::SliderFloat3("Angular speed", angular_speed_.data(), 0.0F, 12.0F);
@@ -768,6 +769,7 @@ private:
   float emission_accumulator_{};
   float lifetime_{4.0F};
   float particle_size_{0.18F};
+  float opacity_{0.4F};
   float ambient_strength_{0.06F};
   bool animate_{true};
   bool fade_{true};
