@@ -75,8 +75,9 @@ inline constexpr std::array<std::uint16_t, 180> indices = [] {
     result[output++] = static_cast<std::uint16_t>(17 + segment);
   }
   constexpr std::array<std::uint16_t, 36> cube_indices{
-      26, 28, 27, 26, 29, 28, 30, 31, 32, 30, 32, 33, 26, 30, 33, 26, 33, 29,
-      27, 28, 32, 27, 32, 31, 29, 33, 32, 29, 32, 28, 26, 27, 31, 26, 31, 30,
+      // 与 Tutorial 07/10 一致，使用 Granit 逻辑裁剪空间的正面绕序。
+      26, 27, 28, 26, 28, 29, 30, 32, 31, 30, 33, 32, 26, 33, 30, 26, 29, 33,
+      27, 32, 28, 27, 31, 32, 29, 32, 33, 29, 28, 32, 26, 31, 27, 26, 30, 31,
   };
   for (const auto index : cube_indices)
     result[output++] = index;
