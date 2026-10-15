@@ -79,7 +79,7 @@ inline constexpr std::array<std::uint16_t, 180> indices = [] {
       1, 2, 6, 1, 6, 5, 3, 7, 6, 3, 6, 2, 0, 1, 5, 0, 5, 4,
   };
   for (const auto index : cube_indices)
-    result[output++] = static_cast<std::uint16_t>(26 + index);
+    result[output++] = index;
   return result;
 }();
 
