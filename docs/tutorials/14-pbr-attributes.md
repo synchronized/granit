@@ -15,6 +15,10 @@
 - `TEXCOORD_0`，用于 Base Color 和 Metallic/Roughness 纹理；
 - 可选的 `TEXCOORD_1`，用于扩展材质通道。
 
+面板还会调用公共 PBR 布局校验，显示无纹理、Base Color + Metallic/Roughness、Normal Map
+以及缺少 Tangent 的结果和 Normal Map Variant Key，覆盖合法组合和明确的
+`missing_tangent` 错误路径。
+
 Suzanne 当前使用 Base Color、Metallic/Roughness 和标准 PBR 默认法线纹理；因此教程重点是
 验证完整顶点属性进入上传、Mesh 和 PBR 管线的路径，而不是引入新的外部 bump 贴图。纯色
 Base Color、Metallic 和 Roughness 仍可通过面板实时修改。

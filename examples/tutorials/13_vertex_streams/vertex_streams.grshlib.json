@@ -11,6 +11,12 @@
       "entry_point": "vertex_main"
     },
     {
+      "name": "vertex_streams.instanced_vertex",
+      "source": "vertex_streams.hlsl",
+      "stage": "vertex",
+      "entry_point": "vertex_instanced_main"
+    },
+    {
       "name": "vertex_streams.fragment",
       "source": "vertex_streams.hlsl",
       "stage": "fragment",

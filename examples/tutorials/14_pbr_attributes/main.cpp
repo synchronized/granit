@@ -10,6 +10,7 @@
 #include "tutorial/tutorial_runtime.h"
 
 #include <granit/pipeline/render_pipeline.hpp>
+#include <granit/pipeline/pbr_material.hpp>
 #include <granit/pipeline/scene.hpp>
 #include <imgui.h>
 
@@ -30,6 +31,23 @@ namespace {
 int report_failure(std::string_view operation, granit::result result) {
   std::cerr << operation << " failed: " << result.message() << '\n';
   return 1;
+}
+
+const char* pbr_layout_result_name(granit::pbr_vertex_layout_result result) noexcept {
+  switch (result) {
+  case granit::pbr_vertex_layout_result::valid:
+    return "valid";
+  case granit::pbr_vertex_layout_result::missing_uv0:
+    return "missing_uv0";
+  case granit::pbr_vertex_layout_result::missing_tangent:
+    return "missing_tangent";
+  case granit::pbr_vertex_layout_result::missing_uv1:
+    return "missing_uv1";
+  case granit::pbr_vertex_layout_result::missing_color:
+    return "missing_color";
+  default:
+    return "invalid";
+  }
 }
 
 class tutorial_application final : public granit::example::application {
@@ -208,6 +226,52 @@ private:
     ImGui::Text("TEXCOORD_0: %s", has_uv0_ ? "present" : "missing");
     ImGui::Text("TEXCOORD_1: %s (optional)", has_uv1_ ? "present" : "not provided");
     ImGui::TextUnformatted("UV0 drives material textures; tangent space drives normal maps.");
+    const std::array position_normal_attributes{
+        granit::vertex_attribute{.location = 0, .format = granit::vertex_format::float32x3},
+        granit::vertex_attribute{.location = 1, .format = granit::vertex_format::float32x3,
+                                 .offset = sizeof(float) * 3},
+    };
+    const std::array position_normal_uv_attributes{
+        position_normal_attributes[0], position_normal_attributes[1],
+        granit::vertex_attribute{.location = 3, .format = granit::vertex_format::float32x2,
+                                 .offset = sizeof(float) * 6},
+    };
+    const std::array complete_attributes{
+        position_normal_attributes[0], position_normal_attributes[1],
+        granit::vertex_attribute{.location = 2, .format = granit::vertex_format::float32x4,
+                                 .offset = sizeof(float) * 6},
+        granit::vertex_attribute{.location = 3, .format = granit::vertex_format::float32x2,
+                                 .offset = sizeof(float) * 10},
+        granit::vertex_attribute{.location = 4, .format = granit::vertex_format::float32x2,
+                                 .offset = sizeof(float) * 12},
+        granit::vertex_attribute{.location = 5, .format = granit::vertex_format::float32x4,
+                                 .offset = sizeof(float) * 14},
+    };
+    const std::array position_normal_layout{granit::vertex_buffer_layout{
+        .stride = sizeof(float) * 6, .attributes = position_normal_attributes}};
+    const std::array position_normal_uv_layout{granit::vertex_buffer_layout{
+        .stride = sizeof(float) * 8, .attributes = position_normal_uv_attributes}};
+    const std::array complete_layout{granit::vertex_buffer_layout{
+        .stride = sizeof(float) * 18, .attributes = complete_attributes}};
+    const auto untextured = granit::validate_pbr_vertex_layout(
+        position_normal_layout, granit::pbr_texture::none);
+    const auto textured = granit::validate_pbr_vertex_layout(
+        position_normal_uv_layout, granit::pbr_texture::base_color |
+                                       granit::pbr_texture::metallic_roughness);
+    const auto normal_mapped = granit::validate_pbr_vertex_layout(
+        complete_layout, granit::pbr_texture::base_color | granit::pbr_texture::metallic_roughness |
+                           granit::pbr_texture::normal);
+    const auto missing_tangent = granit::validate_pbr_vertex_layout(
+        position_normal_uv_layout, granit::pbr_texture::normal);
+    ImGui::SeparatorText("PBR layout matrix");
+    ImGui::Text("Untextured: %s", pbr_layout_result_name(untextured));
+    ImGui::Text("Base Color + MR: %s", pbr_layout_result_name(textured));
+    ImGui::Text("Base Color + MR + Normal: %s", pbr_layout_result_name(normal_mapped));
+    ImGui::Text("Normal without tangent: %s", pbr_layout_result_name(missing_tangent));
+    ImGui::Text("Normal variant key: 0x%llx",
+                static_cast<unsigned long long>(granit::pbr_material_variant_key(
+                    granit::pbr_texture::base_color | granit::pbr_texture::metallic_roughness |
+                        granit::pbr_texture::normal)));
     ImGui::Checkbox("Auto orbit", &auto_orbit_);
     if (ImGui::Button("Reset camera"))
       camera_.reset();

@@ -8,7 +8,11 @@
 
 ## Unreleased
 
-暂无。
+- 新增 Tutorial 13 `Vertex Streams`：验证拆分/交错 Vertex Buffer、实例 Vertex Stream、共享
+  Index Buffer 和 Rendering 前绑定约束；
+- 新增 Tutorial 14 `PBR Vertex Attributes`：展示 POSITION、NORMAL、TANGENT、UV0/UV1，并接入
+  无纹理、纹理、Normal Map 和缺少 Tangent 的 PBR 布局矩阵；
+- 复用程序化几何和既有 CC0 Suzanne 资产，不新增公共 ABI 或未审计外部资源。
 
 ## 0.62.0 - 2026-10-15
 

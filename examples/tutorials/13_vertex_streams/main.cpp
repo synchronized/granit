@@ -48,10 +48,22 @@ struct interleaved_vertex {
   surface_vertex surface{};
 };
 
+struct instance_vertex {
+  std::array<float, 4> offset_scale{};
+  std::array<float, 4> tint{};
+};
+
 static_assert(sizeof(scene_uniforms) == sizeof(float) * 20);
 static_assert(sizeof(base_vertex) == sizeof(float) * 6);
 static_assert(sizeof(surface_vertex) == sizeof(float) * 6);
 static_assert(sizeof(interleaved_vertex) == sizeof(float) * 12);
+static_assert(sizeof(instance_vertex) == sizeof(float) * 8);
+
+constexpr std::array<instance_vertex, 3> instance_vertices{{
+    {{{-2.4F, 0.0F, 0.0F, 0.72F}}, {{0.95F, 0.42F, 0.22F, 1.0F}}},
+    {{{0.0F, 0.0F, 0.0F, 0.72F}}, {{0.22F, 0.82F, 0.98F, 1.0F}}},
+    {{{2.4F, 0.0F, 0.0F, 0.72F}}, {{0.42F, 0.94F, 0.35F, 1.0F}}},
+}};
 
 constexpr std::array<std::array<float, 2>, 4> cube_uv{{
     {{0.0F, 1.0F}}, {{1.0F, 1.0F}}, {{1.0F, 0.0F}}, {{0.0F, 0.0F}},
@@ -92,6 +104,7 @@ public:
 
 private:
   granit::result on_initialize() noexcept override {
+    use_instance_stream_ = smoke_test_;
     auto result = runtime_.initialize(renderer_owner());
     if (result.ok())
       make_geometry(base_vertices_, surface_vertices_, interleaved_vertices_);
@@ -101,6 +114,9 @@ private:
       result = shader_library_.initialize(renderer(), tutorial_vertex_streams::shader_archive());
     if (result.ok())
       result = shader_library_.create_shader("vertex_streams.vertex", vertex_shader_);
+    if (result.ok())
+      result = shader_library_.create_shader("vertex_streams.instanced_vertex",
+                                             instanced_vertex_shader_);
     if (result.ok())
       result = shader_library_.create_shader("vertex_streams.fragment", fragment_shader_);
     if (result.ok())
@@ -128,20 +144,24 @@ private:
     runtime_.shutdown();
     static_cast<void>(split_pipeline_.reset());
     static_cast<void>(interleaved_pipeline_.reset());
+    static_cast<void>(instanced_pipeline_.reset());
     static_cast<void>(resource_group_.reset());
     static_cast<void>(pipeline_layout_.reset());
     static_cast<void>(resource_layout_.reset());
     static_cast<void>(uniform_buffer_.reset());
     static_cast<void>(split_mesh_.reset());
     static_cast<void>(interleaved_mesh_.reset());
+    static_cast<void>(instanced_mesh_.reset());
     static_cast<void>(base_buffer_.reset());
     static_cast<void>(surface_buffer_.reset());
     static_cast<void>(interleaved_buffer_.reset());
+    static_cast<void>(instance_buffer_.reset());
     static_cast<void>(index_buffer_.reset());
     static_cast<void>(depth_view_.reset());
     static_cast<void>(depth_texture_.reset());
     static_cast<void>(fragment_shader_.reset());
     static_cast<void>(vertex_shader_.reset());
+    static_cast<void>(instanced_vertex_shader_.reset());
     static_cast<void>(shader_library_.reset());
     static_cast<void>(frame_context_.reset());
   }
@@ -174,6 +194,11 @@ private:
                              .usage = granit::buffer_usage::vertex |
                                       granit::buffer_usage::transfer_destination});
     if (result.ok())
+      result = instance_buffer_.initialize(
+          renderer_owner(), {.size = sizeof(instance_vertices),
+                             .usage = granit::buffer_usage::vertex |
+                                      granit::buffer_usage::transfer_destination});
+    if (result.ok())
       result = index_buffer_.initialize(
           renderer_owner(), {.size = sizeof(granit::example::geometry::cube_indices),
                              .usage = granit::buffer_usage::index |
@@ -199,6 +224,9 @@ private:
     if (result.ok())
       result = upload.write_buffer(interleaved_buffer_.ref(), 0,
                                    std::as_bytes(std::span{interleaved_vertices_}));
+    if (result.ok())
+      result = upload.write_buffer(instance_buffer_.ref(), 0,
+                                   std::as_bytes(std::span{instance_vertices}));
     if (result.ok())
       result = upload.write_buffer(index_buffer_.ref(), 0,
                                    std::as_bytes(std::span{granit::example::geometry::cube_indices}));
@@ -249,6 +277,34 @@ private:
                                .index_format = granit::index_type::uint16,
                                .index_count = static_cast<std::uint32_t>(
                                    granit::example::geometry::cube_indices.size())});
+        if (result.ok()) {
+          const std::array instance_attributes{
+              granit::vertex_attribute{.location = 4,
+                                       .format = granit::vertex_format::float32x4},
+              granit::vertex_attribute{.location = 5,
+                                       .format = granit::vertex_format::float32x4,
+                                       .offset = sizeof(float) * 4},
+          };
+          const std::array instanced_bindings{
+              granit::mesh_vertex_buffer{.buffer = base_buffer_.ref(),
+                                         .layout = {.stride = sizeof(base_vertex),
+                                                    .attributes = attributes}},
+              granit::mesh_vertex_buffer{.buffer = surface_buffer_.ref(),
+                                         .layout = {.stride = sizeof(surface_vertex),
+                                                    .attributes = surface_attributes}},
+              granit::mesh_vertex_buffer{
+                  .buffer = instance_buffer_.ref(),
+                  .layout = {.stride = sizeof(instance_vertex),
+                             .step_mode = granit::vertex_step_mode::instance,
+                             .attributes = instance_attributes}},
+          };
+          result = instanced_mesh_.initialize(
+              renderer_owner(), {.vertex_buffers = instanced_bindings,
+                                 .index_buffer = index_buffer_.ref(),
+                                 .index_format = granit::index_type::uint16,
+                                 .index_count = static_cast<std::uint32_t>(
+                                     granit::example::geometry::cube_indices.size())});
+        }
       }
     }
     return result;
@@ -289,6 +345,8 @@ private:
     auto result = split_pipeline_.reset();
     if (result.ok())
       result = interleaved_pipeline_.reset();
+    if (result.ok())
+      result = instanced_pipeline_.reset();
     if (result.failed())
       return result;
     const auto format = presentation_info().format;
@@ -318,10 +376,11 @@ private:
     };
     const std::array interleaved_layouts{granit::vertex_buffer_layout{
         .stride = sizeof(interleaved_vertex), .attributes = interleaved_attributes}};
-    const auto make_desc = [&](std::span<const granit::vertex_buffer_layout> layouts) {
+    const auto make_desc = [&](granit::shader_ref vertex_shader,
+                               std::span<const granit::vertex_buffer_layout> layouts) {
       return granit::graphics_pipeline_desc{
           .layout = pipeline_layout_.ref(),
-          .vertex_shader = vertex_shader_.ref(),
+          .vertex_shader = vertex_shader,
           .fragment_shader = fragment_shader_.ref(),
           .color_formats = std::span{&format, 1},
           .depth_stencil_format = granit::texture_format::d32_float,
@@ -331,9 +390,26 @@ private:
           .color_blends = {},
           .depth_bias = std::nullopt};
     };
-    result = split_pipeline_.initialize(renderer_owner(), make_desc(split_layouts));
+    result = split_pipeline_.initialize(renderer_owner(), make_desc(vertex_shader_.ref(), split_layouts));
     if (result.ok())
-      result = interleaved_pipeline_.initialize(renderer_owner(), make_desc(interleaved_layouts));
+      result = interleaved_pipeline_.initialize(
+          renderer_owner(), make_desc(vertex_shader_.ref(), interleaved_layouts));
+    const std::array instance_attributes{
+        granit::vertex_attribute{.location = 4, .format = granit::vertex_format::float32x4},
+        granit::vertex_attribute{.location = 5, .format = granit::vertex_format::float32x4,
+                                 .offset = sizeof(float) * 4},
+    };
+    const std::array instanced_layouts{
+        granit::vertex_buffer_layout{.stride = sizeof(base_vertex), .attributes = base_attributes},
+        granit::vertex_buffer_layout{.stride = sizeof(surface_vertex),
+                                     .attributes = surface_attributes},
+        granit::vertex_buffer_layout{.stride = sizeof(instance_vertex),
+                                     .step_mode = granit::vertex_step_mode::instance,
+                                     .attributes = instance_attributes},
+    };
+    if (result.ok())
+      result = instanced_pipeline_.initialize(
+          renderer_owner(), make_desc(instanced_vertex_shader_.ref(), instanced_layouts));
     if (result.ok())
       pipeline_format_ = format;
     return result;
@@ -341,6 +417,11 @@ private:
 
   granit::result on_render(granit::example::present_frame& frame) noexcept override {
     camera_input_.begin_frame();
+    if (smoke_test_) {
+      const auto phase = rendered_frames() % 3U;
+      use_instance_stream_ = phase == 0U;
+      interleaved_ = phase == 1U;
+    }
     granit::window_state window_state;
     auto result = app_window().get_state(window_state);
     if (result.ok())
@@ -350,12 +431,15 @@ private:
                                      .frame = rendered_frames()});
     if (result.ok()) {
       ImGui::Checkbox("Interleaved Vertex Buffer", &interleaved_);
+      ImGui::Checkbox("Instance Vertex Buffer", &use_instance_stream_);
       ImGui::Checkbox("Auto orbit", &auto_orbit_);
       if (ImGui::Button("Reset camera"))
         camera_.reset();
       ImGui::Text("Layout: %s", interleaved_ ? "1 buffer / 4 attributes" :
                                             "2 buffers / 2+2 attributes");
       ImGui::Text("Index Buffer: 36 uint16 indices");
+      ImGui::Text("Instance stream: %u records, step mode = instance",
+                  static_cast<unsigned>(instance_vertices.size()));
       ImGui::TextUnformatted("Vertex buffers are bound before begin_rendering.");
       result = runtime_.end_frame();
     }
@@ -393,8 +477,11 @@ private:
                                            .area = {0, 0, frame.swapchain.width,
                                                     frame.swapchain.height}};
     auto& recorder = recording.recorder();
-    const auto& pipeline = interleaved_ ? interleaved_pipeline_ : split_pipeline_;
-    const auto& mesh = interleaved_ ? interleaved_mesh_ : split_mesh_;
+    const auto& pipeline = use_instance_stream_
+                               ? instanced_pipeline_
+                               : (interleaved_ ? interleaved_pipeline_ : split_pipeline_);
+    const auto& mesh = use_instance_stream_ ? instanced_mesh_
+                                            : (interleaved_ ? interleaved_mesh_ : split_mesh_);
     if (result.ok())
       result = recorder.set_viewports(0, std::span{&viewport, 1});
     if (result.ok())
@@ -409,7 +496,10 @@ private:
     if (result.ok())
       result = recorder.begin_rendering(rendering);
     if (result.ok())
-      result = mesh.draw(recorder);
+      result = mesh.draw(recorder, {.instance_count = use_instance_stream_
+                                                      ? static_cast<std::uint32_t>(
+                                                            instance_vertices.size())
+                                                      : 1U});
     if (result.ok())
       result = recorder.end_rendering();
     if (result.ok()) {
@@ -440,14 +530,17 @@ private:
   granit::frame_context frame_context_;
   granit::shader_library shader_library_;
   granit::shader vertex_shader_;
+  granit::shader instanced_vertex_shader_;
   granit::shader fragment_shader_;
   granit::buffer base_buffer_;
   granit::buffer surface_buffer_;
   granit::buffer interleaved_buffer_;
+  granit::buffer instance_buffer_;
   granit::buffer index_buffer_;
   granit::buffer uniform_buffer_;
   granit::mesh split_mesh_;
   granit::mesh interleaved_mesh_;
+  granit::mesh instanced_mesh_;
   granit::texture depth_texture_;
   granit::texture_view depth_view_;
   granit::bind_group_layout resource_layout_;
@@ -455,9 +548,11 @@ private:
   granit::bind_group resource_group_;
   granit::graphics_pipeline split_pipeline_;
   granit::graphics_pipeline interleaved_pipeline_;
+  granit::graphics_pipeline instanced_pipeline_;
   granit::texture_format pipeline_format_{granit::texture_format::undefined};
   std::uint64_t uniform_stride_{};
   bool interleaved_{};
+  bool use_instance_stream_{};
   bool auto_orbit_{};
   bool smoke_test_{};
 };
