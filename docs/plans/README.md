@@ -11,6 +11,8 @@
 
 - [S-99：0.63.0 Vertex Streams 与 PBR 顶点属性验证](S-99-0.63.0-vertex-streams-and-pbr-attributes.md)——
   验证多 Vertex Buffer、实例流、UV0、Tangent、Normal Map 和无纹理 PBR 变体，不新增公共 ABI。
+- [S-100：0.64.0 ImGui 输入适配与 Window 解耦](S-100-0.64.0-imgui-input-integration.md)——下一版本规划：
+  提供 Window 无关的 ImGui 帧入口和可选的 Window/Input 事件适配，不新增 C ABI。
 
 ## 最近完成
 
