@@ -1,0 +1,328 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Granit contributors
+
+#include "application/application.h"
+#include "assets/asset_manager.h"
+#include "camera/orbit_camera.h"
+#include "camera/orbit_camera_input_accumulator.h"
+#include "gltf/scene.h"
+#include "gltf_rendering/scene_resources.h"
+#include "tutorial/tutorial_runtime.h"
+
+#include <granit/pipeline/render_pipeline.hpp>
+#include <granit/pipeline/scene.hpp>
+#include <imgui.h>
+
+#include <array>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <iostream>
+#include <span>
+#include <string_view>
+#include <vector>
+
+#if defined(__EMSCRIPTEN__)
+#include <emscripten/emscripten.h>
+#endif
+namespace {
+
+int report_failure(std::string_view operation, granit::result result) {
+  std::cerr << operation << " failed: " << result.message() << '\n';
+  return 1;
+}
+
+class tutorial_application final : public granit::example::application {
+public:
+  void set_smoke_test(bool enabled) noexcept { smoke_test_ = enabled; }
+  [[nodiscard]] std::uint32_t pointer_events() const noexcept { return pointer_events_; }
+  [[nodiscard]] std::uint32_t canvas_items() const noexcept { return runtime_.canvas_items(); }
+  [[nodiscard]] granit_result shutdown_reason() const noexcept { return shutdown_reason_.native(); }
+
+private:
+  granit::result on_initialize() noexcept override {
+    if (!runtime_.initialized()) {
+      auto result = runtime_.initialize(renderer_owner());
+      if (result.failed())
+        return result;
+      model_asset_ = assets().load<granit::example::gltf::scene>(
+          granit::example::assets::asset_location::bundled("tutorials/02_pbr_assets/Suzanne.gltf"));
+    }
+    if (!model_asset_.ready()) {
+      if (!asset_wait_logged_) {
+        std::cout << "GRANIT_DIAGNOSTIC:Tutorial 14 asset wait status="
+                  << static_cast<int>(model_asset_.status()) << " diagnostic="
+                  << model_asset_.diagnostic() << '\n';
+        asset_wait_logged_ = true;
+      }
+      if (model_asset_.status() == granit::example::assets::asset_status::failed ||
+          model_asset_.status() == granit::example::assets::asset_status::cancelled) {
+        std::cerr << "Failed to load Suzanne model: " << model_asset_.diagnostic() << '\n';
+        return granit::result::invalid_argument;
+      }
+      return granit::result::not_ready;
+    }
+
+    asset_wait_logged_ = false;
+
+    last_operation_ = "loading Suzanne glTF";
+    auto result = initialize_model();
+    if (result.ok()) {
+      last_operation_ = "creating render pipeline";
+      result = pipeline_.initialize(renderer(), {.enable_fxaa = true, .enable_specular_aa = true});
+    }
+    if (result.ok()) {
+      granit::texture_view_ref preview_view;
+      granit::sampler_ref preview_sampler;
+      result = model_gpu_.texture_binding(model_scene_.materials.front().base_color_texture, true,
+                                          preview_view, preview_sampler);
+      if (result.ok())
+        result = runtime_.register_texture(preview_view, preview_sampler, preview_texture_id_);
+    }
+    if (result.ok() &&
+        !camera_.focus({.radius = 1.6F}, presentation_info().width, presentation_info().height))
+      result = granit::result::invalid_argument;
+    return result;
+  }
+
+  granit::result on_window_event(const granit::window_event& event) noexcept override {
+    runtime_.process(event);
+    camera_input_.process(event);
+    return granit::result::success;
+  }
+
+  granit::result on_input_event(const granit::input_event& event) noexcept override {
+    runtime_.process(event);
+    camera_input_.process(event, runtime_.wants_mouse(), runtime_.wants_keyboard());
+    if (event.type == granit::input_event_type::pointer_moved ||
+        event.type == granit::input_event_type::pointer_button ||
+        event.type == granit::input_event_type::pointer_wheel) {
+      ++pointer_events_;
+    }
+    return granit::result::success;
+  }
+
+  void on_shutdown(granit::result reason) noexcept override {
+    shutdown_reason_ = reason;
+    if (reason.failed())
+      std::cerr << "window loop stopped during " << last_operation_ << ": " << reason.message()
+                << '\n';
+    runtime_.shutdown();
+    static_cast<void>(scene_.reset());
+    static_cast<void>(pipeline_.reset());
+    model_gpu_.reset();
+  }
+
+  granit::result initialize_model() noexcept {
+    const auto model_scene = model_asset_.value();
+    if (!model_scene) {
+      std::cerr << "Suzanne model asset is unavailable\n";
+      return granit::result::invalid_argument;
+    }
+    model_scene_ = *model_scene;
+    if (model_scene_.materials.empty()) {
+      std::cerr << "Suzanne model does not contain a PBR material\n";
+      return granit::result::invalid_argument;
+    }
+
+    const auto& material = model_scene_.materials.front();
+    model_base_color_ = material.base_color;
+    model_metallic_ = material.metallic;
+    model_roughness_ = material.roughness;
+    for (const auto& mesh : model_scene_.meshes) {
+      for (const auto& primitive : mesh.primitives) {
+        has_position_ = has_position_ || !primitive.positions.empty();
+        has_normal_ = has_normal_ || !primitive.normals.empty();
+        has_tangent_ = has_tangent_ || !primitive.tangents.empty();
+        has_uv0_ = has_uv0_ || !primitive.texture_coordinates.empty();
+        has_uv1_ = has_uv1_ || !primitive.texture_coordinates_1.empty();
+      }
+    }
+    return model_gpu_.initialize(renderer_owner(), model_scene_);
+  }
+  granit::result update_scene(bool with_renderables) noexcept {
+    auto result = scene_.reset();
+    if (result.failed())
+      return result;
+
+    granit::example::camera::camera_matrices matrices;
+    if (!camera_.matrices(presentation_info().width, presentation_info().height, matrices))
+      return granit::result::invalid_argument;
+    const granit::scene_view scene_view{
+        .view = matrices.view,
+        .projection = matrices.projection,
+        .view_projection = matrices.view_projection,
+        .camera_position = matrices.position,
+        .viewport_x = 0,
+        .viewport_y = 0,
+        .viewport_width = static_cast<float>(presentation_info().width),
+        .viewport_height = static_cast<float>(presentation_info().height),
+        .layer_mask = UINT64_MAX,
+    };
+    const granit::scene_directional_light light{
+        .direction_to_light = {0.365148F, 0.912871F, 0.182574F},
+        .radiance = {4.0F, 3.8F, 3.4F},
+        .layer_mask = UINT64_MAX,
+    };
+    if (with_renderables) {
+      return model_gpu_.create_snapshot(std::span{&scene_view, 1}, std::span{&light, 1}, {}, {},
+                                        scene_);
+    }
+    return scene_.initialize(renderer_owner(), {.views = std::span{&scene_view, 1}});
+  }
+
+  granit::result update_model_material() noexcept {
+    const auto& material = model_scene_.materials.front();
+    const granit::example::gltf_rendering::material_factor_update edit{
+        .base_color = model_base_color_,
+        .metallic = model_metallic_,
+        .roughness = model_roughness_,
+        .normal_scale = material.normal_scale,
+        .occlusion_strength = material.occlusion_strength,
+        .emissive = material.emissive,
+    };
+    return model_gpu_.update_material_factors(model_scene_, 0, edit);
+  }
+  granit::result build_imgui_frame(float delta_seconds) noexcept {
+    granit::window_state window_state;
+    auto result = app_window().get_state(window_state);
+    if (result.failed())
+      return result;
+    result = runtime_.begin_frame(window_state, delta_seconds,
+                                  {.name = "14 PBR Vertex Attributes",
+                                   .description = "PBR attributes -> Render Pipeline -> ImGui Canvas",
+                                   .frame = rendered_frames()});
+    if (result.failed())
+      return result;
+    bool material_changed = ImGui::ColorEdit3("Base color", &model_base_color_.x);
+    material_changed =
+        ImGui::SliderFloat("Metallic", &model_metallic_, 0.0F, 1.0F) || material_changed;
+    material_changed =
+        ImGui::SliderFloat("Roughness", &model_roughness_, 0.04F, 1.0F) || material_changed;
+    ImGui::TextUnformatted("Suzanne base color texture:");
+    ImGui::Image(ImTextureRef{preview_texture_id_}, {64, 64});
+    ImGui::SeparatorText("Vertex attributes");
+    ImGui::Text("POSITION: %s", has_position_ ? "present" : "missing");
+    ImGui::Text("NORMAL: %s", has_normal_ ? "present" : "missing");
+    ImGui::Text("TANGENT: %s", has_tangent_ ? "present" : "missing");
+    ImGui::Text("TEXCOORD_0: %s", has_uv0_ ? "present" : "missing");
+    ImGui::Text("TEXCOORD_1: %s (optional)", has_uv1_ ? "present" : "not provided");
+    ImGui::TextUnformatted("UV0 drives material textures; tangent space drives normal maps.");
+    ImGui::Checkbox("Auto orbit", &auto_orbit_);
+    if (ImGui::Button("Reset camera"))
+      camera_.reset();
+    result = material_changed ? update_model_material() : granit::result::success;
+    if (result.ok())
+      result = runtime_.end_frame();
+    return result;
+  }
+
+  granit::result on_render(granit::example::present_frame& frame) noexcept override {
+    camera_input_.begin_frame();
+    last_operation_ = "building ImGui frame";
+    auto result = build_imgui_frame(frame.delta_seconds);
+    const auto input = camera_input_.finish(runtime_.wants_mouse(), runtime_.wants_keyboard());
+    if (auto_orbit_ && !smoke_test_ && !camera_.orbit(frame.delta_seconds * 0.25F))
+      result = granit::result::invalid_argument;
+    if (result.ok() && !camera_.update(input, frame.swapchain.width, frame.swapchain.height))
+      result = granit::result::invalid_argument;
+    const bool empty_frame = rendered_frames() == 0;
+    if (result.ok())
+      result = update_scene(!empty_frame);
+    if (result.failed())
+      return result;
+
+    last_operation_ = "rendering frame";
+    if (result.ok()) {
+      granit::render_pipeline_render_desc render_desc{};
+      render_desc.scene = scene_.ref();
+      render_desc.output = frame.backbuffer.view;
+      render_desc.output_format = frame.swapchain.format;
+      render_desc.width = frame.swapchain.width;
+      render_desc.height = frame.swapchain.height;
+      render_desc.draw_bindings = empty_frame
+                                      ? std::span<const granit::render_pipeline_draw_binding>{}
+                                      : std::span{model_gpu_.draw_bindings()};
+      render_desc.frame = &frame.acquired;
+      render_desc.canvas = runtime_.canvas_ref();
+      render_desc.clear_color = {0.025F, 0.03F, 0.045F, 1.0F};
+      result = pipeline_.render(render_desc);
+    }
+    return result;
+  }
+
+  granit::example::assets::asset_handle<granit::example::gltf::scene> model_asset_;
+  granit::example::gltf::scene model_scene_;
+  granit::example::gltf_rendering::scene_resources model_gpu_;
+  granit::render_pipeline pipeline_;
+  granit::scene_snapshot scene_;
+  granit::example::tutorial::tutorial_runtime runtime_;
+  granit::example::camera::orbit_camera camera_;
+  granit::example::camera::orbit_camera_input_accumulator camera_input_;
+  ImTextureID preview_texture_id_{ImTextureID_Invalid};
+  granit::math::float4 model_base_color_{1.0F, 1.0F, 1.0F, 1.0F};
+  float model_metallic_{1.0F};
+  float model_roughness_{1.0F};
+  bool has_position_{};
+  bool has_normal_{};
+  bool has_tangent_{};
+  bool has_uv0_{};
+  bool has_uv1_{};
+  bool auto_orbit_{true};
+  bool smoke_test_{};
+  bool asset_wait_logged_{};
+  std::uint32_t pointer_events_{};
+  granit::result shutdown_reason_{granit::result::success};
+  const char* last_operation_{"starting"};
+};
+
+tutorial_application application;
+
+} // namespace
+
+#if defined(__EMSCRIPTEN__)
+extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_14_rendered_frames() noexcept {
+  return application.rendered_frames();
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_14_recreate_count() noexcept {
+  return application.completed_recreates();
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_14_pointer_events() noexcept {
+  return application.pointer_events();
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_14_canvas_items() noexcept {
+  return application.canvas_items();
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE int granit_tutorial_14_ready() noexcept {
+  return application.ready() ? 1 : 0;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE granit_result granit_tutorial_14_shutdown_reason() noexcept {
+  return application.shutdown_reason();
+}
+#endif
+
+int main(int argument_count, char** arguments) {
+  const bool smoke_test = argument_count == 2 && std::string_view{arguments[1]} == "--smoke-test";
+  const std::string_view executable_path =
+      argument_count > 0 && arguments[0] != nullptr ? arguments[0] : "";
+  application.set_smoke_test(smoke_test);
+
+  const auto result =
+      application.run({.executable_path = executable_path,
+                       .title = "Granit PBR Vertex Attributes",
+                       .renderer = {.application_name = "Granit PBR Vertex Attributes",
+                                    .presentation = granit::presentation_mode::enabled},
+                       .swapchain = {},
+                       .smoke_test_frames = 5,
+                       .smoke_test = smoke_test});
+  if (smoke_test && result == granit::result::backend_unavailable)
+    return 77;
+  if (result.failed())
+    return report_failure("application run", result);
+  return 0;
+}

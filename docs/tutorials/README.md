@@ -22,6 +22,8 @@
 | 10：Transparency Gallery | Opaque、Mask、Blend、模型、轨道相机和对象级排序 | v0.62.0 已实现；Windows/WebGPU 已验证 | [10_transparency](../../examples/tutorials/10_transparency) |
 | 11：Capabilities Inspector | Format、Mip、Sampler、Indirect 和 Renderer limits 的实际探测 | v0.62.0 已实现；Windows/WebGPU 已验证 | [11_capabilities](../../examples/tutorials/11_capabilities) |
 | [12：Resource Table 场景](12-resource-table.md) | Resource Table 能力查询、显式选择、传统 Bind Group 回退 | v0.60.0 单一场景与压力验证入口 | [12_resource_table_scene](../../examples/tutorials/12_resource_table_scene) |
+| [13：Vertex Streams](13-vertex-streams.md) | 多 Vertex Buffer、交错/拆分布局、共享 Index Buffer | 同一立方体在两种顶点布局间切换 | [13_vertex_streams](../../examples/tutorials/13_vertex_streams) |
+| [14：PBR 顶点属性](14-pbr-attributes.md) | POSITION、NORMAL、TANGENT、UV0/UV1 与 PBR 纹理通道 | Suzanne 顶点属性探针与 PBR 参数面板 | [14_pbr_attributes](../../examples/tutorials/14_pbr_attributes) |
 
 前七个渲染教程复用仓库私有的 `examples/common/application`。它只处理 Window、Renderer 异步初始化、
 Surface、Swapchain、事件循环、Resize、Acquire 与 Present；Shader、资源、命令录制和场景仍留在
