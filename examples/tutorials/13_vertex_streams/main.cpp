@@ -101,6 +101,9 @@ class tutorial_application final : public granit::example::application {
 public:
   void set_smoke_test(bool enabled) noexcept { smoke_test_ = enabled; }
   [[nodiscard]] std::uint32_t canvas_items() const noexcept { return runtime_.canvas_items(); }
+  [[nodiscard]] std::uint32_t feature_value() const noexcept {
+    return use_instance_stream_ ? 3U : (interleaved_ ? 2U : 1U);
+  }
 
 private:
   granit::result on_initialize() noexcept override {
@@ -562,6 +565,18 @@ tutorial_application application;
 } // namespace
 
 #if defined(__EMSCRIPTEN__)
+extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_13_rendered_frames() noexcept {
+  return application.rendered_frames();
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_13_recreate_count() noexcept {
+  return application.completed_recreates();
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_13_feature_value() noexcept {
+  return application.feature_value();
+}
+
 extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_13_canvas_items() noexcept {
   return application.canvas_items();
 }

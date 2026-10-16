@@ -72,7 +72,8 @@ jobs:
             granit_tutorial_02_pbr_assets granit_tutorial_03_instancing \
             granit_tutorial_04_raymarch \
             granit_tutorial_05_metaballs granit_tutorial_06_marching_cubes \
-            granit_tutorial_07_deferred; do
+            granit_tutorial_07_deferred granit_tutorial_13_vertex_streams \
+            granit_tutorial_14_pbr_attributes; do
             output="build/emscripten-release/web/${name}"
             test -s "${output}.html"
             test -s "${output}.js"
@@ -163,6 +164,16 @@ jobs:
             script: test:tutorial-feature
             arguments: >-
               ../../build/emscripten-release/web granit_tutorial_07_deferred 07
+            expect_software_fallback: "0"
+          - name: tutorial-13
+            script: test:tutorial-feature
+            arguments: >-
+              ../../build/emscripten-release/web granit_tutorial_13_vertex_streams 13
+            expect_software_fallback: "0"
+          - name: tutorial-14
+            script: test:tutorial-feature
+            arguments: >-
+              ../../build/emscripten-release/web granit_tutorial_14_pbr_attributes 14
             expect_software_fallback: "0"
     steps:
       - uses: actions/checkout@v5

@@ -55,6 +55,11 @@ public:
   void set_smoke_test(bool enabled) noexcept { smoke_test_ = enabled; }
   [[nodiscard]] std::uint32_t pointer_events() const noexcept { return pointer_events_; }
   [[nodiscard]] std::uint32_t canvas_items() const noexcept { return runtime_.canvas_items(); }
+  [[nodiscard]] std::uint32_t attribute_count() const noexcept {
+    return static_cast<std::uint32_t>(has_position_) + static_cast<std::uint32_t>(has_normal_) +
+           static_cast<std::uint32_t>(has_tangent_) + static_cast<std::uint32_t>(has_uv0_) +
+           static_cast<std::uint32_t>(has_uv1_);
+  }
   [[nodiscard]] granit_result shutdown_reason() const noexcept { return shutdown_reason_.native(); }
 
 private:
@@ -345,6 +350,10 @@ tutorial_application application;
 } // namespace
 
 #if defined(__EMSCRIPTEN__)
+extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_14_feature_value() noexcept {
+  return application.attribute_count();
+}
+
 extern "C" EMSCRIPTEN_KEEPALIVE std::uint32_t granit_tutorial_14_rendered_frames() noexcept {
   return application.rendered_frames();
 }
