@@ -9,17 +9,13 @@
 
 ## 当前计划
 
-- [S-98：0.62.0 交互式图形特性教程](S-98-0.62.0-interactive-feature-tutorials.md)——将 Tutorial 09～11
-  从最小能力探针升级为 Particle Generator、Transparency Gallery 和 Capabilities Inspector，
-  保留固定 Smoke 与跨平台自动验收，不新增公共 ABI。
-
-- [S-95：0.59.0 Resource Table 实验性 API](S-95-0.59.0-resource-table-experimental-api.md)——建立可选、可回退、
-  可测量的 Resource Table 公共实验 API，复用 Vulkan Bindless 原型，验证 WebGPU 回退和 Tutorial 12；不改变
-  Bind Group 默认路径。
-- [S-97：0.61.0 Resource Table 实际 Shader 采样与多材质场景](S-97-0.61.0-resource-table-shader-and-multimaterial-scene.md)——承接 v0.60.0，
-  实现 Vulkan Resource Table Shader 实际采样，以真实模型和可控材质网格验证多纹理、多材质和多 Draw 压力；WebGPU 继续使用 Bind Group 回退。
+暂无已批准的实施中版本计划。v0.62.0 已完成发布，下一版本将先根据现有能力和 bgfx
+示例对照结果确定范围。
 
 ## 最近完成
+
+- [S-98：0.62.0 交互式图形特性教程](S-98-0.62.0-interactive-feature-tutorials.md)——完成
+  Tutorial 09～11、固定 Smoke、跨平台自动验收和公开发布。
 
 - [S-97：0.61.0 Resource Table 实际 Shader 采样与多材质场景](S-97-0.61.0-resource-table-shader-and-multimaterial-scene.md)——完成
   Vulkan Resource Table 实际纹理采样、Tutorial 12 多材质场景、Bind Group 对照和跨平台发布，

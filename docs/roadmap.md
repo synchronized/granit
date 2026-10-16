@@ -30,9 +30,13 @@ Vulkan 内部实验。
 
 ## 当前计划
 
-[v0.62.0](versions/v0.62.0.md) 由 [S-98](plans/S-98-0.62.0-interactive-feature-tutorials.md)
-规划：将 Tutorial 09～11 升级为 Particle Generator、Transparency Gallery 和 Capabilities Inspector，
-并保持固定 Smoke、跨后端验证和无新增公共 ABI。
+暂无已批准的下一版本计划。当前先进行 bgfx 示例对照，筛选能够验证 Granit 现有
+Buffer、Texture、Pipeline、Compute、Instancing、PBR、后处理和诊断能力的候选，确认范围后
+再建立 v0.63.0 计划。
+
+[v0.62.0](versions/v0.62.0.md) 已由 [S-98](plans/S-98-0.62.0-interactive-feature-tutorials.md)
+完成并发布：将 Tutorial 09～11 升级为 Particle Generator、Transparency Gallery 和
+Capabilities Inspector，并完成固定 Smoke、跨后端验证和公开 Release。
 
 [v0.61.0](versions/v0.61.0.md) 已由 [S-97](plans/S-97-0.61.0-resource-table-shader-and-multimaterial-scene.md)
 完成并发布：实现 Vulkan Resource Table Shader 实际纹理采样，升级 Tutorial 12 的多材质场景和压力对照，
