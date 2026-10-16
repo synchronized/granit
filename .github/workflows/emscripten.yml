@@ -97,6 +97,8 @@ jobs:
             build/emscripten-release/web/granit_tutorial_05_metaballs.*
             build/emscripten-release/web/granit_tutorial_06_marching_cubes.*
             build/emscripten-release/web/granit_tutorial_07_deferred.*
+            build/emscripten-release/web/granit_tutorial_13_vertex_streams.*
+            build/emscripten-release/web/granit_tutorial_14_pbr_attributes.*
             build/emscripten-release/web/model_viewer_fixture.gltf
             build/emscripten-release/web/model_viewer_fixture.bin
           if-no-files-found: error
