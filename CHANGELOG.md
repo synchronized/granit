@@ -3,10 +3,10 @@
 
 # 变更记录
 
-本文件记录面向使用者的公共接口、行为、构建和兼容性变化。项目当前仍处于 0.x；`Unreleased`
-内容不代表已经发布。版本兼容规则见[版本与兼容策略](docs/reference/compatibility.md)。
+本文件记录面向使用者的公共接口、行为、构建和兼容性变化。项目当前仍处于 0.x；版本兼容规则见
+[版本与兼容策略](docs/reference/compatibility.md)。
 
-## Unreleased
+## 0.63.0 - 2026-10-16
 
 - 新增 Tutorial 13 `Vertex Streams`：验证拆分/交错 Vertex Buffer、实例 Vertex Stream、共享
   Index Buffer 和 Rendering 前绑定约束；
