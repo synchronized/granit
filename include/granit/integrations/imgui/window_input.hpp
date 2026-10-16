@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include "imgui/imgui_input.h"
+#ifndef GRANIT_INTEGRATIONS_IMGUI_WINDOW_INPUT_HPP_
+#define GRANIT_INTEGRATIONS_IMGUI_WINDOW_INPUT_HPP_
 
 #include <imgui.h>
 
@@ -10,10 +11,13 @@
 #include <cfloat>
 #include <cstdint>
 
-namespace granit::example::imgui {
-namespace {
+#include <granit/integrations/imgui/export.hpp>
+#include <granit/window.hpp>
 
-ImGuiKey map_key(granit::physical_key key) noexcept {
+namespace granit::integration::imgui::window {
+namespace detail {
+
+inline ImGuiKey map_key(granit::physical_key key) noexcept {
   const auto value = static_cast<std::uint32_t>(key);
   if (value >= static_cast<std::uint32_t>(granit::physical_key::a) &&
       value <= static_cast<std::uint32_t>(granit::physical_key::z)) {
@@ -84,7 +88,7 @@ ImGuiKey map_key(granit::physical_key key) noexcept {
   }
 }
 
-int map_button(std::uint32_t button) noexcept {
+inline int map_button(std::uint32_t button) noexcept {
   switch (button) {
   case GRANIT_POINTER_PRIMARY_BIT:
     return ImGuiMouseButton_Left;
@@ -101,7 +105,7 @@ int map_button(std::uint32_t button) noexcept {
   }
 }
 
-void update_modifiers(ImGuiIO& io, std::uint32_t modifiers) noexcept {
+inline void update_modifiers(ImGuiIO& io, std::uint32_t modifiers) noexcept {
   io.AddKeyEvent(ImGuiMod_Ctrl, (modifiers & (GRANIT_MODIFIER_LEFT_CONTROL_BIT |
                                               GRANIT_MODIFIER_RIGHT_CONTROL_BIT)) != 0);
   io.AddKeyEvent(ImGuiMod_Shift, (modifiers & (GRANIT_MODIFIER_LEFT_SHIFT_BIT |
@@ -112,19 +116,21 @@ void update_modifiers(ImGuiIO& io, std::uint32_t modifiers) noexcept {
                                                GRANIT_MODIFIER_RIGHT_SUPER_BIT)) != 0);
 }
 
-} // namespace
+} // namespace detail
 
-void process_window_event(const granit::window_event& event) noexcept {
+/** 将 Granit Window 事件转换为当前 ImGui Context 的窗口事件。 */
+inline void process_window_event(const granit::window_event& event) noexcept {
   if (event.type == granit::window_event_type::focus_changed)
     ImGui::GetIO().AddFocusEvent(event.data.focus.focused);
 }
 
-void process_input_event(const granit::input_event& event) noexcept {
+/** 将 Granit Input 事件转换为当前 ImGui Context 的键盘、文本和指针事件。 */
+inline void process_input_event(const granit::input_event& event) noexcept {
   auto& io = ImGui::GetIO();
   switch (event.type) {
   case granit::input_event_type::key: {
-    update_modifiers(io, event.data.key.modifiers);
-    const auto key = map_key(event.data.key.physical);
+    detail::update_modifiers(io, event.data.key.modifiers);
+    const auto key = detail::map_key(event.data.key.physical);
     if (key != ImGuiKey_None)
       io.AddKeyEvent(key, event.data.key.action != granit::key_action::released);
     break;
@@ -141,7 +147,7 @@ void process_input_event(const granit::input_event& event) noexcept {
     break;
   case granit::input_event_type::pointer_button: {
     io.AddMousePosEvent(event.data.pointer_button.x, event.data.pointer_button.y);
-    const auto button = map_button(event.data.pointer_button.button);
+    const auto button = detail::map_button(event.data.pointer_button.button);
     if (button >= 0)
       io.AddMouseButtonEvent(button, event.data.pointer_button.pressed != 0);
     break;
@@ -158,19 +164,6 @@ void process_input_event(const granit::input_event& event) noexcept {
   }
 }
 
-void begin_frame(const granit::window_state& state, float delta_seconds) noexcept {
-  auto& io = ImGui::GetIO();
-  io.DisplaySize = {static_cast<float>(state.width), static_cast<float>(state.height)};
-  io.DisplayFramebufferScale = {
-      state.width == 0
-          ? 1.0F
-          : static_cast<float>(state.framebuffer_width) / static_cast<float>(state.width),
-      state.height == 0
-          ? 1.0F
-          : static_cast<float>(state.framebuffer_height) / static_cast<float>(state.height),
-  };
-  io.DeltaTime = delta_seconds > 0.0F ? delta_seconds : 1.0F / 60.0F;
-  ImGui::NewFrame();
-}
+} // namespace granit::integration::imgui::window
 
-} // namespace granit::example::imgui
+#endif

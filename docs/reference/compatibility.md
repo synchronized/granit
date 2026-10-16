@@ -48,6 +48,7 @@ v0.50.0 将稳定候选定义为 component 范围，而不是整个 Granit 的�
 | `AssetTools` | `granit::asset_tools` | Threads、可选离线工具链 | 实验性 | 统一离线资产构建、检查与 CLI |
 | `IntegrationSDL3` | `granit::integration_sdl3` | Core、SDL3 | 实验性 | 保持可选适配层，不进入 Core |
 | `IntegrationImGui` | `granit::integration_imgui` | Core、RP、ImGui | 实验性 | 可选；第三方 ABI 不稳定 |
+| `IntegrationImGuiWindow` | `granit::integration_imgui_window` | IntegrationImGui、Window | 实验性 | 可选；Window/Input 到 ImGui 的 C++ 适配 |
 
 component 名、依赖和当前等级是安装 SDK 契约的一部分；底层 Vulkan/WebGPU 实现、示例私有代码、
 测试目标和 `src/` 内部模块不属于可安装 component。当前优先级和重新评估条件见[路线图](../roadmap.md)。

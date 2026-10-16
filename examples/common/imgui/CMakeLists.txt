@@ -20,15 +20,13 @@ if(TARGET granit::integration_imgui)
     imgui_font_atlas.h
     imgui_frame_capture.cpp
     imgui_frame_capture.h
-    imgui_input.cpp
-    imgui_input.h
     imgui_texture_registry.cpp
     imgui_texture_registry.h
   )
   target_compile_features(granit_example_imgui PUBLIC cxx_std_20)
   target_include_directories(granit_example_imgui PUBLIC "${PROJECT_SOURCE_DIR}/examples/common")
   target_link_libraries(
-    granit_example_imgui PUBLIC granit_example_imgui_canvas granit::integration_imgui
+    granit_example_imgui PUBLIC granit_example_imgui_canvas granit::integration_imgui_window
   )
   set_target_properties(granit_example_imgui PROPERTIES FOLDER "Examples")
   granit_target_compile_warnings(granit_example_imgui)

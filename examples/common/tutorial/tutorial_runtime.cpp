@@ -4,10 +4,11 @@
 #include "tutorial/tutorial_runtime.h"
 
 #include "imgui/imgui_font_atlas.h"
-#include "imgui/imgui_input.h"
 #include "imgui/imgui_theme.h"
 
+#include <granit/integrations/imgui/input.hpp>
 #include <granit/integrations/imgui/renderer.hpp>
+#include <granit/integrations/imgui/window_input.hpp>
 #include <imgui.h>
 
 #include <algorithm>
@@ -27,8 +28,8 @@ result tutorial_runtime::initialize(renderer& renderer) noexcept {
 
   auto operation = canvas_.initialize(renderer);
   if (operation.ok()) {
-    operation = imgui::initialize_font_atlas(renderer, textures_, font_texture_, font_view_,
-                                             font_sampler_);
+    operation =
+        imgui::initialize_font_atlas(renderer, textures_, font_texture_, font_view_, font_sampler_);
   }
   if (operation.failed()) {
     shutdown();
@@ -40,12 +41,12 @@ result tutorial_runtime::initialize(renderer& renderer) noexcept {
 
 void tutorial_runtime::process(const window_event& event) noexcept {
   if (initialized_)
-    imgui::process_window_event(event);
+    integration::imgui::window::process_window_event(event);
 }
 
 void tutorial_runtime::process(const input_event& event) noexcept {
   if (initialized_)
-    imgui::process_input_event(event);
+    integration::imgui::window::process_input_event(event);
 }
 
 result tutorial_runtime::begin_frame(const window_state& state, float delta_seconds,
@@ -61,17 +62,27 @@ result tutorial_runtime::begin_frame(const window_state& state, float delta_seco
                                 : smoothed_delta_seconds_ * 0.9F + safe_delta * 0.1F;
   smoothed_fps_ = 1.0F / smoothed_delta_seconds_;
 
-  imgui::begin_frame(state, safe_delta);
+  integration::imgui::begin_frame({
+      .display_width = static_cast<float>(state.width),
+      .display_height = static_cast<float>(state.height),
+      .framebuffer_scale_x = state.width == 0 ? 1.0F
+                                              : static_cast<float>(state.framebuffer_width) /
+                                                    static_cast<float>(state.width),
+      .framebuffer_scale_y = state.height == 0 ? 1.0F
+                                               : static_cast<float>(state.framebuffer_height) /
+                                                     static_cast<float>(state.height),
+      .delta_seconds = safe_delta,
+  });
   ImGui::SetNextWindowPos({20, 20}, ImGuiCond_FirstUseEver);
   ImGui::SetNextWindowSize({340, 0}, ImGuiCond_FirstUseEver);
   ImGui::Begin("Granit Tutorial");
   ImGui::TextUnformatted(info.name.data(), info.name.data() + info.name.size());
-  ImGui::TextUnformatted(info.description.data(), info.description.data() + info.description.size());
+  ImGui::TextUnformatted(info.description.data(),
+                         info.description.data() + info.description.size());
   ImGui::Separator();
-  ImGui::Text("FPS: %.1f | CPU frame: %.2f ms", smoothed_fps_,
-              smoothed_delta_seconds_ * 1000.0F);
-  ImGui::Text("Framebuffer: %u x %u | Frame: %u", state.framebuffer_width,
-              state.framebuffer_height, info.frame);
+  ImGui::Text("FPS: %.1f | CPU frame: %.2f ms", smoothed_fps_, smoothed_delta_seconds_ * 1000.0F);
+  ImGui::Text("Framebuffer: %u x %u | Frame: %u", state.framebuffer_width, state.framebuffer_height,
+              info.frame);
   ImGui::SeparatorText("Chapter Settings");
   frame_open_ = true;
   return result::success;
@@ -86,8 +97,8 @@ result tutorial_runtime::end_frame() noexcept {
 
   auto operation = canvas_.clear();
   if (operation.ok()) {
-    operation = integration::imgui::append_draw_data(
-        ImGui::GetDrawData(), canvas_, imgui::texture_registry::resolver, &textures_);
+    operation = integration::imgui::append_draw_data(ImGui::GetDrawData(), canvas_,
+                                                     imgui::texture_registry::resolver, &textures_);
   }
   canvas_draw_list_stats stats{};
   if (operation.ok())

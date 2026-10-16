@@ -60,6 +60,7 @@ if(NOT GRANIT_REQUEST_COMPONENT)
       granit::asset_tools
       granit::integration_sdl3
       granit::integration_imgui
+      granit::integration_imgui_window
   )
     if(TARGET ${unexpected_target})
       message(FATAL_ERROR "Core-only 请求意外导入可选目标：${unexpected_target}")
@@ -89,6 +90,8 @@ elseif(GRANIT_REQUEST_COMPONENT STREQUAL "IntegrationSDL3")
   set(expected_target granit::integration_sdl3)
 elseif(GRANIT_REQUEST_COMPONENT STREQUAL "IntegrationImGui")
   set(expected_target granit::integration_imgui)
+elseif(GRANIT_REQUEST_COMPONENT STREQUAL "IntegrationImGuiWindow")
+  set(expected_target granit::integration_imgui_window)
 endif()
 
 if(DEFINED expected_target AND NOT TARGET ${expected_target})

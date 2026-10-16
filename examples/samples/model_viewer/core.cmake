@@ -106,7 +106,7 @@ if(TARGET granit::integration_imgui)
     granit_sample_model_viewer_imgui
     PUBLIC granit_sample_model_viewer_core
            granit_example_imgui
-           granit::integration_imgui
+           granit::integration_imgui_window
   )
   set_target_properties(
     granit_sample_model_viewer_imgui PROPERTIES FOLDER "Examples/Samples"

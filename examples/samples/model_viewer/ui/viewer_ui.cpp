@@ -4,9 +4,11 @@
 #include "model_viewer/ui/viewer_ui.h"
 
 #include "imgui/imgui_frame_capture.h"
-#include "imgui/imgui_input.h"
 #include "imgui/imgui_texture_registry.h"
 #include "imgui/imgui_theme.h"
+
+#include <granit/integrations/imgui/input.hpp>
+#include <granit/integrations/imgui/window_input.hpp>
 
 #include <limits>
 #include <new>
@@ -49,17 +51,27 @@ granit::result viewer_ui::initialize() noexcept {
 
 void viewer_ui::process(const granit::window_event& event) noexcept {
   if (state_)
-    imgui::process_window_event(event);
+    granit::integration::imgui::window::process_window_event(event);
 }
 
 void viewer_ui::process(const granit::input_event& event) noexcept {
   if (state_)
-    imgui::process_input_event(event);
+    granit::integration::imgui::window::process_input_event(event);
 }
 
 void viewer_ui::begin_frame(const granit::window_state& state, float delta_seconds) noexcept {
   if (state_)
-    imgui::begin_frame(state, delta_seconds);
+    granit::integration::imgui::begin_frame({
+        .display_width = static_cast<float>(state.width),
+        .display_height = static_cast<float>(state.height),
+        .framebuffer_scale_x = state.width == 0 ? 1.0F
+                                                : static_cast<float>(state.framebuffer_width) /
+                                                      static_cast<float>(state.width),
+        .framebuffer_scale_y = state.height == 0 ? 1.0F
+                                                 : static_cast<float>(state.framebuffer_height) /
+                                                       static_cast<float>(state.height),
+        .delta_seconds = delta_seconds,
+    });
 }
 
 granit::result viewer_ui::capture(imgui::frame_canvas_data& output) noexcept {

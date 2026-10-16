@@ -49,7 +49,7 @@ Granit 采用“Bring Your Own Engine”边界，不接管使用者的 ECS、Sce
 | [参考渲染管线](docs/reference/render-pipeline.md) | `granit::render_pipeline` | 0.x，未冻结 | Forward PBR、Lighting、Canvas、Debug Draw 与 Text |
 | [Window](docs/reference/window.md) | `granit::window` | 0.x，未冻结 | Win32、XCB、Wayland、浏览器窗口、输入与 Surface 接入 |
 | [AssetTools](docs/reference/asset-tools.md) | `granit::asset_tools` | 实验性 | Shader、Material、Texture 与 Environment 离线构建和检查 |
-| [第三方集成](docs/reference/third-party-integrations.md) | `granit::integration_sdl3`、`granit::integration_imgui` | 实验性 | SDL3 Surface 与 ImGui Draw Data 转换 |
+| [第三方集成](docs/reference/third-party-integrations.md) | `granit::integration_sdl3`、`granit::integration_imgui`、`granit::integration_imgui_window` | 实验性 | SDL3 Surface、ImGui Draw Data 与可选 Window 输入适配 |
 
 ## 使用发布包
 
@@ -152,8 +152,6 @@ System 管理生命周期的 SDL3 Backend。已经自行拥有 SDL3 或 GLFW 窗
 接入路径，具体边界见[窗口库接入](docs/guides/window-library-integration.md)；输入行为见
 [Window 输入](docs/reference/input.md)。
 
-使用可选 SDL3 和 ImGui Integration：
-
 ```cmake
 find_package(granit CONFIG REQUIRED COMPONENTS IntegrationSDL3 IntegrationImGui)
 target_link_libraries(
@@ -161,11 +159,9 @@ target_link_libraries(
 )
 ```
 
-SDL3 Integration 只负责创建 Granit Surface；ImGui Integration 只负责把 Draw Data 追加到 Canvas。
-源码树构建时两者默认关闭，安装使用时由父项目或 `find_package` 提供 SDL3 3.2+ 与 ImGui；完整
-启用方式、依赖和所有权边界见[SDL3 与 ImGui Integration](docs/reference/third-party-integrations.md)。
-组合示例同时覆盖字体 Atlas 与自定义 Texture ID，并通过 Canvas 的逐帧公共绑定及有界纹理绑定
-缓存录制；Canvas 的当前录制语义见 [Canvas Draw List](docs/reference/canvas-draw-list.md)。
+如果使用 `granit::window` 的输入事件，可改为请求 `IntegrationImGuiWindow` 并链接
+`granit::integration_imgui_window`；不使用 Granit Window 的应用不需要该组件。完整依赖和所有权
+边界见[SDL3 与 ImGui Integration](docs/reference/third-party-integrations.md)。
 
 ## 文档
 
