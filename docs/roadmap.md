@@ -10,7 +10,7 @@
 ## 当前阶段
 
 Granit 已形成桌面 Vulkan、浏览器 WebGPU、C11 ABI、C++20 RAII、Window、RenderPipeline 与
-AssetTools 的完整闭环。当前仍处于 0.x，v0.59.0 已发布并完成 Resource Table 实验性公共契约。Bindless 继续作为
+AssetTools 的完整闭环。当前仍处于 0.x，v0.62.0 已发布并完成交互式教程与跨平台验收。Bindless 继续作为
 Vulkan 内部实验。
 不改变 Vulkan 驱动由平台提供的边界。
 
@@ -30,9 +30,9 @@ Vulkan 内部实验。
 
 ## 当前计划
 
-暂无已批准的下一版本计划。当前先进行 bgfx 示例对照，筛选能够验证 Granit 现有
-Buffer、Texture、Pipeline、Compute、Instancing、PBR、后处理和诊断能力的候选，确认范围后
-再建立 v0.63.0 计划。
+当前计划为 [v0.63.0](versions/v0.63.0.md)，由
+[S-99](plans/S-99-0.63.0-vertex-streams-and-pbr-attributes.md) 承担：验证多 Vertex Buffer、
+实例流、UV0、Tangent、Normal Map 和无纹理 PBR 变体，不新增公共 ABI。
 
 [v0.62.0](versions/v0.62.0.md) 已由 [S-98](plans/S-98-0.62.0-interactive-feature-tutorials.md)
 完成并发布：将 Tutorial 09～11 升级为 Particle Generator、Transparency Gallery 和

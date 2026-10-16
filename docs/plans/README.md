@@ -9,13 +9,19 @@
 
 ## 当前计划
 
-暂无已批准的实施中版本计划。v0.62.0 已完成发布，下一版本将先根据现有能力和 bgfx
-示例对照结果确定范围。
+- [S-99：0.63.0 Vertex Streams 与 PBR 顶点属性验证](S-99-0.63.0-vertex-streams-and-pbr-attributes.md)——
+  验证多 Vertex Buffer、实例流、UV0、Tangent、Normal Map 和无纹理 PBR 变体，不新增公共 ABI。
 
 ## 最近完成
 
 - [S-98：0.62.0 交互式图形特性教程](S-98-0.62.0-interactive-feature-tutorials.md)——完成
   Tutorial 09～11、固定 Smoke、跨平台自动验收和公开发布。
+
+- [S-97：0.61.0 Resource Table 实际 Shader 采样与多材质场景](S-97-0.61.0-resource-table-shader-and-multimaterial-scene.md)——完成
+  Vulkan Resource Table 实际纹理采样、Tutorial 12 多材质场景和跨平台发布。
+
+- [S-95：0.59.0 Resource Table 实验性 API](S-95-0.59.0-resource-table-experimental-api.md)——完成
+  可回退、可测量的 Resource Table 实验性公共 API 和 Tutorial 12 验证。
 
 - [S-97：0.61.0 Resource Table 实际 Shader 采样与多材质场景](S-97-0.61.0-resource-table-shader-and-multimaterial-scene.md)——完成
   Vulkan Resource Table 实际纹理采样、Tutorial 12 多材质场景、Bind Group 对照和跨平台发布，
