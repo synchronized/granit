@@ -27,7 +27,7 @@
 | `GRANIT_ENABLE_WINDOW_SDL3` | 跟随 `GRANIT_BUILD_EXAMPLES` | 在 Window component 中启用 SDL3 后端 |
 | `GRANIT_BUILD_INTEGRATION_IMGUI` | `OFF` | 构建 ImGui Draw Data 集成组件 |
 | `GRANIT_DEPENDENCY_POLICY` | `auto` | 第三方依赖默认获取策略：`system`（只用系统包）/ `auto`（先系统后下载）/ `download`（强制下载锁定版） |
-| `GRANIT_DEPENDENCY_SOURCE_CACHE_DIR` | `vendor/cache` | 下载型 SDL3/ImGui 的共享源码缓存；各 preset 的编译产物仍在自己的 `build/<preset>` 目录 |
+| `GRANIT_DEPENDENCY_SOURCE_CACHE_DIR` | `vendor/cache` | 下载型 SDL3/ImGui/cgltf/stb 的共享源码缓存；各 preset 的编译产物仍在自己的 `build/<preset>` 目录 |
 | `GRANIT_SHADER_TOOLCHAIN_MODE` | 开发 preset 为 `auto`；手动配置为 `system` | 先使用系统工具，缺失或不完整时从共享缓存获取锁定工具链；可设为 `off`、`system`、`auto` 或 `download` |
 | `GRANIT_SHADER_TOOLCHAIN_CACHE_DIR` | 开发 preset 为 `vendor/cache`；手动配置为 `build/toolchains` | 锁定 Shader Toolchain 的归档和已校验工具链缓存；编译产物仍在自己的 `build/<preset>` 目录 |
 | `GRANIT_ENABLE_XCB` | Linux 上 `ON` | 找到 XCB 开发头时启用私有 XCB Surface 后端 |
@@ -42,7 +42,7 @@
 作为子项目手动
 引入时，依赖策略与警告选项默认保持 `auto` / `OFF`；所有警告选项均为目标私有属性，不会传递给使用者。
 
-当 SDL3 或 ImGui 需要下载时，CMake 会把锁定版本的压缩包和解压后的源码保存到
+当 SDL3、ImGui 或示例 glTF 支持的 cgltf/stb_image 需要下载时，CMake 会把锁定版本的压缩包和解压后的源码保存到
 `vendor/cache/archives` 与 `vendor/cache/sources`，后续 preset 直接复用这份源码。Shader Toolchain
 使用同一个缓存根目录，但归档和已校验工具链分别位于 `vendor/cache/archives/shader-toolchain` 与
 `vendor/cache/toolchains/shader-toolchain`；`vendor/cache/extract/shader-toolchain` 只作为解压临时目录，

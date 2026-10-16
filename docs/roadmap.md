@@ -30,13 +30,13 @@ Vulkan 内部实验。
 
 ## 当前计划
 
-当前计划为 [v0.63.0](versions/v0.63.0.md)，由
-[S-99](plans/S-99-0.63.0-vertex-streams-and-pbr-attributes.md) 承担：验证多 Vertex Buffer、
-实例流、UV0、Tangent、Normal Map 和无纹理 PBR 变体，不新增公共 ABI。
-
-下一版本规划为 [v0.64.0](versions/v0.64.0.md)，由
+当前计划为 [v0.64.0](versions/v0.64.0.md)，由
 [S-100](plans/S-100-0.64.0-imgui-input-integration.md) 承担：提供 Window 无关的 ImGui 帧入口、
 可选的 `granit::window` 输入适配和独立 Consumer 验收，不新增 C ABI。
+
+下一版本规划为 [v0.65.0](versions/v0.65.0.md)，由
+[S-101](plans/S-101-0.65.0-example-dependency-cache.md) 承担：将 cgltf 与 stb_image 接入
+`vendor/cache` 共享源码缓存，补齐示例依赖的离线、静态和跨 preset 构建复用，不新增公共 ABI。
 
 [v0.62.0](versions/v0.62.0.md) 已由 [S-98](plans/S-98-0.62.0-interactive-feature-tutorials.md)
 完成并发布：将 Tutorial 09～11 升级为 Particle Generator、Transparency Gallery 和

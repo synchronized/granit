@@ -15,7 +15,7 @@
 | `granit_features.cmake` | 派生开关（`GRANIT_TESTING_ENABLED`、`GRANIT_NEEDS_*`） |
 | `granit_utility.cmake` | 通用函数（输出目录、编译警告、枚举校验） |
 | `granit_asset_paths.cmake` | 资产路径 |
-| `granit_integration_dependencies.cmake` | 可选集成依赖准备与依赖获取策略（SDL3 / ImGui） |
+| `granit_integration_dependencies.cmake` | 可选集成依赖准备与依赖获取策略（SDL3 / ImGui / 示例依赖缓存辅助） |
 | `granit_web.cmake` | WebGPU / Emscripten 辅助函数 |
 | `granit_shader_assets.cmake` | Shader 资产构建 |
 | `granit_build_assets.cmake` | 资产构建入口 |

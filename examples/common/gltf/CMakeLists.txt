@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
-include(FetchContent)
-
 granit_dependency_policy(CGLTF cgltf_policy)
 granit_dependency_policy(STB stb_policy)
 
@@ -23,17 +21,14 @@ if(NOT cgltf_policy STREQUAL "download")
   endif()
 endif()
 if(NOT cgltf_target AND (cgltf_policy STREQUAL "auto" OR cgltf_policy STREQUAL "download"))
-  FetchContent_Declare(
-    granit_example_cgltf
-    URL
-      https://github.com/jkuhlmann/cgltf/archive/360db1a95480fe102ae9c69b27c5d101167ff5ba.tar.gz
-    URL_HASH SHA256=445d135cf793232ae6a585ca1404e4ff28d4f4dbca070689034fe780370ac84a
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-  )
-  FetchContent_MakeAvailable(granit_example_cgltf)
+  granit_prepare_source_cache(
+    "cgltf" "360db1a95480fe102ae9c69b27c5d101167ff5ba"
+    "https://github.com/jkuhlmann/cgltf/archive/360db1a95480fe102ae9c69b27c5d101167ff5ba.tar.gz"
+    "445d135cf793232ae6a585ca1404e4ff28d4f4dbca070689034fe780370ac84a"
+    "cgltf.h" cgltf_source_dir)
   add_library(granit_example_cgltf_headers INTERFACE)
   target_include_directories(
-    granit_example_cgltf_headers SYSTEM INTERFACE "${granit_example_cgltf_SOURCE_DIR}"
+    granit_example_cgltf_headers SYSTEM INTERFACE "${cgltf_source_dir}"
   )
   set(cgltf_target granit_example_cgltf_headers)
 endif()
@@ -53,17 +48,14 @@ if(NOT stb_policy STREQUAL "download")
   endif()
 endif()
 if(NOT stb_image_target AND (stb_policy STREQUAL "auto" OR stb_policy STREQUAL "download"))
-  FetchContent_Declare(
-    granit_example_stb
-    URL
-      https://github.com/nothings/stb/archive/013ac3beddff3dbffafd5177e7972067cd2b5083.tar.gz
-    URL_HASH SHA256=b01aa93e1a968aed55f43e072c98ee401d2f20e897aabdb1a166c7166886ed11
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-  )
-  FetchContent_MakeAvailable(granit_example_stb)
+  granit_prepare_source_cache(
+    "stb" "013ac3beddff3dbffafd5177e7972067cd2b5083"
+    "https://github.com/nothings/stb/archive/013ac3beddff3dbffafd5177e7972067cd2b5083.tar.gz"
+    "b01aa93e1a968aed55f43e072c98ee401d2f20e897aabdb1a166c7166886ed11"
+    "stb_image.h" stb_source_dir)
   add_library(granit_example_stb_image_headers INTERFACE)
   target_include_directories(
-    granit_example_stb_image_headers SYSTEM INTERFACE "${granit_example_stb_SOURCE_DIR}"
+    granit_example_stb_image_headers SYSTEM INTERFACE "${stb_source_dir}"
   )
   set(stb_image_target granit_example_stb_image_headers)
 endif()

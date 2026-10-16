@@ -9,6 +9,8 @@
 
 ## 当前计划
 
+- [S-101：0.65.0 示例第三方依赖缓存收敛](S-101-0.65.0-example-dependency-cache.md)——将 cgltf 与 stb_image
+  接入 `vendor/cache` 共享源码缓存，统一示例依赖的离线与跨 preset 构建行为。
 - [S-99：0.63.0 Vertex Streams 与 PBR 顶点属性验证](S-99-0.63.0-vertex-streams-and-pbr-attributes.md)——
   验证多 Vertex Buffer、实例流、UV0、Tangent、Normal Map 和无纹理 PBR 变体，不新增公共 ABI。
 - [S-100：0.64.0 ImGui 输入适配与 Window 解耦](S-100-0.64.0-imgui-input-integration.md)——下一版本规划：
