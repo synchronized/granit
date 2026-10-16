@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Granit contributors
+
+include_guard(GLOBAL)
+
+# 所有下载型第三方源码的身份信息集中维护。源码缓存只接受锁定 commit 和匹配 SHA-256 的归档。
+set(GRANIT_SDL3_LOCKED_VERSION "3.4.10")
+set(GRANIT_SDL3_LOCKED_COMMIT "8e37db5e797b6167f3a00d697d816a684bd259c7")
+set(GRANIT_SDL3_LOCKED_URL
+    "https://github.com/libsdl-org/SDL/archive/${GRANIT_SDL3_LOCKED_COMMIT}.tar.gz")
+set(GRANIT_SDL3_LOCKED_SHA256
+    "85aa3f7b01e91d9a0b2e8079b065c594e579c43d53d5671c8f68b20074cc896e")
+set(GRANIT_SDL3_LOCKED_MARKER "CMakeLists.txt")
+
+set(GRANIT_IMGUI_LOCKED_VERSION "1.92.9")
+set(GRANIT_IMGUI_LOCKED_COMMIT "01380c579715e62fb9a8d6ec0502c4ea83bfde6e")
+set(GRANIT_IMGUI_LOCKED_URL
+    "https://github.com/ocornut/imgui/archive/${GRANIT_IMGUI_LOCKED_COMMIT}.tar.gz")
+set(GRANIT_IMGUI_LOCKED_SHA256
+    "c7bc489afefa2461c40a84812118e6dff86e7eadfc4b7e2f851a8c94ade8910d")
+set(GRANIT_IMGUI_LOCKED_MARKER "imgui.cpp")
+
+set(GRANIT_CGLTF_LOCKED_VERSION "1.15")
+set(GRANIT_CGLTF_LOCKED_COMMIT "360db1a95480fe102ae9c69b27c5d101167ff5ba")
+set(GRANIT_CGLTF_LOCKED_URL
+    "https://github.com/jkuhlmann/cgltf/archive/${GRANIT_CGLTF_LOCKED_COMMIT}.tar.gz")
+set(GRANIT_CGLTF_LOCKED_SHA256
+    "445d135cf793232ae6a585ca1404e4ff28d4f4dbca070689034fe780370ac84a")
+set(GRANIT_CGLTF_LOCKED_MARKER "cgltf.h")
+
+set(GRANIT_STB_LOCKED_VERSION "2.30")
+set(GRANIT_STB_LOCKED_COMMIT "013ac3beddff3dbffafd5177e7972067cd2b5083")
+set(GRANIT_STB_LOCKED_URL
+    "https://github.com/nothings/stb/archive/${GRANIT_STB_LOCKED_COMMIT}.tar.gz")
+set(GRANIT_STB_LOCKED_SHA256
+    "b01aa93e1a968aed55f43e072c98ee401d2f20e897aabdb1a166c7166886ed11")
+set(GRANIT_STB_LOCKED_MARKER "stb_image.h")

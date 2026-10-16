@@ -50,9 +50,11 @@
 Debug、Release 和静态构建不会共享编译产物。缓存目录已加入 `.gitignore`；删除对应缓存目录即可
 强制重新下载。
 
-缓存目录只保存可校验、可重新生成的下载内容，不是第三方源码的提交目录，也不进入安装包。锁定版本、
-归档名称和 SHA-256 的唯一权威来源是
-[`cmake/toolchain/GranitShaderToolchainLock.cmake`](../../cmake/toolchain/GranitShaderToolchainLock.cmake)；
+缓存目录只保存可校验、可重新生成的下载内容，不是第三方源码的提交目录，也不进入安装包。源码依赖
+的锁定版本、归档地址、marker 和 SHA-256 的唯一权威来源是
+[`cmake/granit_dependency_catalog.cmake`](../../cmake/granit_dependency_catalog.cmake)；Shader Toolchain
+继续使用独立的
+[`cmake/toolchain/GranitShaderToolchainLock.cmake`](../../cmake/toolchain/GranitShaderToolchainLock.cmake)。
 本页只说明使用和目录布局。
 
 Model Viewer 和 SDL3/ImGui 集成的组合配置见[模型查看器指南](model-viewer.md)；浏览器构建和

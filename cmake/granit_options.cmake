@@ -14,8 +14,8 @@ option(GRANIT_ENABLE_WAYLAND "在 Linux 上启用 Wayland Surface 与 Window 后
 
 # 第三方依赖获取策略：全局默认 + 每依赖覆盖。
 #   system   —— 只用 find_package，找不到即报错（离线 / 发行版打包）
-#   auto     —— 先 find_package，找不到再 FetchContent 下载锁定版本（默认）
-#   download —— 强制 FetchContent 下载锁定版本，忽略系统包（可复现构建）
+#   auto     —— 先 find_package，找不到再下载锁定版本（默认）
+#   download —— 强制下载锁定版本，忽略系统包（可复现构建）
 set(GRANIT_DEPENDENCY_POLICY "auto" CACHE STRING
     "第三方依赖默认获取策略：system、auto 或 download")
 set_property(CACHE GRANIT_DEPENDENCY_POLICY PROPERTY STRINGS system auto download)

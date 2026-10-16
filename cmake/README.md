@@ -11,11 +11,13 @@
 | --- | --- |
 | `granit_version.cmake` | 工程版本唯一来源，并派生 major、minor、patch 与兼容版本 |
 | `granit_options.cmake` | 构建选项（`BUILD_SHARED_LIBS`、`GRANIT_BUILD_*` 等） |
+| `granit_dependency_catalog.cmake` | 下载型第三方源码的锁定版本、URL、SHA-256 和 marker |
+| `granit_dependency_cache.cmake` | 下载型第三方源码的共享缓存、校验和解压辅助函数 |
 | `granit_platform.cmake` | 平台探测（Emscripten / XCB / Wayland 能力） |
 | `granit_features.cmake` | 派生开关（`GRANIT_TESTING_ENABLED`、`GRANIT_NEEDS_*`） |
 | `granit_utility.cmake` | 通用函数（输出目录、编译警告、枚举校验） |
 | `granit_asset_paths.cmake` | 资产路径 |
-| `granit_integration_dependencies.cmake` | 可选集成依赖准备与依赖获取策略（SDL3 / ImGui / 示例依赖缓存辅助） |
+| `granit_integration_dependencies.cmake` | SDL3 / ImGui 的集成 target 与获取策略 |
 | `granit_web.cmake` | WebGPU / Emscripten 辅助函数 |
 | `granit_shader_assets.cmake` | Shader 资产构建 |
 | `granit_build_assets.cmake` | 资产构建入口 |

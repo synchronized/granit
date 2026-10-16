@@ -9,6 +9,8 @@
 
 ## 当前计划
 
+- [S-102：0.65.0 第三方依赖清单与缓存层收敛](S-102-0.65.0-dependency-catalog.md)——集中维护下载型源码依赖元数据，
+  抽离通用源码缓存模块，不改变各依赖的 target 类型和公共边界。
 - [S-101：0.65.0 示例第三方依赖缓存收敛](S-101-0.65.0-example-dependency-cache.md)——将 cgltf 与 stb_image
   接入 `vendor/cache` 共享源码缓存，统一示例依赖的离线与跨 preset 构建行为。
 - [S-99：0.63.0 Vertex Streams 与 PBR 顶点属性验证](S-99-0.63.0-vertex-streams-and-pbr-attributes.md)——
