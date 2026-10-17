@@ -57,6 +57,7 @@
 逐项 API 定义。
 
 - [构建、测试、安装与 CMake 集成](guides/build.md)
+- [第三方依赖与缓存](guides/third-party-dependencies.md)
 - [Vulkan Runtime Bundle 部署](guides/vulkan-runtime-bundle.md)
 - [CI 与验证](guides/ci.md)
 - [发布验收](guides/release.md)

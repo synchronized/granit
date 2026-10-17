@@ -36,26 +36,17 @@
 | `GRANIT_ENABLE_PEDANTIC_WARNINGS` | `OFF` | 启用 `-Wpedantic` 等严格标准扩展警告 |
 | `GRANIT_WARNINGS_AS_ERRORS` | `OFF` | 将 Granit 自有源码警告视为错误 |
 
+第三方依赖的查找优先级、获取策略、父项目 target 复用和缓存布局见[第三方依赖与缓存](third-party-dependencies.md)。
 仓库提供的开发 presets 会将第三方依赖获取策略 `GRANIT_DEPENDENCY_POLICY` 和 Shader 工具链模式
 设为 `auto`（缺失时下载锁定版本），并将 `GRANIT_WARNINGS_AS_ERRORS` 设为 `ON`，以便尽早发现问题。
 这样全新 Debug/Release preset 会共享同一套已校验工具链，不会因为本机没有系统 Tint 而跳过示例目标。
 作为子项目手动
 引入时，依赖策略与警告选项默认保持 `auto` / `OFF`；所有警告选项均为目标私有属性，不会传递给使用者。
 
-当 SDL3、ImGui 或示例 glTF 支持的 cgltf/stb_image 需要下载时，CMake 会把锁定版本的压缩包和解压后的源码保存到
-`vendor/cache/archives` 与 `vendor/cache/sources`，后续 preset 直接复用这份源码。Shader Toolchain
-使用同一个缓存根目录，但归档和已校验工具链分别位于 `vendor/cache/archives/shader-toolchain` 与
-`vendor/cache/toolchains/shader-toolchain`；`vendor/cache/extract/shader-toolchain` 只作为解压临时目录，
-成功后会删除。所有目标文件、库文件和 CMake 生成文件仍位于当前 `build/<preset>`，因此不同平台、
-Debug、Release 和静态构建不会共享编译产物。缓存目录已加入 `.gitignore`；删除对应缓存目录即可
-强制重新下载。
-
-缓存目录只保存可校验、可重新生成的下载内容，不是第三方源码的提交目录，也不进入安装包。源码依赖
-的锁定版本、归档地址、marker 和 SHA-256 的唯一权威来源是
-[`cmake/granit_dependency_catalog.cmake`](../../cmake/granit_dependency_catalog.cmake)；Shader Toolchain
-继续使用独立的
-[`cmake/toolchain/GranitShaderToolchainLock.cmake`](../../cmake/toolchain/GranitShaderToolchainLock.cmake)。
-本页只说明使用和目录布局。
+Shader Toolchain 使用同一个缓存根目录，但归档和已校验工具链分别位于
+`vendor/cache/archives/shader-toolchain` 与 `vendor/cache/toolchains/shader-toolchain`；其锁定信息见
+[`GranitShaderToolchainLock.cmake`](../../cmake/toolchain/GranitShaderToolchainLock.cmake)。所有目标文件、库文件
+和 CMake 生成文件仍位于当前 `build/<preset>`，缓存目录已加入 `.gitignore`。
 
 Model Viewer 和 SDL3/ImGui 集成的组合配置见[模型查看器指南](model-viewer.md)；浏览器构建和
 平台验证见[浏览器 WebGPU 指南](webgpu-browser-example.md)。

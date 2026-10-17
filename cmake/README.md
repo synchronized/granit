@@ -3,6 +3,8 @@
 本目录承载 Granit 的构建配置，按职责分层。约定：只有主构建模块与安装入口放在顶层，
 独立脚本归入子目录，测试校验脚本归入 `tests/cmake/`。
 
+第三方依赖的查找、缓存、策略和 target 组装规则见[第三方依赖与缓存指南](../docs/guides/third-party-dependencies.md)。
+
 ## 顶层：主构建模块
 
 由根 `CMakeLists.txt` 通过 `include()` 加载，定义选项、平台探测、通用函数与目标。
