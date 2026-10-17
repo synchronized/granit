@@ -204,7 +204,14 @@ jobs:
       - uses: ./.github/actions/setup-msvc
         with:
           arch: x64
+      - name: 恢复 Windows Vulkan Runtime 缓存
+        id: runtime-cache
+        uses: actions/cache@v5
+        with:
+          path: granit-vulkan-runtime-windows-x64.zip
+          key: granit-vulkan-runtime-v2-windows-x64-${{ env.VULKAN_HEADERS_REF }}-${{ env.VULKAN_LOADER_REF }}-${{ env.VULKAN_VALIDATION_REF }}
       - name: 构建锁定的 Khronos Runtime
+        if: steps.runtime-cache.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -251,7 +258,14 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v5
+      - name: 恢复 Linux Vulkan Runtime 缓存
+        id: runtime-cache
+        uses: actions/cache@v5
+        with:
+          path: granit-vulkan-runtime-linux-x64.tar.zst
+          key: granit-vulkan-runtime-v2-linux-x64-${{ env.VULKAN_HEADERS_REF }}-${{ env.VULKAN_LOADER_REF }}-${{ env.VULKAN_VALIDATION_REF }}
       - name: 构建锁定的 Khronos Runtime
+        if: steps.runtime-cache.outputs.cache-hit != 'true'
         shell: bash
         run: |
           set -euo pipefail
