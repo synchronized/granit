@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+## 0.65.0 - 2026-10-17
+
 - v0.65.0 将发布 ImGui Window/Input 适配，保持不使用 `granit::window` 的核心 ImGui 路径独立；
 - v0.65.0 将 cgltf、stb_image、SDL3 和 ImGui 的锁定源码依赖统一接入共享缓存和校验流程；
 - v0.65.0 新增第三方依赖与缓存指南，不新增 C ABI 或公共 Vulkan 类型。
