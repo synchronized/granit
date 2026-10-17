@@ -6,6 +6,12 @@
 本文件记录面向使用者的公共接口、行为、构建和兼容性变化。项目当前仍处于 0.x；版本兼容规则见
 [版本与兼容策略](docs/reference/compatibility.md)。
 
+## Unreleased
+
+- v0.65.0 将发布 ImGui Window/Input 适配，保持不使用 `granit::window` 的核心 ImGui 路径独立；
+- v0.65.0 将 cgltf、stb_image、SDL3 和 ImGui 的锁定源码依赖统一接入共享缓存和校验流程；
+- v0.65.0 新增第三方依赖与缓存指南，不新增 C ABI 或公共 Vulkan 类型。
+
 ## 0.63.0 - 2026-10-16
 
 - 新增 Tutorial 13 `Vertex Streams`：验证拆分/交错 Vertex Buffer、实例 Vertex Stream、共享
