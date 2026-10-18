@@ -210,8 +210,10 @@ jobs:
         with:
           path: granit-vulkan-runtime-windows-x64.zip
           key: granit-vulkan-runtime-v2-windows-x64-${{ env.VULKAN_HEADERS_REF }}-${{ env.VULKAN_LOADER_REF }}-${{ env.VULKAN_VALIDATION_REF }}
+          restore-keys: |
+            granit-vulkan-runtime-v2-windows-x64-${{ env.VULKAN_HEADERS_REF }}-${{ env.VULKAN_LOADER_REF }}-${{ env.VULKAN_VALIDATION_REF }}
       - name: 构建锁定的 Khronos Runtime
-        if: steps.runtime-cache.outputs.cache-hit != 'true'
+        if: hashFiles('granit-vulkan-runtime-windows-x64.zip') == ''
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -264,8 +266,10 @@ jobs:
         with:
           path: granit-vulkan-runtime-linux-x64.tar.zst
           key: granit-vulkan-runtime-v2-linux-x64-${{ env.VULKAN_HEADERS_REF }}-${{ env.VULKAN_LOADER_REF }}-${{ env.VULKAN_VALIDATION_REF }}
+          restore-keys: |
+            granit-vulkan-runtime-v2-linux-x64-${{ env.VULKAN_HEADERS_REF }}-${{ env.VULKAN_LOADER_REF }}-${{ env.VULKAN_VALIDATION_REF }}
       - name: 构建锁定的 Khronos Runtime
-        if: steps.runtime-cache.outputs.cache-hit != 'true'
+        if: hashFiles('granit-vulkan-runtime-linux-x64.tar.zst') == ''
         shell: bash
         run: |
           set -euo pipefail

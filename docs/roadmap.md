@@ -31,6 +31,10 @@ Vulkan 内部实验。
 
 ## 当前计划
 
+当前计划为 [v0.66.1](versions/v0.66.1.md)，由
+[S-104](plans/S-104-0.66.1-linux-runtime-cache-fix.md) 承担：修复 Linux 容器 Runtime 缓存恢复竞态，
+验证 Windows/Linux 重复 Release 均跳过 Runtime 源码构建。不新增 C ABI。
+
 v0.66.0 已由 [S-103](plans/S-103-0.66.0-release-convergence-and-runtime-cache.md) 完成并发布：收口
 发布文档，完成 Runtime 首次构建、Windows 缓存命中和公开制品复核；Linux 容器缓存竞态留作后续 CI
 优化项。不新增 C ABI。
