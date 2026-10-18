@@ -265,9 +265,9 @@ jobs:
         uses: actions/cache@v5
         with:
           path: granit-vulkan-runtime-linux-x64.tar.zst
-          key: granit-vulkan-runtime-v2-linux-x64-${{ env.VULKAN_HEADERS_REF }}-${{ env.VULKAN_LOADER_REF }}-${{ env.VULKAN_VALIDATION_REF }}
+          key: granit-vulkan-runtime-v3-linux-x64-${{ env.VULKAN_HEADERS_REF }}-${{ env.VULKAN_LOADER_REF }}-${{ env.VULKAN_VALIDATION_REF }}
           restore-keys: |
-            granit-vulkan-runtime-v2-linux-x64-${{ env.VULKAN_HEADERS_REF }}-${{ env.VULKAN_LOADER_REF }}-${{ env.VULKAN_VALIDATION_REF }}
+            granit-vulkan-runtime-v3-linux-x64-${{ env.VULKAN_HEADERS_REF }}-${{ env.VULKAN_LOADER_REF }}-${{ env.VULKAN_VALIDATION_REF }}
       - name: 构建锁定的 Khronos Runtime
         if: hashFiles('granit-vulkan-runtime-linux-x64.tar.zst') == ''
         shell: bash
