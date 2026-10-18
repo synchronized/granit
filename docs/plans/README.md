@@ -7,12 +7,10 @@
 行为以 Reference、Concept 和仓库实现为准。全局优先级见[路线图](../roadmap.md)，执行结果见
 [实施记录](../records/README.md)。
 
-## 当前计划
-
-- [S-104：0.66.1 Linux Runtime 缓存恢复修复](S-104-0.66.1-linux-runtime-cache-fix.md)——修复 Linux
-  容器 Runtime 缓存恢复竞态，验证 Windows/Linux 重复 Release 均跳过 Runtime 源码构建。
-
 ## 已完成计划
+
+- [S-104：0.66.1 Linux Runtime 缓存恢复修复](S-104-0.66.1-linux-runtime-cache-fix.md)——将 Linux Runtime
+  构建迁移到标准 Ubuntu Runner，验证 Windows/Linux 重复 Release 均跳过 Runtime 源码构建。
 
 - [S-103：0.66.0 发布收口与 Runtime 缓存验证](S-103-0.66.0-release-convergence-and-runtime-cache.md)——完成
   v0.66.0 发布文档收口、Runtime 首次构建和 Windows 缓存命中验证；Linux 容器缓存竞态作为后续 CI

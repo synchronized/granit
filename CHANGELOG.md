@@ -10,7 +10,7 @@
 
 ## 0.66.1 - 2026-10-19
 
-- 修复 Release workflow 在 Linux 容器中恢复 Vulkan Runtime 缓存不稳定导致的重复编译；
+- 将 Linux Runtime Release 构建迁移到标准 Ubuntu Runner，修复缓存恢复不稳定导致的重复编译；
 - 保留缓存未命中时的完整 Runtime 构建、SHA-256 和公开制品校验路径。
 
 ## 0.66.0 - 2026-10-18
