@@ -10,8 +10,8 @@
 ## 当前阶段
 
 Granit 已形成桌面 Vulkan、浏览器 WebGPU、C11 ABI、C++20 RAII、Window、RenderPipeline 与
-AssetTools 的完整闭环。当前仍处于 0.x，v0.65.0 已发布并完成 ImGui 输入适配、示例依赖缓存和公开制品
-验收。Bindless 继续作为
+AssetTools 的完整闭环。当前仍处于 0.x，v0.66.0 已发布并完成 Runtime 制品复核、Windows 缓存命中和
+既有 ImGui 输入适配回归；v0.65.0 已完成示例依赖缓存与公开制品验收。Bindless 继续作为
 Vulkan 内部实验。
 不改变 Vulkan 驱动由平台提供的边界。
 
@@ -31,9 +31,9 @@ Vulkan 内部实验。
 
 ## 当前计划
 
-当前计划为 [v0.66.0](versions/v0.66.0.md)，由
-[S-103](plans/S-103-0.66.0-release-convergence-and-runtime-cache.md) 承担：收口发布文档状态，验证
-Vulkan Runtime 缓存命中/失效行为，并补齐 ImGui Consumer 的跨平台验收。不新增 C ABI。
+v0.66.0 已由 [S-103](plans/S-103-0.66.0-release-convergence-and-runtime-cache.md) 完成并发布：收口
+发布文档，完成 Runtime 首次构建、Windows 缓存命中和公开制品复核；Linux 容器缓存竞态留作后续 CI
+优化项。不新增 C ABI。
 
 [v0.65.0](versions/v0.65.0.md) 已完成并发布，详细范围和证据见版本文档与
 [验收记录](records/2026-10-17-v0.65.0-acceptance.md)。
