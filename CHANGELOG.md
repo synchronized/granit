@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+## 0.66.0 - 2026-10-18
+
 - CI Release 流程新增按 Vulkan-Headers、Loader 和 ValidationLayers 锁定提交复用 Runtime 制品缓存，
   依赖版本不变时跳过重复编译；
 - 收口 `v0.65.0` 发布文档状态，并建立下一版本的 Runtime 缓存与 ImGui Consumer 验证计划。
