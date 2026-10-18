@@ -9,6 +9,11 @@
 
 ## 当前计划
 
+- [S-103：0.66.0 发布收口与 Runtime 缓存验证](S-103-0.66.0-release-convergence-and-runtime-cache.md)——收敛
+  v0.65.0 发布后的文档状态，验证 Vulkan Runtime 缓存命中/失效路径，并补齐 ImGui Consumer 跨平台验收。
+
+## 已完成计划
+
 - [S-102：0.65.0 第三方依赖清单与缓存层收敛](S-102-0.65.0-dependency-catalog.md)——集中维护下载型源码依赖元数据，
   抽离通用源码缓存模块，不改变各依赖的 target 类型和公共边界。
 - [S-101：0.65.0 示例第三方依赖缓存收敛](S-101-0.65.0-example-dependency-cache.md)——将 cgltf 与 stb_image

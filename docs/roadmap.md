@@ -10,7 +10,8 @@
 ## 当前阶段
 
 Granit 已形成桌面 Vulkan、浏览器 WebGPU、C11 ABI、C++20 RAII、Window、RenderPipeline 与
-AssetTools 的完整闭环。当前仍处于 0.x，v0.62.0 已发布并完成交互式教程与跨平台验收。Bindless 继续作为
+AssetTools 的完整闭环。当前仍处于 0.x，v0.65.0 已发布并完成 ImGui 输入适配、示例依赖缓存和公开制品
+验收。Bindless 继续作为
 Vulkan 内部实验。
 不改变 Vulkan 驱动由平台提供的边界。
 
@@ -30,10 +31,12 @@ Vulkan 内部实验。
 
 ## 当前计划
 
-当前发布候选为 [v0.65.0](versions/v0.65.0.md)，由
-[S-100](plans/S-100-0.64.0-imgui-input-integration.md)、[S-101](plans/S-101-0.65.0-example-dependency-cache.md)
-和 [S-102](plans/S-102-0.65.0-dependency-catalog.md) 承担：提供 ImGui Window/Input 适配，统一示例
-第三方源码缓存和依赖清单，不新增 C ABI。
+当前计划为 [v0.66.0](versions/v0.66.0.md)，由
+[S-103](plans/S-103-0.66.0-release-convergence-and-runtime-cache.md) 承担：收口发布文档状态，验证
+Vulkan Runtime 缓存命中/失效行为，并补齐 ImGui Consumer 的跨平台验收。不新增 C ABI。
+
+[v0.65.0](versions/v0.65.0.md) 已完成并发布，详细范围和证据见版本文档与
+[验收记录](records/2026-10-17-v0.65.0-acceptance.md)。
 
 [v0.62.0](versions/v0.62.0.md) 已由 [S-98](plans/S-98-0.62.0-interactive-feature-tutorials.md)
 完成并发布：将 Tutorial 09～11 升级为 Particle Generator、Transparency Gallery 和
