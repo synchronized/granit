@@ -259,14 +259,14 @@ jobs:
     needs: validate
     runs-on: ubuntu-24.04
     timeout-minutes: 120
-    container:
-      image: >-
-        ghcr.io/synchronized/granit-ci@sha256:6a2d0aba3b2464838958a4259d3a343106205eb35df9f4ad24d060bf98739015
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v5
+      - name: 安装 Linux Runtime 构建工具
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ninja-build zstd
       - name: 恢复 Linux Vulkan Runtime 缓存
         id: runtime-cache
         uses: actions/cache/restore@v5
