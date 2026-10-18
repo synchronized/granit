@@ -7,6 +7,11 @@
 行为以 Reference、Concept 和仓库实现为准。全局优先级见[路线图](../roadmap.md)，执行结果见
 [实施记录](../records/README.md)。
 
+## 当前计划
+
+- [S-105：0.67.0 AssetTools Consumer 与资产验证闭环](S-105-0.67.0-asset-tools-consumer-and-validation.md)——
+  建立安装 SDK Consumer，验证 Shader Library、Material、Texture 和 Environment 的构建、检查与运行时边界。
+
 ## 已完成计划
 
 - [S-104：0.66.1 Linux Runtime 缓存恢复修复](S-104-0.66.1-linux-runtime-cache-fix.md)——将 Linux Runtime
