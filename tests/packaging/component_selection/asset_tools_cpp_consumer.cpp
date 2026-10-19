@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
       corrupt_environment.diagnostic().empty() || !corrupt_environment.package().empty())
     return 6;
 
-  if (argc != 3)
+  if (argc != 3 && argc != 7)
     return 7;
   const auto material_source = read_text(argv[1]);
   const auto shader_library = read_bytes(argv[2]);
