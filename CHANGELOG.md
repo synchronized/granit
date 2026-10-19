@@ -10,6 +10,12 @@
 
 ## 0.67.0 - 2026-10-19
 
+- 新增安装 SDK AssetTools C++ Consumer，实际验证 Shader Library、Material、Texture 和 Environment
+  的构建、检查与失败诊断边界；
+- 补齐 AssetTools 安装包的 shared Consumer 运行验证，并在提供锁定 Shader Toolchain 时验证从 manifest
+  构建 Shader Library；
+- 保持 AssetTools 为实验性组件，不新增稳定 ABI 或 Vulkan 公共头依赖。
+
 ## 0.66.1 - 2026-10-19
 
 - 将 Linux Runtime Release 构建迁移到标准 Ubuntu Runner，修复缓存恢复不稳定导致的重复编译；
