@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+## 0.67.0 - 2026-10-19
+
 ## 0.66.1 - 2026-10-19
 
 - 将 Linux Runtime Release 构建迁移到标准 Ubuntu Runner，修复缓存恢复不稳定导致的重复编译；
