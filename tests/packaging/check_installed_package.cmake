@@ -57,9 +57,17 @@ granit_check_package(render_pipeline TRUE -DGRANIT_REQUEST_VERSION=${granit_curr
 granit_check_package(window TRUE -DGRANIT_REQUEST_VERSION=${granit_current_minor}
                      -DGRANIT_REQUEST_COMPONENT=Window)
 if(EXISTS "${GRANIT_INSTALL_PREFIX}/lib/cmake/granit/granitAssetToolsTargets.cmake")
+  set(asset_tools_package_args
+      -DGRANIT_REQUEST_VERSION=${granit_current_minor}
+      -DGRANIT_REQUEST_COMPONENT=AssetTools
+      "-DGRANIT_TEST_FIXTURE_DIR=${GRANIT_SOURCE_DIR}/tests/fixtures")
+  if(DEFINED GRANIT_TEST_SHADER_TOOLCHAIN_ROOT AND
+     NOT GRANIT_TEST_SHADER_TOOLCHAIN_ROOT STREQUAL "")
+    list(APPEND asset_tools_package_args
+         "-DGRANIT_TEST_SHADER_TOOLCHAIN_ROOT=${GRANIT_TEST_SHADER_TOOLCHAIN_ROOT}")
+  endif()
   granit_check_package(asset_tools TRUE -DGRANIT_REQUEST_VERSION=${granit_current_minor}
-                       -DGRANIT_REQUEST_COMPONENT=AssetTools
-                       "-DGRANIT_TEST_FIXTURE_DIR=${GRANIT_SOURCE_DIR}/tests/fixtures")
+                       ${asset_tools_package_args})
 else()
   granit_check_package(asset_tools_unavailable FALSE -DGRANIT_REQUEST_VERSION=${granit_current_minor}
                        -DGRANIT_REQUEST_COMPONENT=AssetTools)

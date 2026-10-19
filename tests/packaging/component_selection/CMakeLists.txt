@@ -99,6 +99,24 @@ elseif(GRANIT_REQUEST_COMPONENT STREQUAL "AssetTools")
       "${consumer_shader_library}" COPYONLY
     )
     list(APPEND consumer_arguments "${consumer_material_source}" "${consumer_shader_library}")
+    if(DEFINED GRANIT_TEST_SHADER_TOOLCHAIN_ROOT AND
+       EXISTS "${GRANIT_TEST_SHADER_TOOLCHAIN_ROOT}")
+      set(consumer_manifest "${CMAKE_CURRENT_BINARY_DIR}/material_fixture.grshlib.json")
+      set(consumer_shader_source "${CMAKE_CURRENT_BINARY_DIR}/material_fixture.hlsl")
+      set(consumer_shader_cache "${CMAKE_CURRENT_BINARY_DIR}/shader-objects")
+      set(consumer_shader_output "${CMAKE_CURRENT_BINARY_DIR}/consumer.grshlib")
+      configure_file(
+        "${GRANIT_TEST_FIXTURE_DIR}/shaders/material_fixture.grshlib.json"
+        "${consumer_manifest}" COPYONLY
+      )
+      configure_file(
+        "${GRANIT_TEST_FIXTURE_DIR}/shaders/material_fixture.hlsl"
+        "${consumer_shader_source}" COPYONLY
+      )
+      list(APPEND consumer_arguments "${consumer_manifest}"
+           "${GRANIT_TEST_SHADER_TOOLCHAIN_ROOT}" "${consumer_shader_cache}"
+           "${consumer_shader_output}")
+    endif()
   endif()
   if(WIN32)
     add_custom_command(

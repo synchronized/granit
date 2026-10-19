@@ -109,6 +109,18 @@ int main(int argc, char** argv) {
       invalid_material.diagnostic().empty() || !invalid_material.archive().empty())
     return 10;
 
+  if (argc == 7) {
+    const granit::asset_tools::shader::source_library_desc library_desc{
+        argv[3], argv[4], argv[5], argv[6]};
+    auto [library_status, library] =
+        granit::asset_tools::shader::build_library_from_manifest(library_desc);
+    if (library_status.failed() || !library || !library.info().diagnostic.empty() ||
+        !std::filesystem::exists(argv[6]))
+      return 11;
+  } else if (argc != 3) {
+    return 12;
+  }
+
   const granit::asset_tools::texture::subresource_info invalid_subresource{
       0, 0, 0, texture_payload.size() - 1, 16, 4};
   const granit::asset_tools::texture::variant_desc invalid_variant{
@@ -124,5 +136,5 @@ int main(int argc, char** argv) {
   return invalid_status == granit::result::invalid_argument && invalid_texture &&
                  invalid_texture.manifest().empty() && !invalid_texture.diagnostic().empty()
              ? 0
-             : 11;
+             : 13;
 }
