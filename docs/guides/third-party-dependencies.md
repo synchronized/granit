@@ -82,10 +82,23 @@ Release、静态和共享 preset 复用源码，但各自保留自己的编译�
 - SDL3：使用缓存源码的 CMake 项目，通过 `FetchContent` 创建 SDL target；
 - ImGui：从缓存源码选取 Granit 所需源文件，创建 Granit 私有静态目标；
 - cgltf/stb_image：创建只暴露 include directory 的 `INTERFACE` 目标；
-- 测试框架：优先复用系统包，缺失时使用仓库内置 CMake 目标；
+- 测试框架：优先复用父项目或系统包，缺失时使用仓库内置 CMake 目标；内部实现目标使用
+  `granit_test_*` 名称，兼容 alias 仅在外部目标不存在时创建；
 - Shader Toolchain：使用独立的二进制归档、manifest 和能力检查，不混入源码缓存。
 
 因此，统一的是“身份、校验、缓存和策略”，不是把所有第三方库强行转换成同一种 CMake target。
+
+## 测试框架与父项目共存
+
+Unity 和 Catch2 只参与 Granit 的测试构建，不进入安装导出目标，也不成为 Granit 公共库的传递
+依赖。测试配置会先复用父项目已经提供的兼容 target，避免在同一个构建树中重复编译测试框架。
+
+Catch2 要求 3.x；如果已发现的包明确报告低于 3.0 的版本，配置会直接失败，而不会静默混用
+Catch2 2.x。仓库内置 fallback 使用 `granit_test_*` 私有目标，只有为了兼容现有测试 CMake
+文件，且在同名外部 target 不存在时才创建 `Catch2::` 或 `Unity::` alias。
+
+将测试框架放入 `vendor/cache` 不能解决 target 名称或版本冲突。它们当前已经随仓库固定在 `3rd/`
+中，因此不需要额外下载缓存；`vendor/cache` 仍只用于下载型依赖的源码缓存。
 
 ## 离线和系统包构建
 
