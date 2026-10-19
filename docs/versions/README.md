@@ -12,9 +12,11 @@
 
 ## 当前版本
 
-[v0.67.0：AssetTools Consumer 与资产验证闭环](v0.67.0.md) 进入规划；`v0.66.1` 已发布。
+[v0.67.0：AssetTools Consumer 与资产验证闭环](v0.67.0.md) 已发布；`v0.66.1` 为上一版本。
 
 ## 已发布版本
+
+- [v0.67.0：AssetTools Consumer 与资产验证闭环](v0.67.0.md)
 
 - [v0.66.1：Linux Runtime 缓存恢复修复](v0.66.1.md)
 - [v0.66.0：发布收口与 Runtime 缓存验证](v0.66.0.md)

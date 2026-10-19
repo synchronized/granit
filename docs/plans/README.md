@@ -9,10 +9,12 @@
 
 ## 当前计划
 
-- [S-105：0.67.0 AssetTools Consumer 与资产验证闭环](S-105-0.67.0-asset-tools-consumer-and-validation.md)——
-  建立安装 SDK Consumer，验证 Shader Library、Material、Texture 和 Environment 的构建、检查与运行时边界。
+当前版本已完成发布，下一项计划确定后再建立新的实施计划。
 
 ## 已完成计划
+
+- [S-105：0.67.0 AssetTools Consumer 与资产验证闭环](S-105-0.67.0-asset-tools-consumer-and-validation.md)——
+  建立安装 SDK Consumer，验证 Shader Library、Material、Texture 和 Environment 的构建、检查与运行时边界。
 
 - [S-104：0.66.1 Linux Runtime 缓存恢复修复](S-104-0.66.1-linux-runtime-cache-fix.md)——将 Linux Runtime
   构建迁移到标准 Ubuntu Runner，验证 Windows/Linux 重复 Release 均跳过 Runtime 源码构建。
