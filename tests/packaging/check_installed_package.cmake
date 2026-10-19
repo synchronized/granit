@@ -58,7 +58,8 @@ granit_check_package(window TRUE -DGRANIT_REQUEST_VERSION=${granit_current_minor
                      -DGRANIT_REQUEST_COMPONENT=Window)
 if(EXISTS "${GRANIT_INSTALL_PREFIX}/lib/cmake/granit/granitAssetToolsTargets.cmake")
   granit_check_package(asset_tools TRUE -DGRANIT_REQUEST_VERSION=${granit_current_minor}
-                       -DGRANIT_REQUEST_COMPONENT=AssetTools)
+                       -DGRANIT_REQUEST_COMPONENT=AssetTools
+                       "-DGRANIT_TEST_FIXTURE_DIR=${GRANIT_SOURCE_DIR}/tests/fixtures")
 else()
   granit_check_package(asset_tools_unavailable FALSE -DGRANIT_REQUEST_VERSION=${granit_current_minor}
                        -DGRANIT_REQUEST_COMPONENT=AssetTools)

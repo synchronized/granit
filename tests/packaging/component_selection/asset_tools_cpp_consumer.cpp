@@ -4,11 +4,33 @@
 #include <granit/asset_tools/asset_tools.hpp>
 
 #include <array>
+#include <algorithm>
 #include <cstddef>
+#include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <span>
+#include <string>
 #include <vector>
 
-int main() {
+namespace {
+
+std::string read_text(const std::filesystem::path& path) {
+  std::ifstream stream{path, std::ios::binary};
+  return {std::istreambuf_iterator<char>{stream}, {}};
+}
+
+std::vector<std::byte> read_bytes(const std::filesystem::path& path) {
+  std::ifstream stream{path, std::ios::binary};
+  const std::vector<char> bytes{std::istreambuf_iterator<char>{stream}, {}};
+  std::vector<std::byte> result(bytes.size());
+  std::ranges::copy(std::as_bytes(std::span{bytes}), result.begin());
+  return result;
+}
+
+} // namespace
+
+int main(int argc, char** argv) {
   const auto [status, capabilities] = granit::asset_tools::shader::target_capabilities(
       granit::shader_backend::vulkan, granit::shader_profile::portable);
   static_cast<void>(capabilities);
@@ -62,6 +84,31 @@ int main() {
       corrupt_environment.diagnostic().empty() || !corrupt_environment.package().empty())
     return 6;
 
+  if (argc != 3)
+    return 7;
+  const auto material_source = read_text(argv[1]);
+  const auto shader_library = read_bytes(argv[2]);
+  const granit::asset_tools::material::build_desc::shader_library libraries[]{{shader_library}};
+  auto [material_status, material] = granit::asset_tools::material::build(
+      {.source_json = material_source, .shader_libraries = libraries});
+  if (material_status.failed() || !material || material.archive().empty() ||
+      material.debug_json().find("\"magic\": \"GRMAT\"") == std::string_view::npos)
+    return 8;
+  auto [material_inspect_status, inspected_material] =
+      granit::asset_tools::material::inspect(material.archive());
+  if (material_inspect_status.failed() || !inspected_material ||
+      inspected_material.archive().size() != material.archive().size())
+    return 9;
+
+  const std::array<std::byte, 1> invalid_archive{std::byte{0}};
+  const granit::asset_tools::material::build_desc::shader_library invalid_libraries[]{
+      {invalid_archive}};
+  auto [invalid_material_status, invalid_material] = granit::asset_tools::material::build(
+      {.source_json = material_source, .shader_libraries = invalid_libraries});
+  if (invalid_material_status != granit::result::invalid_argument || !invalid_material ||
+      invalid_material.diagnostic().empty() || !invalid_material.archive().empty())
+    return 10;
+
   const granit::asset_tools::texture::subresource_info invalid_subresource{
       0, 0, 0, texture_payload.size() - 1, 16, 4};
   const granit::asset_tools::texture::variant_desc invalid_variant{
@@ -77,5 +124,5 @@ int main() {
   return invalid_status == granit::result::invalid_argument && invalid_texture &&
                  invalid_texture.manifest().empty() && !invalid_texture.diagnostic().empty()
              ? 0
-             : 7;
+             : 11;
 }

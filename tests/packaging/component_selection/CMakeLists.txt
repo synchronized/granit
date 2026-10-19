@@ -86,12 +86,26 @@ elseif(GRANIT_REQUEST_COMPONENT STREQUAL "AssetTools")
   add_executable(granit_asset_tools_cpp_consumer asset_tools_cpp_consumer.cpp)
   target_compile_features(granit_asset_tools_cpp_consumer PRIVATE cxx_std_20)
   target_link_libraries(granit_asset_tools_cpp_consumer PRIVATE granit::asset_tools)
+  set(consumer_arguments)
+  if(DEFINED GRANIT_TEST_FIXTURE_DIR AND EXISTS "${GRANIT_TEST_FIXTURE_DIR}")
+    set(consumer_material_source "${CMAKE_CURRENT_BINARY_DIR}/material_fixture.grmat.json")
+    set(consumer_shader_library "${CMAKE_CURRENT_BINARY_DIR}/material_fixture.grshlib")
+    configure_file(
+      "${GRANIT_TEST_FIXTURE_DIR}/materials/material_package_fixture.grmat.json"
+      "${consumer_material_source}" COPYONLY
+    )
+    configure_file(
+      "${GRANIT_TEST_FIXTURE_DIR}/shaders/material_fixture.grshlib"
+      "${consumer_shader_library}" COPYONLY
+    )
+    list(APPEND consumer_arguments "${consumer_material_source}" "${consumer_shader_library}")
+  endif()
   if(WIN32)
     add_custom_command(
       TARGET granit_asset_tools_cpp_consumer POST_BUILD
       COMMAND "${CMAKE_COMMAND}" -E env
               "PATH=${CMAKE_PREFIX_PATH}/bin"
-              "$<TARGET_FILE:granit_asset_tools_cpp_consumer>"
+              "$<TARGET_FILE:granit_asset_tools_cpp_consumer>" ${consumer_arguments}
       COMMENT "运行安装 SDK AssetTools C++ Consumer"
       VERBATIM
     )
@@ -100,7 +114,7 @@ elseif(GRANIT_REQUEST_COMPONENT STREQUAL "AssetTools")
       TARGET granit_asset_tools_cpp_consumer POST_BUILD
       COMMAND "${CMAKE_COMMAND}" -E env
               "LD_LIBRARY_PATH=${CMAKE_PREFIX_PATH}/lib"
-              "$<TARGET_FILE:granit_asset_tools_cpp_consumer>"
+              "$<TARGET_FILE:granit_asset_tools_cpp_consumer>" ${consumer_arguments}
       COMMENT "运行安装 SDK AssetTools C++ Consumer"
       VERBATIM
     )
