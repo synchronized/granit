@@ -86,6 +86,25 @@ elseif(GRANIT_REQUEST_COMPONENT STREQUAL "AssetTools")
   add_executable(granit_asset_tools_cpp_consumer asset_tools_cpp_consumer.cpp)
   target_compile_features(granit_asset_tools_cpp_consumer PRIVATE cxx_std_20)
   target_link_libraries(granit_asset_tools_cpp_consumer PRIVATE granit::asset_tools)
+  if(WIN32)
+    add_custom_command(
+      TARGET granit_asset_tools_cpp_consumer POST_BUILD
+      COMMAND "${CMAKE_COMMAND}" -E env
+              "PATH=${CMAKE_PREFIX_PATH}/bin"
+              "$<TARGET_FILE:granit_asset_tools_cpp_consumer>"
+      COMMENT "运行安装 SDK AssetTools C++ Consumer"
+      VERBATIM
+    )
+  elseif(UNIX)
+    add_custom_command(
+      TARGET granit_asset_tools_cpp_consumer POST_BUILD
+      COMMAND "${CMAKE_COMMAND}" -E env
+              "LD_LIBRARY_PATH=${CMAKE_PREFIX_PATH}/lib"
+              "$<TARGET_FILE:granit_asset_tools_cpp_consumer>"
+      COMMENT "运行安装 SDK AssetTools C++ Consumer"
+      VERBATIM
+    )
+  endif()
 elseif(GRANIT_REQUEST_COMPONENT STREQUAL "IntegrationSDL3")
   set(expected_target granit::integration_sdl3)
 elseif(GRANIT_REQUEST_COMPONENT STREQUAL "IntegrationImGui")
