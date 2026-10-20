@@ -68,9 +68,9 @@ Backend 时，SDL3 仍是 Window 的私有编译依赖，不进入公共头文�
 ## 测试依赖
 
 公开 C API 测试使用 Unity 2.6，C++20 包装层和内部实现测试使用 Catch2 3。配置时优先复用
-父项目已有目标，其次通过 `find_package` 查找安装包，最后回退到仓库内置的 Unity 2.6.1 和
-Catch2 3.15.0。两套框架只在同时启用 `GRANIT_BUILD_TESTING` 和 CMake `BUILD_TESTING`
-时引入，不会成为 Granit 安装包或使用者的传递依赖。
+父项目已有目标，其次通过 `find_package` 查找安装包，最后回退到 `vendor/cache` 中锁定的
+源码。两套框架只在同时启用 `GRANIT_BUILD_TESTING` 和 CMake `BUILD_TESTING` 时引入，不会
+成为 Granit 安装包或使用者的传递依赖。
 
 Vulkan-Headers 与 Volk 始终作为 Granit 内部构建依赖。Volk 对象直接并入库目标，不出现在
 安装后的 CMake package 中；Vulkan include 目录、`VK_NO_PROTOTYPES` 和 `VOLK_NAMESPACE`

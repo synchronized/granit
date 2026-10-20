@@ -14,7 +14,7 @@
 | ImGui | ImGui Draw Data 和示例 UI | 可选 Integration/示例 | 系统 target 或锁定源码 |
 | cgltf | glTF/GLB 解析 | 示例 Model Viewer | 系统 target 或锁定源码 |
 | stb_image | PNG/JPEG 解码 | 示例 Model Viewer | 系统 target 或锁定源码 |
-| Unity、Catch2 | 测试框架 | 测试目标 | 系统包或仓库内置版本 |
+| Unity、Catch2 | 测试框架 | 测试目标 | 系统包或 `vendor/cache` 锁定源码 |
 | Shader Toolchain | DXC、Tint 等离线工具 | Shader 资产构建 | 独立工具链缓存 |
 | Vulkan-Headers、Volk、VMA | Vulkan 内部实现 | Granit 核心 | 仓库内置 `3rd/` |
 
@@ -100,7 +100,7 @@ Unity 和 Catch2 只参与 Granit 的测试构建，不进入安装导出目标�
 依赖。测试配置会先复用父项目已经提供的兼容 target，避免在同一个构建树中重复编译测试框架。
 
 Catch2 要求 3.x；如果已发现的包明确报告低于 3.0 的版本，配置会直接失败，而不会静默混用
-Catch2 2.x。仓库内置 fallback 使用 `granit_test_*` 私有目标，只有为了兼容现有测试 CMake
+Catch2 2.x。缓存源码 fallback 使用 `granit_test_*` 私有目标，只有为了兼容现有测试 CMake
 文件，且在同名外部 target 不存在时才创建 `Catch2::` 或 `Unity::` alias。
 
 将测试框架放入 `vendor/cache` 不能解决 target 名称或版本冲突；Granit 仍通过 `granit_test_*`
