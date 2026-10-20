@@ -47,6 +47,7 @@ if(GRANIT_NEEDS_IMGUI)
 endif()
 
 add_subdirectory(3rd)
+include(granit_test_dependencies)
 include(granit_shader_assets)
 include(granit_build_assets)
 add_subdirectory(src)

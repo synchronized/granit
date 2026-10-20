@@ -26,7 +26,8 @@ endif()
 
 # 源码仓库只提供测试辅助；Granit 目标必须来自安装包。
 include("${repository_dir}/cmake/granit_utility.cmake")
-include("${repository_dir}/3rd/unity.cmake")
+include("${repository_dir}/cmake/granit_test_dependencies.cmake")
+granit_prepare_unity_test_dependency()
 add_executable(granit_web_pipeline_c_consumer pipeline_c_test.c)
 target_compile_features(granit_web_pipeline_c_consumer PRIVATE c_std_11)
 target_link_libraries(
