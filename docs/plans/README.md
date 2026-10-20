@@ -9,7 +9,9 @@
 
 ## 当前计划
 
-当前版本已完成发布，下一项计划确定后再建立新的实施计划。
+当前版本为 [v0.68.0](../versions/v0.68.0.md)，详细实施计划见 [S-106](S-106-0.68.0-test-dependency-cache-and-compatibility.md)。
+
+- [S-106：0.68.0 测试依赖缓存与父项目兼容性](S-106-0.68.0-test-dependency-cache-and-compatibility.md)——规划中。
 
 ## 已完成计划
 

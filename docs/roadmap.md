@@ -32,7 +32,8 @@ Vulkan 内部实验。
 
 ## 当前计划
 
-当前版本 [v0.67.0](versions/v0.67.0.md) 已完成发布；下一项计划确定后再更新本节。
+当前版本 [v0.68.0](versions/v0.68.0.md) 正在规划，由 [S-106](plans/S-106-0.68.0-test-dependency-cache-and-compatibility.md)
+负责统一测试依赖缓存、父项目 target 复用和版本兼容性验证。
 
 v0.66.1 已由 [S-104](plans/S-104-0.66.1-linux-runtime-cache-fix.md) 完成并发布：将 Linux Runtime
 构建迁移到标准 Ubuntu Runner，验证 Windows/Linux 重复 Release 均跳过 Runtime 源码构建。不新增 C ABI。
