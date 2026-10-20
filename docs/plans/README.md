@@ -9,11 +9,12 @@
 
 ## 当前计划
 
-当前版本为 [v0.68.0](../versions/v0.68.0.md)，详细实施计划见 [S-106](S-106-0.68.0-test-dependency-cache-and-compatibility.md)。
-
-- [S-106：0.68.0 测试依赖缓存与父项目兼容性](S-106-0.68.0-test-dependency-cache-and-compatibility.md)——规划中。
+当前版本 [v0.68.0](../versions/v0.68.0.md) 已完成发布收口，新的版本计划尚未建立。
 
 ## 已完成计划
+
+- [S-106：0.68.0 测试依赖缓存与父项目兼容性](S-106-0.68.0-test-dependency-cache-and-compatibility.md)——
+  统一测试依赖源码缓存、父项目 target 复用和独立 Consumer 验证。
 
 - [S-105：0.67.0 AssetTools Consumer 与资产验证闭环](S-105-0.67.0-asset-tools-consumer-and-validation.md)——
   建立安装 SDK Consumer，验证 Shader Library、Material、Texture 和 Environment 的构建、检查与运行时边界。
