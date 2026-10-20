@@ -2,6 +2,7 @@
 # Copyright (c) 2026 Granit contributors
 
 include_guard(GLOBAL)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}")
 include(granit_integration_dependencies)
 
 # 测试框架只参与测试构建，不进入 Granit 安装导出或生产库传递依赖。
