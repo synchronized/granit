@@ -53,7 +53,8 @@ bool write_file_atomically(const std::filesystem::path& path, std::span<const st
   const auto process_id = static_cast<std::uint64_t>(getpid());
 #endif
   auto temporary = path;
-  temporary += ".tmp." + std::to_string(process_id) + "." +
+  // 缩短临时文件名，避免 Windows 下接近 MAX_PATH 的缓存路径在原子替换前溢出。
+  temporary += ".t" + std::to_string(process_id) + "." +
                std::to_string(sequence.fetch_add(1, std::memory_order_relaxed));
   {
     std::ofstream stream(temporary, std::ios::binary | std::ios::trunc);
