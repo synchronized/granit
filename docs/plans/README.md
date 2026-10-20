@@ -9,9 +9,12 @@
 
 ## 当前计划
 
-当前版本 [v0.68.0](../versions/v0.68.0.md) 已完成发布收口，新的版本计划尚未建立。
+当前版本 [v0.68.1](../versions/v0.68.1.md) 已完成发布收口，新的版本计划尚未建立。
 
 ## 已完成计划
+
+- [S-107：0.68.1 独立 Consumer 与发布文档修复](S-107-0.68.1-standalone-consumer-fixes.md)——
+  修复独立 Web Consumer 的测试依赖配置并完成补丁版本收口。
 
 - [S-106：0.68.0 测试依赖缓存与父项目兼容性](S-106-0.68.0-test-dependency-cache-and-compatibility.md)——
   统一测试依赖源码缓存、父项目 target 复用和独立 Consumer 验证。
