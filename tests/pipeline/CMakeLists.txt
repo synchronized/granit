@@ -87,7 +87,7 @@ target_link_libraries(
     granit::lighting
     granit::material
     granit::granit
-    Catch2::Catch2WithMain
+    granit_test_catch2_with_main
 )
 target_compile_options(granit_pipeline_test PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>)
 target_compile_definitions(

@@ -27,5 +27,10 @@ set(GRANIT_DEPENDENCY_CGLTF "" CACHE STRING
     "cgltf 获取策略覆盖（空 = 跟随 GRANIT_DEPENDENCY_POLICY）")
 set(GRANIT_DEPENDENCY_STB "" CACHE STRING
     "stb 获取策略覆盖（空 = 跟随 GRANIT_DEPENDENCY_POLICY）")
+set(GRANIT_DEPENDENCY_CATCH2 "" CACHE STRING
+    "Catch2 获取策略覆盖（空 = 跟随 GRANIT_DEPENDENCY_POLICY）")
+set(GRANIT_DEPENDENCY_UNITY "" CACHE STRING
+    "Unity 获取策略覆盖（空 = 跟随 GRANIT_DEPENDENCY_POLICY）")
+option(GRANIT_DEPENDENCY_OFFLINE "只使用已有的第三方源码缓存，不访问网络" OFF)
 set(GRANIT_DEPENDENCY_SOURCE_CACHE_DIR "${PROJECT_SOURCE_DIR}/vendor/cache" CACHE PATH
     "下载型第三方依赖的共享源码缓存目录；各 preset 的编译产物仍位于自己的 build 目录")

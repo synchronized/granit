@@ -11,7 +11,7 @@ add_executable(
 target_include_directories(granit_render_graph_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
 target_link_libraries(
   granit_render_graph_test
-  PRIVATE granit::render_graph Catch2::Catch2WithMain $<$<PLATFORM_ID:Windows>:user32>
+  PRIVATE granit::render_graph granit_test_catch2_with_main $<$<PLATFORM_ID:Windows>:user32>
 )
 target_compile_options(
   granit_render_graph_test

@@ -17,7 +17,7 @@ granit_target_compile_warnings(granit_example_tasks)
 if(GRANIT_TESTING_ENABLED)
   add_executable(granit_example_tasks_test task_system_test.cpp)
   target_link_libraries(
-    granit_example_tasks_test PRIVATE granit_example_tasks Catch2::Catch2WithMain
+    granit_example_tasks_test PRIVATE granit_example_tasks granit_test_catch2_with_main
   )
   granit_target_compile_warnings(granit_example_tasks_test)
   add_test(NAME granit.example.tasks COMMAND granit_example_tasks_test)

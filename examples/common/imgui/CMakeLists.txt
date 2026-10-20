@@ -36,7 +36,7 @@ if(TARGET granit::integration_imgui)
       granit_example_imgui_test imgui_frame_capture_test.cpp imgui_texture_registry_test.cpp
     )
     target_link_libraries(
-      granit_example_imgui_test PRIVATE granit_example_imgui Catch2::Catch2WithMain
+      granit_example_imgui_test PRIVATE granit_example_imgui granit_test_catch2_with_main
     )
     granit_target_compile_warnings(granit_example_imgui_test)
     add_test(NAME granit.example.imgui COMMAND granit_example_imgui_test)

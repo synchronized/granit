@@ -98,7 +98,7 @@ if(GRANIT_HAS_NATIVE_WINDOW AND GRANIT_TESTING_ENABLED)
   add_executable(granit_example_gltf_support_test gltf_test.cpp)
   target_link_libraries(
     granit_example_gltf_support_test
-    PRIVATE granit_example_gltf_support Catch2::Catch2WithMain
+    PRIVATE granit_example_gltf_support granit_test_catch2_with_main
   )
   granit_target_compile_warnings(granit_example_gltf_support_test)
   add_test(NAME granit.example.gltf_support COMMAND granit_example_gltf_support_test)

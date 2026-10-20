@@ -46,7 +46,7 @@ if(GRANIT_TESTING_ENABLED)
     resource_path_test.cpp
   )
   target_link_libraries(
-    granit_example_assets_test PRIVATE granit_example_assets Catch2::Catch2WithMain
+    granit_example_assets_test PRIVATE granit_example_assets granit_test_catch2_with_main
   )
   granit_target_compile_warnings(granit_example_assets_test)
   add_test(NAME granit.example.assets COMMAND granit_example_assets_test)

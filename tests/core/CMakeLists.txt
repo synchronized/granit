@@ -5,7 +5,7 @@ set_property(DIRECTORY APPEND PROPERTY LABELS unit)
 
 add_executable(granit_core_api_c_test core_api_c_test.c)
 target_compile_features(granit_core_api_c_test PRIVATE c_std_11)
-target_link_libraries(granit_core_api_c_test PRIVATE granit::granit Unity::Unity)
+target_link_libraries(granit_core_api_c_test PRIVATE granit::granit granit_test_unity)
 set_target_properties(granit_core_api_c_test PROPERTIES LINKER_LANGUAGE CXX)
 granit_target_compile_warnings(granit_core_api_c_test)
 granit_target_output_directories(granit_core_api_c_test)
@@ -14,7 +14,7 @@ add_test(NAME granit.core.api.c COMMAND granit_core_api_c_test)
 add_executable(granit_cpp_version_test version_cpp_test.cpp)
 target_link_libraries(
   granit_cpp_version_test
-  PRIVATE granit::granit Catch2::Catch2WithMain
+  PRIVATE granit::granit granit_test_catch2_with_main
 )
 granit_target_compile_warnings(granit_cpp_version_test)
 add_test(NAME granit.core.version.cpp COMMAND granit_cpp_version_test)
@@ -33,7 +33,7 @@ add_executable(
 target_include_directories(
   granit_sha256_test PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/include"
 )
-target_link_libraries(granit_sha256_test PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(granit_sha256_test PRIVATE granit_test_catch2_with_main)
 granit_target_compile_warnings(granit_sha256_test)
 add_test(NAME granit.core.sha256 COMMAND granit_sha256_test)
 
@@ -45,12 +45,12 @@ add_executable(
 target_include_directories(
   granit_utf8_test PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/include"
 )
-target_link_libraries(granit_utf8_test PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(granit_utf8_test PRIVATE granit_test_catch2_with_main)
 granit_target_compile_warnings(granit_utf8_test)
 add_test(NAME granit.core.utf8 COMMAND granit_utf8_test)
 
 add_executable(granit_c_version_test version_c_test.c)
-target_link_libraries(granit_c_version_test PRIVATE granit::granit Unity::Unity)
+target_link_libraries(granit_c_version_test PRIVATE granit::granit granit_test_unity)
 set_target_properties(granit_c_version_test PROPERTIES LINKER_LANGUAGE CXX)
 granit_target_compile_warnings(granit_c_version_test)
 add_test(NAME granit.core.version.c COMMAND granit_c_version_test)
@@ -64,7 +64,7 @@ add_executable(
 target_include_directories(granit_handle_table_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
 target_link_libraries(
   granit_handle_table_test
-  PRIVATE granit::granit Catch2::Catch2WithMain
+  PRIVATE granit::granit granit_test_catch2_with_main
 )
 granit_target_compile_warnings(granit_handle_table_test)
 add_test(NAME granit.core.handle_table COMMAND granit_handle_table_test)
@@ -76,7 +76,7 @@ add_executable(
 )
 target_include_directories(granit_async_operation_state_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
 target_link_libraries(
-  granit_async_operation_state_test PRIVATE granit::granit Catch2::Catch2WithMain
+  granit_async_operation_state_test PRIVATE granit::granit granit_test_catch2_with_main
 )
 granit_target_compile_warnings(granit_async_operation_state_test)
 add_test(NAME granit.core.async_operation_state COMMAND granit_async_operation_state_test)
@@ -89,7 +89,7 @@ add_executable(
 target_include_directories(granit_resource_validation_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
 target_link_libraries(
   granit_resource_validation_test
-  PRIVATE granit::granit Catch2::Catch2WithMain
+  PRIVATE granit::granit granit_test_catch2_with_main
 )
 granit_target_compile_warnings(granit_resource_validation_test)
 add_test(NAME granit.core.resource_validation COMMAND granit_resource_validation_test)
@@ -110,7 +110,7 @@ target_include_directories(
     "${PROJECT_SOURCE_DIR}/include"
     "${PROJECT_SOURCE_DIR}/src"
 )
-target_link_libraries(granit_lifecycle_validation_test PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(granit_lifecycle_validation_test PRIVATE granit_test_catch2_with_main)
 target_compile_options(
   granit_lifecycle_validation_test
   PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
@@ -124,7 +124,7 @@ add_executable(
   "${PROJECT_SOURCE_DIR}/src/core/retirement_queue.cpp"
 )
 target_include_directories(granit_retirement_queue_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
-target_link_libraries(granit_retirement_queue_test PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(granit_retirement_queue_test PRIVATE granit_test_catch2_with_main)
 target_compile_options(
   granit_retirement_queue_test
   PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>
@@ -137,7 +137,7 @@ target_include_directories(
   granit_device_status_test
   PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
 )
-target_link_libraries(granit_device_status_test PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(granit_device_status_test PRIVATE granit_test_catch2_with_main)
 target_compile_options(
   granit_device_status_test
   PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>

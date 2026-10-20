@@ -15,6 +15,16 @@ add_test(
 )
 set_property(TEST granit.contracts.api_stability APPEND PROPERTY LABELS unit contract)
 
+add_test(
+  NAME granit.ci.dependency_source_cache
+  COMMAND
+    "${CMAKE_COMMAND}"
+    "-DGRANIT_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
+    "-DGRANIT_BINARY_DIR=${CMAKE_BINARY_DIR}"
+    -P "${PROJECT_SOURCE_DIR}/tests/cmake/check_dependency_source_cache.cmake"
+)
+set_property(TEST granit.ci.dependency_source_cache APPEND PROPERTY LABELS unit dependency)
+
 if(NOT GRANIT_HAS_NATIVE_WINDOW)
   add_subdirectory(web)
   return()

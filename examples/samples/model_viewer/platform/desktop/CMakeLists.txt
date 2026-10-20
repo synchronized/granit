@@ -59,7 +59,7 @@ if(GRANIT_TESTING_ENABLED)
   )
   target_link_libraries(
     granit_sample_model_viewer_desktop_shell_test
-    PRIVATE granit_sample_model_viewer_desktop_shell Catch2::Catch2WithMain
+    PRIVATE granit_sample_model_viewer_desktop_shell granit_test_catch2_with_main
   )
   granit_target_compile_warnings(granit_sample_model_viewer_desktop_shell_test)
   add_test(

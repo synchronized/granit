@@ -61,9 +61,10 @@ GRANIT_DEPENDENCY_POLICY
 
 ```text
 vendor/cache/
+├─ locks/<name>-<commit>.lock
 ├─ archives/<name>-<commit>.tar.gz
 ├─ sources/<name>/<commit>/
-└─ extract/                 # 解压临时目录，成功后删除
+└─ staging/<name>-<commit>-<nonce>/ # 下载和解压临时目录，成功后删除
 ```
 
 源码依赖的版本、commit、下载地址、SHA-256 和 marker 文件唯一维护在
@@ -72,6 +73,11 @@ vendor/cache/
 
 缓存只保存可校验、可重新生成的下载内容，不提交第三方源码，也不进入安装包。不同平台、Debug、
 Release、静态和共享 preset 复用源码，但各自保留自己的编译产物和 CMake 生成目录。
+
+每个“依赖名 + commit”使用独立的 CMake 进程锁，等待上限为 300 秒。持锁期间只写入随机命名的
+`staging` 目录；下载完成后校验 SHA-256，解压并检查 marker，再写入 `.granit-source-complete`
+完成收据，最后以目录重命名的方式发布到 `sources`。因此并行 configure 不会读到正在下载、解压或
+校验中的半成品；已有缓存若缺少完成收据，会在首次复用时补齐收据。
 
 删除对应的 `archives` 或 `sources` 子目录即可强制重新获取；修改锁定 commit 后会使用新的缓存路径。
 
@@ -82,7 +88,7 @@ Release、静态和共享 preset 复用源码，但各自保留自己的编译�
 - SDL3：使用缓存源码的 CMake 项目，通过 `FetchContent` 创建 SDL target；
 - ImGui：从缓存源码选取 Granit 所需源文件，创建 Granit 私有静态目标；
 - cgltf/stb_image：创建只暴露 include directory 的 `INTERFACE` 目标；
-- 测试框架：优先复用父项目或系统包，缺失时使用仓库内置 CMake 目标；内部实现目标使用
+- 测试框架：优先复用父项目或系统包，缺失时使用锁定源码缓存构建 CMake 目标；内部实现目标使用
   `granit_test_*` 名称，兼容 alias 仅在外部目标不存在时创建；
 - Shader Toolchain：使用独立的二进制归档、manifest 和能力检查，不混入源码缓存。
 
@@ -97,8 +103,9 @@ Catch2 要求 3.x；如果已发现的包明确报告低于 3.0 的版本，配�
 Catch2 2.x。仓库内置 fallback 使用 `granit_test_*` 私有目标，只有为了兼容现有测试 CMake
 文件，且在同名外部 target 不存在时才创建 `Catch2::` 或 `Unity::` alias。
 
-将测试框架放入 `vendor/cache` 不能解决 target 名称或版本冲突。它们当前已经随仓库固定在 `3rd/`
-中，因此不需要额外下载缓存；`vendor/cache` 仍只用于下载型依赖的源码缓存。
+将测试框架放入 `vendor/cache` 不能解决 target 名称或版本冲突；Granit 仍通过 `granit_test_*`
+目标隔离内部实现，并按策略复用父项目目标。`vendor/cache` 负责其锁定源码的下载、校验和并发
+填充，测试框架源码本身不提交到仓库。
 
 ## 离线和系统包构建
 
@@ -119,6 +126,7 @@ cmake -S . -B build/offline \
 ```
 
 若缓存缺失，`download` 配置会在获取阶段失败；不会静默回退到其他版本。
+如需显式禁止网络访问，可额外设置 `-DGRANIT_DEPENDENCY_OFFLINE=ON`；缓存缺失时会立即失败。
 
 ## 权威来源
 

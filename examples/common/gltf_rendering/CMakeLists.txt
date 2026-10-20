@@ -119,7 +119,7 @@ if(GRANIT_HAS_NATIVE_WINDOW AND GRANIT_TESTING_ENABLED)
   add_executable(granit_example_gltf_rendering_test scene_resources_test.cpp)
   target_link_libraries(
     granit_example_gltf_rendering_test
-    PRIVATE granit_example_gltf_rendering Catch2::Catch2WithMain
+    PRIVATE granit_example_gltf_rendering granit_test_catch2_with_main
   )
   granit_target_compile_warnings(granit_example_gltf_rendering_test)
   add_test(NAME granit.example.gltf_rendering COMMAND granit_example_gltf_rendering_test)

@@ -3,7 +3,7 @@
 
 add_executable(granit_pbr_test pbr_render_graph_adapter_test.cpp)
 target_include_directories(granit_pbr_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
-target_link_libraries(granit_pbr_test PRIVATE granit::pbr Catch2::Catch2WithMain)
+target_link_libraries(granit_pbr_test PRIVATE granit::pbr granit_test_catch2_with_main)
 target_compile_options(granit_pbr_test PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>)
 granit_target_compile_warnings(granit_pbr_test)
 granit_target_output_directories(granit_pbr_test)
@@ -31,7 +31,7 @@ add_executable(
 target_include_directories(
   granit_material_test PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/tests"
 )
-target_link_libraries(granit_material_test PRIVATE granit::material Catch2::Catch2WithMain)
+target_link_libraries(granit_material_test PRIVATE granit::material granit_test_catch2_with_main)
 target_sources(granit_material_test PRIVATE $<TARGET_OBJECTS:granit_asset_format_shader>)
 target_compile_options(
   granit_material_test

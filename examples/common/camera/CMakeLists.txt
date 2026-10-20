@@ -20,7 +20,7 @@ if(GRANIT_HAS_NATIVE_WINDOW AND GRANIT_TESTING_ENABLED)
     granit_example_camera_test orbit_camera_test.cpp orbit_camera_input_accumulator_test.cpp
   )
   target_link_libraries(
-    granit_example_camera_test PRIVATE granit_example_camera Catch2::Catch2WithMain
+    granit_example_camera_test PRIVATE granit_example_camera granit_test_catch2_with_main
   )
   granit_target_compile_warnings(granit_example_camera_test)
   add_test(NAME granit.example.camera COMMAND granit_example_camera_test)

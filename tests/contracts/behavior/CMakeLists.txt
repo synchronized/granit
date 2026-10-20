@@ -5,7 +5,7 @@ add_executable(granit_stable_candidate_contract_test stable_candidate_c_test.c)
 target_compile_features(granit_stable_candidate_contract_test PRIVATE c_std_11)
 target_link_libraries(
   granit_stable_candidate_contract_test
-  PRIVATE granit::granit granit::render_pipeline granit::window Unity::Unity
+  PRIVATE granit::granit granit::render_pipeline granit::window granit_test_unity
 )
 set_target_properties(
   granit_stable_candidate_contract_test PROPERTIES LINKER_LANGUAGE CXX

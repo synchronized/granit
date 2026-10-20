@@ -30,7 +30,7 @@ include("${repository_dir}/3rd/unity.cmake")
 add_executable(granit_web_pipeline_c_consumer pipeline_c_test.c)
 target_compile_features(granit_web_pipeline_c_consumer PRIVATE c_std_11)
 target_link_libraries(
-  granit_web_pipeline_c_consumer PRIVATE granit::render_pipeline granit::window Unity::Unity
+  granit_web_pipeline_c_consumer PRIVATE granit::render_pipeline granit::window granit_test_unity
 )
 set_target_properties(granit_web_pipeline_c_consumer PROPERTIES LINKER_LANGUAGE CXX)
 granit_target_compile_warnings(granit_web_pipeline_c_consumer)

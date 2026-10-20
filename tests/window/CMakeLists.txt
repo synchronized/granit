@@ -3,7 +3,7 @@
 
 # 公共契约在每个平台使用同一份源码；Emscripten 负责构建，浏览器 smoke 负责运行。
 add_executable(granit_window_contract_test contract_test.cpp)
-target_link_libraries(granit_window_contract_test PRIVATE granit::window Catch2::Catch2WithMain)
+target_link_libraries(granit_window_contract_test PRIVATE granit::window granit_test_catch2_with_main)
 granit_target_compile_warnings(granit_window_contract_test)
 granit_target_output_directories(granit_window_contract_test)
 
@@ -18,7 +18,7 @@ add_executable(
 target_include_directories(
   granit_window_adapter_test PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src"
 )
-target_link_libraries(granit_window_adapter_test PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(granit_window_adapter_test PRIVATE granit_test_catch2_with_main)
 if(GRANIT_HAS_WAYLAND_INPUT)
   target_sources(
     granit_window_adapter_test
@@ -47,7 +47,7 @@ if(GRANIT_HAS_NATIVE_WINDOW)
     platform/window_test.cpp
     $<$<PLATFORM_ID:Windows>:platform/win32_input_test.cpp>
   )
-  target_link_libraries(granit_window_platform_test PRIVATE granit::window Catch2::Catch2WithMain)
+  target_link_libraries(granit_window_platform_test PRIVATE granit::window granit_test_catch2_with_main)
   if(GRANIT_HAS_XCB)
     target_compile_definitions(granit_window_platform_test PRIVATE GRANIT_TEST_HAS_XCB)
     target_include_directories(
@@ -69,7 +69,7 @@ if(GRANIT_HAS_NATIVE_WINDOW)
 
   add_executable(granit_window_renderer_test renderer_test.cpp)
   target_link_libraries(
-    granit_window_renderer_test PRIVATE granit::window granit::granit Catch2::Catch2WithMain
+    granit_window_renderer_test PRIVATE granit::window granit::granit granit_test_catch2_with_main
   )
   if(GRANIT_HAS_XCB)
     target_compile_definitions(granit_window_renderer_test PRIVATE GRANIT_TEST_HAS_XCB)

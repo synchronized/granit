@@ -186,7 +186,7 @@ if(GRANIT_TESTING_ENABLED)
     PRIVATE "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/include"
   )
   target_link_libraries(
-    granit_asset_tools_shader_library_source_manifest_test PRIVATE Catch2::Catch2WithMain
+    granit_asset_tools_shader_library_source_manifest_test PRIVATE granit_test_catch2_with_main
   )
   granit_target_compile_warnings(granit_asset_tools_shader_library_source_manifest_test)
   granit_target_output_directories(granit_asset_tools_shader_library_source_manifest_test)

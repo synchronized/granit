@@ -69,7 +69,7 @@ if(GRANIT_HAS_NATIVE_WINDOW AND GRANIT_TESTING_ENABLED)
   )
   target_link_libraries(
     granit_sample_model_viewer_core_test
-    PRIVATE granit_sample_model_viewer_core Catch2::Catch2WithMain
+    PRIVATE granit_sample_model_viewer_core granit_test_catch2_with_main
   )
   granit_target_compile_warnings(granit_sample_model_viewer_core_test)
   add_test(
@@ -143,7 +143,7 @@ if(TARGET granit::integration_imgui)
     )
     target_link_libraries(
       granit_sample_model_viewer_imgui_test
-      PRIVATE granit_sample_model_viewer_imgui Catch2::Catch2WithMain
+      PRIVATE granit_sample_model_viewer_imgui granit_test_catch2_with_main
     )
     granit_target_compile_warnings(granit_sample_model_viewer_imgui_test)
     add_test(

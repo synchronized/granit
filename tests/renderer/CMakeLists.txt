@@ -78,7 +78,7 @@ target_link_libraries(
   granit_renderer_test
   PRIVATE
     granit::granit
-    Catch2::Catch2WithMain
+    granit_test_catch2_with_main
     $<TARGET_OBJECTS:granit_asset_tools_shader_object_storage>
     $<TARGET_OBJECTS:granit_asset_format_shader>
     $<$<PLATFORM_ID:Windows>:user32>

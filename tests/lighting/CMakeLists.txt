@@ -62,7 +62,7 @@ target_include_directories(
     "${PROJECT_SOURCE_DIR}/src"
     "${PROJECT_SOURCE_DIR}/tests"
 )
-target_link_libraries(granit_lighting_test PRIVATE granit::lighting Catch2::Catch2WithMain)
+target_link_libraries(granit_lighting_test PRIVATE granit::lighting granit_test_catch2_with_main)
 target_compile_options(granit_lighting_test PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>)
 target_compile_definitions(
   granit_lighting_test

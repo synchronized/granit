@@ -35,7 +35,7 @@ if(TARGET granit::integration_imgui)
   )
   target_link_libraries(
     granit_integration_imgui_test
-    PRIVATE granit::integration_imgui_window Catch2::Catch2WithMain
+    PRIVATE granit::integration_imgui_window granit_test_catch2_with_main
   )
   granit_target_compile_warnings(granit_integration_imgui_test)
   granit_target_output_directories(granit_integration_imgui_test)
@@ -48,7 +48,7 @@ if(TARGET granit::integration_imgui)
   )
   target_link_libraries(
     granit_integration_imgui_core_test
-    PRIVATE granit::integration_imgui Catch2::Catch2WithMain
+    PRIVATE granit::integration_imgui granit_test_catch2_with_main
   )
   granit_target_compile_warnings(granit_integration_imgui_core_test)
   granit_target_output_directories(granit_integration_imgui_core_test)
@@ -68,7 +68,7 @@ if(TARGET granit::integration_imgui)
     )
     target_link_libraries(
       granit_integration_imgui_visual_test
-      PRIVATE granit::integration_imgui granit_example_validation Catch2::Catch2WithMain
+      PRIVATE granit::integration_imgui granit_example_validation granit_test_catch2_with_main
     )
     granit_target_compile_warnings(granit_integration_imgui_visual_test)
     granit_target_output_directories(granit_integration_imgui_visual_test)

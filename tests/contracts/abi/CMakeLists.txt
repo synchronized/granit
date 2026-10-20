@@ -48,7 +48,7 @@ if(BUILD_SHARED_LIBS)
   )
   target_link_libraries(
     granit_abi_exports_test
-    PRIVATE Catch2::Catch2WithMain ${CMAKE_DL_LIBS}
+    PRIVATE granit_test_catch2_with_main ${CMAKE_DL_LIBS}
   )
   add_dependencies(
     granit_abi_exports_test granit granit_render_pipeline granit_window granit_asset_tools

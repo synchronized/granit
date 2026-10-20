@@ -14,7 +14,7 @@ granit_target_compile_warnings(granit_example_validation)
 if(GRANIT_TESTING_ENABLED)
   add_executable(granit_example_validation_test screenshot_comparison_test.cpp)
   target_link_libraries(
-    granit_example_validation_test PRIVATE granit_example_validation Catch2::Catch2WithMain
+    granit_example_validation_test PRIVATE granit_example_validation granit_test_catch2_with_main
   )
   granit_target_compile_warnings(granit_example_validation_test)
   add_test(NAME granit.example.validation COMMAND granit_example_validation_test)
