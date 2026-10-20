@@ -8,6 +8,9 @@
 
 ## Unreleased
 
+- v0.68.0 开始统一 Catch2、Unity 与下载型依赖的源码缓存、SHA-256 校验、并发锁和离线配置；
+- 测试目标改用 `granit_test_*` 私有 target，避免父项目同名测试框架 target 影响强制下载策略；
+
 ## 0.67.0 - 2026-10-19
 
 - 新增安装 SDK AssetTools C++ Consumer，实际验证 Shader Library、Material、Texture 和 Environment
