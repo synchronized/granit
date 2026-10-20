@@ -13,6 +13,13 @@ endif()
 get_filename_component(repository_dir "${CMAKE_CURRENT_SOURCE_DIR}/../../.." ABSOLUTE)
 include(CTest)
 include("${repository_dir}/cmake/granit_version.cmake")
+
+# 这是独立消费端，不会继承根项目的依赖选项；测试框架固定复用仓库锁定缓存，
+# 避免浏览器交叉编译时依赖开发机或网络环境。
+set(GRANIT_DEPENDENCY_POLICY "download")
+set(GRANIT_DEPENDENCY_OFFLINE ON)
+set(GRANIT_DEPENDENCY_SOURCE_CACHE_DIR "${repository_dir}/vendor/cache")
+
 find_package(
   granit ${GRANIT_PROJECT_COMPAT_VERSION} CONFIG REQUIRED COMPONENTS RenderPipeline Window
 )
