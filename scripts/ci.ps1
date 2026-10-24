@@ -7,10 +7,13 @@
 #>
 param(
   [Parameter(Mandatory = $true, Position = 0)]
-  [string]$Workflow
+  [string]$Workflow,
+  [string]$Ref,
+  [ValidateSet('native', 'sanitizers', 'all')][string]$Suite = 'all'
 )
 
 $workflows = @{
+  'compatibility' = 'compatibility.yml'
   'linux' = 'linux.yml'
   'windows' = 'windows.yml'
   'emscripten' = 'emscripten.yml'
@@ -26,7 +29,10 @@ if (-not $workflows.ContainsKey($Workflow)) {
 }
 
 $wf = $workflows[$Workflow]
-gh workflow run $wf
+$arguments = @('workflow', 'run', $wf)
+if ($Ref) { $arguments += @('--ref', $Ref) }
+if ($Workflow -eq 'compatibility') { $arguments += @('-f', "suite=$Suite") }
+gh @arguments
 if ($LASTEXITCODE -ne 0) {
   exit $LASTEXITCODE
 }

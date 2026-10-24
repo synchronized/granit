@@ -4,11 +4,6 @@
 name: Linux
 
 on:
-  pull_request:
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
-      - "cmake/granit_version.cmake"
   workflow_dispatch:
 
 permissions:

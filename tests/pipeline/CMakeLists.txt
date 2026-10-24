@@ -11,6 +11,12 @@ add_dependencies(
   granit_test_shader_assets
 )
 target_link_libraries(granit_pipeline_render_test PRIVATE granit::render_pipeline)
+if(WIN32)
+  target_link_libraries(granit_pipeline_render_test PRIVATE Psapi)
+endif()
+if(GRANIT_ENABLE_STRESS_TESTS)
+  granit_register_stress(granit.pipeline.render_stress granit_pipeline_render_test --stress)
+endif()
 target_compile_definitions(
   granit_pipeline_render_test
   PRIVATE GRANIT_RENDER_PIPELINE_SMOKE_PACKAGE="${granit_render_pipeline_test_package}"

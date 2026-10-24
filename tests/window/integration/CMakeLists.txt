@@ -1,6 +1,13 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+if(GRANIT_ENABLE_STRESS_TESTS)
+  granit_stress_target(granit_window_stress window_recreation_stress_test.cpp)
+  target_link_libraries(granit_window_stress PRIVATE granit::window)
+  granit_register_stress(granit.window.recreation_stress granit_window_stress)
+  set_property(TEST granit.window.recreation_stress APPEND PROPERTY LABELS platform)
+endif()
+
 add_executable(granit_window_hdr_test hdr_window_test.cpp)
 add_dependencies(granit_window_hdr_test granit_test_shader_assets)
 target_sources(

@@ -1,0 +1,150 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Granit contributors
+
+name: Compatibility
+
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: 关键版本验收范围；长测只在本地显式运行
+        type: choice
+        default: all
+        options: [native, sanitizers, all]
+
+permissions:
+  contents: read
+
+jobs:
+  matrix:
+    runs-on: ubuntu-24.04
+    outputs:
+      rows: ${{ steps.select.outputs.rows }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: select
+        shell: python
+        env:
+          SUITE: ${{ inputs.suite }}
+        run: |
+          import json, os
+          with open('.github/ci/compatibility-matrix.json', encoding='utf-8') as f:
+              catalog = json.load(f)
+          suite = os.environ['SUITE']
+          rows = catalog['native'] + catalog['sanitizers'] if suite == 'all' else catalog[suite]
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as f:
+              f.write('rows=' + json.dumps({'include': rows}, separators=(',', ':')) + '\n')
+
+  validate:
+    needs: matrix
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.matrix.outputs.rows) }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: 安装 Linux 编译器与窗口环境
+        if: runner.os == 'Linux'
+        shell: bash
+        env:
+          COMPILER: ${{ matrix.compiler }}
+          VERSION: ${{ matrix.version }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y ninja-build libvulkan-dev mesa-vulkan-drivers vulkan-tools \
+            vulkan-validationlayers libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev \
+            libwayland-dev wayland-protocols xvfb xauth weston
+          if [[ "$COMPILER" == clang && "$VERSION" == 20 ]]; then
+            curl -fsSL https://apt.llvm.org/llvm.sh -o "$RUNNER_TEMP/llvm.sh"
+            sudo bash "$RUNNER_TEMP/llvm.sh" "$VERSION"
+          elif [[ "$COMPILER" == clang ]]; then
+            sudo apt-get install -y "clang-$VERSION"
+          else
+            sudo apt-get install -y "gcc-$VERSION" "g++-$VERSION"
+          fi
+      - name: 确保指定 MSVC 工具集存在
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          COMPILER: ${{ matrix.compiler }}
+          VERSION: ${{ matrix.version }}
+        run: |
+          $toolset = if ($env:COMPILER -eq 'msvc') { $env:VERSION } else { '14.44' }
+          $vswhere = "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe"
+          $installation = (& $vswhere -latest -products * -property installationPath).Trim()
+          if (-not (Get-ChildItem "$installation/VC/Tools/MSVC" -Directory |
+              Where-Object Name -Like "$toolset.*")) {
+            $suffix = if ($toolset -eq '14.38') { '17.8' } else { '17.14' }
+            $component = "Microsoft.VisualStudio.Component.VC.$toolset.$suffix.x86.x64"
+            $installer = "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/setup.exe"
+            $process = Start-Process -FilePath $installer -ArgumentList @('modify',
+              '--installPath', "`"$installation`"", '--add', $component,
+              '--quiet', '--norestart') -Wait -PassThru -WindowStyle Hidden
+            if ($process.ExitCode -notin 0,3010) { throw "工具集安装失败：$($process.ExitCode)" }
+          }
+      - uses: ./.github/actions/setup-msvc
+        if: runner.os == 'Windows'
+        with:
+          toolset: ${{ matrix.compiler == 'msvc' && matrix.version || '14.44' }}
+      - name: 安装指定 Windows LLVM
+        if: runner.os == 'Windows' && matrix.compiler == 'clang'
+        shell: pwsh
+        env:
+          VERSION: ${{ matrix.version }}
+        run: |
+          $installer = Join-Path $env:RUNNER_TEMP 'llvm.exe'
+          Invoke-WebRequest "https://github.com/llvm/llvm-project/releases/download/llvmorg-$env:VERSION/LLVM-$env:VERSION-win64.exe" -OutFile $installer
+          $destination = Join-Path $env:RUNNER_TEMP "llvm-$env:VERSION"
+          $process = Start-Process $installer -ArgumentList @('/S', "/D=$destination") `
+            -Wait -PassThru -WindowStyle Hidden
+          if ($process.ExitCode -ne 0) { throw 'LLVM 安装失败' }
+          "$destination/bin" >> $env:GITHUB_PATH
+      - name: 准备锁定 Shader 工具链
+        id: shader-toolchain
+        uses: ./.github/actions/setup-shader-toolchain
+      - name: 验证 Linux
+        if: runner.os == 'Linux'
+        shell: bash
+        env:
+          MATRIX_ROW: ${{ toJSON(matrix) }}
+          SHADER_ROOT: ${{ steps.shader-toolchain.outputs.root }}
+          ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+          TSAN_OPTIONS: halt_on_error=1
+        run: |
+          set -euo pipefail
+          export XDG_RUNTIME_DIR="$RUNNER_TEMP/granit-wayland"
+          install -d -m 700 "$XDG_RUNTIME_DIR"
+          export WAYLAND_DISPLAY=granit-compatibility
+          weston --backend=headless-backend.so --socket="$WAYLAND_DISPLAY" --idle-time=0 \
+            >"$RUNNER_TEMP/weston.log" 2>&1 &
+          weston_pid=$!
+          trap 'kill "$weston_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..50}; do
+            [[ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]] && break
+            sleep 0.1
+          done
+          test -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY"
+          xvfb-run -a cmake "-DGRANIT_SOURCE_DIR=$PWD" "-DGRANIT_MATRIX_ROW=$MATRIX_ROW" \
+            "-DGRANIT_SHADER_TOOLCHAIN_ROOT=$SHADER_ROOT" -P scripts/compatibility.cmake
+      - name: 验证 Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          MATRIX_ROW: ${{ toJSON(matrix) }}
+          SHADER_ROOT: ${{ steps.shader-toolchain.outputs.root }}
+        run: |
+          cmake "-DGRANIT_SOURCE_DIR=$PWD" "-DGRANIT_MATRIX_ROW=$env:MATRIX_ROW" `
+            "-DGRANIT_SHADER_TOOLCHAIN_ROOT=$env:SHADER_ROOT" -P scripts/compatibility.cmake
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: 上传环境、测试与诊断
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: compatibility-${{ matrix.id }}
+          path: |
+            build/compatibility/${{ matrix.id }}/report
+            build/compatibility/${{ matrix.id }}/test-artifacts
+          if-no-files-found: warn

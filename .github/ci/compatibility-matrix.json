@@ -1,0 +1,25 @@
+{
+  "_license": "SPDX-License-Identifier: MIT",
+  "_copyright": "Copyright (c) 2026 Granit contributors",
+  "schema_version": 1,
+  "native": [
+    {"id":"linux-clang18-shared","os":"ubuntu-24.04","compiler":"clang","version":"18","cc":"clang-18","cxx":"clang++-18","expected":"18.","linkage":"ON","config":"Release","sanitizer":"none"},
+    {"id":"linux-clang18-static","os":"ubuntu-24.04","compiler":"clang","version":"18","cc":"clang-18","cxx":"clang++-18","expected":"18.","linkage":"OFF","config":"Release","sanitizer":"none"},
+    {"id":"linux-clang20-boundary","os":"ubuntu-24.04","compiler":"clang","version":"20","cc":"clang-20","cxx":"clang++-20","expected":"20.","linkage":"ON","config":"Release","sanitizer":"none"},
+    {"id":"linux-clang18-debug","os":"ubuntu-24.04","compiler":"clang","version":"18","cc":"clang-18","cxx":"clang++-18","expected":"18.","linkage":"ON","config":"Debug","sanitizer":"none"},
+    {"id":"linux-gcc13-shared","os":"ubuntu-24.04","compiler":"gcc","version":"13","cc":"gcc-13","cxx":"g++-13","expected":"13.","linkage":"ON","config":"Release","sanitizer":"none"},
+    {"id":"linux-gcc13-static","os":"ubuntu-24.04","compiler":"gcc","version":"13","cc":"gcc-13","cxx":"g++-13","expected":"13.","linkage":"OFF","config":"Release","sanitizer":"none"},
+    {"id":"linux-gcc14-boundary","os":"ubuntu-24.04","compiler":"gcc","version":"14","cc":"gcc-14","cxx":"g++-14","expected":"14.","linkage":"ON","config":"Release","sanitizer":"none"},
+    {"id":"windows-msvc1444-shared","os":"windows-2022","compiler":"msvc","version":"14.44","cc":"cl","cxx":"cl","expected":"19.44.","linkage":"ON","config":"Release","sanitizer":"none"},
+    {"id":"windows-msvc1444-static","os":"windows-2022","compiler":"msvc","version":"14.44","cc":"cl","cxx":"cl","expected":"19.44.","linkage":"OFF","config":"Release","sanitizer":"none"},
+    {"id":"windows-msvc1438-boundary","os":"windows-2022","compiler":"msvc","version":"14.38","cc":"cl","cxx":"cl","expected":"19.38.","linkage":"ON","config":"Release","sanitizer":"none"},
+    {"id":"windows-msvc1444-debug","os":"windows-2022","compiler":"msvc","version":"14.44","cc":"cl","cxx":"cl","expected":"19.44.","linkage":"ON","config":"Debug","sanitizer":"none"},
+    {"id":"windows-clang20-shared","os":"windows-2022","compiler":"clang","version":"20.1.8","cc":"clang","cxx":"clang++","expected":"20.1.8","linkage":"ON","config":"Release","sanitizer":"none"},
+    {"id":"windows-clang20-static","os":"windows-2022","compiler":"clang","version":"20.1.8","cc":"clang","cxx":"clang++","expected":"20.1.8","linkage":"OFF","config":"Release","sanitizer":"none"},
+    {"id":"windows-clang18-boundary","os":"windows-2022","compiler":"clang","version":"18.1.8","cc":"clang","cxx":"clang++","expected":"18.1.8","linkage":"ON","config":"Release","sanitizer":"none"}
+  ],
+  "sanitizers": [
+    {"id":"linux-clang18-asan-ubsan","os":"ubuntu-24.04","compiler":"clang","version":"18","cc":"clang-18","cxx":"clang++-18","expected":"18.","linkage":"ON","config":"Debug","sanitizer":"address-undefined"},
+    {"id":"linux-clang18-tsan","os":"ubuntu-24.04","compiler":"clang","version":"18","cc":"clang-18","cxx":"clang++-18","expected":"18.","linkage":"ON","config":"Debug","sanitizer":"thread"}
+  ]
+}

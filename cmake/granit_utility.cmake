@@ -36,6 +36,10 @@ function(granit_target_compile_warnings target)
     message(FATAL_ERROR "目标不存在: ${target}")
   endif()
 
+  if(COMMAND granit_target_sanitizer)
+    granit_target_sanitizer(${target})
+  endif()
+
   # clang-cl 的编译器 ID 是 Clang，但使用 MSVC 风格命令行，必须按前端变体分流。
   if(CMAKE_C_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
     target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:C>:/utf-8>)

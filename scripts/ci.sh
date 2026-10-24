@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# 用法: scripts/ci.sh <workflow>
+# 用法: scripts/ci.sh <workflow> [ref] [suite]
 # 用 gh CLI 触发对应 workflow。
 #
 # 可用: linux windows emscripten quick-check documentation package-shader-toolchain
@@ -10,13 +10,14 @@ set -euo pipefail
 #   scripts/ci.sh linux
 #   scripts/ci.sh quick-check
 
-if [ $# -ne 1 ]; then
-  echo "用法: scripts/ci.sh <workflow>" >&2
+if [ $# -lt 1 ] || [ $# -gt 3 ]; then
+  echo "用法: scripts/ci.sh <workflow> [ref] [suite]" >&2
   echo "可用: linux windows emscripten quick-check documentation package-shader-toolchain" >&2
   exit 1
 fi
 
 case "$1" in
+  compatibility) wf="compatibility.yml" ;;
   linux) wf="linux.yml" ;;
   windows) wf="windows.yml" ;;
   emscripten) wf="emscripten.yml" ;;
@@ -29,5 +30,8 @@ case "$1" in
     ;;
 esac
 
-gh workflow run "$wf"
+args=(workflow run "$wf")
+if [[ $# -ge 2 ]]; then args+=(--ref "$2"); fi
+if [[ "$1" == compatibility ]]; then args+=(-f "suite=${3:-all}"); fi
+gh "${args[@]}"
 echo "已触发 $wf"
