@@ -86,7 +86,8 @@ encode_handle(std::uint32_t slot_index, std::uint32_t generation, handle_type ty
 }
 
 [[nodiscard]] constexpr std::uint32_t next_handle_generation(std::uint32_t generation) noexcept {
-  return generation == handle_maximum_generation ? 1 : generation + 1;
+  // 0 表示 generation 已耗尽；回绕到 1 会让很早销毁的句柄重新命中新资源。
+  return generation == handle_maximum_generation ? 0 : generation + 1;
 }
 
 constexpr std::array registered_handle_types{

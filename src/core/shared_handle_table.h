@@ -70,8 +70,12 @@ public:
       return GRANIT_ERROR_INVALID_HANDLE;
     candidate.value.reset();
     candidate.generation = next_handle_generation(candidate.generation);
-    candidate.next_free = free_head_;
-    free_head_ = decoded.slot_index;
+    if (candidate.generation != 0) {
+      candidate.next_free = free_head_;
+      free_head_ = decoded.slot_index;
+    } else {
+      candidate.next_free = invalid_slot;
+    }
     return GRANIT_SUCCESS;
   }
 

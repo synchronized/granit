@@ -17,6 +17,7 @@ TEST_CASE("同进程持续验证资源提交回读与 generation 失效", "[stre
                                  .diagnostics = run.diagnostic,
                                  .diagnostic_user_data = &run}) == granit::result::success);
     run.device(renderer);
+    granit_buffer oldest_destroyed = GRANIT_NULL_HANDLE;
     while (run.running()) {
       INFO("iteration=" << run.iterations());
       std::array<std::byte, 256> expected{};
@@ -39,6 +40,10 @@ TEST_CASE("同进程持续验证资源提交回读与 generation 失效", "[stre
                                            .location = granit::memory_location::device}) ==
               granit::result::success);
       const auto stale = buffer.native_handle();
+      if (oldest_destroyed == GRANIT_NULL_HANDLE)
+        oldest_destroyed = stale;
+      else
+        REQUIRE(stale != oldest_destroyed);
       {
         granit::upload_batch upload;
         REQUIRE(upload.initialize(renderer) == granit::result::success);
@@ -74,6 +79,7 @@ TEST_CASE("同进程持续验证资源提交回读与 generation 失效", "[stre
       REQUIRE(
           replacement.initialize(renderer, {.size = 256, .usage = granit::buffer_usage::vertex}) ==
           granit::result::success);
+      REQUIRE(replacement.native_handle() != oldest_destroyed);
       // 仅此负向调用允许预期的 Granit 句柄诊断，Vulkan 错误仍计为失败。
       run.expect_invalid_buffer.store(true);
       const auto stale_result = granit_buffer_destroy(renderer.native_handle(), stale);
