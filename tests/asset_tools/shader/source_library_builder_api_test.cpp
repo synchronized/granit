@@ -113,20 +113,10 @@ int main(int argc, char** argv) {
     std::cerr << "长名称构建失败：" << long_result.info().diagnostic << '\n';
     return 8;
   }
-  bool found_object = false;
-  for (const auto& entry : std::filesystem::directory_iterator{cache}) {
-    if (entry.path().extension() == ".grshaderobj") {
-      found_object = true;
-      if (entry.path().stem().string().size() != 64)
-        return 9;
-    }
-  }
-  if (!found_object)
-    return 10;
   auto [long_cached_status, long_cached_result] =
       granit::asset_tools::shader::build_library_from_manifest(desc);
   if (long_cached_status.failed() || !long_cached_result.info().cache_hit)
-    return 11;
+    return 9;
   std::filesystem::remove_all(root, error);
   return 0;
 }

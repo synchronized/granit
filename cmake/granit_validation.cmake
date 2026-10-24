@@ -34,25 +34,39 @@ set(granit_environment "{}")
 foreach(key IN ITEMS CMAKE_C_COMPILER CMAKE_C_COMPILER_ID CMAKE_C_COMPILER_VERSION
                      CMAKE_CXX_COMPILER CMAKE_CXX_COMPILER_ID CMAKE_CXX_COMPILER_VERSION
                      CMAKE_SYSTEM_NAME CMAKE_SYSTEM_PROCESSOR CMAKE_BUILD_TYPE
-                     BUILD_SHARED_LIBS GRANIT_PROJECT_VERSION GRANIT_SANITIZER)
+                     CMAKE_GENERATOR CMAKE_VERSION BUILD_SHARED_LIBS GRANIT_PROJECT_VERSION
+                     GRANIT_SANITIZER GRANIT_ENABLE_STRESS_TESTS GRANIT_STRESS_SECONDS
+                     GRANIT_STRESS_SEED GRANIT_STRESS_ITERATIONS)
   set(value "${${key}}")
   string(REPLACE "\\" "/" value "${value}")
   string(REPLACE "\"" "\\\"" value "${value}")
   string(JSON granit_environment SET "${granit_environment}" "${key}" "\"${value}\"")
+endforeach()
+foreach(language IN ITEMS C CXX)
+  if(EXISTS "${CMAKE_${language}_COMPILER}")
+    file(SHA256 "${CMAKE_${language}_COMPILER}" compiler_digest)
+    string(JSON granit_environment SET "${granit_environment}" "${language}_COMPILER_SHA256"
+      "\"${compiler_digest}\"")
+  endif()
 endforeach()
 file(WRITE "${CMAKE_BINARY_DIR}/validation-environment.json" "${granit_environment}\n")
 
 function(granit_register_stress name target)
   if(NOT GRANIT_STRESS_SECONDS MATCHES "^[0-9]+$" OR
      GRANIT_STRESS_SECONDS LESS 1 OR GRANIT_STRESS_SECONDS GREATER 86400 OR
-     NOT GRANIT_STRESS_SEED MATCHES "^[0-9]+$")
-    message(FATAL_ERROR "长测需要 1..86400 秒和非负整数种子")
+     NOT GRANIT_STRESS_SEED MATCHES "^[0-9]+$" OR GRANIT_STRESS_SEED GREATER 4294967295 OR
+     NOT GRANIT_STRESS_ITERATIONS MATCHES "^[0-9]+$" OR
+     GRANIT_STRESS_ITERATIONS GREATER 4294967295)
+    message(FATAL_ERROR "长测需要 1..86400 秒，以及 32 位无符号种子和迭代上限")
   endif()
   math(EXPR timeout "${GRANIT_STRESS_SECONDS} + 120")
+  set(environment "GRANIT_STRESS_SECONDS=${GRANIT_STRESS_SECONDS}"
+    "GRANIT_STRESS_SEED=${GRANIT_STRESS_SEED}" "GRANIT_VULKAN_VALIDATION=on"
+    "GRANIT_STRESS_ITERATIONS=${GRANIT_STRESS_ITERATIONS}" "GRANIT_FRAME_TRACE_MAX_EVENTS=512")
   add_test(NAME ${name} COMMAND ${target} ${ARGN})
   set_tests_properties(${name} PROPERTIES LABELS "stress;gpu;integration"
     TIMEOUT ${timeout} RESOURCE_LOCK granit_gpu
-    ENVIRONMENT "GRANIT_STRESS_SECONDS=${GRANIT_STRESS_SECONDS};GRANIT_STRESS_SEED=${GRANIT_STRESS_SEED};GRANIT_VULKAN_VALIDATION=on;GRANIT_FRAME_TRACE_MAX_EVENTS=512"
+    ENVIRONMENT "${environment}"
     ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:granit>"
     FAIL_REGULAR_EXPRESSION "\\[granit\\]\\[lifecycle\\]")
 endfunction()

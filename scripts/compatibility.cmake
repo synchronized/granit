@@ -13,6 +13,7 @@ endif()
 set(build "${GRANIT_SOURCE_DIR}/build/compatibility/${id}")
 set(report "${build}/report")
 file(MAKE_DIRECTORY "${report}/logs")
+file(WRITE "${report}/summary.json" "{\"status\":\"running\"}\n")
 set(ENV{CC} "${cc}")
 set(ENV{CXX} "${cxx}")
 set(ENV{CMAKE_GENERATOR} Ninja)
@@ -54,7 +55,7 @@ run(configure "${CMAKE_COMMAND}" -S "${GRANIT_SOURCE_DIR}" -B "${build}" -G Ninj
   "-DCMAKE_C_COMPILER=${cc}" "-DCMAKE_CXX_COMPILER=${cxx}"
   "-DCMAKE_BUILD_TYPE=${config}" "-DBUILD_SHARED_LIBS=${linkage}"
   "-DGRANIT_SANITIZER=${sanitizer}" -DGRANIT_BUILD_EXAMPLES=OFF
-  -DGRANIT_ENABLE_WINDOW_SDL3=OFF -DGRANIT_BUILD_ASSET_TOOLS=ON
+  -DGRANIT_ENABLE_WINDOW_SDL3=OFF -DGRANIT_BUILD_ASSET_TOOLS=ON -DGRANIT_BUILD_TOOLS=ON
   -DGRANIT_WARNINGS_AS_ERRORS=ON -DGRANIT_VERIFY_SHADER_ASSET_SNAPSHOTS=OFF ${toolchain_args})
 file(READ "${build}/validation-environment.json" environment)
 file(COPY "${build}/validation-environment.json" DESTINATION "${report}")
@@ -80,7 +81,8 @@ elseif(sanitizer STREQUAL "thread")
   set(selection -R "^granit\\.core\\.(handle_table|async_operation_state|retirement_queue)$")
 endif()
 run(test "${CMAKE_CTEST_COMMAND}" --test-dir "${build}" --output-on-failure
-  --no-tests=error --output-junit "${report}/junit.xml" ${selection})
+  --no-tests=error --output-junit "${report}/junit.xml"
+  --test-output-size-passed 1048576 --test-output-size-failed 1048576 ${selection})
 if(sanitizer STREQUAL "none")
   set(prefix "${build}/install")
   run(install "${CMAKE_COMMAND}" --install "${build}" --prefix "${prefix}")

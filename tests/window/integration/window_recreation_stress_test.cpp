@@ -24,9 +24,12 @@ TEST_CASE("同进程反复重建窗口 Surface 与 Swapchain", "[stress][window]
       const auto width = 96U + run.random() % 128U;
       const auto height = 72U + run.random() % 128U;
       granit::window window;
-      REQUIRE(window.initialize(
-                  system, {.title = "Granit Window Soak", .width = width, .height = height}) ==
-              granit::result::success);
+      granit::window_desc desc{.title = "Granit Window Soak", .width = width, .height = height};
+#if defined(_WIN32)
+      // 长测反复创建窗口时不抢占用户桌面，可见窗口流程仍由普通 Smoke 覆盖。
+      desc.flags = granit::window_flag::none;
+#endif
+      REQUIRE(window.initialize(system, desc) == granit::result::success);
       granit::surface surface;
       REQUIRE(window.create_surface(renderer, surface) == granit::result::success);
       granit::swapchain chain;

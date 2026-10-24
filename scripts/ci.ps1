@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Granit contributors
+
 <#
 .SYNOPSIS
   用 gh CLI 触发对应 workflow。

@@ -22,9 +22,11 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-#include <windows.h>
 // Windows SDK 的 psapi.h 依赖 windows.h 中的基础类型。
+// clang-format off
+#include <windows.h>
 #include <psapi.h>
+// clang-format on
 #else
 #include <unistd.h>
 #endif
@@ -75,16 +77,18 @@ class soak_run {
 public:
   soak_run()
       : seconds_{soak_number("GRANIT_STRESS_SECONDS", 3600)},
-        seed_{soak_number("GRANIT_STRESS_SEED", 20261024)}, random_{seed_} {
+        seed_{soak_number("GRANIT_STRESS_SEED", 20261024)},
+        limit_{soak_number("GRANIT_STRESS_ITERATIONS", 0)}, random_{seed_} {
     if (seconds_ == 0 || seconds_ > 86400)
       throw std::invalid_argument{"GRANIT_STRESS_SECONDS 必须在 1..86400"};
     std::signal(SIGINT, interrupt_soak);
     std::signal(SIGTERM, interrupt_soak);
-    std::cout << "soak seed=" << seed_ << " seconds=" << seconds_ << std::endl;
+    std::cout << "soak seed=" << seed_ << " seconds=" << seconds_ << " iteration_limit=" << limit_
+              << std::endl;
   }
 
   [[nodiscard]] bool running() const {
-    return soak_interrupted == 0 &&
+    return soak_interrupted == 0 && (limit_ == 0 || iterations_ < limit_) &&
            std::chrono::steady_clock::now() - started_ < std::chrono::seconds{seconds_};
   }
 
@@ -99,13 +103,18 @@ public:
 
   ~soak_run() { sample(); }
 
-  void sample() const {
+  void sample() {
     const auto elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - started_);
+    const auto interval = elapsed.count() - last_elapsed_;
+    const auto count = iterations_ - last_iterations_;
     std::cout << "soak elapsed=" << elapsed.count() << " iterations=" << iterations_
               << " seed=" << seed_ << " rss_bytes=" << resident_bytes()
               << " validation_errors=" << validation_errors.load()
-              << " expected_diagnostics=" << expected_diagnostics.load()
+              << " expected_diagnostics=" << expected_diagnostics.load() << " mean_iteration_ms="
+              << (count == 0 ? 0.0 : interval * 1000.0 / static_cast<double>(count))
               << " interrupted=" << soak_interrupted << std::endl;
+    last_elapsed_ = elapsed.count();
+    last_iterations_ = iterations_;
   }
 
   void device(renderer& owner) {
@@ -144,8 +153,11 @@ public:
 private:
   std::uint32_t seconds_;
   std::uint32_t seed_;
+  std::uint32_t limit_;
   std::mt19937 random_;
   std::uint64_t iterations_{};
+  double last_elapsed_{};
+  std::uint64_t last_iterations_{};
   std::chrono::steady_clock::time_point started_{std::chrono::steady_clock::now()};
   std::chrono::steady_clock::time_point last_sample_{started_};
 };

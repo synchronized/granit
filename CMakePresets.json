@@ -73,6 +73,14 @@
       }
     },
     {
+      "name": "toolchain-clang-windows",
+      "hidden": true,
+      "inherits": "toolchain-clang",
+      "cacheVariables": {
+        "CMAKE_RC_COMPILER": "llvm-rc"
+      }
+    },
+    {
       "name": "toolchain-msvc",
       "hidden": true,
       "inherits": "base-ninja",
@@ -212,22 +220,22 @@
     {
       "name": "windows-clang-debug",
       "displayName": "Windows x64 Clang Shared Debug",
-      "inherits": ["platform-windows", "toolchain-clang", "config-debug", "linkage-shared"]
+      "inherits": ["platform-windows", "toolchain-clang-windows", "config-debug", "linkage-shared"]
     },
     {
       "name": "windows-clang-release",
       "displayName": "Windows x64 Clang Shared Release",
-      "inherits": ["platform-windows", "toolchain-clang", "config-release", "linkage-shared"]
+      "inherits": ["platform-windows", "toolchain-clang-windows", "config-release", "linkage-shared"]
     },
     {
       "name": "windows-clang-static-debug",
       "displayName": "Windows x64 Clang Static Debug",
-      "inherits": ["platform-windows", "toolchain-clang", "config-debug", "linkage-static"]
+      "inherits": ["platform-windows", "toolchain-clang-windows", "config-debug", "linkage-static"]
     },
     {
       "name": "windows-clang-static-release",
       "displayName": "Windows x64 Clang Static Release",
-      "inherits": ["platform-windows", "toolchain-clang", "config-release", "linkage-static"]
+      "inherits": ["platform-windows", "toolchain-clang-windows", "config-release", "linkage-static"]
     },
     {
       "name": "linux-clang-debug",
@@ -321,6 +329,7 @@
       "name": "test-default",
       "hidden": true,
       "output": {"outputOnFailure": true},
+      "filter": {"exclude": {"label": "^stress$"}},
       "execution": {"noTestsAction": "error", "stopOnFailure": false}
     },
     {

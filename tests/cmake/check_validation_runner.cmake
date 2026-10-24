@@ -20,24 +20,35 @@ if(NOT CASE STREQUAL "empty")
   else()
     add_test(NAME fixture COMMAND "${CMAKE_COMMAND}" -E true)
   endif()
-  set_tests_properties(fixture PROPERTIES LABELS unit)
+  if(CASE STREQUAL "stress")
+    set_tests_properties(fixture PROPERTIES LABELS stress)
+  else()
+    set_tests_properties(fixture PROPERTIES LABELS unit)
+  endif()
 endif()
 ]=])
 file(WRITE "${fixture}/CMakePresets.json" [=[
 {"version":4,
- "configurePresets":[{"name":"fixture","generator":"Ninja","binaryDir":"${sourceDir}/build/fixture"}],
+ "configurePresets":[{"name":"fixture","generator":"Ninja",
+ "binaryDir":"${sourceDir}/build/fixture"}],
  "buildPresets":[{"name":"fixture","configurePreset":"fixture"}],
- "testPresets":[{"name":"fixture","configurePreset":"fixture"}]}
+ "testPresets":[{"name":"fixture","configurePreset":"fixture",
+ "filter":{"exclude":{"label":"^stress$"}}}]}
 ]=])
-foreach(case IN ITEMS pass skip fail empty build_fail)
+foreach(case IN ITEMS pass skip fail empty build_fail stress)
   # 先缓存用例模式，运行入口的重新配置应保留该模式。
   execute_process(COMMAND "${CMAKE_COMMAND}" --preset fixture "-DCASE=${case}"
                   WORKING_DIRECTORY "${fixture}" COMMAND_ERROR_IS_FATAL ANY)
   file(GLOB previous_reports "${fixture}/build/validation/*")
+  set(suite quick)
+  if(case STREQUAL "stress")
+    set(suite stress)
+  endif()
   execute_process(COMMAND "${CMAKE_COMMAND}" "-DGRANIT_SOURCE_DIR=${fixture}"
-    -DGRANIT_PRESET=fixture -DGRANIT_SUITE=quick
+    -DGRANIT_PRESET=fixture "-DGRANIT_SUITE=${suite}"
     -P "${GRANIT_SOURCE_DIR}/scripts/validate.cmake" RESULT_VARIABLE result)
-  if((case STREQUAL "pass" OR case STREQUAL "skip") AND NOT result EQUAL 0)
+  if((case STREQUAL "pass" OR case STREQUAL "skip" OR case STREQUAL "stress")
+     AND NOT result EQUAL 0)
     message(FATAL_ERROR "成功测试未通过验证入口")
   elseif((case STREQUAL "fail" OR case STREQUAL "empty" OR case STREQUAL "build_fail")
          AND result EQUAL 0)

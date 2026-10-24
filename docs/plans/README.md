@@ -9,7 +9,7 @@
 
 ## 当前计划
 
-[v0.69.0](../versions/v0.69.0.md) 已确认以下开发计划，均待实施：
+[v0.69.0](../versions/v0.69.0.md) 正在实施以下计划；本地实现已有提交，平台验收尚未完成：
 
 - [S-108：验证入口与报告](S-108-0.69.0-validation-entrypoints.md)。
 - [S-109：手动兼容矩阵](S-109-0.69.0-manual-compatibility-matrix.md)。

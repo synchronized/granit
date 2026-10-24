@@ -32,7 +32,7 @@
 - 所有可能失败的操作返回 `granit_result`；零表示成功，负值表示失败，异常不会跨越 C ABI。
 - 参数为空、范围错误、未知标志位或状态顺序错误通常返回
   `GRANIT_ERROR_INVALID_ARGUMENT`；无效、类型错误或归属错误的句柄返回
-  `GRANIT_ERROR_INVALID_HANDLE`。generation 耗尽的槽位不再复用，旧句柄不会因回绕而恢复有效。
+  `GRANIT_ERROR_INVALID_HANDLE`。
 - 后端或设备不支持合法请求时返回 `GRANIT_ERROR_UNSUPPORTED`；Device Lost 是 Renderer 级
   粘滞错误，首次发生后相关操作持续返回 `GRANIT_ERROR_DEVICE_LOST`。
 - 除专门定义为“容量输入/实际大小输出”的查询参数外，调用者只能在返回成功后读取输出值。

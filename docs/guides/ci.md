@@ -49,8 +49,8 @@ PR 打开或更新时只自动运行 `quick-check`，按差异选择代码或文
 | `linux-ci-image` | 向 `main` 推送且改动 Dockerfile | `workflow_dispatch` |
 | `documentation` / `package-shader-toolchain` | — | `workflow_dispatch` |
 
-要让这些 PR check 成为 merge 门禁，还需在 main 分支设置 branch protection，把它们设为
-required check。
+分支保护的常规 required check 应使用 Quick Check。不要把全部手动完整矩阵设为每次 PR 的
+必需检查；关键版本按验收记录和发布流程审查所需的手动结果。
 
 ## Workflow 清单
 
@@ -182,14 +182,18 @@ Web 回归使用同一提交的 Emscripten 工作流，避免将不同提交的�
 
 长测默认不注册。使用 `scripts/dev.ps1 windows-clang-release -Suite stress -Seconds 3600`
 或 `scripts/dev.sh linux-clang-release --suite stress --seconds 3600` 显式启用、构建并运行。
-`-Seed` / `--seed` 指定可复现随机种子，默认 20261024。短时自检可设 10 秒，扩展验收设 28800 秒。
+`-Seed` / `--seed` 指定可复现随机种子，默认 20261024；`-Iterations` / `--iterations`
+限制单项迭代数，默认 0 表示仅按时长停止，达到任一边界便结束。短时自检可设 10 秒，
+扩展验收设 28800 秒。
 时长按每项测试计算，三项串行的一小时配置共约三小时，八小时配置共约二十四小时。
 
 用例覆盖资源上传/回读和旧句柄失效、窗口/Surface/Swapchain 反复创建重建，以及同进程持续
 渲染、材质切换与逐帧回读。GPU 资源锁限制 CTest 并发，每项超时额外留 120 秒清理余量。
-窗口用例改变新窗口尺寸；同窗口最小化与原生尺寸事件不在本次自动长测覆盖内。
+Windows 长测创建隐藏窗口以免反复抢占桌面；窗口用例改变新窗口尺寸，同窗口最小化与原生
+尺寸事件不在本次自动长测覆盖内。不要同时启动多个 GPU 验证进程，CTest 资源锁仅在单次
+CTest 调度内部生效。长测应使用独立终端或独立后台进程，关闭会话可能中断测试。
 
-心跳每十秒记录时长、迭代、种子、进程 RSS 和诊断计数；崩溃、超时、错误回读、非预期验证或
+心跳每十秒记录时长、迭代、种子、进程 RSS、诊断计数和区间平均迭代耗时；崩溃、超时、错误回读、非预期验证或
 生命周期诊断均失败。资源负向测试只接受该调用预期的无效句柄诊断。内存趋势记录不设置性能阈值，
 需要在同一环境比较预热后的采样；显存趋势目前没有统一采集接口，不能从 RSS 推断。
 
@@ -201,3 +205,13 @@ CTest 重复启动进程适合偶发回归，不能代替上述同进程长测�
 该机制见 [Vulkan Loader 文档](https://github.com/KhronosGroup/Vulkan-Loader/blob/main/docs/LoaderLayerInterface.md)。
 这是隔离环境的验收，必须在记录中说明，不能当成 Overlay 兼容性已通过。
 验证层是否实际可用需结合运行环境记录核实；仅请求 Validation 不构成已启用证明。
+
+报告的通过/跳过统计以 CTest 测试进程为单位；Catch2 进程内部的条件跳过需同时审查
+JUnit 中的测试输出，不能据绿色退出码宣称所有硬件能力均已验证。
+
+Windows GNU 风格 Clang preset 显式使用 LLVM 自带的 `llvm-rc`，避免把 Clang 预处理的
+GNU 行标记交给 Windows SDK `rc.exe`。自定义编译器路径时，应同时选择匹配的资源编译器。
+
+区间平均耗时包含 CPU 工作与等待，不代表 GPU Timestamp。Windows Clang 旧构建目录切换资源
+编译器时应先用 `scripts/msvc.ps1 -Action configure -Preset <preset> -Fresh` 重建配置；
+CMake 因编译器变化自动清缓存后可能选择 PATH 默认编译器，应核对实际工具链环境报告。

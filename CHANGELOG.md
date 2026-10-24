@@ -8,6 +8,14 @@
 
 ## Unreleased
 
+- 修复资源和共享句柄表 generation 回绕可能复活旧句柄的问题，耗尽的槽位永久退役。
+
+- 新增仅手动触发的跨工具链版本、Debug 与 Linux Sanitizer 验收矩阵；完整平台工作流不再由 PR 触发。
+- Windows Clang preset 显式使用 LLVM 资源编译器，避免与 Windows SDK rc.exe 的预处理格式混用。
+- 统一 CTest 本地验证入口、环境身份、JUnit 和失败日志归档；新增默认关闭的真实 GPU 长测。
+- 修复长 Shader 逻辑名称导致 Windows 缓存路径膨胀、静态链接教程退出时的资源析构顺序问题。
+- 修复 MSVC 严格警告下的测试变量遮蔽，并消除 Unlit 像素测试对 UNORM 舍入边界的依赖。
+
 ## 0.68.1 - 2026-10-20
 
 - 修复独立 Emscripten Web Consumer 未继承测试依赖策略和 `vendor/cache` 源码缓存目录的问题；

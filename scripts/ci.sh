@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Granit contributors
 set -euo pipefail
 
 # 用法: scripts/ci.sh <workflow> [ref] [suite]
 # 用 gh CLI 触发对应 workflow。
 #
-# 可用: linux windows emscripten quick-check documentation package-shader-toolchain
+# 可用: compatibility linux windows emscripten quick-check documentation package-shader-toolchain
 #
 # 示例:
 #   scripts/ci.sh linux
@@ -12,7 +14,7 @@ set -euo pipefail
 
 if [ $# -lt 1 ] || [ $# -gt 3 ]; then
   echo "用法: scripts/ci.sh <workflow> [ref] [suite]" >&2
-  echo "可用: linux windows emscripten quick-check documentation package-shader-toolchain" >&2
+  echo "可用: compatibility linux windows emscripten quick-check documentation package-shader-toolchain" >&2
   exit 1
 fi
 

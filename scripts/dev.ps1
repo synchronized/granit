@@ -10,13 +10,15 @@ param(
   [switch]$Test,
   [ValidateSet('default', 'quick', 'stress')][string]$Suite = 'default',
   [ValidateRange(1, 86400)][int]$Seconds = 3600,
-  [uint32]$Seed = 20261024
+  [uint32]$Seed = 20261024,
+  [uint32]$Iterations = 0
 )
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 if ($Test -or $Suite -ne 'default') {
   & cmake "-DGRANIT_SOURCE_DIR=$repoRoot" "-DGRANIT_PRESET=$Preset" `
     "-DGRANIT_SUITE=$Suite" "-DGRANIT_STRESS_SECONDS=$Seconds" `
-    "-DGRANIT_STRESS_SEED=$Seed" -P "$PSScriptRoot/validate.cmake"
+    "-DGRANIT_STRESS_SEED=$Seed" "-DGRANIT_STRESS_ITERATIONS=$Iterations" `
+    -P "$PSScriptRoot/validate.cmake"
   exit $LASTEXITCODE
 }
 Push-Location $repoRoot
