@@ -34,3 +34,6 @@ tests/
 
 CTest 名称使用 `granit.<组件>.<行为>`。标签只描述运行条件：`unit`、`gpu`、`integration`、
 `platform`、`browser`、`package`、`release`、`smoke` 和 `tooling`，不用于表达代码归属。
+
+统一本地入口与报告格式见 [CI 与验证](../docs/guides/ci.md#本地统一验证入口)。
+长测使用额外的 `stress` 标签，只有显式启用 `GRANIT_ENABLE_STRESS_TESTS` 才注册。

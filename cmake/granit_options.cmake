@@ -1,5 +1,8 @@
 option(BUILD_SHARED_LIBS "构建共享库" ON)
 option(GRANIT_BUILD_TESTING "构建 Granit 测试" ON)
+option(GRANIT_ENABLE_STRESS_TESTS "显式注册本地长测，默认不进入普通测试集合" OFF)
+set(GRANIT_STRESS_SECONDS "3600" CACHE STRING "单项长测时长（秒）")
+set(GRANIT_STRESS_SEED "20261024" CACHE STRING "长测随机种子")
 option(GRANIT_BUILD_EXAMPLES "构建 Granit 示例" ${PROJECT_IS_TOP_LEVEL})
 option(GRANIT_BUILD_BENCHMARKS "构建 Granit benchmark 程序" OFF)
 option(GRANIT_BUILD_TOOLS "构建 Granit 离线工具" OFF)

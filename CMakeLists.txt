@@ -24,6 +24,7 @@ include(CTest)
 include(granit_features)
 
 include(granit_utility)
+include(granit_validation)
 include(granit_asset_paths)
 include(granit_integration_dependencies)
 

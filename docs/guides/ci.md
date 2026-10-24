@@ -145,3 +145,14 @@ bash scripts/publish.sh X.Y.Z
 ```
 
 `publish` 脚本会校验本地与远端 `main`、版本和标签，并默认等待工作流完成。
+
+## 本地统一验证入口
+
+`scripts/dev.ps1 <preset> -Test` 或 `scripts/dev.sh <preset> --test` 配置、构建并执行
+默认测试集合；`-Suite quick` / `--suite quick` 选择不依赖 GPU 和窗口的单元及 Smoke 测试。
+报告保存在 `build/validation/<UTC 时间与随机编号>/`，终端打印绝对路径。
+
+报告包含源码提交与工作区状态、实际工具链配置、测试清单、配置/构建/测试命令、原始日志和
+CTest JUnit 结果。`summary.json` 区分 `passed`、`failed` 和存在跳过项的 `incomplete`；
+没有选中测试视为失败。脚本失败返回非零，具体子命令退出码保存在报告中。
+配置失败时仍保留环境与配置日志，但不会声称已经获得实际编译器身份或测试结果。

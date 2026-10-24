@@ -1,29 +1,29 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Granit contributors
 set -euo pipefail
-
-# 用法: scripts/dev.sh <preset> [--test]
-# 等价于: cmake --preset <preset> && cmake --build --preset <preset> [&& ctest --preset <preset>]
-#
-# 示例:
-#   scripts/dev.sh linux-clang-release
-#   scripts/dev.sh linux-clang-release --test
-
-if [ $# -lt 1 ]; then
-  echo "用法: scripts/dev.sh <preset> [--test]" >&2
-  echo "示例: scripts/dev.sh linux-clang-release --test" >&2
-  exit 1
-fi
-preset="$1"
+# 用法：scripts/dev.sh <preset> [--test] [--suite default|quick|stress] [--seconds N] [--seed N]
+[[ $# -ge 1 ]] || { echo '缺少 preset' >&2; exit 2; }
+preset="$1"; shift
 run_test=false
-if [ $# -ge 2 ] && [ "$2" = "--test" ]; then
-  run_test=true
-fi
-
+suite=default
+seconds=3600
+seed=20261024
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --test) run_test=true; shift ;;
+    --suite) suite="${2:?缺少范围}"; run_test=true; shift 2 ;;
+    --seconds) seconds="${2:?缺少秒数}"; shift 2 ;;
+    --seed) seed="${2:?缺少种子}"; shift 2 ;;
+    *) echo "未知参数：$1" >&2; exit 2 ;;
+  esac
+done
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$repo_root"
-
+if [[ "$run_test" == true ]]; then
+  exec cmake "-DGRANIT_SOURCE_DIR=$repo_root" "-DGRANIT_PRESET=$preset" \
+    "-DGRANIT_SUITE=$suite" "-DGRANIT_STRESS_SECONDS=$seconds" \
+    "-DGRANIT_STRESS_SEED=$seed" -P scripts/validate.cmake
+fi
 cmake --preset "$preset"
 cmake --build --preset "$preset"
-if [ "$run_test" = true ]; then
-  ctest --preset "$preset" --output-on-failure
-fi
