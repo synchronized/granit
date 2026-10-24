@@ -32,8 +32,10 @@ Vulkan 内部实验。
 
 ## 当前计划
 
-当前版本 [v0.68.1](versions/v0.68.1.md) 已完成发布收口；[S-107](plans/S-107-0.68.1-standalone-consumer-fixes.md)
-已完成独立 Consumer 构建修复和补丁版本验收。下一版本计划待确定。
+下一版本 [v0.69.0](versions/v0.69.0.md) 规划跨工具链验收与本地长测，优先级 P1。
+按 S-108 验证入口、S-109 手动兼容矩阵、S-110 本地长测的顺序实施；
+详细任务见[当前计划](plans/README.md#当前计划)。PR 保留快速反馈，关键版本手动验收，
+长测在本地显式运行。上述机制尚未实现；工程版本仍为 0.68.1。
 
 v0.66.1 已由 [S-104](plans/S-104-0.66.1-linux-runtime-cache-fix.md) 完成并发布：将 Linux Runtime
 构建迁移到标准 Ubuntu Runner，验证 Windows/Linux 重复 Release 均跳过 Runtime 源码构建。不新增 C ABI。

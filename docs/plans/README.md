@@ -9,7 +9,11 @@
 
 ## 当前计划
 
-当前版本 [v0.68.1](../versions/v0.68.1.md) 已完成发布收口，新的版本计划尚未建立。
+[v0.69.0](../versions/v0.69.0.md) 已确认以下开发计划，均待实施：
+
+- [S-108：验证入口与报告](S-108-0.69.0-validation-entrypoints.md)。
+- [S-109：手动兼容矩阵](S-109-0.69.0-manual-compatibility-matrix.md)。
+- [S-110：本地真实 GPU 长测](S-110-0.69.0-local-soak-tests.md)。
 
 ## 已完成计划
 
