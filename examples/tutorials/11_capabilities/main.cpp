@@ -76,6 +76,8 @@ private:
     return granit::result::success;
   }
   void on_shutdown(granit::result) noexcept override {
+    // 静态链接时全局 Application 比注册表更晚析构，必须在 Renderer 存活时释放。
+    static_cast<void>(frame_context_.reset());
     runtime_.shutdown();
     static_cast<void>(indirect_buffer_.reset());
     static_cast<void>(sampler_.reset());

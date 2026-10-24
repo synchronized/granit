@@ -11,6 +11,7 @@
 #include "asset_tools/shader/library_source_manifest.h"
 #include "asset_tools/shader/object_cache.h"
 #include "asset_tools/shader/object_storage.h"
+#include "core/sha256.h"
 #include "core/shared_handle_table.h"
 
 #include <algorithm>
@@ -96,11 +97,14 @@ std::string tool_identity(const std::filesystem::path& path) {
 }
 
 std::string object_stem(std::string_view name) {
+  // 逻辑名称可很长；固定长度摘要避免 Windows 缓存路径随变体名称翻倍增长。
+  const auto digest =
+      granit::detail::sha256_bytes(std::as_bytes(std::span{name.data(), name.size()}));
   constexpr std::string_view digits = "0123456789abcdef";
   std::string result;
-  result.reserve(name.size() * 2);
-  for (const auto character : name) {
-    const auto value = static_cast<unsigned char>(character);
+  result.reserve(digest.size() * 2);
+  for (const auto character : digest) {
+    const auto value = std::to_integer<unsigned char>(character);
     result.push_back(digits[value >> 4]);
     result.push_back(digits[value & 0xf]);
   }
@@ -243,8 +247,8 @@ extern "C" granit_result granit_asset_tools_shader_build_library_from_manifest(
                              GRANIT_SHADER_BACKEND_WEBGPU_BIT) != 0;
     const auto target_environment = manifest.target_profile == granit::shader_profile::vulkan_native
                                         ? std::string_view{"vulkan1.3-native"}
-                                        : has_webgpu ? std::string_view{"vulkan1.3+webgpu-portable"}
-                                                     : std::string_view{"vulkan1.3"};
+                                    : has_webgpu ? std::string_view{"vulkan1.3+webgpu-portable"}
+                                                 : std::string_view{"vulkan1.3"};
 
     compiler_owner compiler;
     const granit_asset_tools_shader_compiler_desc compiler_desc{

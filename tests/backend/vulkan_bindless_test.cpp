@@ -504,8 +504,7 @@ TEST_CASE("Vulkan Bindless Shader 按索引采样 texture 和 sampler", "[vulkan
   constexpr std::uint32_t pressure_capacity = 512;
   vulkan_bindless_resource_registry pressure_registry{UINT64_C(0x534F01)};
   REQUIRE(pressure_registry.initialize(device, pressure_capacity, pressure_capacity,
-                                       pressure_capacity) ==
-          GRANIT_SUCCESS);
+                                       pressure_capacity) == GRANIT_SUCCESS);
   const std::array<std::uint32_t, 3> pressure_sizes{8, 64, 512};
   constexpr std::uint32_t pressure_iterations = 16;
   for (const auto pressure_size : pressure_sizes) {
@@ -514,14 +513,14 @@ TEST_CASE("Vulkan Bindless Shader 按索引采样 texture 和 sampler", "[vulkan
     pressure_texture_handles.reserve(pressure_size);
     pressure_sampler_handles.reserve(pressure_size);
     for (std::uint32_t index = 0; index < pressure_size; ++index) {
-      std::uint64_t texture_handle{};
-      std::uint64_t sampler_handle{};
-      REQUIRE(pressure_registry.register_sampled_texture(device, source_view, index + 10,
-                                                         texture_handle) == GRANIT_SUCCESS);
-      REQUIRE(pressure_registry.register_sampler(device, sampler, index + 10, sampler_handle) ==
-              GRANIT_SUCCESS);
-      pressure_texture_handles.push_back(texture_handle);
-      pressure_sampler_handles.push_back(sampler_handle);
+      std::uint64_t pressure_texture_handle{};
+      std::uint64_t pressure_sampler_handle{};
+      REQUIRE(pressure_registry.register_sampled_texture(
+                  device, source_view, index + 10, pressure_texture_handle) == GRANIT_SUCCESS);
+      REQUIRE(pressure_registry.register_sampler(device, sampler, index + 10,
+                                                 pressure_sampler_handle) == GRANIT_SUCCESS);
+      pressure_texture_handles.push_back(pressure_texture_handle);
+      pressure_sampler_handles.push_back(pressure_sampler_handle);
     }
     if (pressure_size == pressure_capacity) {
       std::uint64_t exhausted_texture_handle{};

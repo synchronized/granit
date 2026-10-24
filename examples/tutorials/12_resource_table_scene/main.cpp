@@ -230,9 +230,13 @@ private:
     runtime_.shutdown();
     static_cast<void>(scene_.reset());
     static_cast<void>(pipeline_.reset());
+    // 绑定表和 Sampler 在 Renderer 关闭前销毁，避免全局对象静态析构顺序依赖。
+    stress_tables_.clear();
+    static_cast<void>(table_.reset());
     pressure_bind_groups_.clear();
     static_cast<void>(pressure_bind_group_layout_.reset());
     model_gpu_.reset();
+    static_cast<void>(sampler_.reset());
   }
 
   granit::result on_window_event(const granit::window_event& event) noexcept override {
