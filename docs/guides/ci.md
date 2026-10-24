@@ -178,6 +178,27 @@ Web 回归使用同一提交的 Emscripten 工作流，避免将不同提交的�
 公共 API/ABI、安装导出、依赖或工具链升级、平台生命周期变化及稳定候选里程碑需要关键版本验收。
 普通补丁按影响范围选择；不要求每次 PR 或每个补丁全量运行。验收后修改受影响代码必须重新验证。
 
+## Linux 虚拟机测试环境
+
+没有 GPU 直通的虚拟机可使用 Mesa 软件 Vulkan 验证资源生命周期、回读和窗口流程。
+这类结果必须注明 CPU 软件设备，不能替代真实 GPU 与驱动验收。
+Arch Linux 的基础环境可安装以下官方软件包：
+
+```sh
+sudo pacman -S --needed vulkan-icd-loader vulkan-swrast vulkan-tools \
+  vulkan-validation-layers xorg-server-xvfb xorg-xauth \
+  libx11 libxcursor libxi libxrandr libxinerama libxss libxtst \
+  libxkbcommon libxkbcommon-x11 libxdamage libxcomposite libxrender \
+  libxfixes libxext libxcb wayland wayland-protocols weston
+vulkaninfo --summary
+xvfb-run -a vulkaninfo --summary
+```
+
+`vulkan-swrast` 提供软件 Vulkan，见 [Arch Vulkan 指南](https://wiki.archlinux.org/title/Vulkan)。
+确认输出包含 Khronos Validation Layer，并记录设备名称、驱动、包版本和实际编译器身份。
+Xvfb 提供 X11 显示；Wayland 测试另需启动无头 Weston，不能以 X11 通过代替 Wayland 通过。
+软件设备是否满足 Granit 要求仍以项目测试结果为准。
+
 ## 本地真实 GPU 长测
 
 长测默认不注册。使用 `scripts/dev.ps1 windows-clang-release -Suite stress -Seconds 3600`
