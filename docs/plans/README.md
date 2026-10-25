@@ -9,13 +9,15 @@
 
 ## 当前计划
 
-[v0.69.0](../versions/v0.69.0.md) 正在实施以下计划；本地实现已有提交，平台验收尚未完成：
+[v0.69.0](../versions/v0.69.0.md) 已完成 S-108 验证入口，以下计划仍待平台验收收口：
 
-- [S-108：验证入口与报告](S-108-0.69.0-validation-entrypoints.md)。
 - [S-109：手动兼容矩阵](S-109-0.69.0-manual-compatibility-matrix.md)。
 - [S-110：本地真实 GPU 长测](S-110-0.69.0-local-soak-tests.md)。
 
 ## 已完成计划
+
+- [S-108：验证入口与报告](S-108-0.69.0-validation-entrypoints.md)——统一 Windows/Linux 本地
+  CTest 编排、环境身份、失败报告和数值退出码。
 
 - [S-107：0.68.1 独立 Consumer 与发布文档修复](S-107-0.68.1-standalone-consumer-fixes.md)——
   修复独立 Web Consumer 的测试依赖配置并完成补丁版本收口。
