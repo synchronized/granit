@@ -19,7 +19,7 @@ if [ $# -lt 1 ] || [ $# -gt 3 ]; then
 fi
 
 case "$1" in
-  compatibility) wf="compatibility.yml" ;;
+  compatibility) wf="linux.yml" ;;
   linux) wf="linux.yml" ;;
   windows) wf="windows.yml" ;;
   emscripten) wf="emscripten.yml" ;;
@@ -34,6 +34,8 @@ esac
 
 args=(workflow run "$wf")
 if [[ $# -ge 2 ]]; then args+=(--ref "$2"); fi
-if [[ "$1" == compatibility ]]; then args+=(-f "suite=${3:-all}"); fi
+if [[ "$1" == compatibility ]]; then
+  args+=(-f validation=compatibility -f "suite=${3:-all}")
+fi
 gh "${args[@]}"
 echo "已触发 $wf"

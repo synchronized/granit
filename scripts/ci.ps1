@@ -16,7 +16,7 @@ param(
 )
 
 $workflows = @{
-  'compatibility' = 'compatibility.yml'
+  'compatibility' = 'linux.yml'
   'linux' = 'linux.yml'
   'windows' = 'windows.yml'
   'emscripten' = 'emscripten.yml'
@@ -34,7 +34,9 @@ if (-not $workflows.ContainsKey($Workflow)) {
 $wf = $workflows[$Workflow]
 $arguments = @('workflow', 'run', $wf)
 if ($Ref) { $arguments += @('--ref', $Ref) }
-if ($Workflow -eq 'compatibility') { $arguments += @('-f', "suite=$Suite") }
+if ($Workflow -eq 'compatibility') {
+  $arguments += @('-f', 'validation=compatibility', '-f', "suite=$Suite")
+}
 gh @arguments
 if ($LASTEXITCODE -ne 0) {
   exit $LASTEXITCODE

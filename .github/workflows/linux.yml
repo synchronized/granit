@@ -5,6 +5,17 @@ name: Linux
 
 on:
   workflow_dispatch:
+    inputs:
+      validation:
+        description: 原生 Linux 验收或跨平台兼容矩阵
+        type: choice
+        default: native
+        options: [native, compatibility]
+      suite:
+        description: 兼容矩阵范围；原生 Linux 验收忽略此项
+        type: choice
+        default: all
+        options: [native, sanitizers, all]
 
 permissions:
   contents: read
@@ -17,7 +28,14 @@ env:
   CCACHE_MAXSIZE: 500M
 
 jobs:
+  compatibility:
+    if: github.event_name == 'workflow_dispatch' && inputs.validation == 'compatibility'
+    uses: ./.github/workflows/compatibility.yml
+    with:
+      suite: ${{ inputs.suite }}
+
   restore-shader-toolchain:
+    if: inputs.validation != 'compatibility'
     runs-on: ubuntu-24.04
     container:
       image: >-
@@ -197,6 +215,7 @@ jobs:
         run: ccache --show-stats
 
   lavapipe-resource-table:
+    if: inputs.validation != 'compatibility'
     runs-on: ubuntu-24.04
     container:
       image: >-
@@ -248,6 +267,7 @@ jobs:
             -R '^(granit\.tutorial\.12_resource_table_scene|granit\.backend\.vulkan|granit\.renderer\.resources|granit\.smoke\.gpu_offscreen)$'
 
   integration-runtime:
+    if: inputs.validation != 'compatibility'
     runs-on: ubuntu-24.04
     container:
       image: >-

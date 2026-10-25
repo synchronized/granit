@@ -177,6 +177,10 @@ Windows LLVM 锁定完整发行版本；MSVC 选择工具集系列；Linux 使�
 
 手动运行示例：`scripts/ci.ps1 compatibility -Ref <候选分支> -Suite all`，或
 `scripts/ci.sh compatibility <候选分支> all`。`native` 与 `sanitizers` 可分别执行。
+脚本通过已有 Linux 手动入口的 `validation=compatibility` 调用同提交的兼容工作流，
+避免新工作流尚未进入默认分支时直接调度返回 404。复用定义的两个任务均校验原始事件
+必须为 `workflow_dispatch`，不能通过 PR、push 或定时调用启动矩阵。
+复用调用的上下文规则见 [GitHub 官方说明](https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations)。
 Web 回归使用同一提交的 Emscripten 工作流，避免将不同提交的结果拼成通过证据。
 矩阵报告在 Actions 的 `compatibility-<组合>` 制品中，Windows 报告明确标为 `incomplete`，
 因为云端不执行完整 GPU/平台用例，需要本地真实 GPU 证据补足。

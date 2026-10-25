@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+cmake_minimum_required(VERSION 3.23)
+
 if(NOT DEFINED GRANIT_SOURCE_DIR)
   message(FATAL_ERROR "必须通过 GRANIT_SOURCE_DIR 指定仓库根目录")
 endif()
@@ -66,8 +68,18 @@ endforeach()
 
 foreach(workflow IN ITEMS windows.yml linux.yml emscripten.yml compatibility.yml)
   file(READ "${GRANIT_SOURCE_DIR}/.github/workflows/${workflow}" content)
-  if(content MATCHES "\n  (pull_request|push|schedule|workflow_call):")
+  if(content MATCHES "\n  (pull_request|push|schedule):")
     message(FATAL_ERROR "${workflow} 完整验收只能手动触发")
+  endif()
+  if(content MATCHES "\n  workflow_call:")
+    if(NOT workflow STREQUAL "compatibility.yml")
+      message(FATAL_ERROR "${workflow} 不得提供未经审核的复用触发入口")
+    endif()
+    string(REGEX MATCHALL "if: github.event_name == 'workflow_dispatch'" guards "${content}")
+    list(LENGTH guards guard_count)
+    if(NOT guard_count EQUAL 2)
+      message(FATAL_ERROR "兼容矩阵的两个任务必须校验调用源为手动事件")
+    endif()
   endif()
   string(FIND "${content}" "workflow_dispatch:" manual_position)
   if(manual_position EQUAL -1)

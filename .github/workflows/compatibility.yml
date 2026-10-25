@@ -4,6 +4,11 @@
 name: Compatibility
 
 on:
+  workflow_call:
+    inputs:
+      suite:
+        type: string
+        default: all
   workflow_dispatch:
     inputs:
       suite:
@@ -17,6 +22,8 @@ permissions:
 
 jobs:
   matrix:
+    # 复用调用保留调用者事件；禁止 PR、push 或定时调用启动完整矩阵。
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     outputs:
       rows: ${{ steps.select.outputs.rows }}
@@ -36,6 +43,7 @@ jobs:
               f.write('rows=' + json.dumps({'include': rows}, separators=(',', ':')) + '\n')
 
   validate:
+    if: github.event_name == 'workflow_dispatch'
     needs: matrix
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
