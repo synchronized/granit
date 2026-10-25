@@ -11,7 +11,7 @@
 - 所有公开对象使用 64 位整数句柄，零值无效；句柄不能持久化，也不能跨 Renderer 使用。
 - `*_create` 成功后，调用者拥有返回句柄，并负责调用配对的 `*_destroy`。创建失败不产生句柄。
 - 销毁后旧句柄立即失效；重复销毁、资源类型错误和跨 Renderer 使用返回
-  `GRANIT_ERROR_INVALID_HANDLE`。
+  `GRANIT_ERROR_INVALID_HANDLE`。generation 耗尽的槽位不再复用，旧句柄不会因回绕而恢复有效。
 - Renderer 是所有 GPU 资源的根对象。调用者应先结束使用并销毁子资源，再销毁 Renderer；验证
   模式会报告遗留的用户资源，随后仍执行级联清理。
 - Swapchain backbuffer View 等明确标记的借用句柄由父对象管理，调用者不得单独销毁。

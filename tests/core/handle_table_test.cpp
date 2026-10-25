@@ -114,3 +114,47 @@ TEST_CASE("共享句柄表拒绝跨类型与重复销毁", "[handle_table]") {
 }
 
 } // namespace
+
+TEST_CASE("资源句柄 generation 耗尽后旧句柄不能复活", "[handle_table][generation]") {
+  granit::detail::handle_table table;
+  int resource = 7;
+  const auto type = granit::detail::resource_type::buffer;
+  const auto old = table.insert(&resource, type, 1);
+  REQUIRE(old != GRANIT_NULL_HANDLE);
+  auto current = old;
+  // 走完真实的 generation 空间，避免为测试增加运行时状态或降低生产位宽。
+  for (std::uint32_t index = 0; index < granit::detail::handle_maximum_generation; ++index) {
+    if (table.erase(current, type, 1) != GRANIT_SUCCESS)
+      FAIL("边界循环销毁失败，迭代=" << index);
+    current = table.insert(&resource, type, 1);
+    if (current == GRANIT_NULL_HANDLE)
+      FAIL("边界循环创建失败，迭代=" << index);
+  }
+  CHECK(current != old);
+  CHECK(table.find(old, type, 1) == nullptr);
+  CHECK(table.find(current, type, 1) == &resource);
+  CHECK(table.size() == 1);
+  CHECK(table.erase(current, type, 1) == GRANIT_SUCCESS);
+  CHECK(table.empty());
+}
+
+TEST_CASE("共享句柄 generation 耗尽后旧句柄不能复活", "[handle_table][generation]") {
+  granit::detail::shared_handle_table<int, granit::detail::handle_type::asset_tools_material_result>
+      table;
+  const auto resource = std::make_shared<const int>(7);
+  const auto old = table.insert(resource);
+  REQUIRE(old != GRANIT_NULL_HANDLE);
+  auto current = old;
+  for (std::uint32_t index = 0; index < granit::detail::handle_maximum_generation; ++index) {
+    if (table.erase(current) != GRANIT_SUCCESS)
+      FAIL("共享表边界循环销毁失败，迭代=" << index);
+    current = table.insert(resource);
+    if (current == GRANIT_NULL_HANDLE)
+      FAIL("共享表边界循环创建失败，迭代=" << index);
+  }
+  CHECK(current != old);
+  CHECK(table.find(old) == nullptr);
+  REQUIRE(table.find(current) != nullptr);
+  CHECK(*table.find(current) == 7);
+  CHECK(table.erase(current) == GRANIT_SUCCESS);
+}

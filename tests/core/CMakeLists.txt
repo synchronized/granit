@@ -78,6 +78,12 @@ target_include_directories(granit_async_operation_state_test PRIVATE "${PROJECT_
 target_link_libraries(
   granit_async_operation_state_test PRIVATE granit::granit granit_test_catch2_with_main
 )
+if(NOT EMSCRIPTEN)
+  # 当前 Web 构建未启用 pthread；状态机行为仍在 Web 验证，并发竞争交给原生与 TSan。
+  find_package(Threads REQUIRED)
+  target_sources(granit_async_operation_state_test PRIVATE async_operation_concurrency_test.cpp)
+  target_link_libraries(granit_async_operation_state_test PRIVATE Threads::Threads)
+endif()
 granit_target_compile_warnings(granit_async_operation_state_test)
 add_test(NAME granit.core.async_operation_state COMMAND granit_async_operation_state_test)
 

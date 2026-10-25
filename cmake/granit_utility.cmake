@@ -36,6 +36,10 @@ function(granit_target_compile_warnings target)
     message(FATAL_ERROR "目标不存在: ${target}")
   endif()
 
+  if(COMMAND granit_target_sanitizer)
+    granit_target_sanitizer(${target})
+  endif()
+
   # clang-cl 的编译器 ID 是 Clang，但使用 MSVC 风格命令行，必须按前端变体分流。
   if(CMAKE_C_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
     target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:C>:/utf-8>)
@@ -44,6 +48,13 @@ function(granit_target_compile_warnings target)
     # MSVC 不会为 Ninja 目标自动启用标准 C++ 异常展开；标准库容器和 Granit 的
     # 工具实现均依赖该语义，显式声明可避免 Release + /WX 产生 C4530。
     target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/utf-8 /EHsc>)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND DEFINED ENV{VCToolsInstallDir})
+      # 标准库模板的对齐填充由工具链负责；只将其目录标记为外部头，保留自有代码 /W4 /WX。
+      # CMake 会去重隐式包含目录，直接声明外部目录，避免该标记在生成阶段丢失。
+      target_compile_options(${target} PRIVATE
+        "$<$<COMPILE_LANGUAGE:CXX>:/external:I$ENV{VCToolsInstallDir}/include>"
+        $<$<COMPILE_LANGUAGE:CXX>:/external:W0>)
+    endif()
   endif()
 
   if(NOT GRANIT_ENABLE_WARNINGS)

@@ -5,6 +5,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <string>
 
 int main(int argc, char** argv) {
@@ -94,6 +95,28 @@ int main(int argc, char** argv) {
   if (compile_status != granit::result::initialization_failed || !compile_result ||
       compile_info.failed_shader != "broken.fragment" || compile_info.diagnostic.empty())
     return 7;
+  // 长逻辑名称不能直接扩张缓存文件名；仍应正常构建并命中缓存。
+  const auto long_manifest = root / "long.grshlib.json";
+  {
+    std::ofstream source{broken_source, std::ios::binary};
+    source << "float4 fragment_main() : SV_Target0 { return float4(1, 0, 0, 1); }";
+    std::ofstream manifest{long_manifest, std::ios::binary};
+    manifest << R"({"format_version":1,"name":"long","target_profile":"portable",)"
+             << R"("target_backends":["vulkan","webgpu"],"shaders":[{"name":")"
+             << std::string(100, 's') << '.' << std::string(100, 'v')
+             << R"(","source":"broken.hlsl","stage":"fragment","entry_point":"fragment_main"}]})";
+  }
+  const auto long_manifest_text = long_manifest.string();
+  desc.manifest_path = long_manifest_text;
+  auto [long_status, long_result] = granit::asset_tools::shader::build_library_from_manifest(desc);
+  if (long_status.failed() || !long_result) {
+    std::cerr << "长名称构建失败：" << long_result.info().diagnostic << '\n';
+    return 8;
+  }
+  auto [long_cached_status, long_cached_result] =
+      granit::asset_tools::shader::build_library_from_manifest(desc);
+  if (long_cached_status.failed() || !long_cached_result.info().cache_hit)
+    return 9;
   std::filesystem::remove_all(root, error);
   return 0;
 }

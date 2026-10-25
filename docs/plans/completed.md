@@ -8,6 +8,10 @@
 
 ## 资源、命令与性能
 
+- [S-108：验证入口与报告](S-108-0.69.0-validation-entrypoints.md)
+- [S-109：手动兼容矩阵](S-109-0.69.0-manual-compatibility-matrix.md)
+- [S-110：本地长测（按调整范围验收）](S-110-0.69.0-local-soak-tests.md)
+
 - [R-01：GPU 内存分配](R-01-memory-allocation.md)
 - [R-02：资源模型](R-02-resource-model.md)
 - [R-03：Buffer](R-03-buffer.md)

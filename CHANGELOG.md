@@ -8,6 +8,25 @@
 
 ## Unreleased
 
+## 0.69.0 - 2026-10-25
+
+- 修复资源和共享句柄表 generation 回绕可能复活旧句柄的问题，耗尽的槽位永久退役。
+
+- 新增仅手动触发的跨工具链版本、Debug 与 Linux Sanitizer 验收矩阵；完整平台工作流不再由 PR 触发。
+- Windows 矩阵显式固定 MSVC 标准库工具集；Clang 18 使用兼容的 14.38 工具集。
+- 将 MSVC 标准库和 ImGui 头文件明确归为外部依赖，保留 Granit 自有代码的严格警告检查。
+- Windows Clang preset 显式使用 LLVM 资源编译器，避免与 Windows SDK rc.exe 的预处理格式混用。
+- 统一 CTest 本地验证入口、环境身份、JUnit 和失败日志归档；新增默认关闭的真实 GPU 长测。
+- 本地薄入口保留 CTest 数值退出码；并发状态测试仅在原生构建注册，Linux C Window Consumer
+  实际验证可用后端的创建和销毁。
+- 修复 quick 与 preset 的标签筛选叠加后误选图形用例的问题，默认集合继续排除长测。
+- 修复长 Shader 逻辑名称导致 Windows 缓存路径膨胀、静态链接教程退出时的资源析构顺序问题。
+- 修复 MSVC 严格警告下的测试变量遮蔽，并消除 Unlit 像素测试对 UNORM 舍入边界的依赖。
+
+v0.69.0 发布范围已收口，验收与已知环境限制见
+[版本文档](docs/versions/v0.69.0.md)。Linux 真实 GPU 与扩展长测未覆盖项单独跟踪，
+不将 Arch 软件驱动的泄漏诊断记为通过。
+
 ## 0.68.1 - 2026-10-20
 
 - 修复独立 Emscripten Web Consumer 未继承测试依赖策略和 `vendor/cache` 源码缓存目录的问题；

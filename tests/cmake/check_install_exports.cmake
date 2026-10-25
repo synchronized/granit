@@ -139,7 +139,8 @@ file(GLOB package_files "${install_prefix}/lib/cmake/granit/*.cmake")
 foreach(package_file IN LISTS package_files)
   file(READ "${package_file}" content)
   foreach(forbidden IN ITEMS "${source_dir}" "${build_dir}" "Catch2::" "Unity::" "Vulkan::"
-                             "granit_volk" "volk::" "vulkan-headers" "/3rd/")
+                             "granit_volk" "volk::" "vulkan-headers" "/3rd/" "-fsanitize="
+                             "-fno-omit-frame-pointer" "-fno-sanitize-recover")
     string(FIND "${content}" "${forbidden}" position)
     if(NOT position EQUAL -1)
       message(FATAL_ERROR "${package_file} 泄漏了私有内容: ${forbidden}")

@@ -12,7 +12,8 @@
 
 ## 当前版本
 
-[v0.68.1：独立 Consumer 与测试依赖构建修复](v0.68.1.md) 已完成发布收口；`v0.68.0` 已发布。
+[v0.69.0：跨工具链验收与本地长测](v0.69.0.md) 发布范围与验收已完成，工程版本为 0.69.0。
+公开制品与校验和以 [GitHub Release](https://github.com/synchronized/granit/releases/tag/v0.69.0) 为准。
 
 ## 已发布版本
 

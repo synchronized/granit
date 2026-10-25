@@ -77,7 +77,7 @@ function(granit_fetch_imgui)
     "${granit_imgui_SOURCE_DIR}/imgui_tables.cpp"
     "${granit_imgui_SOURCE_DIR}/imgui_widgets.cpp"
   )
-  target_include_directories(granit_imgui_dependency PUBLIC "${granit_imgui_SOURCE_DIR}")
+  target_include_directories(granit_imgui_dependency SYSTEM PUBLIC "${granit_imgui_SOURCE_DIR}")
   target_compile_features(granit_imgui_dependency PUBLIC cxx_std_20)
   set_target_properties(
     granit_imgui_dependency PROPERTIES POSITION_INDEPENDENT_CODE YES FOLDER "Third Party"

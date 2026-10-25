@@ -319,6 +319,9 @@ target_compile_definitions(
     GRANIT_PIPELINE_ASSET_DIR="${GRANIT_PBR_TEST_SHADER_DIR}"
 )
 target_link_libraries(granit_render_pipeline_benchmarks PRIVATE granit::render_pipeline)
+if(WIN32)
+  target_link_libraries(granit_render_pipeline_benchmarks PRIVATE Psapi)
+endif()
 target_include_directories(
   granit_render_pipeline_benchmarks PRIVATE "${PROJECT_SOURCE_DIR}/src"
                                              "${PROJECT_SOURCE_DIR}/tests"

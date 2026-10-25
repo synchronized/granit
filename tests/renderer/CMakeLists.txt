@@ -1,6 +1,11 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Granit contributors
 
+if(GRANIT_ENABLE_STRESS_TESTS)
+  granit_stress_target(granit_resource_stress integration/resource_lifetime_stress_test.cpp)
+  granit_register_stress(granit.renderer.resource_stress granit_resource_stress)
+endif()
+
 add_executable(granit_renderer_compute_test integration/compute_test.cpp)
 add_dependencies(granit_renderer_compute_test granit_test_shader_assets)
 target_link_libraries(granit_renderer_compute_test PRIVATE granit::granit)

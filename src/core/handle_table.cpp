@@ -53,8 +53,12 @@ granit_result handle_table::erase(granit_handle handle, resource_type expected_t
   target.domain = 0;
   target.type = resource_type::unknown;
   target.generation = next_handle_generation(target.generation);
-  target.next_free = free_head_;
-  free_head_ = decoded.slot_index;
+  if (target.generation != 0) {
+    target.next_free = free_head_;
+    free_head_ = decoded.slot_index;
+  } else {
+    target.next_free = invalid_slot;
+  }
   --active_count_;
   return GRANIT_SUCCESS;
 }

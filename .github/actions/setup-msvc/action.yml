@@ -9,6 +9,10 @@ inputs:
     description: 目标架构
     required: false
     default: x64
+  toolset:
+    description: 指定 MSVC 工具集系列（例如 14.38）；为空时使用默认版本
+    required: false
+    default: ""
 
 runs:
   using: composite
@@ -17,6 +21,7 @@ runs:
       shell: pwsh
       env:
         GRANIT_MSVC_ARCH: ${{ inputs.arch }}
+        GRANIT_MSVC_TOOLSET: ${{ inputs.toolset }}
       run: |
         $vswhere = "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe"
         if (-not (Test-Path -LiteralPath $vswhere -PathType Leaf)) {
@@ -30,7 +35,12 @@ runs:
         if (-not (Test-Path -LiteralPath $devCmd -PathType Leaf)) {
           throw "未找到 VsDevCmd.bat：$devCmd"
         }
-        $command = "`"$devCmd`" -no_logo -arch=$env:GRANIT_MSVC_ARCH >nul && set"
+        $toolset = $env:GRANIT_MSVC_TOOLSET
+        if ($toolset -and $toolset -notmatch '^14\.[0-9]{2}$') {
+          throw '工具集系列必须使用 14.xx 格式'
+        }
+        $versionArg = if ($toolset) { " -vcvars_ver=$toolset" } else { '' }
+        $command = "`"$devCmd`" -no_logo -arch=$env:GRANIT_MSVC_ARCH$versionArg >nul && set"
         $variables = & $env:COMSPEC /d /s /c $command
         if ($LASTEXITCODE -ne 0) { throw "VsDevCmd.bat 执行失败" }
         foreach ($line in $variables) {

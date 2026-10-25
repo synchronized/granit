@@ -97,18 +97,19 @@ TEST_CASE("Unlit Opaque与Alpha Cutoff产生预期像素") {
           granit::result::success);
   const auto read_pixel = [&](uint32_t x, uint32_t y) {
     granit::command_recorder recorder;
-    REQUIRE(recorder.initialize(granit::renderer_ref::from_native(native)) == granit::result::success);
+    REQUIRE(recorder.initialize(granit::renderer_ref::from_native(native)) ==
+            granit::result::success);
     REQUIRE(recorder.begin() == granit::result::success);
     const granit::texture_write_region region{.mip_level = 0,
-                                             .base_array_layer = 0,
-                                             .array_layer_count = 1,
-                                             .aspect = granit::texture_aspect::color,
-                                             .x = 0,
-                                             .y = 0,
-                                             .z = 0,
-                                             .width = size,
-                                             .height = size,
-                                             .depth = 1};
+                                              .base_array_layer = 0,
+                                              .array_layer_count = 1,
+                                              .aspect = granit::texture_aspect::color,
+                                              .x = 0,
+                                              .y = 0,
+                                              .z = 0,
+                                              .width = size,
+                                              .height = size,
+                                              .depth = 1};
     REQUIRE(recorder.copy_texture_to_buffer(color.ref(), readback.ref(), {}, region) ==
             granit::result::success);
     REQUIRE(recorder.end() == granit::result::success);
@@ -142,19 +143,19 @@ TEST_CASE("Unlit Opaque与Alpha Cutoff产生预期像素") {
         granit_material material = GRANIT_NULL_HANDLE;
         REQUIRE(granit_material_create(native, &material_desc, &material) == GRANIT_SUCCESS);
         granit::command_recorder recorder;
-        REQUIRE(recorder.initialize(granit::renderer_ref::from_native(native)) == granit::result::success);
+        REQUIRE(recorder.initialize(granit::renderer_ref::from_native(native)) ==
+                granit::result::success);
         REQUIRE(recorder.begin() == granit::result::success);
         granit::material::pbr_frame_constants frame{.view_projection = identity(),
                                                     .camera_position = {},
                                                     .direction_to_light = {},
                                                     .light_radiance = {},
                                                     .render_options = {}};
-        granit::material::pbr_object_constants object{
-            .model = identity(),
-            .normal_matrix = identity(),
-            .object_id = 0,
-            .transform_handedness = 1.0F,
-            .reserved = {}};
+        granit::material::pbr_object_constants object{.model = identity(),
+                                                      .normal_matrix = identity(),
+                                                      .object_id = 0,
+                                                      .transform_handedness = 1.0F,
+                                                      .reserved = {}};
         REQUIRE(granit::pipeline::detail::record_unlit_pass(
                     native, recorder.native_handle(),
                     {.color = color_view.native_handle(),
@@ -176,7 +177,9 @@ TEST_CASE("Unlit Opaque与Alpha Cutoff产生预期像素") {
         REQUIRE(granit_material_destroy(native, material) == GRANIT_SUCCESS);
       };
 
-  render({0.25F, 0.5F, 1.0F, 1.0F}, granit::pipeline::detail::unlit_mode::opaque);
+  // 精确对应目标 UNORM 码值，避免 0.5 * 255 落在舍入边界产生驱动差异。
+  render({64.0F / 255.0F, 128.0F / 255.0F, 1.0F, 1.0F},
+         granit::pipeline::detail::unlit_mode::opaque);
   CHECK(read_pixel(size / 2, size / 2) == std::array<uint8_t, 4>{64, 128, 255, 255});
   render({0.25F, 0.5F, 1.0F, 0.25F}, granit::pipeline::detail::unlit_mode::alpha_cutoff);
   const auto cutoff_pixel = read_pixel(size / 2, size / 2);

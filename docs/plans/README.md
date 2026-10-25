@@ -9,9 +9,19 @@
 
 ## 当前计划
 
-当前版本 [v0.68.1](../versions/v0.68.1.md) 已完成发布收口，新的版本计划尚未建立。
+[v0.69.0](../versions/v0.69.0.md) 的 S-108～S-110 已按调整范围完成验收。
+后续环境验收单独跟踪：
+
+- [S-111：后续硬件与驱动验收](S-111-post-0.69-hardware-and-driver-validation.md)。
 
 ## 已完成计划
+
+- [S-110：本地长测](S-110-0.69.0-local-soak-tests.md)——三类显式长测、报告及调整范围验收，
+  Linux 真实 GPU 等未覆盖组合由 S-111 承接。
+- [S-109：手动兼容矩阵](S-109-0.69.0-manual-compatibility-matrix.md)——16 组合与同提交平台 CI 通过。
+
+- [S-108：验证入口与报告](S-108-0.69.0-validation-entrypoints.md)——统一 Windows/Linux 本地
+  CTest 编排、环境身份、失败报告和数值退出码。
 
 - [S-107：0.68.1 独立 Consumer 与发布文档修复](S-107-0.68.1-standalone-consumer-fixes.md)——
   修复独立 Web Consumer 的测试依赖配置并完成补丁版本收口。
