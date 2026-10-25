@@ -78,8 +78,9 @@ jobs:
         env:
           COMPILER: ${{ matrix.compiler }}
           VERSION: ${{ matrix.version }}
+          TOOLSET: ${{ matrix.toolset }}
         run: |
-          $toolset = if ($env:COMPILER -eq 'msvc') { $env:VERSION } else { '14.44' }
+          $toolset = $env:TOOLSET
           $vswhere = "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe"
           $installation = (& $vswhere -latest -products * -property installationPath).Trim()
           if (-not (Get-ChildItem "$installation/VC/Tools/MSVC" -Directory |
@@ -95,7 +96,7 @@ jobs:
       - uses: ./.github/actions/setup-msvc
         if: runner.os == 'Windows'
         with:
-          toolset: ${{ matrix.compiler == 'msvc' && matrix.version || '14.44' }}
+          toolset: ${{ matrix.toolset }}
       - name: 安装指定 Windows LLVM
         if: runner.os == 'Windows' && matrix.compiler == 'clang'
         shell: pwsh

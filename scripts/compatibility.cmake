@@ -19,6 +19,10 @@ set(ENV{CXX} "${cxx}")
 set(ENV{CMAKE_GENERATOR} Ninja)
 file(WRITE "${report}/requested-environment.json" "${GRANIT_MATRIX_ROW}\n")
 if(CMAKE_HOST_WIN32)
+  file(WRITE "${report}/msvc-environment.txt"
+    "VCToolsVersion=$ENV{VCToolsVersion}\n"
+    "VCToolsInstallDir=$ENV{VCToolsInstallDir}\n"
+    "WindowsSDKVersion=$ENV{WindowsSDKVersion}\n")
   execute_process(COMMAND powershell -NoProfile -Command
     "Get-CimInstance Win32_VideoController | Select-Object Name,DriverVersion | ConvertTo-Json"
     OUTPUT_FILE "${report}/gpu-driver.json")
@@ -48,8 +52,16 @@ if(DEFINED GRANIT_SHADER_TOOLCHAIN_ROOT)
     -DGRANIT_SHADER_TOOLCHAIN_POLICY=locked
     "-DGRANIT_TINT_REVISION=${GRANIT_SHADER_TOOLCHAIN_TINT_REVISION}")
 endif()
-if(CMAKE_HOST_WIN32 AND DEFINED ENV{VCToolsInstallDir})
+if(CMAKE_HOST_WIN32)
+  if(NOT DEFINED ENV{VCToolsInstallDir} OR NOT DEFINED ENV{VCToolsVersion})
+    message(FATAL_ERROR "Windows 兼容验证必须先初始化指定 MSVC 工具集环境")
+  endif()
   list(APPEND toolchain_args "-DCMAKE_LINKER=$ENV{VCToolsInstallDir}/bin/Hostx64/x64/link.exe")
+  string(JSON requested_toolset GET "${GRANIT_MATRIX_ROW}" toolset)
+  string(FIND "$ENV{VCToolsVersion}" "${requested_toolset}." toolset_position)
+  if(NOT toolset_position EQUAL 0)
+    message(FATAL_ERROR "实际 MSVC 工具集 $ENV{VCToolsVersion} 不匹配 ${requested_toolset}")
+  endif()
 endif()
 run(configure "${CMAKE_COMMAND}" -S "${GRANIT_SOURCE_DIR}" -B "${build}" -G Ninja
   "-DCMAKE_C_COMPILER=${cc}" "-DCMAKE_CXX_COMPILER=${cxx}"
