@@ -158,6 +158,11 @@ bash scripts/publish.sh X.Y.Z
 CTest JUnit 结果。`summary.json` 区分 `passed`、`failed` 和存在跳过项的 `incomplete`；
 没有选中测试视为失败。薄入口保留子命令的数值失败码，例如 CTest 失败为 8；
 无法表示的平台异常返回通用失败码，原始结果保存在报告中。
+
+普通 test preset 按 `_stress` 名称后缀排除长测，注册函数强制该命名。
+显式长测入口覆盖名称排除；quick 再按标签排除 GPU、平台与长测。
+不要把默认保护改为额外的标签排除：CTest 的多个 `-LE` 条件按 AND 合并，
+会令 quick 的排除条件失效。
 配置失败时仍保留环境与配置日志，但不会声称已经获得实际编译器身份或测试结果。
 
 ## 关键版本兼容验收

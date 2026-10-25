@@ -329,7 +329,7 @@
       "name": "test-default",
       "hidden": true,
       "output": {"outputOnFailure": true},
-      "filter": {"exclude": {"label": "^stress$"}},
+      "filter": {"exclude": {"name": "_stress$"}},
       "execution": {"noTestsAction": "error", "stopOnFailure": false}
     },
     {

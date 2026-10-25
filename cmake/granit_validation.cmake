@@ -52,6 +52,9 @@ endforeach()
 file(WRITE "${CMAKE_BINARY_DIR}/validation-environment.json" "${granit_environment}\n")
 
 function(granit_register_stress name target)
+  if(NOT name MATCHES "_stress$")
+    message(FATAL_ERROR "长测名称必须以 _stress 结尾，与普通 test preset 的保护规则一致")
+  endif()
   if(NOT GRANIT_STRESS_SECONDS MATCHES "^[0-9]+$" OR
      GRANIT_STRESS_SECONDS LESS 1 OR GRANIT_STRESS_SECONDS GREATER 86400 OR
      NOT GRANIT_STRESS_SEED MATCHES "^[0-9]+$" OR GRANIT_STRESS_SEED GREATER 4294967295 OR

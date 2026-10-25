@@ -105,6 +105,7 @@ target_link_libraries(
 )
 granit_target_compile_warnings(granit_vulkan_backend_test)
 add_test(NAME granit.backend.vulkan COMMAND granit_vulkan_backend_test)
+set_property(TEST granit.backend.vulkan APPEND PROPERTY LABELS gpu integration)
 
 foreach(
   target

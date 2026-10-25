@@ -37,3 +37,5 @@ CTest 名称使用 `granit.<组件>.<行为>`。标签只描述运行条件：`u
 
 统一本地入口与报告格式见 [CI 与验证](../docs/guides/ci.md#本地统一验证入口)。
 长测使用额外的 `stress` 标签，只有显式启用 `GRANIT_ENABLE_STRESS_TESTS` 才注册。
+长测名称必须以 `_stress` 结尾，由注册函数与普通 test preset 共同保护默认集合；
+显式长测入口负责覆盖名称排除。

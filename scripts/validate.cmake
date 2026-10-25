@@ -71,8 +71,8 @@ set(test "${CMAKE_CTEST_COMMAND}" --preset "${GRANIT_PRESET}" --output-on-failur
 if(GRANIT_SUITE STREQUAL "quick")
   list(APPEND test -L "^(unit|smoke)$" -LE "^(gpu|platform|stress)$")
 elseif(GRANIT_SUITE STREQUAL "stress")
-  # 普通 test preset 默认排除长测；只有显式范围才覆盖该保护。
-  list(APPEND test -L "^stress$" -LE "^$")
+  # 名称排除可显式覆盖；标签排除会与 preset 按 AND 合并，破坏 quick 的选择。
+  list(APPEND test -L "^stress$" -E "^$")
 else()
   list(APPEND test -LE "^stress$")
 endif()
