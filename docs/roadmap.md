@@ -32,10 +32,11 @@ Vulkan 内部实验。
 
 ## 当前计划
 
-下一版本 [v0.69.0](versions/v0.69.0.md) 规划跨工具链验收与本地长测，优先级 P1。
-按 S-108 验证入口、S-109 手动兼容矩阵、S-110 本地长测的顺序实施；
-详细任务见[当前计划](plans/README.md#当前计划)。PR 保留快速反馈，关键版本手动验收，
-长测在本地显式运行。实现已提交，平台与长测验收进行中；工程版本仍为 0.68.1。
+下一版本 [v0.69.0](versions/v0.69.0.md) 已完成跨工具链验收与本地长测的调整范围收口，尚未发布。
+S-108 验证入口、S-109 手动兼容矩阵、S-110 本地长测已完成，证据与限制见版本验收记录。
+PR 保留快速反馈，关键版本手动验收，长测在本地显式运行；工程版本仍为 0.68.1。
+当前 [S-111](plans/S-111-post-0.69-hardware-and-driver-validation.md) 承接 Linux 真实 GPU、
+Windows 扩展长测及 Arch 驱动泄漏复验，缺少环境不计为通过。
 
 v0.66.1 已由 [S-104](plans/S-104-0.66.1-linux-runtime-cache-fix.md) 完成并发布：将 Linux Runtime
 构建迁移到标准 Ubuntu Runner，验证 Windows/Linux 重复 Release 均跳过 Runtime 源码构建。不新增 C ABI。
