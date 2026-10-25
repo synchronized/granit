@@ -25,6 +25,9 @@ execute_process(COMMAND git rev-parse HEAD WORKING_DIRECTORY "${GRANIT_SOURCE_DI
                 OUTPUT_VARIABLE commit OUTPUT_STRIP_TRAILING_WHITESPACE)
 execute_process(COMMAND git status --porcelain WORKING_DIRECTORY "${GRANIT_SOURCE_DIR}"
                 OUTPUT_VARIABLE dirty OUTPUT_STRIP_TRAILING_WHITESPACE)
+# -P 脚本未初始化工程平台变量，直接查询宿主，避免版本与架构被记录为空。
+cmake_host_system_information(RESULT CMAKE_HOST_SYSTEM_VERSION QUERY OS_RELEASE)
+cmake_host_system_information(RESULT CMAKE_HOST_SYSTEM_PROCESSOR QUERY OS_PLATFORM)
 set(environment "{}")
 foreach(key IN ITEMS commit dirty GRANIT_PRESET GRANIT_SUITE CMAKE_HOST_SYSTEM_NAME
                      CMAKE_HOST_SYSTEM_VERSION CMAKE_HOST_SYSTEM_PROCESSOR)
@@ -44,7 +47,7 @@ else()
   execute_process(COMMAND vulkaninfo --summary OUTPUT_FILE "${report}/gpu-driver.txt"
     ERROR_FILE "${report}/logs/gpu-query.log" TIMEOUT 20)
 endif()
-foreach(key IN ITEMS VK_IMPLICIT_LAYER_PATH VK_LAYER_PATH VK_ICD_FILENAMES
+foreach(key IN ITEMS VK_IMPLICIT_LAYER_PATH VK_LAYER_PATH VK_ICD_FILENAMES VK_DRIVER_FILES
                      GRANIT_VULKAN_RUNTIME GRANIT_VULKAN_LOADER_PATH
                      GRANIT_VULKAN_VALIDATION GRANIT_VULKAN_VALIDATION_PATH)
   file(APPEND "${report}/logs/runtime-environment.txt" "${key}=$ENV{${key}}\n")
