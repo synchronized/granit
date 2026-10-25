@@ -3,6 +3,9 @@
 
 # 所有平台入口共享配置、构建、归档和退出语义；失败后仍保留部分报告。
 cmake_minimum_required(VERSION 3.23)
+if(DEFINED GRANIT_EXIT_CODE_FILE)
+  file(WRITE "${GRANIT_EXIT_CODE_FILE}" "1\n")
+endif()
 foreach(required IN ITEMS GRANIT_SOURCE_DIR GRANIT_PRESET)
   if(NOT DEFINED ${required} OR "${${required}}" STREQUAL "")
     message(FATAL_ERROR "缺少 ${required}")
@@ -143,6 +146,12 @@ file(WRITE "${report}/summary.json"
   "{\"status\":\"${status}\",\"failed_stage\":\"${failed_stage}\","
   "\"exit_code\":\"${result}\",\"test_count\":${executed_count},"
   "\"skipped_count\":${skipped_count}}\n")
+if(DEFINED GRANIT_EXIT_CODE_FILE)
+  # CMake 脚本本身只返回通用失败码；薄入口通过文件恢复子命令的数值退出码。
+  if(result MATCHES "^[0-9]+$")
+    file(WRITE "${GRANIT_EXIT_CODE_FILE}" "${result}\n")
+  endif()
+endif()
 if(status STREQUAL "failed")
   file(READ "${report}/logs/${failed_stage}.log" failure)
   message("${failure}")

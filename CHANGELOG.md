@@ -13,6 +13,8 @@
 - 新增仅手动触发的跨工具链版本、Debug 与 Linux Sanitizer 验收矩阵；完整平台工作流不再由 PR 触发。
 - Windows Clang preset 显式使用 LLVM 资源编译器，避免与 Windows SDK rc.exe 的预处理格式混用。
 - 统一 CTest 本地验证入口、环境身份、JUnit 和失败日志归档；新增默认关闭的真实 GPU 长测。
+- 本地薄入口保留 CTest 数值退出码；并发状态测试仅在原生构建注册，Linux C Window Consumer
+  实际验证可用后端的创建和销毁。
 - 修复长 Shader 逻辑名称导致 Windows 缓存路径膨胀、静态链接教程退出时的资源析构顺序问题。
 - 修复 MSVC 严格警告下的测试变量遮蔽，并消除 Unlit 像素测试对 UNORM 舍入边界的依赖。
 

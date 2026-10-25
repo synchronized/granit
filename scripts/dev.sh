@@ -24,9 +24,16 @@ done
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$repo_root"
 if [[ "$run_test" == true ]]; then
-  exec cmake "-DGRANIT_SOURCE_DIR=$repo_root" "-DGRANIT_PRESET=$preset" \
+  exit_file=$(mktemp)
+  trap 'rm -f "$exit_file"' EXIT
+  code=0
+  cmake "-DGRANIT_SOURCE_DIR=$repo_root" "-DGRANIT_PRESET=$preset" \
     "-DGRANIT_SUITE=$suite" "-DGRANIT_STRESS_SECONDS=$seconds" \
-    "-DGRANIT_STRESS_SEED=$seed" "-DGRANIT_STRESS_ITERATIONS=$iterations" -P scripts/validate.cmake
+    "-DGRANIT_STRESS_SEED=$seed" "-DGRANIT_STRESS_ITERATIONS=$iterations" \
+    "-DGRANIT_EXIT_CODE_FILE=$exit_file" -P scripts/validate.cmake || code=$?
+  raw=$(cat "$exit_file")
+  if [[ "$raw" =~ ^[0-9]+$ ]] && (( raw <= 255 )); then code=$raw; fi
+  exit "$code"
 fi
 cmake --preset "$preset"
 cmake --build --preset "$preset"

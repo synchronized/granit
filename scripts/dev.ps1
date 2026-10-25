@@ -15,11 +15,18 @@ param(
 )
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 if ($Test -or $Suite -ne 'default') {
-  & cmake "-DGRANIT_SOURCE_DIR=$repoRoot" "-DGRANIT_PRESET=$Preset" `
-    "-DGRANIT_SUITE=$Suite" "-DGRANIT_STRESS_SECONDS=$Seconds" `
-    "-DGRANIT_STRESS_SEED=$Seed" "-DGRANIT_STRESS_ITERATIONS=$Iterations" `
-    -P "$PSScriptRoot/validate.cmake"
-  exit $LASTEXITCODE
+  $exitFile = New-TemporaryFile
+  try {
+    & cmake "-DGRANIT_SOURCE_DIR=$repoRoot" "-DGRANIT_PRESET=$Preset" `
+      "-DGRANIT_SUITE=$Suite" "-DGRANIT_STRESS_SECONDS=$Seconds" `
+      "-DGRANIT_STRESS_SEED=$Seed" "-DGRANIT_STRESS_ITERATIONS=$Iterations" `
+      "-DGRANIT_EXIT_CODE_FILE=$($exitFile.FullName)" -P "$PSScriptRoot/validate.cmake"
+    $code = $LASTEXITCODE
+    $raw = ([string](Get-Content -LiteralPath $exitFile.FullName -Raw)).Trim()
+    $parsed = 0
+    if ([int]::TryParse($raw, [ref]$parsed) -and $parsed -ge 0) { $code = $parsed }
+  } finally { Remove-Item -LiteralPath $exitFile.FullName }
+  exit $code
 }
 Push-Location $repoRoot
 try {
