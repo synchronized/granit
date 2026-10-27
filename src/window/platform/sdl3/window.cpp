@@ -447,12 +447,12 @@ granit_result create_sdl3_window(const std::shared_ptr<window_system_record>& sy
         !SDL_SetNumberProperty(properties.handle, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER,
                                desc->height) ||
         !SDL_SetBooleanProperty(properties.handle, SDL_PROP_WINDOW_CREATE_HIDDEN_BOOLEAN,
-                                (desc->flags & GRANIT_WINDOW_VISIBLE_BIT) == 0) ||
+                                (desc->flags & GRANIT_WINDOW_FLAG_VISIBLE_BIT) == 0) ||
         !SDL_SetBooleanProperty(properties.handle, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN,
-                                (desc->flags & GRANIT_WINDOW_RESIZABLE_BIT) != 0) ||
+                                (desc->flags & GRANIT_WINDOW_FLAG_RESIZABLE_BIT) != 0) ||
         !SDL_SetBooleanProperty(properties.handle,
                                 SDL_PROP_WINDOW_CREATE_HIGH_PIXEL_DENSITY_BOOLEAN,
-                                (desc->flags & GRANIT_WINDOW_HIGH_DPI_BIT) != 0)) {
+                                (desc->flags & GRANIT_WINDOW_FLAG_HIGH_DPI_BIT) != 0)) {
       return GRANIT_ERROR_OUT_OF_MEMORY;
     }
 #if defined(__EMSCRIPTEN__)

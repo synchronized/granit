@@ -36,9 +36,9 @@ struct window_system_desc {
 
 enum class window_flag : std::uint32_t {
   none = 0,
-  visible = GRANIT_WINDOW_VISIBLE_BIT,
-  resizable = GRANIT_WINDOW_RESIZABLE_BIT,
-  high_dpi = GRANIT_WINDOW_HIGH_DPI_BIT,
+  visible = GRANIT_WINDOW_FLAG_VISIBLE_BIT,
+  resizable = GRANIT_WINDOW_FLAG_RESIZABLE_BIT,
+  high_dpi = GRANIT_WINDOW_FLAG_HIGH_DPI_BIT,
 };
 
 enum class window_target_type : std::uint32_t {

@@ -47,8 +47,8 @@ extern "C" granit_result granit_window_create(granit_window_system system_handle
   *output = GRANIT_NULL_HANDLE;
   if (desc == nullptr || desc->struct_size < GRANIT_WINDOW_DESC_VERSION_1_SIZE ||
       desc->width == 0 || desc->height == 0 || desc->reserved != 0 ||
-      (desc->flags & ~(GRANIT_WINDOW_VISIBLE_BIT | GRANIT_WINDOW_RESIZABLE_BIT |
-                       GRANIT_WINDOW_HIGH_DPI_BIT)) != 0)
+      (desc->flags & ~(GRANIT_WINDOW_FLAG_VISIBLE_BIT | GRANIT_WINDOW_FLAG_RESIZABLE_BIT |
+                       GRANIT_WINDOW_FLAG_HIGH_DPI_BIT)) != 0)
     return GRANIT_ERROR_INVALID_ARGUMENT;
   const auto target_result = validate_window_target(*desc);
   if (target_result != GRANIT_SUCCESS)
