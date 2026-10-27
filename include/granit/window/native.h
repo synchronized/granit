@@ -13,8 +13,8 @@
 typedef struct granit_window_native_win32 {
   uint32_t struct_size;
   uint32_t reserved;
-  void* instance;
-  void* window;
+  void* instance; /* HINSTANCE */
+  void* window; /* HWND */
 } granit_window_native_win32;
 
 #define GRANIT_WINDOW_NATIVE_WIN32_VERSION_1_SIZE                                                  \
@@ -25,8 +25,8 @@ typedef struct granit_window_native_win32 {
 /** 同一次查询获得的 XCB 原生值快照；connection 为借用，window 为 XCB 整数标识。 */
 typedef struct granit_window_native_xcb {
   uint32_t struct_size;
-  uint32_t window;
-  void* connection;
+  uint32_t window; /* xcb_window_t */
+  void* connection; /* xcb_connection_t* */
 } granit_window_native_xcb;
 
 #define GRANIT_WINDOW_NATIVE_XCB_VERSION_1_SIZE                                                    \
@@ -37,8 +37,8 @@ typedef struct granit_window_native_xcb {
 typedef struct granit_window_native_wayland {
   uint32_t struct_size;
   uint32_t reserved;
-  void* display;
-  void* surface;
+  void* display; /* wl_display* */
+  void* surface; /* wl_surface* */
 } granit_window_native_wayland;
 
 #define GRANIT_WINDOW_NATIVE_WAYLAND_VERSION_1_SIZE                                                \
@@ -50,7 +50,7 @@ typedef struct granit_window_native_wayland {
 typedef struct granit_window_native_emscripten {
   uint32_t struct_size;
   uint32_t canvas_selector_length;
-  const char* canvas_selector;
+  const char* canvas_selector; /* 指向窗口自己拥有的字符串 */
 } granit_window_native_emscripten;
 
 #define GRANIT_WINDOW_NATIVE_EMSCRIPTEN_VERSION_1_SIZE                                             \
@@ -58,28 +58,58 @@ typedef struct granit_window_native_emscripten {
 #define GRANIT_WINDOW_NATIVE_EMSCRIPTEN_INIT                                                       \
   {(uint32_t)sizeof(granit_window_native_emscripten), UINT32_C(0), 0}
 
+/** 统一 tagged union(通用快照) */
+typedef struct granit_window_native {
+  uint32_t struct_size;
+  granit_window_backend backend; // granit_window_native_backend
+  union {
+    granit_window_native_win32 win32;
+    granit_window_native_xcb xcb;
+    granit_window_native_wayland wayland;
+    granit_window_native_emscripten emscripten;
+  } u;
+} granit_window_native;
+
+#define GRANIT_WINDOW_NATIVE_VERSION_1_SIZE       \
+  ((uint32_t)(offsetof(granit_window_native, u) + \
+    sizeof(((granit_window_native*)0)->u)))
+#define GRANIT_WINDOW_NATIVE_INIT                 \
+  {GRANIT_WINDOW_NATIVE_VERSION_1_SIZE,           \
+    GRANIT_WINDOW_BACKEND_AUTO,                   \
+    {GRANIT_WINDOW_NATIVE_WIN32_INIT} }
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /** 返回借用的 Win32 原生值；输出仅在 Window 存活期间有效。 */
-GRANIT_WINDOW_API granit_result granit_window_get_native_win32(granit_window_system window_system,
-                                                               granit_window window,
-                                                               granit_window_native_win32* output);
+GRANIT_WINDOW_API granit_result
+  granit_window_get_native_win32(granit_window_system window_system,
+                                 granit_window window,
+                                 granit_window_native_win32* output);
 
 /** 返回借用的 XCB 原生值；输出仅在 Window 存活期间有效。 */
-GRANIT_WINDOW_API granit_result granit_window_get_native_xcb(granit_window_system window_system,
-                                                             granit_window window,
-                                                             granit_window_native_xcb* output);
+GRANIT_WINDOW_API granit_result
+  granit_window_get_native_xcb(granit_window_system window_system,
+                               granit_window window,
+                               granit_window_native_xcb* output);
 
 /** 返回借用的 Wayland 原生值；输出仅在 Window 存活期间有效。 */
-GRANIT_WINDOW_API granit_result granit_window_get_native_wayland(
-    granit_window_system window_system, granit_window window, granit_window_native_wayland* output);
+GRANIT_WINDOW_API granit_result
+  granit_window_get_native_wayland(granit_window_system window_system,
+                                   granit_window window,
+                                   granit_window_native_wayland* output);
 
 /** 返回借用的 Emscripten Canvas selector；输出仅在 Window 存活期间有效。 */
 GRANIT_WINDOW_API granit_result
-granit_window_get_native_emscripten(granit_window_system window_system, granit_window window,
-                                    granit_window_native_emscripten* output);
+  granit_window_get_native_emscripten(granit_window_system window_system,
+                                      granit_window window,
+                                      granit_window_native_emscripten* output);
+
+GRANIT_WINDOW_API granit_result
+  granit_window_get_native(granit_window_system window_system,
+                           granit_window window,
+                           granit_window_native* output);
 
 #ifdef __cplusplus
 }

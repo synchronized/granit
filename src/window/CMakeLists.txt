@@ -12,6 +12,7 @@ target_sources(
   PRIVATE system_api.cpp
           window_loop_api.cpp
           window_api.cpp
+          native_api.cpp
           presentation_api.cpp
           registry.cpp
           registry.h

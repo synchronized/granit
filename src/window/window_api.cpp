@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/window/native.h>
 #include <granit/window/window.h>
 
 #include "window/platform/backend.h"
@@ -106,91 +105,3 @@ extern "C" granit_result granit_window_get_state(granit_window_system system_han
   return GRANIT_SUCCESS;
 }
 
-extern "C" granit_result granit_window_get_native_win32(granit_window_system system_handle,
-                                                        granit_window window_handle,
-                                                        granit_window_native_win32* output) {
-  if (output == nullptr || output->struct_size < GRANIT_WINDOW_NATIVE_WIN32_VERSION_1_SIZE)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  *output = GRANIT_WINDOW_NATIVE_WIN32_INIT;
-  auto system = acquire_system(system_handle);
-  if (!system)
-    return GRANIT_ERROR_INVALID_HANDLE;
-  if (!on_owner_thread(*system))
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto found = system->windows.find(window_handle);
-  if (found == system->windows.end())
-    return GRANIT_ERROR_INVALID_HANDLE;
-#if defined(_WIN32)
-  if (system->backend != GRANIT_WINDOW_BACKEND_WIN32)
-    return GRANIT_ERROR_UNSUPPORTED;
-  return get_native_win32(found->second, *output);
-#else
-  return GRANIT_ERROR_UNSUPPORTED;
-#endif
-}
-
-extern "C" granit_result granit_window_get_native_xcb(granit_window_system system_handle,
-                                                      granit_window window_handle,
-                                                      granit_window_native_xcb* output) {
-  if (output == nullptr || output->struct_size < GRANIT_WINDOW_NATIVE_XCB_VERSION_1_SIZE)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  *output = GRANIT_WINDOW_NATIVE_XCB_INIT;
-  auto system = acquire_system(system_handle);
-  if (!system)
-    return GRANIT_ERROR_INVALID_HANDLE;
-  if (!on_owner_thread(*system))
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto found = system->windows.find(window_handle);
-  if (found == system->windows.end())
-    return GRANIT_ERROR_INVALID_HANDLE;
-#if defined(GRANIT_WINDOW_HAS_XCB)
-  if (system->backend == GRANIT_WINDOW_BACKEND_XCB)
-    return get_native_xcb(system, found->second, *output);
-#endif
-  return GRANIT_ERROR_UNSUPPORTED;
-}
-
-extern "C" granit_result granit_window_get_native_wayland(granit_window_system system_handle,
-                                                          granit_window window_handle,
-                                                          granit_window_native_wayland* output) {
-  if (output == nullptr || output->struct_size < GRANIT_WINDOW_NATIVE_WAYLAND_VERSION_1_SIZE)
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  *output = GRANIT_WINDOW_NATIVE_WAYLAND_INIT;
-  auto system = acquire_system(system_handle);
-  if (!system)
-    return GRANIT_ERROR_INVALID_HANDLE;
-  if (!on_owner_thread(*system))
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto found = system->windows.find(window_handle);
-  if (found == system->windows.end())
-    return GRANIT_ERROR_INVALID_HANDLE;
-#if defined(GRANIT_WINDOW_HAS_WAYLAND)
-  if (system->backend == GRANIT_WINDOW_BACKEND_WAYLAND)
-    return get_native_wayland(system, found->second, *output);
-#endif
-  return GRANIT_ERROR_UNSUPPORTED;
-}
-
-extern "C" granit_result
-granit_window_get_native_emscripten(granit_window_system system_handle, granit_window window_handle,
-                                    granit_window_native_emscripten* output) {
-  if (output == nullptr || output->struct_size < GRANIT_WINDOW_NATIVE_EMSCRIPTEN_VERSION_1_SIZE) {
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  }
-  *output = GRANIT_WINDOW_NATIVE_EMSCRIPTEN_INIT;
-  auto system = acquire_system(system_handle);
-  if (!system)
-    return GRANIT_ERROR_INVALID_HANDLE;
-  if (!on_owner_thread(*system))
-    return GRANIT_ERROR_INVALID_ARGUMENT;
-  const auto found = system->windows.find(window_handle);
-  if (found == system->windows.end())
-    return GRANIT_ERROR_INVALID_HANDLE;
-#if defined(__EMSCRIPTEN__)
-  if (system->backend != GRANIT_WINDOW_BACKEND_EMSCRIPTEN)
-    return GRANIT_ERROR_UNSUPPORTED;
-  return get_native_emscripten(found->second, *output);
-#else
-  return GRANIT_ERROR_UNSUPPORTED;
-#endif
-}
