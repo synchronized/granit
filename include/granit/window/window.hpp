@@ -17,10 +17,6 @@
 
 namespace granit {
 
-class renderer;
-class renderer_ref;
-class surface;
-
 enum class window_backend : std::uint32_t {
   automatic = GRANIT_WINDOW_BACKEND_AUTO,
   win32 = GRANIT_WINDOW_BACKEND_WIN32,
@@ -36,9 +32,9 @@ struct window_system_desc {
 
 enum class window_flag : std::uint32_t {
   none = 0,
-  visible = GRANIT_WINDOW_VISIBLE_BIT,
-  resizable = GRANIT_WINDOW_RESIZABLE_BIT,
-  high_dpi = GRANIT_WINDOW_HIGH_DPI_BIT,
+  visible = GRANIT_WINDOW_FLAG_VISIBLE_BIT,
+  resizable = GRANIT_WINDOW_FLAG_RESIZABLE_BIT,
+  high_dpi = GRANIT_WINDOW_FLAG_HIGH_DPI_BIT,
 };
 
 enum class window_target_type : std::uint32_t {
@@ -271,8 +267,6 @@ public:
     }
     return from_native(value);
   }
-  [[nodiscard]] result create_surface(renderer_ref owner, surface& output) const noexcept;
-  [[nodiscard]] result create_surface(renderer& owner, surface& output) const noexcept;
   [[nodiscard]] result get_state(window_state& state) const noexcept {
     granit_window_state native = GRANIT_WINDOW_STATE_INIT;
     const auto value = granit_window_get_state(system_, handle_, &native);
@@ -297,7 +291,5 @@ private:
 };
 
 } // namespace granit
-
-#include <granit/window/presentation.hpp>
 
 #endif

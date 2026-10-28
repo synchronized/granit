@@ -3,6 +3,7 @@
 
 #include "support/soak.h"
 #include "support/swapchain_frame.h"
+#include "../support/window_surface.h"
 #include <granit/window.hpp>
 
 #include <catch2/catch_all.hpp>
@@ -31,7 +32,8 @@ TEST_CASE("同进程反复重建窗口 Surface 与 Swapchain", "[stress][window]
 #endif
       REQUIRE(window.initialize(system, desc) == granit::result::success);
       granit::surface surface;
-      REQUIRE(window.create_surface(renderer, surface) == granit::result::success);
+      REQUIRE(granit::tests::create_window_surface(renderer, system, window.ref(), surface) ==
+              granit::result::success);
       granit::swapchain chain;
       REQUIRE(chain.initialize(renderer, surface, {.width = width, .height = height}) ==
               granit::result::success);

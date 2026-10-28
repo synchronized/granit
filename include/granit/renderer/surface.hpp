@@ -80,8 +80,6 @@ public:
   [[nodiscard]] renderer_ref owner() const noexcept { return renderer_ref::from_native(renderer_); }
 
 private:
-  friend class window;
-
   void adopt(granit_renderer renderer, granit_surface handle) noexcept {
     renderer_ = renderer;
     handle_ = handle;

@@ -28,6 +28,9 @@ granit_add_smoke_target(granit_render_pipeline_window_smoke render_pipeline_wind
 target_link_libraries(
   granit_render_pipeline_window_smoke PRIVATE granit::render_pipeline granit::window
 )
+if(TARGET granit::integration_sdl3)
+  target_link_libraries(granit_render_pipeline_window_smoke PRIVATE granit::integration_sdl3)
+endif()
 target_compile_definitions(
   granit_render_pipeline_window_smoke
   PRIVATE GRANIT_RENDER_PIPELINE_SMOKE_PACKAGE="${granit_render_pipeline_test_package}"

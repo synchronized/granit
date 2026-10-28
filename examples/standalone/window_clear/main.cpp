@@ -2,6 +2,8 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <granit/granit.hpp>
+#include <granit/renderer/native_surface.hpp>
+#include <granit/window/native.hpp>
 #include <granit/window.hpp>
 
 #include <chrono>
@@ -12,6 +14,36 @@
 #include <thread>
 
 namespace {
+
+granit::result create_window_surface(granit::renderer& renderer,
+                                     const granit::window_system& system,
+                                     granit::window_ref window, granit::surface& output) noexcept {
+  granit::window_native native{};
+  const auto native_result = granit::get_native(system, window, native);
+  if (native_result.failed())
+    return native_result;
+  switch (native.backend) {
+  case GRANIT_WINDOW_BACKEND_WIN32:
+    return output.initialize(renderer,
+                             granit::surface_desc::win32(native.u.win32.instance,
+                                                         native.u.win32.window));
+  case GRANIT_WINDOW_BACKEND_XCB:
+    return output.initialize(renderer,
+                             granit::surface_desc::xcb(native.u.xcb.connection,
+                                                       native.u.xcb.window));
+  case GRANIT_WINDOW_BACKEND_WAYLAND:
+    return output.initialize(renderer,
+                             granit::surface_desc::wayland(native.u.wayland.display,
+                                                           native.u.wayland.surface));
+  case GRANIT_WINDOW_BACKEND_EMSCRIPTEN:
+    return output.initialize(
+        renderer,
+        granit::surface_desc::canvas({native.u.emscripten.canvas_selector,
+                                      native.u.emscripten.canvas_selector_length}));
+  default:
+    return granit::result::unsupported;
+  }
+}
 
 bool environment_unavailable(granit::result value) {
   return value == granit::result::backend_unavailable ||
@@ -89,7 +121,7 @@ int main(int argument_count, char** arguments) {
     return report_failure("renderer initialization", result, smoke_test);
 
   granit::surface surface;
-  result = window.create_surface(renderer, surface);
+  result = create_window_surface(renderer, window_system, window.ref(), surface);
   if (result.failed())
     return report_failure("surface creation", result, smoke_test);
 
@@ -145,7 +177,7 @@ int main(int argument_count, char** arguments) {
       if (result.ok())
         result = surface.reset();
       if (result.ok())
-        result = window.create_surface(renderer, surface);
+        result = create_window_surface(renderer, window_system, window.ref(), surface);
       if (result.ok()) {
         result = swapchain.initialize(
             renderer, surface,

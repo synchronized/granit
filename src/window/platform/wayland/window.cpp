@@ -417,7 +417,7 @@ granit_result create_wayland_window(const std::shared_ptr<window_system_record>&
                                   ? std::string{"Granit"}
                                   : std::string{desc->title, desc->title_length};
     xdg_toplevel_set_title(record->wayland_toplevel, title.c_str());
-    if ((desc->flags & GRANIT_WINDOW_RESIZABLE_BIT) == 0) {
+    if ((desc->flags & GRANIT_WINDOW_FLAG_RESIZABLE_BIT) == 0) {
       xdg_toplevel_set_min_size(record->wayland_toplevel, static_cast<std::int32_t>(desc->width),
                                 static_cast<std::int32_t>(desc->height));
       xdg_toplevel_set_max_size(record->wayland_toplevel, static_cast<std::int32_t>(desc->width),

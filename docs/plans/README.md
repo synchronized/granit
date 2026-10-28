@@ -9,6 +9,9 @@
 
 ## 当前计划
 
+[S-112：0.70.0 Window 原生句柄与 Surface 解耦](S-112-0.70.0-window-native-surface-decoupling.md) 已完成实现，
+等待最终 CI 和版本发布收口。
+
 [v0.69.0](../versions/v0.69.0.md) 的 S-108～S-110 已按调整范围完成验收。
 后续环境验收单独跟踪：
 

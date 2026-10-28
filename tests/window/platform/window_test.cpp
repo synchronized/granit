@@ -16,6 +16,23 @@
 #include <xcb/xcb.h>
 #endif
 
+TEST_CASE("C++ Window 原生快照默认构造时自动初始化", "[window][abi]") {
+  const granit::window_native native{};
+  const granit::window_native_win32 win32{};
+  const granit::window_native_xcb xcb{};
+  const granit::window_native_wayland wayland{};
+  const granit::window_native_emscripten emscripten{};
+  const granit::window_native_sdl3 sdl3{};
+
+  CHECK(native.struct_size == GRANIT_WINDOW_NATIVE_VERSION_1_SIZE);
+  CHECK(native.backend == GRANIT_WINDOW_BACKEND_AUTO);
+  CHECK(win32.struct_size == sizeof(granit_window_native_win32));
+  CHECK(xcb.struct_size == sizeof(granit_window_native_xcb));
+  CHECK(wayland.struct_size == sizeof(granit_window_native_wayland));
+  CHECK(emscripten.struct_size == sizeof(granit_window_native_emscripten));
+  CHECK(sdl3.struct_size == sizeof(granit_window_native_sdl3));
+}
+
 TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]") {
   granit_window_system system = UINT64_C(42);
   CHECK(granit_window_system_create(nullptr, &system) == GRANIT_ERROR_INVALID_ARGUMENT);
@@ -32,7 +49,7 @@ TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]")
   window_desc.title_length = 18;
   window_desc.width = 96;
   window_desc.height = 72;
-  window_desc.flags = GRANIT_WINDOW_HIGH_DPI_BIT;
+  window_desc.flags = GRANIT_WINDOW_FLAG_HIGH_DPI_BIT;
   REQUIRE(granit_window_create(system, &window_desc, &window) == GRANIT_SUCCESS);
   REQUIRE(window != GRANIT_NULL_HANDLE);
 
@@ -40,6 +57,12 @@ TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]")
   REQUIRE(granit_window_get_native_win32(system, window, &native) == GRANIT_SUCCESS);
   CHECK(native.instance != nullptr);
   CHECK(native.window != nullptr);
+
+  granit_window_native generic_native = GRANIT_WINDOW_NATIVE_INIT;
+  REQUIRE(granit_window_get_native(system, window, &generic_native) == GRANIT_SUCCESS);
+  CHECK(generic_native.backend == GRANIT_WINDOW_BACKEND_WIN32);
+  CHECK(generic_native.u.win32.instance == native.instance);
+  CHECK(generic_native.u.win32.window == native.window);
 
   granit_window_state state = GRANIT_WINDOW_STATE_INIT;
   REQUIRE(granit_window_get_state(system, window, &state) == GRANIT_SUCCESS);
@@ -140,7 +163,7 @@ TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]")
   window_desc.title_length = 22;
   window_desc.width = 96;
   window_desc.height = 72;
-  window_desc.flags = GRANIT_WINDOW_VISIBLE_BIT | GRANIT_WINDOW_RESIZABLE_BIT;
+  window_desc.flags = GRANIT_WINDOW_FLAG_VISIBLE_BIT | GRANIT_WINDOW_FLAG_RESIZABLE_BIT;
   granit_window window = GRANIT_NULL_HANDLE;
   REQUIRE(granit_window_create(system, &window_desc, &window) == GRANIT_SUCCESS);
 
@@ -210,7 +233,7 @@ TEST_CASE("Wayland Window 提供配置后的原生 Surface", "[window][wayland]"
   window_desc.title_length = 26;
   window_desc.width = 96;
   window_desc.height = 72;
-  window_desc.flags = GRANIT_WINDOW_VISIBLE_BIT;
+  window_desc.flags = GRANIT_WINDOW_FLAG_VISIBLE_BIT;
   granit_window window = GRANIT_NULL_HANDLE;
   REQUIRE(granit_window_create(system, &window_desc, &window) == GRANIT_SUCCESS);
 

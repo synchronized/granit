@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "application/application.h"
+#include "application/window_surface.h"
 
 namespace granit::example {
 
@@ -33,7 +34,8 @@ result application::initialize_presentation() noexcept {
     return result::not_ready;
 
   if (!surface_.valid())
-    operation = app_window().create_surface(renderer_, surface_);
+    operation = create_window_surface(renderer_.ref(), app_window_system(), app_window().ref(),
+                                      surface_);
   if (operation.ok() && !swapchain_.valid()) {
     auto swapchain_desc = desc_.swapchain;
     swapchain_desc.width = window_state_.framebuffer_width;

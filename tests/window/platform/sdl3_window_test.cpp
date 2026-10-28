@@ -94,6 +94,14 @@ TEST_CASE("SDL3 Window 后端统一管理多窗口和输入路由", "[window][sd
   CHECK(granit_window_get_native_win32(system, windows[0], &native) == GRANIT_ERROR_UNSUPPORTED);
   CHECK(native.window == nullptr);
 
+  granit_window_native_sdl3 sdl3_native = GRANIT_WINDOW_NATIVE_SDL3_INIT;
+  REQUIRE(granit_window_get_native_sdl3(system, windows[0], &sdl3_native) == GRANIT_SUCCESS);
+  CHECK(sdl3_native.window != nullptr);
+  granit_window_native generic_native = GRANIT_WINDOW_NATIVE_INIT;
+  REQUIRE(granit_window_get_native(system, windows[0], &generic_native) == GRANIT_SUCCESS);
+  CHECK(generic_native.backend == GRANIT_WINDOW_BACKEND_SDL3);
+  CHECK(generic_native.u.sdl3.window == sdl3_native.window);
+
   for (const auto id : {first_id, second_id}) {
     SDL_Event close{};
     close.type = SDL_EVENT_WINDOW_CLOSE_REQUESTED;

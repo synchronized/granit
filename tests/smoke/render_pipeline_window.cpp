@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Granit contributors
 
 #include "../support/shader_asset_store.h"
+#include "../../examples/common/application/window_surface.h"
 #include <granit/granit.hpp>
 #include <granit/pipeline/canvas_draw_list.hpp>
 #include <granit/pipeline/render_pipeline.h>
@@ -108,7 +109,7 @@ int main(int argument_count, char** arguments) {
     result = granit::result::initialization_failed;
   granit::surface surface;
   if (result.ok())
-    result = window.create_surface(renderer, surface);
+    result = granit::example::create_window_surface(renderer.ref(), window_system, window.ref(), surface);
   granit::swapchain swapchain;
   if (result.ok()) {
     result = swapchain.initialize(

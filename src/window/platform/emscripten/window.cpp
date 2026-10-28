@@ -343,7 +343,7 @@ granit_result create_emscripten_window(const std::shared_ptr<window_system_recor
       EMSCRIPTEN_RESULT_SUCCESS) {
     return GRANIT_ERROR_BACKEND_UNAVAILABLE;
   }
-  const auto scale = (desc->flags & GRANIT_WINDOW_HIGH_DPI_BIT) != 0
+  const auto scale = (desc->flags & GRANIT_WINDOW_FLAG_HIGH_DPI_BIT) != 0
                          ? std::max(1.0, emscripten_get_device_pixel_ratio())
                          : 1.0;
   const auto framebuffer_width = std::round(static_cast<double>(desc->width) * scale);

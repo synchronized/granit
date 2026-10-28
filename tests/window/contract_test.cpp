@@ -4,6 +4,7 @@
 #include <granit/window.h>
 #include <granit/window.hpp>
 #include <granit/window/native.h>
+#include <granit/window/native.hpp>
 
 #include <catch2/catch_all.hpp>
 
@@ -11,8 +12,16 @@
 #include <cstddef>
 #include <cstring>
 #include <thread>
+#include <type_traits>
 
 namespace {
+
+static_assert(std::is_same_v<decltype(static_cast<granit::result (*)(
+                                   const granit::window_system&, granit::window_ref,
+                                   granit::window_native&)>(&granit::get_native)),
+                             granit::result (*)(const granit::window_system&,
+                                                granit::window_ref,
+                                                granit::window_native&)>);
 
 template <typename T, std::size_t VersionSize>
 void check_versioned_output(granit_result (*call)(T*), granit_result expected) {
@@ -114,6 +123,13 @@ TEST_CASE("Window Loop 在接受回调前校验描述", "[window][loop][abi]") {
 }
 
 TEST_CASE("Window 原生快照在访问句柄前校验输出容量", "[window][native][abi]") {
+  granit_window_native native = GRANIT_WINDOW_NATIVE_INIT;
+  native.struct_size = GRANIT_WINDOW_NATIVE_VERSION_1_SIZE - 1;
+  CHECK(granit_window_get_native(UINT64_MAX, UINT64_MAX, &native) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(granit_window_get_native(UINT64_MAX, UINT64_MAX, nullptr) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+
   granit_window_native_win32 win32 = GRANIT_WINDOW_NATIVE_WIN32_INIT;
   win32.struct_size = GRANIT_WINDOW_NATIVE_WIN32_VERSION_1_SIZE - 1;
   CHECK(granit_window_get_native_win32(UINT64_MAX, UINT64_MAX, &win32) ==
@@ -134,6 +150,11 @@ TEST_CASE("Window 原生快照在访问句柄前校验输出容量", "[window][n
   granit_window_native_emscripten emscripten = GRANIT_WINDOW_NATIVE_EMSCRIPTEN_INIT;
   emscripten.struct_size = GRANIT_WINDOW_NATIVE_EMSCRIPTEN_VERSION_1_SIZE - 1;
   CHECK(granit_window_get_native_emscripten(UINT64_MAX, UINT64_MAX, &emscripten) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+
+  granit_window_native_sdl3 sdl3 = GRANIT_WINDOW_NATIVE_SDL3_INIT;
+  sdl3.struct_size = GRANIT_WINDOW_NATIVE_SDL3_VERSION_1_SIZE - 1;
+  CHECK(granit_window_get_native_sdl3(UINT64_MAX, UINT64_MAX, &sdl3) ==
         GRANIT_ERROR_INVALID_ARGUMENT);
 }
 
@@ -272,12 +293,6 @@ TEST_CASE("Window System 在当前平台直接拥有输入状态和事件队列"
 
 TEST_CASE("Window创建把空Window System归类为无效句柄", "[window][contract]") {
   CHECK(granit_window_system_process_events(UINT64_MAX) == GRANIT_ERROR_INVALID_HANDLE);
-  granit_surface surface = UINT64_C(42);
-  CHECK(granit_window_create_surface(UINT64_MAX, UINT64_C(1), UINT64_C(1), &surface) ==
-        GRANIT_ERROR_INVALID_HANDLE);
-  CHECK(surface == GRANIT_NULL_HANDLE);
-  CHECK(granit_window_create_surface(UINT64_MAX, UINT64_C(1), UINT64_C(1), nullptr) ==
-        GRANIT_ERROR_INVALID_ARGUMENT);
 
   granit_window_desc desc = GRANIT_WINDOW_DESC_INIT;
   desc.width = 1;

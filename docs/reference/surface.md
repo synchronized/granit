@@ -6,8 +6,7 @@
 ## 定位
 
 Surface 表示 Renderer 与窗口系统或浏览器 Canvas 之间的输出连接。普通头
-`<granit/renderer/surface.h>` 提供句柄和销毁；Granit Window 用户直接调用
-`granit_window_create_surface`。外部窗口和 Canvas 使用显式高级头
+`<granit/renderer/surface.h>` 提供句柄和销毁；Window 原生句柄、外部窗口和 Canvas 使用显式高级头
 `<granit/renderer/native_surface.h>` 中的 `granit_surface_desc` 和 `granit_surface_create`，平台差异
 只存在于描述的 `surface_type` 与 `source`。公共接口不暴露 Vulkan 或 WebGPU 类型。
 

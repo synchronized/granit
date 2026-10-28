@@ -16,6 +16,9 @@ namespace granit::integration::sdl3 {
 [[nodiscard]] GRANIT_INTEGRATION_SDL3_API result create_surface(renderer& owner,
                                                                 SDL_Window* window,
                                                                 surface& output) noexcept;
+[[nodiscard]] GRANIT_INTEGRATION_SDL3_API result create_surface(renderer_ref owner,
+                                                                SDL_Window* window,
+                                                                surface& output) noexcept;
 
 } // namespace granit::integration::sdl3
 

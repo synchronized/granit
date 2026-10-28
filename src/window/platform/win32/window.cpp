@@ -212,9 +212,9 @@ granit_result create_win32_window(const std::shared_ptr<window_system_record>& s
     record->handle = allocate_handle();
     record->system = system;
     record->instance = GetModuleHandleW(nullptr);
-    record->high_dpi = (desc->flags & GRANIT_WINDOW_HIGH_DPI_BIT) != 0;
+    record->high_dpi = (desc->flags & GRANIT_WINDOW_FLAG_HIGH_DPI_BIT) != 0;
     DWORD style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
-    if ((desc->flags & GRANIT_WINDOW_RESIZABLE_BIT) != 0)
+    if ((desc->flags & GRANIT_WINDOW_FLAG_RESIZABLE_BIT) != 0)
       style |= WS_THICKFRAME | WS_MAXIMIZEBOX;
     RECT rectangle{0, 0, static_cast<LONG>(desc->width), static_cast<LONG>(desc->height)};
     AdjustWindowRect(&rectangle, style, FALSE);
@@ -244,7 +244,7 @@ granit_result create_win32_window(const std::shared_ptr<window_system_record>& s
     record->height = static_cast<std::uint32_t>(std::lround(
         static_cast<float>(record->framebuffer_height) / record->content_scale_vertical));
     system->windows.emplace(record->handle, record);
-    if ((desc->flags & GRANIT_WINDOW_VISIBLE_BIT) != 0)
+    if ((desc->flags & GRANIT_WINDOW_FLAG_VISIBLE_BIT) != 0)
       ShowWindow(static_cast<HWND>(record->window), SW_SHOW);
     *output = record->handle;
     return GRANIT_SUCCESS;

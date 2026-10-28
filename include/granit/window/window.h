@@ -14,18 +14,21 @@
 typedef granit_handle granit_window_system;
 typedef granit_handle granit_window;
 
-typedef enum granit_window_backend {
-  GRANIT_WINDOW_BACKEND_AUTO = 0,
-  GRANIT_WINDOW_BACKEND_WIN32 = 1,
-  GRANIT_WINDOW_BACKEND_XCB = 2,
-  GRANIT_WINDOW_BACKEND_WAYLAND = 3,
-  GRANIT_WINDOW_BACKEND_EMSCRIPTEN = 4,
-  GRANIT_WINDOW_BACKEND_SDL3 = 5
-} granit_window_backend;
+/** 窗口后端类型 */
+typedef uint32_t granit_window_backend;
+#define GRANIT_WINDOW_BACKEND_AUTO UINT32_C(0)
+/** 原始窗口类型 */
+#define GRANIT_WINDOW_BACKEND_WIN32 UINT32_C(1)
+#define GRANIT_WINDOW_BACKEND_XCB UINT32_C(2)
+#define GRANIT_WINDOW_BACKEND_WAYLAND UINT32_C(3)
+#define GRANIT_WINDOW_BACKEND_EMSCRIPTEN UINT32_C(4)
+/** 第三方库窗口类型 */
+#define GRANIT_WINDOW_BACKEND_SDL3 UINT32_C(50)
 
-#define GRANIT_WINDOW_VISIBLE_BIT (UINT32_C(1) << 0)
-#define GRANIT_WINDOW_RESIZABLE_BIT (UINT32_C(1) << 1)
-#define GRANIT_WINDOW_HIGH_DPI_BIT (UINT32_C(1) << 2)
+typedef uint32_t granit_window_flag;
+#define GRANIT_WINDOW_FLAG_VISIBLE_BIT (UINT32_C(1) << 0)
+#define GRANIT_WINDOW_FLAG_RESIZABLE_BIT (UINT32_C(1) << 1)
+#define GRANIT_WINDOW_FLAG_HIGH_DPI_BIT (UINT32_C(1) << 2)
 
 typedef uint32_t granit_window_target_type;
 #define GRANIT_WINDOW_TARGET_AUTOMATIC UINT32_C(0)
@@ -53,7 +56,7 @@ typedef struct granit_window_target_desc {
 
 typedef struct granit_window_system_desc {
   uint32_t struct_size;
-  uint32_t backend;
+  granit_window_backend backend;
   uint32_t flags;
   uint32_t reserved;
 } granit_window_system_desc;
@@ -70,7 +73,7 @@ typedef struct granit_window_desc {
   uint32_t title_length;
   uint32_t width;
   uint32_t height;
-  uint32_t flags;
+  granit_window_flag flags;
   uint32_t reserved;
   const granit_window_target_desc* target;
 } granit_window_desc;
@@ -85,7 +88,7 @@ typedef struct granit_window_desc {
    UINT32_C(0),                                                                                    \
    UINT32_C(0),                                                                                    \
    UINT32_C(0),                                                                                    \
-   GRANIT_WINDOW_VISIBLE_BIT | GRANIT_WINDOW_RESIZABLE_BIT,                                        \
+   GRANIT_WINDOW_FLAG_VISIBLE_BIT | GRANIT_WINDOW_FLAG_RESIZABLE_BIT,                                        \
    UINT32_C(0),                                                                                    \
    0}
 

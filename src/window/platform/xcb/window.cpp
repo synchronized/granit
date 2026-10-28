@@ -105,7 +105,7 @@ granit_result create_xcb_window(const std::shared_ptr<window_system_record>& sys
     if (system->wm_protocols != XCB_ATOM_NONE && system->wm_delete_window != XCB_ATOM_NONE)
       xcb_change_property(system->connection, XCB_PROP_MODE_REPLACE, record->window,
                           system->wm_protocols, XCB_ATOM_ATOM, 32, 1, &system->wm_delete_window);
-    if ((desc->flags & GRANIT_WINDOW_RESIZABLE_BIT) == 0 &&
+    if ((desc->flags & GRANIT_WINDOW_FLAG_RESIZABLE_BIT) == 0 &&
         system->wm_size_hints != XCB_ATOM_NONE) {
       std::uint32_t hints[18]{};
       hints[0] = (UINT32_C(1) << 4) | (UINT32_C(1) << 5);
@@ -114,7 +114,7 @@ granit_result create_xcb_window(const std::shared_ptr<window_system_record>& sys
       xcb_change_property(system->connection, XCB_PROP_MODE_REPLACE, record->window,
                           XCB_ATOM_WM_NORMAL_HINTS, system->wm_size_hints, 32, 18, hints);
     }
-    if ((desc->flags & GRANIT_WINDOW_VISIBLE_BIT) != 0)
+    if ((desc->flags & GRANIT_WINDOW_FLAG_VISIBLE_BIT) != 0)
       xcb_map_window(system->connection, record->window);
     system->windows.emplace(record->handle, record);
     if (xcb_flush(system->connection) <= 0 || xcb_connection_has_error(system->connection) != 0) {

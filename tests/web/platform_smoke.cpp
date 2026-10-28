@@ -773,7 +773,7 @@ extern "C" EMSCRIPTEN_KEEPALIVE int granit_web_validate_multi_window() noexcept 
     return GRANIT_ERROR_INTERNAL;
   }
 
-  granit::window_native_emscripten native = GRANIT_WINDOW_NATIVE_EMSCRIPTEN_INIT;
+  granit::window_native_emscripten native{};
   result = granit::get_native(system, secondary.ref(), native);
   constexpr std::string_view expected_selector = "#secondary-canvas";
   if (result.failed() || native.canvas_selector_length != expected_selector.size() ||

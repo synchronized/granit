@@ -26,7 +26,7 @@ const char* video_driver() noexcept {
 
 } // namespace
 
-result create_surface(renderer& owner, SDL_Window* window, surface& output) noexcept {
+result create_surface(renderer_ref owner, SDL_Window* window, surface& output) noexcept {
   if (window == nullptr)
     return result::invalid_argument;
   const auto properties = SDL_GetWindowProperties(window);
@@ -80,6 +80,10 @@ result create_surface(renderer& owner, SDL_Window* window, surface& output) noex
   }
 
   return result::unsupported;
+}
+
+result create_surface(renderer& owner, SDL_Window* window, surface& output) noexcept {
+  return create_surface(owner.ref(), window, output);
 }
 
 } // namespace granit::integration::sdl3
