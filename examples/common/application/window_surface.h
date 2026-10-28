@@ -4,9 +4,12 @@
 #ifndef GRANIT_EXAMPLE_APPLICATION_WINDOW_SURFACE_H_
 #define GRANIT_EXAMPLE_APPLICATION_WINDOW_SURFACE_H_
 
-#include <granit/integrations/sdl3/surface.hpp>
 #include <granit/renderer/native_surface.hpp>
 #include <granit/window/native.hpp>
+
+#if defined(GRANIT_EXAMPLE_HAS_SDL3)
+#include <granit/integrations/sdl3/surface.hpp>
+#endif
 
 namespace granit::example {
 
@@ -33,9 +36,11 @@ inline result create_window_surface(renderer_ref renderer, const window_system& 
         renderer,
         surface_desc::canvas({native.u.emscripten.canvas_selector,
                               native.u.emscripten.canvas_selector_length}));
+#if defined(GRANIT_EXAMPLE_HAS_SDL3)
   case GRANIT_WINDOW_BACKEND_SDL3:
     return integration::sdl3::create_surface(
         renderer, static_cast<SDL_Window*>(native.u.sdl3.window), output);
+#endif
   default:
     return result::unsupported;
   }

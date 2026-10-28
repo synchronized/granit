@@ -30,6 +30,7 @@ target_link_libraries(
 )
 if(TARGET granit::integration_sdl3)
   target_link_libraries(granit_render_pipeline_window_smoke PRIVATE granit::integration_sdl3)
+  target_compile_definitions(granit_render_pipeline_window_smoke PRIVATE GRANIT_EXAMPLE_HAS_SDL3=1)
 endif()
 target_compile_definitions(
   granit_render_pipeline_window_smoke

@@ -21,6 +21,7 @@ target_link_libraries(
 )
 if(TARGET granit::integration_sdl3)
   target_link_libraries(granit_example_application PUBLIC granit::integration_sdl3)
+  target_compile_definitions(granit_example_application PRIVATE GRANIT_EXAMPLE_HAS_SDL3=1)
 endif()
 
 set_target_properties(granit_example_application PROPERTIES FOLDER "Examples/Common")
