@@ -11,7 +11,7 @@ namespace granit::tests {
 
 inline result create_window_surface(renderer& renderer, const window_system& system,
                                     window_ref window, surface& output) noexcept {
-  window_native native = GRANIT_WINDOW_NATIVE_INIT;
+  window_native native{};
   const auto native_result = get_native(system, window, native);
   if (native_result.failed())
     return native_result;

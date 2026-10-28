@@ -21,7 +21,7 @@ C++ 用户无需修改 `granit::window_flag` 的枚举名称。
 Renderer；调用方应先查询 native 快照，再使用 Renderer 的 Surface 描述构造器：
 
 ```cpp
-granit::window_native native = GRANIT_WINDOW_NATIVE_INIT;
+granit::window_native native{};
 granit::get_native(system, window.ref(), native);
 
 granit::surface_desc desc =

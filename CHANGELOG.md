@@ -12,6 +12,7 @@
   `GRANIT_WINDOW_*_BIT` 名称已移除，迁移方式见
   [Window API 迁移指南](docs/guides/migrate-window-api.md)；
 - 新增带后端标签的 `granit_window_get_native` 及对应 C++ 包装，统一读取原生窗口快照。
+- C++ 原生窗口快照改为带默认构造函数的包装类型，自动初始化 `struct_size`，避免误用 C 初始化宏。
 - 移除 Window 对 Renderer 的直接依赖；调用方使用 Window native 快照和
   `granit_surface_create` 组织 Surface，SDL3 通过可选集成层创建 Surface。
 

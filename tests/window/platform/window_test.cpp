@@ -16,6 +16,23 @@
 #include <xcb/xcb.h>
 #endif
 
+TEST_CASE("C++ Window 原生快照默认构造时自动初始化", "[window][abi]") {
+  const granit::window_native native{};
+  const granit::window_native_win32 win32{};
+  const granit::window_native_xcb xcb{};
+  const granit::window_native_wayland wayland{};
+  const granit::window_native_emscripten emscripten{};
+  const granit::window_native_sdl3 sdl3{};
+
+  CHECK(native.struct_size == GRANIT_WINDOW_NATIVE_VERSION_1_SIZE);
+  CHECK(native.backend == GRANIT_WINDOW_BACKEND_AUTO);
+  CHECK(win32.struct_size == sizeof(granit_window_native_win32));
+  CHECK(xcb.struct_size == sizeof(granit_window_native_xcb));
+  CHECK(wayland.struct_size == sizeof(granit_window_native_wayland));
+  CHECK(emscripten.struct_size == sizeof(granit_window_native_emscripten));
+  CHECK(sdl3.struct_size == sizeof(granit_window_native_sdl3));
+}
+
 TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]") {
   granit_window_system system = UINT64_C(42);
   CHECK(granit_window_system_create(nullptr, &system) == GRANIT_ERROR_INVALID_ARGUMENT);

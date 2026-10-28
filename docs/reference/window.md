@@ -200,7 +200,7 @@ selector，自动 Target 对应 `#canvas`。
 C++ 使用重载的 `granit::get_native(system, window, output)`，其中 output 为
 `window_native`、`window_native_win32`、`window_native_xcb`、`window_native_wayland`、
 `window_native_emscripten` 或 `window_native_sdl3`。包装直接接收 RAII 对象，不要求调用方提取
-C 句柄。
+C 句柄；这些 C++ 快照类型的默认构造函数会自动初始化 `struct_size` 和默认值。
 
 ## 线程约束
 

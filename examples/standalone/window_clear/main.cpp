@@ -18,7 +18,7 @@ namespace {
 granit::result create_window_surface(granit::renderer& renderer,
                                      const granit::window_system& system,
                                      granit::window_ref window, granit::surface& output) noexcept {
-  granit::window_native native = GRANIT_WINDOW_NATIVE_INIT;
+  granit::window_native native{};
   const auto native_result = granit::get_native(system, window, native);
   if (native_result.failed())
     return native_result;
