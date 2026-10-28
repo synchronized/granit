@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+## 0.70.0 - 2026-10-28
+
 - Window C API 的窗口标志宏统一为 `GRANIT_WINDOW_FLAG_*`；原
   `GRANIT_WINDOW_*_BIT` 名称已移除，迁移方式见
   [Window API 迁移指南](docs/guides/migrate-window-api.md)；
