@@ -14,6 +14,14 @@ using window_native_win32 = granit_window_native_win32;
 using window_native_xcb = granit_window_native_xcb;
 using window_native_wayland = granit_window_native_wayland;
 using window_native_emscripten = granit_window_native_emscripten;
+using window_native = granit_window_native;
+
+[[nodiscard]] inline result get_native(const window_system& system, window_ref value,
+                                       window_native& output) noexcept {
+  output = GRANIT_WINDOW_NATIVE_INIT;
+  return from_native(
+      granit_window_get_native(system.native_handle(), value.native_handle(), &output));
+}
 
 [[nodiscard]] inline result get_native(const window_system& system, window_ref value,
                                        window_native_win32& output) noexcept {

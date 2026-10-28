@@ -41,6 +41,12 @@ TEST_CASE("Window 组件骨架保持确定的失败与输出语义", "[window]")
   CHECK(native.instance != nullptr);
   CHECK(native.window != nullptr);
 
+  granit_window_native generic_native = GRANIT_WINDOW_NATIVE_INIT;
+  REQUIRE(granit_window_get_native(system, window, &generic_native) == GRANIT_SUCCESS);
+  CHECK(generic_native.backend == GRANIT_WINDOW_BACKEND_WIN32);
+  CHECK(generic_native.u.win32.instance == native.instance);
+  CHECK(generic_native.u.win32.window == native.window);
+
   granit_window_state state = GRANIT_WINDOW_STATE_INIT;
   REQUIRE(granit_window_get_state(system, window, &state) == GRANIT_SUCCESS);
   CHECK(state.width > 0);

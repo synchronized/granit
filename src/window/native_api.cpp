@@ -6,9 +6,6 @@
 
 #include "window/platform/backend.h"
 
-#include <cstring>
-#include <utility>
-
 using namespace granit::window::detail;
 
 extern "C" granit_result granit_window_get_native_win32(granit_window_system system_handle,

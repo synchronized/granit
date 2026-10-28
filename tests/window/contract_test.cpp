@@ -4,6 +4,7 @@
 #include <granit/window.h>
 #include <granit/window.hpp>
 #include <granit/window/native.h>
+#include <granit/window/native.hpp>
 
 #include <catch2/catch_all.hpp>
 
@@ -11,8 +12,16 @@
 #include <cstddef>
 #include <cstring>
 #include <thread>
+#include <type_traits>
 
 namespace {
+
+static_assert(std::is_same_v<decltype(static_cast<granit::result (*)(
+                                   const granit::window_system&, granit::window_ref,
+                                   granit::window_native&)>(&granit::get_native)),
+                             granit::result (*)(const granit::window_system&,
+                                                granit::window_ref,
+                                                granit::window_native&)>);
 
 template <typename T, std::size_t VersionSize>
 void check_versioned_output(granit_result (*call)(T*), granit_result expected) {
@@ -114,6 +123,13 @@ TEST_CASE("Window Loop 在接受回调前校验描述", "[window][loop][abi]") {
 }
 
 TEST_CASE("Window 原生快照在访问句柄前校验输出容量", "[window][native][abi]") {
+  granit_window_native native = GRANIT_WINDOW_NATIVE_INIT;
+  native.struct_size = GRANIT_WINDOW_NATIVE_VERSION_1_SIZE - 1;
+  CHECK(granit_window_get_native(UINT64_MAX, UINT64_MAX, &native) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+  CHECK(granit_window_get_native(UINT64_MAX, UINT64_MAX, nullptr) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
+
   granit_window_native_win32 win32 = GRANIT_WINDOW_NATIVE_WIN32_INIT;
   win32.struct_size = GRANIT_WINDOW_NATIVE_WIN32_VERSION_1_SIZE - 1;
   CHECK(granit_window_get_native_win32(UINT64_MAX, UINT64_MAX, &win32) ==

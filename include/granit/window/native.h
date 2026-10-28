@@ -58,10 +58,10 @@ typedef struct granit_window_native_emscripten {
 #define GRANIT_WINDOW_NATIVE_EMSCRIPTEN_INIT                                                       \
   {(uint32_t)sizeof(granit_window_native_emscripten), UINT32_C(0), 0}
 
-/** 统一 tagged union(通用快照) */
+/** 统一 tagged union（通用快照）；backend 决定应读取的 union 成员。 */
 typedef struct granit_window_native {
   uint32_t struct_size;
-  granit_window_backend backend; // granit_window_native_backend
+  granit_window_backend backend;
   union {
     granit_window_native_win32 win32;
     granit_window_native_xcb xcb;

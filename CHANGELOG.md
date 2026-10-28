@@ -8,6 +8,11 @@
 
 ## Unreleased
 
+- Window C API 的窗口标志宏统一为 `GRANIT_WINDOW_FLAG_*`；原
+  `GRANIT_WINDOW_*_BIT` 名称已移除，迁移方式见
+  [Window API 迁移指南](docs/guides/migrate-window-api.md)；
+- 新增带后端标签的 `granit_window_get_native` 及对应 C++ 包装，统一读取原生窗口快照。
+
 ## 0.69.0 - 2026-10-25
 
 - 修复资源和共享句柄表 generation 回绕可能复活旧句柄的问题，耗尽的槽位永久退役。

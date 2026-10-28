@@ -175,6 +175,8 @@ Window System 的顺序销毁。函数校验 Window System、Window 归属和创
 `granit_window_get_native_win32`、`granit_window_get_native_xcb`、
 `granit_window_get_native_wayland` 与 `granit_window_get_native_emscripten`。每个平台通过一次查询
 返回版本化快照结构，查询值仅在 Window 存活期间借用。这些查询不进入普通 Window 聚合头。
+也可以使用 `granit_window_get_native` 获取带 `backend` 标签的统一快照；C++ 对应包装为
+`granit::get_native(system, window, output)`，其中 `output` 为 `granit::window_native`。
 
 在 Win32 Window 上查询 XCB、Wayland 或 Emscripten 值返回 `GRANIT_ERROR_UNSUPPORTED`，输出结构
 恢复为空值。XCB Window 可通过 `granit_window_get_native_xcb` 借用 connection 和
