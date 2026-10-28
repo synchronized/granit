@@ -3,8 +3,6 @@
 
 #include "window/platform/backend.h"
 
-#include <granit/renderer/native_surface.h>
-
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_keyboard.h>
@@ -323,6 +321,14 @@ SDL_WindowID event_window(const SDL_Event& event) noexcept {
 
 } // namespace
 
+granit_result get_native_sdl3(const std::shared_ptr<window_record>& window,
+                              granit_window_native_sdl3& output) {
+  if (window == nullptr || window->sdl_window == nullptr)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  output.window = window->sdl_window;
+  return GRANIT_SUCCESS;
+}
+
 granit_result create_sdl3_system(granit_window_system* output) {
   if (!active_sdl3_system.expired())
     return GRANIT_ERROR_RESOURCE_IN_USE;
@@ -522,46 +528,6 @@ granit_result destroy_sdl3_window(const std::shared_ptr<window_system_record>& s
   SDL_StopTextInput(native_window(*window));
   destroy_native_window(native_window(*window));
   return GRANIT_SUCCESS;
-}
-
-granit_result create_sdl3_surface(const std::shared_ptr<window_system_record>&,
-                                  const std::shared_ptr<window_record>& window,
-                                  granit_renderer renderer, granit_surface* surface) {
-  const auto properties = SDL_GetWindowProperties(native_window(*window));
-  const auto* driver = SDL_GetCurrentVideoDriver();
-  granit_surface_desc desc = GRANIT_SURFACE_DESC_INIT;
-  if (driver != nullptr && std::strcmp(driver, "windows") == 0) {
-    desc.surface_type = GRANIT_SURFACE_TYPE_WIN32_BIT;
-    desc.source.win32.instance =
-        SDL_GetPointerProperty(properties, SDL_PROP_WINDOW_WIN32_INSTANCE_POINTER, nullptr);
-    desc.source.win32.window =
-        SDL_GetPointerProperty(properties, SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
-  } else if (driver != nullptr && std::strcmp(driver, "wayland") == 0) {
-    desc.surface_type = GRANIT_SURFACE_TYPE_WAYLAND_BIT;
-    desc.source.wayland.display =
-        SDL_GetPointerProperty(properties, SDL_PROP_WINDOW_WAYLAND_DISPLAY_POINTER, nullptr);
-    desc.source.wayland.surface =
-        SDL_GetPointerProperty(properties, SDL_PROP_WINDOW_WAYLAND_SURFACE_POINTER, nullptr);
-#if defined(GRANIT_WINDOW_SDL3_HAS_X11)
-  } else if (driver != nullptr && std::strcmp(driver, "x11") == 0) {
-    auto* display = static_cast<Display*>(
-        SDL_GetPointerProperty(properties, SDL_PROP_WINDOW_X11_DISPLAY_POINTER, nullptr));
-    const auto native = SDL_GetNumberProperty(properties, SDL_PROP_WINDOW_X11_WINDOW_NUMBER, 0);
-    if (display == nullptr || native <= 0 || native > std::numeric_limits<std::uint32_t>::max())
-      return GRANIT_ERROR_BACKEND_UNAVAILABLE;
-    desc.surface_type = GRANIT_SURFACE_TYPE_XCB_BIT;
-    desc.source.xcb.connection = XGetXCBConnection(display);
-    desc.source.xcb.window = static_cast<std::uint32_t>(native);
-#endif
-  } else if (driver != nullptr && std::strcmp(driver, "emscripten") == 0) {
-    desc.surface_type = GRANIT_SURFACE_TYPE_CANVAS_BIT;
-    desc.source.canvas.selector = window->sdl_canvas_selector.data();
-    desc.source.canvas.selector_length =
-        static_cast<std::uint32_t>(window->sdl_canvas_selector.size());
-  } else {
-    return GRANIT_ERROR_UNSUPPORTED;
-  }
-  return granit_surface_create(renderer, &desc, surface);
 }
 
 } // namespace granit::window::detail

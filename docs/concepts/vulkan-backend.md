@@ -64,9 +64,10 @@ Swapchain 图像和提交状态。
 
 ## Surface 与 Swapchain
 
-使用 Granit Window 时，`granit_window_create_surface` 在 Window component 内取得平台值，普通应用
-无需访问原生句柄。SDL3、GLFW、Qt 或引擎平台层可以显式包含 `native_surface.h`，通过带标签的
-Win32、XCB 或 Wayland 描述创建同一种公共 Surface。
+使用 Granit Window 时，应用通过 `granit_window_get_native` 获取平台值，再使用
+`granit_surface_create` 创建 Surface。Window component 不再依赖 Renderer；SDL3、GLFW、Qt 或引擎
+平台层可以显式包含 `native_surface.h`，通过带标签的 Win32、XCB 或 Wayland 描述创建同一种公共
+Surface。SDL3 Window 的借用句柄由 SDL3 集成层转换为这些描述。
 
 Swapchain 负责能力查询、格式和 Present Mode 选择、Backbuffer 发布、重建、acquire、cancel 与
 present。重建和关闭等低频 WSI 路径会等待相关 Queue 安全完成；普通资源回收不使用全局

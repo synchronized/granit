@@ -5,7 +5,6 @@
 #define GRANIT_WINDOW_H_
 
 #include <granit/window/input.h>
-#include <granit/window/presentation.h>
 #include <granit/window/window.h>
 #include <granit/window/window_loop.h>
 

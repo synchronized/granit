@@ -58,6 +58,18 @@ typedef struct granit_window_native_emscripten {
 #define GRANIT_WINDOW_NATIVE_EMSCRIPTEN_INIT                                                       \
   {(uint32_t)sizeof(granit_window_native_emscripten), UINT32_C(0), 0}
 
+/** SDL3 原生窗口快照；window 是 SDL_Window* 的借用指针。 */
+typedef struct granit_window_native_sdl3 {
+  uint32_t struct_size;
+  uint32_t reserved;
+  void* window;
+} granit_window_native_sdl3;
+
+#define GRANIT_WINDOW_NATIVE_SDL3_VERSION_1_SIZE                                                   \
+  ((uint32_t)(offsetof(granit_window_native_sdl3, window) + sizeof(void*)))
+#define GRANIT_WINDOW_NATIVE_SDL3_INIT                                                            \
+  {(uint32_t)sizeof(granit_window_native_sdl3), UINT32_C(0), 0}
+
 /** 统一 tagged union（通用快照）；backend 决定应读取的 union 成员。 */
 typedef struct granit_window_native {
   uint32_t struct_size;
@@ -67,6 +79,7 @@ typedef struct granit_window_native {
     granit_window_native_xcb xcb;
     granit_window_native_wayland wayland;
     granit_window_native_emscripten emscripten;
+    granit_window_native_sdl3 sdl3;
   } u;
 } granit_window_native;
 
@@ -105,6 +118,12 @@ GRANIT_WINDOW_API granit_result
   granit_window_get_native_emscripten(granit_window_system window_system,
                                       granit_window window,
                                       granit_window_native_emscripten* output);
+
+/** 返回借用的 SDL3 原生窗口指针；输出仅在 Window 存活期间有效。 */
+GRANIT_WINDOW_API granit_result
+  granit_window_get_native_sdl3(granit_window_system window_system,
+                                granit_window window,
+                                granit_window_native_sdl3* output);
 
 GRANIT_WINDOW_API granit_result
   granit_window_get_native(granit_window_system window_system,

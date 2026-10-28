@@ -6,6 +6,7 @@
 #include "support/pbr_test_support.h"
 #include "support/shader_asset_store.h"
 #include "support/tone_mapping_shader_library.h"
+#include "../support/window_surface.h"
 
 #include <granit/granit.hpp>
 #include <granit/window.hpp>
@@ -215,7 +216,7 @@ int main(int argument_count, char** arguments) {
   }
   granit::surface surface;
   if (result.ok())
-    result = window.create_surface(renderer, surface);
+    result = granit::tests::create_window_surface(renderer, window_system, window.ref(), surface);
   granit::swapchain swapchain;
   if (result.ok()) {
     result = swapchain.initialize(

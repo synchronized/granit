@@ -24,8 +24,6 @@ if(EXISTS "${install_prefix}/lib/cmake/granit/granitWindowTargets.cmake")
   list(APPEND required_files
        "include/granit/window/input.h"
        "include/granit/window/input.hpp"
-       "include/granit/window/presentation.h"
-       "include/granit/window/presentation.hpp"
        "include/granit/window/native.h"
        "include/granit/window/native.hpp")
 endif()

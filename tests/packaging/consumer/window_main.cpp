@@ -2,6 +2,8 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <granit/window.hpp>
+#include <granit/renderer/native_surface.hpp>
+#include <granit/window/native.hpp>
 
 #include <utility>
 
@@ -14,6 +16,36 @@ namespace {
 }
 
 } // namespace
+
+granit::result create_window_surface(granit::renderer& renderer,
+                                     const granit::window_system& system,
+                                     granit::window_ref window, granit::surface& output) noexcept {
+  granit::window_native native = GRANIT_WINDOW_NATIVE_INIT;
+  const auto native_result = granit::get_native(system, window, native);
+  if (native_result.failed())
+    return native_result;
+  switch (native.backend) {
+  case GRANIT_WINDOW_BACKEND_WIN32:
+    return output.initialize(renderer,
+                             granit::surface_desc::win32(native.u.win32.instance,
+                                                         native.u.win32.window));
+  case GRANIT_WINDOW_BACKEND_XCB:
+    return output.initialize(renderer,
+                             granit::surface_desc::xcb(native.u.xcb.connection,
+                                                       native.u.xcb.window));
+  case GRANIT_WINDOW_BACKEND_WAYLAND:
+    return output.initialize(renderer,
+                             granit::surface_desc::wayland(native.u.wayland.display,
+                                                           native.u.wayland.surface));
+  case GRANIT_WINDOW_BACKEND_EMSCRIPTEN:
+    return output.initialize(
+        renderer,
+        granit::surface_desc::canvas({native.u.emscripten.canvas_selector,
+                                      native.u.emscripten.canvas_selector_length}));
+  default:
+    return granit::result::unsupported;
+  }
+}
 
 int main() {
   granit::window_system system;
@@ -61,11 +93,11 @@ int main() {
     if (renderer_result.failed() || !renderer.valid())
       return 8;
     granit::surface surface;
-    if ((window.create_surface(renderer, surface)).failed() || !surface.valid())
+    if ((create_window_surface(renderer, system, window.ref(), surface)).failed() || !surface.valid())
       return 9;
     if ((surface.reset()).failed() || surface.valid())
       return 10;
-    if ((window.create_surface(renderer, surface)).failed() || !surface.valid())
+    if ((create_window_surface(renderer, system, window.ref(), surface)).failed() || !surface.valid())
       return 11;
     if ((surface.reset()).failed() || (surface.reset()).failed())
       return 12;

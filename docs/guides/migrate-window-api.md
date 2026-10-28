@@ -15,6 +15,25 @@
 
 C++ 用户无需修改 `granit::window_flag` 的枚举名称。
 
+## Window 与 Surface 解耦
+
+`granit_window_create_surface` 和 `window::create_surface` 已移除。Window component 不再链接
+Renderer；调用方应先查询 native 快照，再使用 Renderer 的 Surface 描述构造器：
+
+```cpp
+granit::window_native native = GRANIT_WINDOW_NATIVE_INIT;
+granit::get_native(system, window.ref(), native);
+
+granit::surface_desc desc =
+    granit::surface_desc::win32(native.u.win32.instance, native.u.win32.window);
+granit::surface surface;
+surface.initialize(renderer, desc);
+```
+
+实际使用时必须根据 `native.backend` 选择对应的 `surface_desc` 构造器，并保持 Window 存活到
+Surface 销毁之后。SDL3 后端的 `native.u.sdl3.window` 应交给
+`granit::integration::sdl3::create_surface`。
+
 ## 统一原生窗口快照
 
 需要根据实际后端读取原生句柄时，可以使用统一快照：

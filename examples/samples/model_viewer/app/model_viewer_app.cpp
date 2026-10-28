@@ -13,6 +13,7 @@
 #include "model_viewer/rendering/render_execution.h"
 #include "model_viewer/ui/texture_previews.h"
 #include "model_viewer/ui/viewer_ui.h"
+#include "application/window_surface.h"
 
 #include <imgui.h>
 
@@ -373,7 +374,9 @@ struct model_viewer_app::implementation {
     };
     if (recreate_surface) {
       granit::surface surface;
-      result = owner.app_window().create_surface(rendering.renderer(), surface);
+      result = granit::example::create_window_surface(rendering.renderer(),
+                                                       owner.app_window_system(),
+                                                       owner.app_window().ref(), surface);
       if (result.ok())
         result = rendering.recreate_surface(std::move(surface), swapchain_desc);
     } else {
@@ -414,7 +417,9 @@ struct model_viewer_app::implementation {
     }
     if (result.ok()) {
       granit::surface surface;
-      result = owner.app_window().create_surface(rendering.renderer(), surface);
+      result = granit::example::create_window_surface(rendering.renderer(),
+                                                       owner.app_window_system(),
+                                                       owner.app_window().ref(), surface);
       if (result.ok())
         result = rendering.initialize_presentation(std::move(surface),
                                                    {.width = window_state.framebuffer_width,

@@ -7,6 +7,7 @@ add_library(
   application.h
   application_host.cpp
   application_host.h
+  window_surface.h
 )
 
 target_compile_features(granit_example_application PUBLIC cxx_std_20)
@@ -18,6 +19,9 @@ target_link_libraries(
   granit_example_application
   PUBLIC granit_example_assets granit_example_gltf_support granit::granit granit::window
 )
+if(TARGET granit::integration_sdl3)
+  target_link_libraries(granit_example_application PUBLIC granit::integration_sdl3)
+endif()
 
 set_target_properties(granit_example_application PROPERTIES FOLDER "Examples/Common")
 granit_target_compile_warnings(granit_example_application)

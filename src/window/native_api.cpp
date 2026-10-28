@@ -94,6 +94,27 @@ granit_window_get_native_emscripten(granit_window_system system_handle, granit_w
 }
 
 extern "C" granit_result
+granit_window_get_native_sdl3(granit_window_system system_handle, granit_window window_handle,
+                              granit_window_native_sdl3* output) {
+  if (output == nullptr || output->struct_size < GRANIT_WINDOW_NATIVE_SDL3_VERSION_1_SIZE)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  *output = GRANIT_WINDOW_NATIVE_SDL3_INIT;
+  auto system = acquire_system(system_handle);
+  if (!system)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  if (!on_owner_thread(*system))
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  const auto found = system->windows.find(window_handle);
+  if (found == system->windows.end())
+    return GRANIT_ERROR_INVALID_HANDLE;
+#if defined(GRANIT_WINDOW_HAS_SDL3)
+  if (system->backend == GRANIT_WINDOW_BACKEND_SDL3)
+    return get_native_sdl3(found->second, *output);
+#endif
+  return GRANIT_ERROR_UNSUPPORTED;
+}
+
+extern "C" granit_result
 granit_window_get_native(granit_window_system system_handle, granit_window window_handle,
                                     granit_window_native* output) {
   if (output == nullptr || output->struct_size < GRANIT_WINDOW_NATIVE_VERSION_1_SIZE) {
@@ -154,6 +175,18 @@ granit_window_get_native(granit_window_system system_handle, granit_window windo
       output->struct_size = GRANIT_WINDOW_NATIVE_VERSION_1_SIZE;
       output->backend = system->backend;
       output->u.emscripten = emscripten;
+    }
+    return result;
+  }
+#endif
+#if defined(GRANIT_WINDOW_HAS_SDL3)
+  if (system->backend == GRANIT_WINDOW_BACKEND_SDL3) {
+    granit_window_native_sdl3 sdl3 = GRANIT_WINDOW_NATIVE_SDL3_INIT;
+    result = get_native_sdl3(found->second, sdl3);
+    if (result == GRANIT_SUCCESS) {
+      output->struct_size = GRANIT_WINDOW_NATIVE_VERSION_1_SIZE;
+      output->backend = system->backend;
+      output->u.sdl3 = sdl3;
     }
     return result;
   }

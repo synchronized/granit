@@ -13,7 +13,6 @@ target_sources(
           window_loop_api.cpp
           window_api.cpp
           native_api.cpp
-          presentation_api.cpp
           registry.cpp
           registry.h
           event_queue.cpp
@@ -50,8 +49,6 @@ target_sources(
       "${PROJECT_SOURCE_DIR}/include/granit/window/input.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/window/native.h"
       "${PROJECT_SOURCE_DIR}/include/granit/window/native.hpp"
-      "${PROJECT_SOURCE_DIR}/include/granit/window/presentation.h"
-      "${PROJECT_SOURCE_DIR}/include/granit/window/presentation.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/window/window.h"
       "${PROJECT_SOURCE_DIR}/include/granit/window/window.hpp"
       "${PROJECT_SOURCE_DIR}/include/granit/window/window_ref.hpp"
@@ -83,7 +80,6 @@ target_include_directories(
 )
 target_link_libraries(
   granit_window
-  PUBLIC granit::granit
   PRIVATE $<$<BOOL:${GRANIT_HAS_XCB}>:${GRANIT_XCB_LIBRARY}>
           $<$<BOOL:${GRANIT_HAS_WAYLAND_SHELL}>:${GRANIT_WAYLAND_LIBRARY}>
           $<$<BOOL:${GRANIT_HAS_WAYLAND_INPUT}>:${GRANIT_XKBCOMMON_LIBRARY}>

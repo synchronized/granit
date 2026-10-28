@@ -151,6 +151,11 @@ TEST_CASE("Window 原生快照在访问句柄前校验输出容量", "[window][n
   emscripten.struct_size = GRANIT_WINDOW_NATIVE_EMSCRIPTEN_VERSION_1_SIZE - 1;
   CHECK(granit_window_get_native_emscripten(UINT64_MAX, UINT64_MAX, &emscripten) ==
         GRANIT_ERROR_INVALID_ARGUMENT);
+
+  granit_window_native_sdl3 sdl3 = GRANIT_WINDOW_NATIVE_SDL3_INIT;
+  sdl3.struct_size = GRANIT_WINDOW_NATIVE_SDL3_VERSION_1_SIZE - 1;
+  CHECK(granit_window_get_native_sdl3(UINT64_MAX, UINT64_MAX, &sdl3) ==
+        GRANIT_ERROR_INVALID_ARGUMENT);
 }
 
 TEST_CASE("Window Loop 拒绝未知动作和递归运行", "[window][loop]") {
@@ -288,12 +293,6 @@ TEST_CASE("Window System 在当前平台直接拥有输入状态和事件队列"
 
 TEST_CASE("Window创建把空Window System归类为无效句柄", "[window][contract]") {
   CHECK(granit_window_system_process_events(UINT64_MAX) == GRANIT_ERROR_INVALID_HANDLE);
-  granit_surface surface = UINT64_C(42);
-  CHECK(granit_window_create_surface(UINT64_MAX, UINT64_C(1), UINT64_C(1), &surface) ==
-        GRANIT_ERROR_INVALID_HANDLE);
-  CHECK(surface == GRANIT_NULL_HANDLE);
-  CHECK(granit_window_create_surface(UINT64_MAX, UINT64_C(1), UINT64_C(1), nullptr) ==
-        GRANIT_ERROR_INVALID_ARGUMENT);
 
   granit_window_desc desc = GRANIT_WINDOW_DESC_INIT;
   desc.width = 1;

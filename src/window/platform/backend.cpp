@@ -14,7 +14,6 @@ const backend_operations win32_operations{destroy_win32_system,
                                           process_win32_events,
                                           create_win32_window,
                                           destroy_win32_window,
-                                          nullptr,
                                           false};
 #endif
 
@@ -33,7 +32,6 @@ const backend_operations xcb_operations{destroy_xcb_system,
                                         process_xcb_events,
                                         create_xcb_window,
                                         destroy_xcb_window_dispatch,
-                                        nullptr,
                                         false};
 #endif
 
@@ -52,7 +50,6 @@ const backend_operations wayland_operations{destroy_registered_wayland_system,
                                             process_wayland_events,
                                             create_wayland_window,
                                             destroy_wayland_window_dispatch,
-                                            nullptr,
                                             false};
 #endif
 
@@ -61,14 +58,12 @@ const backend_operations emscripten_operations{destroy_emscripten_system,
                                                process_emscripten_events,
                                                create_emscripten_window,
                                                destroy_emscripten_window,
-                                               nullptr,
                                                true};
 #endif
 
 #if defined(GRANIT_WINDOW_HAS_SDL3)
 const backend_operations sdl3_operations{destroy_sdl3_system, process_sdl3_events,
-                                         create_sdl3_window,  destroy_sdl3_window,
-                                         create_sdl3_surface, true};
+                                         create_sdl3_window,  destroy_sdl3_window, true};
 #endif
 
 granit_result initialize(const backend_operations& operations,

@@ -28,8 +28,8 @@ auto result = windows.initialize({.backend = granit::window_backend::sdl3});
 Window，并按 `SDL_WindowID` 路由事件和输入。
 
 桌面 SDL3 Window 使用自动 Target。Emscripten SDL3 Window 使用与原生后端相同的 Canvas selector
-Target，并把 selector 交给 SDL 创建属性；同一 System 内重复绑定返回资源占用。两种后端均通过
-统一 `granit_window_create_surface` 创建 Surface，应用不需要读取 SDL 原生属性。
+Target，并把 selector 交给 SDL 创建属性；同一 System 内重复绑定返回资源占用。Window 只负责窗口
+生命周期、事件和 native 快照；Surface 由上层使用 Renderer 的 Surface 接口创建。
 
 ## 创建与销毁
 
@@ -162,21 +162,27 @@ SDL 等外部框架仍可继续直接使用非阻塞 `process_events`，无需�
 ## Renderer 接入
 
 ```c
+granit_window_native native = GRANIT_WINDOW_NATIVE_INIT;
+granit_window_get_native(system, window, &native);
+
+granit_surface_desc surface_desc = GRANIT_SURFACE_DESC_INIT;
+/* 根据 native.backend 将 native.u 中的平台字段填入 surface_desc。 */
 granit_surface surface = GRANIT_NULL_HANDLE;
-granit_window_create_surface(system, window, renderer, &surface);
+granit_surface_create(renderer, &surface_desc, &surface);
 ```
 
 Surface 由 Renderer 拥有。Window 不保存 Renderer 或 Surface；应用按 Swapchain、Surface、Window、
-Window System 的顺序销毁。函数校验 Window System、Window 归属和创建线程，平台来源在 Window
-内部读取，不需要普通调用方判断 Win32、XCB、Wayland 或 Canvas。C++ 使用
-`granit::window::create_surface(renderer, surface)`，输出为 `granit::surface` RAII 对象。
+Window System 的顺序销毁。C++ 使用 `granit::surface_desc` 构造器和
+`surface.initialize(renderer, desc)` 创建 Surface，输出为 `granit::surface` RAII 对象。
 
 原生互操作仍可显式包含 `<granit/window/native.h>` 或对应 C++ 头，并使用
 `granit_window_get_native_win32`、`granit_window_get_native_xcb`、
 `granit_window_get_native_wayland` 与 `granit_window_get_native_emscripten`。每个平台通过一次查询
 返回版本化快照结构，查询值仅在 Window 存活期间借用。这些查询不进入普通 Window 聚合头。
+SDL3 后端还提供 `granit_window_get_native_sdl3`，返回借用的 `SDL_Window*` 不透明指针。
 也可以使用 `granit_window_get_native` 获取带 `backend` 标签的统一快照；C++ 对应包装为
-`granit::get_native(system, window, output)`，其中 `output` 为 `granit::window_native`。
+`granit::get_native(system, window, output)`，其中 `output` 为 `granit::window_native`。SDL3 后端的
+`native.u.sdl3.window` 是借用的 `SDL_Window*`，应交给 SDL3 集成层创建 Surface。
 
 在 Win32 Window 上查询 XCB、Wayland 或 Emscripten 值返回 `GRANIT_ERROR_UNSUPPORTED`，输出结构
 恢复为空值。XCB Window 可通过 `granit_window_get_native_xcb` 借用 connection 和
@@ -192,8 +198,9 @@ selector，自动 Target 对应 `#canvas`。
 可跨 ABI 使用的指针。
 
 C++ 使用重载的 `granit::get_native(system, window, output)`，其中 output 为
-`window_native_win32`、`window_native_xcb`、`window_native_wayland` 或
-`window_native_emscripten`。包装直接接收 RAII 对象，不要求调用方提取 C 句柄。
+`window_native`、`window_native_win32`、`window_native_xcb`、`window_native_wayland`、
+`window_native_emscripten` 或 `window_native_sdl3`。包装直接接收 RAII 对象，不要求调用方提取
+C 句柄。
 
 ## 线程约束
 
