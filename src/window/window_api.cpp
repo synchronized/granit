@@ -103,4 +103,3 @@ extern "C" granit_result granit_window_get_state(granit_window_system system_han
   state->content_scale_vertical = window.content_scale_vertical;
   return GRANIT_SUCCESS;
 }
-

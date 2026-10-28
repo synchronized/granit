@@ -192,4 +192,3 @@ granit_window_get_native(granit_window_system system_handle, granit_window windo
 #endif
   return result;
 }
-
