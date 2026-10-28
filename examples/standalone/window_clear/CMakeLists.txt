@@ -10,7 +10,7 @@ find_package(granit CONFIG REQUIRED COMPONENTS Window)
 
 add_executable(granit_window_clear main.cpp)
 target_compile_features(granit_window_clear PRIVATE cxx_std_20)
-target_link_libraries(granit_window_clear PRIVATE granit::window)
+target_link_libraries(granit_window_clear PRIVATE granit::granit granit::window)
 
 if(BUILD_TESTING)
   add_test(NAME granit.standalone.window_clear COMMAND granit_window_clear --smoke-test)
