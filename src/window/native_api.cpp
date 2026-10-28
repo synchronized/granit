@@ -28,7 +28,6 @@ extern "C" granit_result granit_window_get_native_win32(granit_window_system sys
 #endif
   return GRANIT_ERROR_UNSUPPORTED;
 }
-
 extern "C" granit_result granit_window_get_native_xcb(granit_window_system system_handle,
                                                       granit_window window_handle,
                                                       granit_window_native_xcb* output) {

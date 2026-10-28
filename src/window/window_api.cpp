@@ -17,7 +17,6 @@ constexpr std::uint32_t maximum_target_value_length = 4096;
 const granit_window_target_desc* get_window_target(const granit_window_desc& desc) noexcept {
   return desc.struct_size >= GRANIT_WINDOW_DESC_VERSION_2_SIZE ? desc.target : nullptr;
 }
-
 granit_result validate_window_target(const granit_window_desc& desc) noexcept {
   const auto* target = get_window_target(desc);
   if (target == nullptr)
