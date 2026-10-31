@@ -2,13 +2,37 @@
 // Copyright (c) 2026 Granit contributors
 
 #include <granit/render_graph.hpp>
+#include <granit/renderer/renderer.hpp>
 
 #include <cstdio>
+#include <cstdint>
 
 namespace {
 
-granit_result record_pass(const granit_render_graph_pass_context*, void*) {
-  return GRANIT_SUCCESS;
+struct pass_state {
+  granit_render_graph_resource output = GRANIT_RENDER_GRAPH_INVALID_RESOURCE;
+  std::uint32_t width = 0;
+  std::uint32_t height = 0;
+};
+
+granit_result record_pass(const granit_render_graph_pass_context* context, void* user_data) {
+  const auto& state = *static_cast<const pass_state*>(user_data);
+  granit_color_attachment_desc color = GRANIT_COLOR_ATTACHMENT_DESC_INIT;
+  color.view = granit_render_graph_context_texture_view(context, state.output);
+  if (color.view == GRANIT_NULL_HANDLE)
+    return GRANIT_ERROR_INVALID_HANDLE;
+  granit_rendering_desc rendering = GRANIT_RENDERING_DESC_INIT;
+  rendering.color_attachments = &color;
+  rendering.color_attachment_count = 1;
+  rendering.area.width = state.width;
+  rendering.area.height = state.height;
+  auto result = granit_command_recorder_begin_rendering(
+      granit_render_graph_context_renderer(context), granit_render_graph_context_recorder(context),
+      &rendering);
+  if (result == GRANIT_SUCCESS)
+    result = granit_command_recorder_end_rendering(granit_render_graph_context_renderer(context),
+                                                   granit_render_graph_context_recorder(context));
+  return result;
 }
 
 granit_render_graph_access_desc access(granit_render_graph_resource resource,
@@ -22,6 +46,10 @@ granit_render_graph_access_desc access(granit_render_graph_resource resource,
 int main() {
   granit::render_graph_handle graph;
   if (graph.initialize().failed())
+    return 1;
+
+  granit::renderer renderer;
+  if (renderer.initialize({.application_name = "Granit Render Graph Example"}).failed())
     return 1;
 
   granit_texture_desc texture_desc = GRANIT_TEXTURE_DESC_INIT;
@@ -51,7 +79,8 @@ int main() {
   shadow_desc.name_length = 6;
   shadow_desc.accesses = &shadow_write;
   shadow_desc.access_count = 1;
-  if (graph.add_pass(shadow_desc, record_pass, nullptr, shadow_pass).failed())
+  pass_state shadow_state{shadow, texture_desc.width, texture_desc.height};
+  if (graph.add_pass(shadow_desc, record_pass, &shadow_state, shadow_pass).failed())
     return 1;
 
   const granit_render_graph_access_desc scene_accesses[] = {
@@ -65,7 +94,8 @@ int main() {
   scene_desc.name_length = 5;
   scene_desc.accesses = scene_accesses;
   scene_desc.access_count = 2;
-  if (graph.add_pass(scene_desc, record_pass, nullptr, scene_pass).failed())
+  pass_state scene_state{hdr, texture_desc.width, texture_desc.height};
+  if (graph.add_pass(scene_desc, record_pass, &scene_state, scene_pass).failed())
     return 1;
 
   const granit_render_graph_access_desc tone_accesses[] = {
@@ -80,13 +110,20 @@ int main() {
   tone_desc.accesses = tone_accesses;
   tone_desc.access_count = 2;
   granit_render_graph_pass tone_pass = GRANIT_RENDER_GRAPH_INVALID_PASS;
-  if (graph.add_pass(tone_desc, record_pass, nullptr, tone_pass).failed())
+  pass_state tone_state{output, texture_desc.width, texture_desc.height};
+  if (graph.add_pass(tone_desc, record_pass, &tone_state, tone_pass).failed())
     return 1;
 
   if (graph.add_dependency(shadow_pass, scene_pass).failed() ||
       graph.add_dependency(scene_pass, tone_pass).failed() || graph.compile().failed())
     return 1;
 
-  std::puts("Shadow -> Scene -> Tone Mapping graph compiled");
+  granit_render_graph_execution_result execution = GRANIT_RENDER_GRAPH_EXECUTION_RESULT_INIT;
+  if (graph.execute(renderer.native_handle(), GRANIT_NULL_HANDLE, UINT32_MAX, execution).failed())
+    return 1;
+  if (granit_command_recorder_destroy(renderer.native_handle(), execution.recorder) != GRANIT_SUCCESS)
+    return 1;
+
+  std::puts("Shadow -> Scene -> Tone Mapping graph executed");
   return 0;
 }
