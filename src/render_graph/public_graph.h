@@ -6,7 +6,7 @@
 
 #include "render_graph/serial_graph.h"
 
-#include <granit/render_graph/render_graph.h>
+#include <granit/render_graph/graph.h>
 
 #include <string>
 #include <vector>

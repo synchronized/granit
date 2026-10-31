@@ -20,8 +20,9 @@ set(required_files
     "lib/cmake/granit/granitTargets.cmake"
     "lib/cmake/granit/granitRenderGraphTargets.cmake"
     "lib/cmake/granit/granitRenderPipelineTargets.cmake"
-    "include/granit/render_graph/render_graph.h"
-    "include/granit/render_graph/render_graph.hpp"
+    "include/granit/render_graph/graph.h"
+    "include/granit/render_graph/graph.hpp"
+    "include/granit/render_graph/types.h"
     "include/granit/render_graph/types.hpp"
 )
 if(EXISTS "${install_prefix}/lib/cmake/granit/granitWindowTargets.cmake")

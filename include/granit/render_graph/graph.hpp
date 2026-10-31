@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#ifndef GRANIT_RENDER_GRAPH_HPP_
-#define GRANIT_RENDER_GRAPH_HPP_
+#ifndef GRANIT_RENDER_GRAPH_GRAPH_HPP_
+#define GRANIT_RENDER_GRAPH_GRAPH_HPP_
 
 #include <granit/core/result.hpp>
-#include <granit/render_graph/render_graph.h>
+#include <granit/render_graph/graph.h>
 #include <granit/render_graph/types.hpp>
 #include <granit/renderer/buffer.hpp>
 #include <granit/renderer/renderer.hpp>

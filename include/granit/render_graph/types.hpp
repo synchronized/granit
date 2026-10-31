@@ -5,7 +5,7 @@
 #define GRANIT_RENDER_GRAPH_TYPES_HPP_
 
 #include <granit/core/result.hpp>
-#include <granit/render_graph/render_graph.h>
+#include <granit/render_graph/types.h>
 #include <granit/renderer/texture.hpp>
 
 #include <cstdint>
