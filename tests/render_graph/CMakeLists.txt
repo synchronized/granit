@@ -7,6 +7,7 @@ add_executable(
   granit_render_graph_test
   graph_compiler_test.cpp
   serial_graph_test.cpp
+  public_api_test.cpp
 )
 target_include_directories(granit_render_graph_test PRIVATE "${PROJECT_SOURCE_DIR}/src")
 target_link_libraries(

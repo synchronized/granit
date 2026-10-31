@@ -37,12 +37,9 @@ int main() {
   granit_render_graph_resource shadow = GRANIT_RENDER_GRAPH_INVALID_RESOURCE;
   granit_render_graph_resource hdr = GRANIT_RENDER_GRAPH_INVALID_RESOURCE;
   granit_render_graph_resource output = GRANIT_RENDER_GRAPH_INVALID_RESOURCE;
-  if (granit_render_graph_create_transient_texture(graph.native_handle(), &texture_desc, "shadow",
-                                                   6, &shadow) != GRANIT_SUCCESS ||
-      granit_render_graph_create_transient_texture(graph.native_handle(), &texture_desc, "hdr", 3,
-                                                   &hdr) != GRANIT_SUCCESS ||
-      granit_render_graph_create_transient_texture(graph.native_handle(), &texture_desc, "output",
-                                                   6, &output) != GRANIT_SUCCESS)
+  if (graph.create_transient_texture(texture_desc, "shadow", shadow).failed() ||
+      graph.create_transient_texture(texture_desc, "hdr", hdr).failed() ||
+      graph.create_transient_texture(texture_desc, "output", output).failed())
     return 1;
 
   const granit_render_graph_access_desc shadow_write =
@@ -54,8 +51,7 @@ int main() {
   shadow_desc.name_length = 6;
   shadow_desc.accesses = &shadow_write;
   shadow_desc.access_count = 1;
-  if (granit_render_graph_add_pass(graph.native_handle(), &shadow_desc, record_pass, nullptr,
-                                   &shadow_pass) != GRANIT_SUCCESS)
+  if (graph.add_pass(shadow_desc, record_pass, nullptr, shadow_pass).failed())
     return 1;
 
   const granit_render_graph_access_desc scene_accesses[] = {
@@ -69,8 +65,7 @@ int main() {
   scene_desc.name_length = 5;
   scene_desc.accesses = scene_accesses;
   scene_desc.access_count = 2;
-  if (granit_render_graph_add_pass(graph.native_handle(), &scene_desc, record_pass, nullptr,
-                                   &scene_pass) != GRANIT_SUCCESS)
+  if (graph.add_pass(scene_desc, record_pass, nullptr, scene_pass).failed())
     return 1;
 
   const granit_render_graph_access_desc tone_accesses[] = {
@@ -85,15 +80,11 @@ int main() {
   tone_desc.accesses = tone_accesses;
   tone_desc.access_count = 2;
   granit_render_graph_pass tone_pass = GRANIT_RENDER_GRAPH_INVALID_PASS;
-  if (granit_render_graph_add_pass(graph.native_handle(), &tone_desc, record_pass, nullptr,
-                                   &tone_pass) != GRANIT_SUCCESS)
+  if (graph.add_pass(tone_desc, record_pass, nullptr, tone_pass).failed())
     return 1;
 
-  if (granit_render_graph_add_dependency(graph.native_handle(), shadow_pass, scene_pass) !=
-          GRANIT_SUCCESS ||
-      granit_render_graph_add_dependency(graph.native_handle(), scene_pass, tone_pass) !=
-          GRANIT_SUCCESS ||
-      granit_render_graph_compile(graph.native_handle()) != GRANIT_SUCCESS)
+  if (graph.add_dependency(shadow_pass, scene_pass).failed() ||
+      graph.add_dependency(scene_pass, tone_pass).failed() || graph.compile().failed())
     return 1;
 
   std::puts("Shadow -> Scene -> Tone Mapping graph compiled");
