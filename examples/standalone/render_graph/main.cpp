@@ -46,7 +46,7 @@ access(granit::render_graph::render_graph_resource resource,
 } // namespace
 
 int main() {
-  granit::render_graph::render_graph_handle graph;
+  granit::render_graph::graph graph;
   if (graph.initialize().failed())
     return 1;
 

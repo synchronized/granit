@@ -19,10 +19,10 @@
 
 namespace granit::render_graph {
 
-class render_graph_handle {
+class graph {
 public:
-  render_graph_handle() noexcept = default;
-  ~render_graph_handle() { static_cast<void>(reset()); }
+  graph() noexcept = default;
+  ~graph() { static_cast<void>(reset()); }
 
   [[nodiscard]] result initialize(const render_graph_desc& desc = {}) noexcept {
     static_cast<void>(reset());
@@ -34,12 +34,10 @@ public:
     return from_native(granit_render_graph_create(&native_desc, &handle_));
   }
 
-  render_graph_handle(const render_graph_handle&) = delete;
-  render_graph_handle& operator=(const render_graph_handle&) = delete;
-  render_graph_handle(render_graph_handle&& other) noexcept : handle_(other.handle_) {
-    other.handle_ = GRANIT_NULL_HANDLE;
-  }
-  render_graph_handle& operator=(render_graph_handle&& other) noexcept {
+  graph(const graph&) = delete;
+  graph& operator=(const graph&) = delete;
+  graph(graph&& other) noexcept : handle_(other.handle_) { other.handle_ = GRANIT_NULL_HANDLE; }
+  graph& operator=(graph&& other) noexcept {
     if (this != &other) {
       static_cast<void>(reset());
       handle_ = other.handle_;
