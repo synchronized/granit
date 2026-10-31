@@ -21,24 +21,42 @@ function(granit_add_render_graph_module)
     PRIVATE
       "${PROJECT_SOURCE_DIR}/src/render_graph/graph_compiler.cpp"
       "${PROJECT_SOURCE_DIR}/src/render_graph/serial_graph.cpp"
+      "${PROJECT_SOURCE_DIR}/src/render_graph/public_api.cpp"
+      "${PROJECT_SOURCE_DIR}/src/core/handle_table.cpp"
     PRIVATE
-      FILE_SET HEADERS
+      FILE_SET detail_headers TYPE HEADERS
       BASE_DIRS "${PROJECT_SOURCE_DIR}/src"
       FILES
         "${PROJECT_SOURCE_DIR}/src/render_graph/graph_compiler.h"
         "${PROJECT_SOURCE_DIR}/src/render_graph/serial_graph.h"
+        "${PROJECT_SOURCE_DIR}/src/render_graph/public_graph.h"
+    PUBLIC
+      FILE_SET HEADERS TYPE HEADERS
+      BASE_DIRS "${PROJECT_SOURCE_DIR}/include"
+      FILES
+        "${PROJECT_SOURCE_DIR}/include/granit/render_graph.h"
+        "${PROJECT_SOURCE_DIR}/include/granit/render_graph.hpp"
   )
   target_compile_features(granit_render_graph PUBLIC cxx_std_20)
   target_include_directories(
-    granit_render_graph PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>"
+    granit_render_graph
+    PUBLIC
+      "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>"
+      "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
+      "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
   )
   target_link_libraries(granit_render_graph PUBLIC granit::granit)
+  target_compile_definitions(
+    granit_render_graph
+    PRIVATE GRANIT_BUILDING_LIBRARY
+    PUBLIC GRANIT_STATIC_DEFINE
+  )
   granit_target_compile_warnings(granit_render_graph)
   granit_target_output_directories(granit_render_graph)
   set_target_properties(
     granit_render_graph
     PROPERTIES
-      EXPORT_NAME detail_render_graph
+      EXPORT_NAME render_graph
       FOLDER "Modules"
       POSITION_INDEPENDENT_CODE ON
   )

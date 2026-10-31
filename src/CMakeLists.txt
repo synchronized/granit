@@ -237,7 +237,6 @@ granit_add_render_pipeline_module()
 
 install(
   TARGETS
-    granit_render_graph
     granit_material
     granit_pbr
     granit_scene
@@ -245,6 +244,19 @@ install(
   EXPORT granitRenderPipelineTargets
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
   COMPONENT RenderPipeline
+)
+install(
+  TARGETS granit_render_graph
+  EXPORT granitRenderGraphTargets
+  ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+  FILE_SET HEADERS DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+  COMPONENT RenderGraph
+)
+install(
+  EXPORT granitRenderGraphTargets
+  NAMESPACE granit::
+  DESTINATION "${GRANIT_INSTALL_CMAKEDIR}"
+  COMPONENT RenderGraph
 )
 install(
   TARGETS granit_render_pipeline

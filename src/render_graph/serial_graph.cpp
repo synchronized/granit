@@ -90,6 +90,15 @@ resource_id serial_graph::create_transient_texture(const granit_texture_desc& de
   return compiler_.add_resource();
 }
 
+bool serial_graph::update_transient_texture(resource_id resource, const granit_texture_desc& desc) {
+  if (resource >= resources_.size() || resources_[resource].type != imported_resource_type::texture_view ||
+      !resources_[resource].transient) {
+    return false;
+  }
+  resources_[resource].texture_desc = desc;
+  return true;
+}
+
 pass_id serial_graph::add_pass(pass_desc desc, pass_callback callback, std::string name) {
   const auto pass = compiler_.add_pass(desc);
   passes_.push_back(std::move(desc));
@@ -249,20 +258,6 @@ execution_result serial_graph::execute_internal(granit_renderer renderer, granit
       static_cast<void>(destroy_resources());
       return fail_at(result, execution_phase::record_pass, pass);
     }
-    for (std::size_t resource_index = resources.size(); resource_index > 0; --resource_index) {
-      const auto index = resource_index - 1;
-      const auto& lifetime = compiled.resource_lifetimes[index];
-      if (!resources[index].transient || !lifetime.used || lifetime.last_use != order_index) {
-        continue;
-      }
-      result = destroy_resource(index);
-      if (result != GRANIT_SUCCESS) {
-        destroy_recorder(renderer, recorder);
-        static_cast<void>(destroy_resources());
-        return fail_at(result, execution_phase::destroy_resources, pass,
-                       static_cast<resource_id>(index));
-      }
-    }
   }
 
   result = granit_command_recorder_end(renderer, recorder);
@@ -278,6 +273,11 @@ execution_result serial_graph::execute_internal(granit_renderer renderer, granit
     destroy_recorder(renderer, recorder);
     static_cast<void>(destroy_resources());
     return fail(result, execution_phase::submit);
+  }
+  result = destroy_resources();
+  if (result != GRANIT_SUCCESS) {
+    destroy_recorder(renderer, recorder);
+    return fail(result, execution_phase::destroy_resources);
   }
   execution_result success;
   success.recorder = recorder;

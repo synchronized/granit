@@ -36,5 +36,6 @@
 #include <granit/renderer/texture_asset.h>
 #include <granit/renderer/timestamp_query.h>
 #include <granit/renderer/upload_batch.h>
+#include <granit/render_graph.h>
 
 #endif

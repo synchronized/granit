@@ -45,10 +45,11 @@ add_library(
     pipeline_environment_map_h.c
     pipeline_text_draw_list_h.c
     pipeline_text_atlas_h.c
+    render_graph_h.c
 )
 target_compile_features(granit_c_header_test PRIVATE c_std_11)
 target_link_libraries(
-  granit_c_header_test PRIVATE granit::granit granit::render_pipeline granit::window
+  granit_c_header_test PRIVATE granit::granit granit::render_graph granit::render_pipeline granit::window
 )
 granit_target_compile_warnings(granit_c_header_test)
 
@@ -95,8 +96,9 @@ add_library(
     pipeline_text_atlas_hpp.cpp
     window_hpp.cpp
     window_native_hpp.cpp
+    render_graph_hpp.cpp
 )
 target_link_libraries(
-  granit_cpp_header_test PRIVATE granit::granit granit::render_pipeline granit::window
+  granit_cpp_header_test PRIVATE granit::granit granit::render_graph granit::render_pipeline granit::window
 )
 granit_target_compile_warnings(granit_cpp_header_test)

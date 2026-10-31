@@ -98,6 +98,8 @@ public:
                                                     std::string name = {});
   [[nodiscard]] resource_id create_transient_texture(const granit_texture_desc& desc,
                                                      std::string name = {});
+  [[nodiscard]] bool update_transient_texture(resource_id resource,
+                                               const granit_texture_desc& desc);
   [[nodiscard]] pass_id add_pass(pass_desc desc, pass_callback callback, std::string name = {});
   [[nodiscard]] bool add_dependency(pass_id before, pass_id after);
   [[nodiscard]] execution_result execute(granit_renderer renderer) const;

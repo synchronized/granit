@@ -39,6 +39,7 @@ struct resource_desc {
 struct resource_access {
   resource_id resource = invalid_resource_id;
   access_type type = access_type::read;
+  std::uint32_t usage = 0;
 };
 
 struct pass_desc {

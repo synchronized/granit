@@ -32,6 +32,7 @@
 6. [Frame 与命令录制分层](concepts/frame-and-command-lifecycle.md)
 6. [Frame Context](reference/frame-context.md)
 7. [线程安全](reference/thread-safety.md)
+8. [公共 Render Graph（实验性）](reference/render-graph.md)
 
 ### 理解高级渲染层
 

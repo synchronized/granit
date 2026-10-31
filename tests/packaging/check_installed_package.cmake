@@ -54,6 +54,8 @@ endfunction()
 granit_check_package(core_only TRUE -DGRANIT_REQUEST_VERSION=${granit_current_minor})
 granit_check_package(render_pipeline TRUE -DGRANIT_REQUEST_VERSION=${granit_current_minor}
                      -DGRANIT_REQUEST_COMPONENT=RenderPipeline)
+granit_check_package(render_graph TRUE -DGRANIT_REQUEST_VERSION=${granit_current_minor}
+                     -DGRANIT_REQUEST_COMPONENT=RenderGraph)
 granit_check_package(window TRUE -DGRANIT_REQUEST_VERSION=${granit_current_minor}
                      -DGRANIT_REQUEST_COMPONENT=Window)
 if(EXISTS "${GRANIT_INSTALL_PREFIX}/lib/cmake/granit/granitAssetToolsTargets.cmake")
