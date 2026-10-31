@@ -5,7 +5,7 @@
 #define GRANIT_RENDER_GRAPH_HPP_
 
 #include <granit/core/result.hpp>
-#include <granit/render_graph.h>
+#include <granit/render_graph/render_graph.h>
 #include <granit/renderer/buffer.hpp>
 #include <granit/renderer/renderer.hpp>
 #include <granit/renderer/texture.hpp>

@@ -34,8 +34,8 @@ function(granit_add_render_graph_module)
       FILE_SET HEADERS TYPE HEADERS
       BASE_DIRS "${PROJECT_SOURCE_DIR}/include"
       FILES
-        "${PROJECT_SOURCE_DIR}/include/granit/render_graph.h"
-        "${PROJECT_SOURCE_DIR}/include/granit/render_graph.hpp"
+        "${PROJECT_SOURCE_DIR}/include/granit/render_graph/render_graph.h"
+        "${PROJECT_SOURCE_DIR}/include/granit/render_graph/render_graph.hpp"
   )
   target_compile_features(granit_render_graph PUBLIC cxx_std_20)
   target_include_directories(

@@ -28,7 +28,7 @@ foreach(granit_header IN LISTS granit_public_headers)
   elseif(granit_relative_header MATCHES "^pipeline/")
     math(EXPR granit_observation_count "${granit_observation_count} + 1")
   elseif(granit_relative_header MATCHES "^(asset_tools|integrations)/" OR
-         granit_relative_header MATCHES "^render_graph\.(h|hpp)$")
+         granit_relative_header MATCHES "^render_graph/")
     math(EXPR granit_experimental_count "${granit_experimental_count} + 1")
   else()
     list(APPEND granit_unclassified_headers "${granit_relative_header}")

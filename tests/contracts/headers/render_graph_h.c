@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/render_graph.h>
+#include <granit/render_graph/render_graph.h>
 
 typedef char granit_render_graph_access_size_check[
     (sizeof(granit_render_graph_access_desc) == GRANIT_RENDER_GRAPH_ACCESS_DESC_VERSION_1_SIZE)

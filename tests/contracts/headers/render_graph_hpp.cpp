@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Granit contributors
 
-#include <granit/render_graph.hpp>
+#include <granit/render_graph/render_graph.hpp>
 
 #include <span>
 #include <type_traits>
