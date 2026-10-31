@@ -42,7 +42,8 @@
 `granit::granit`，不链接 `granit::render_pipeline`、Scene 或 Material。公共入口为：
 
 - `include/granit/render_graph/render_graph.h`：C11 ABI、句柄、资源 ID、描述结构、回调和结果查询；
-- `include/granit/render_graph/render_graph.hpp`：C++20 RAII 包装和类型安全辅助；
+- `include/granit/render_graph/types.hpp`：C++20 描述类型、访问声明和执行结果；
+- `include/granit/render_graph/render_graph.hpp`：C++20 RAII 包装和 Graph 操作；
 - 安装 SDK 导出 `granit::render_graph`，外部项目只需 `find_package(granit COMPONENTS RenderGraph)`。
 
 现有 `src/render_graph` 实现先拆分为公共实现和内部编译辅助；不得把 `src/render_graph/*.h`

@@ -13,7 +13,7 @@ find_package(granit CONFIG REQUIRED COMPONENTS RenderGraph)
 target_link_libraries(game PRIVATE granit::render_graph)
 ```
 
-公共入口是 `granit/render_graph/render_graph.h` 和 `granit/render_graph/render_graph.hpp`，不需要包含 `src/` 或 Vulkan
+公共入口是 `granit/render_graph/render_graph.h`、`render_graph.hpp` 和 `types.hpp`，不需要包含 `src/` 或 Vulkan
 头文件。Graph 不拥有 Renderer，也不负责加载文件或创建 Pipeline。
 
 使用 C++ 入口时，描述数据使用 `granit::render_graph_desc`、
