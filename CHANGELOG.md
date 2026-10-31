@@ -8,6 +8,15 @@
 
 ## Unreleased
 
+## 0.71.0 - 2026-10-31
+
+- 新增实验性的公共 Render Graph component，可独立依赖核心 Renderer，支持外部资源导入、临时资源、
+  Pass 读写声明、显式依赖、离屏执行和窗口 Frame 执行；
+- 新增 C11 `types.h`/`graph.h` 与 C++20 `types.hpp`/`graph.hpp` 公共入口，以及安装 SDK 外部
+  Consumer 示例；
+- 补充 Render Graph 的资源所有权、生命周期、错误诊断和 Vulkan Subpass 边界文档；
+- 公共 Render Graph API、头文件路径和 C++ 名称仍属于 0.x 实验性接口，后续版本可能调整。
+
 ## 0.70.0 - 2026-10-28
 
 - Window C API 的窗口标志宏统一为 `GRANIT_WINDOW_FLAG_*`；原
