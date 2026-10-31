@@ -17,7 +17,7 @@
 #include <string_view>
 #include <vector>
 
-namespace granit {
+namespace granit::render_graph {
 
 class render_graph_handle {
 public:
@@ -188,6 +188,6 @@ private:
   render_graph_native_handle handle_ = GRANIT_NULL_HANDLE;
 };
 
-} // namespace granit
+} // namespace granit::render_graph
 
 #endif

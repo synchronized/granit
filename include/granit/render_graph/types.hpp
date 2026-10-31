@@ -12,7 +12,7 @@
 #include <span>
 #include <string_view>
 
-namespace granit {
+namespace granit::render_graph {
 
 using render_graph_resource = std::uint32_t;
 using render_graph_pass = std::uint32_t;
@@ -77,6 +77,6 @@ struct render_graph_execution_result {
 
 using render_graph_record_callback = granit_render_graph_record_callback;
 
-} // namespace granit
+} // namespace granit::render_graph
 
 #endif

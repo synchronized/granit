@@ -4,6 +4,6 @@
 #include <granit/render_graph/render_graph.hpp>
 
 int main() {
-  granit::render_graph_handle graph;
+  granit::render_graph::render_graph_handle graph;
   return graph.initialize().ok() && graph.valid() ? 0 : 1;
 }
