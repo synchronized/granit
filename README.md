@@ -18,7 +18,7 @@ Granit 不是 Vulkan API 的逐项重命名，而是围绕实际渲染任务提�
 ```text
 Scene / View / Material
           -> Render Pipeline（默认整帧策略）
-          -> 内部 Render Graph（Pass 与资源依赖）
+          -> Render Graph（公共或参考管线内部，Pass 与资源依赖）
           -> Renderer / Command Recorder（GPU 执行）
           -> 私有 HAL -> Vulkan / WebGPU（内部后端）
 ```
@@ -27,7 +27,7 @@ Scene / View / Material
 
 - 使用完整 Render Pipeline，快速获得默认 Forward PBR 渲染路径。
 - 扩展默认 Pipeline 和 Material，插入自定义效果。
-- 直接使用核心 Renderer 自行组织渲染流程；Render Graph 当前仅供参考管线内部使用。
+- 直接使用核心 Renderer 和实验性的公共 Render Graph 自行组织渲染流程。
 
 Granit 采用“Bring Your Own Engine”边界，不接管使用者的 ECS、Scene Graph、资产数据库或完整
 应用生命周期。
