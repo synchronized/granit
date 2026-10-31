@@ -16,6 +16,11 @@ target_link_libraries(game PRIVATE granit::render_graph)
 公共入口是 `granit/render_graph.h` 和 `granit/render_graph.hpp`，不需要包含 `src/` 或 Vulkan
 头文件。Graph 不拥有 Renderer，也不负责加载文件或创建 Pipeline。
 
+使用 C++ 入口时，描述数据使用 `granit::render_graph_desc`、
+`granit::render_graph_pass_desc`、`granit::render_graph_access_desc`、
+`granit::texture_desc` 和 `granit::buffer_desc`。这些类型只在包装层转换为 C ABI 描述结构；
+`native_handle()` 仅用于明确的底层互操作，不表示 C++ 包装层接管句柄所有权。
+
 ## 资源与 Pass
 
 调用方可以导入已有 Buffer、Texture View，或创建图内临时 Buffer、Texture。导入资源是借用的，
