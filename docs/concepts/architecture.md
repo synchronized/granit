@@ -89,8 +89,9 @@ Granit Renderer 的长期职责止于 GPU 资源、Pipeline、Bind Group、命�
 GPU 生命周期。它不负责选择 PBR 模型、筛选 Scene、生成阴影、管理环境光照或执行 Tone Mapping。
 
 Material、Scene、PBR、Lighting 和 Post Process 由 `granit::render_pipeline` 组合成类似
-DiligentFX 的可选高级参考渲染套件。Render Graph 当前是该套件的内部实现模块，没有公共 C ABI
-或 C++ API。统一门面提供默认可运行路径，但不是核心 Renderer 的唯一入口。
+DiligentFX 的可选高级参考渲染套件。公共 `RenderGraph` component 作为实验性独立扩展提供给
+外部引擎；它只依赖核心 Renderer，不要求使用参考管线。统一门面提供默认可运行路径，但不是
+核心 Renderer 的唯一入口。
 
 使用者当前可以选择三种逐级开放的层级：
 
@@ -99,8 +100,8 @@ DiligentFX 的可选高级参考渲染套件。Render Graph 当前是该套件�
 2. 配置或扩展参考管线，使用自定义 Material，并在稳定扩展点插入后处理、UI 等 Pass。
 3. 直接使用核心 Renderer，自行管理 GPU 资源、命令、同步和提交。
 
-自行组合高层模块或构建 Render Graph 属于未来可能公开的扩展层级；在形成真实需求和独立 ABI
-设计前，不应把内部头文件或实现目标作为公共接口使用。
+外部引擎可以通过 `find_package(granit COMPONENTS RenderGraph)` 使用公共 Render Graph；仍不应
+包含 `src/` 内部头文件或依赖内部实现目标。该 component 的 ABI 和高级功能仍处于实验性阶段。
 
 各层职责保持正交：PBR 决定材质与光照如何着色；Render Pipeline 决定一帧包含哪些渲染阶段；
 Render Graph 根据 Pass 的资源读写声明组织依赖、顺序和资源状态；Renderer 负责执行后端中立的
@@ -109,7 +110,7 @@ GPU 命令。Render Graph 不内置 PBR、阴影或 UI 业务语义，Renderer �
 ```text
 Scene / View / Material
           -> Render Pipeline（整帧策略）
-          -> 内部 Render Graph（Pass 与资源依赖）
+          -> Render Graph（公共或参考管线内部，Pass 与资源依赖）
           -> Renderer / Command Recorder（GPU 执行）
           -> Vulkan / WebGPU（内部后端）
 ```

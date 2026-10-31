@@ -12,7 +12,7 @@ Render Graph 和 Render Pipeline 位于它们之上。
 ```text
 Render Pipeline（Scene、PBR、阴影、后处理）
         ↓
-内部 Render Graph（Pass、依赖、资源状态）
+Render Graph（公共或参考管线内部，Pass、依赖、资源状态）
         ↓
 Frame Context（窗口 Frame、在途槽、Recorder 复用）
         ↓
