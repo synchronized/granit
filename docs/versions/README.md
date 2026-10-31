@@ -12,12 +12,12 @@
 
 ## 当前版本
 
-[v0.69.0：跨工具链验收与本地长测](v0.69.0.md) 发布范围与验收已完成，工程版本为 0.69.0。
-公开制品与校验和以 [GitHub Release](https://github.com/synchronized/granit/releases/tag/v0.69.0) 为准。
+[v0.70.0：Window 原生句柄与 Surface 解耦](v0.70.0.md) 为上一发布版本；v0.71.0 正在准备中。
 
 ## 候选版本
 
 - [v0.70.0：Window 原生句柄与 Surface 解耦](v0.70.0.md)
+- [v0.71.0：公共 Render Graph API](v0.71.0.md)
 
 ## 已发布版本
 
