@@ -30,6 +30,10 @@ struct record_state {
   granit_result result = GRANIT_SUCCESS;
 };
 
+struct failure_state {
+  bool fail = true;
+};
+
 struct window_record_state {
   granit_render_graph_resource resource = GRANIT_RENDER_GRAPH_INVALID_RESOURCE;
   granit_texture_view view = GRANIT_NULL_HANDLE;
@@ -74,6 +78,15 @@ granit_result fill_buffer(const granit_render_graph_pass_context* context, void*
       granit_render_graph_context_renderer(context), granit_render_graph_context_recorder(context),
       state.buffer, 0, 256, 0x12345678U);
   return state.result;
+}
+
+granit_result fail_once(const granit_render_graph_pass_context*, void* user_data) {
+  auto& state = *static_cast<failure_state*>(user_data);
+  if (state.fail) {
+    state.fail = false;
+    return GRANIT_ERROR_UNSUPPORTED;
+  }
+  return GRANIT_SUCCESS;
 }
 
 granit_result record_window(const granit_render_graph_pass_context* context, void* user_data) {
@@ -253,6 +266,44 @@ TEST_CASE("公共 Render Graph 可更新尺寸并重复执行瞬态纹理") {
   REQUIRE(granit_render_graph_compile(graph) == GRANIT_SUCCESS);
   REQUIRE(execute() == GRANIT_SUCCESS);
   CHECK(state.result == GRANIT_SUCCESS);
+  REQUIRE(granit_render_graph_destroy(graph) == GRANIT_SUCCESS);
+}
+
+TEST_CASE("公共 Render Graph 录制失败后清理并允许再次执行") {
+  granit::renderer renderer;
+  const auto initialize = renderer.initialize({.application_name = "granit-public-render-graph-failure"});
+  if (environment_unavailable(initialize))
+    SKIP("当前运行环境没有满足要求的 Vulkan 设备");
+  REQUIRE(initialize == granit::result::success);
+
+  granit_render_graph graph = GRANIT_NULL_HANDLE;
+  REQUIRE(granit_render_graph_create(nullptr, &graph) == GRANIT_SUCCESS);
+  const granit_render_graph_pass_desc pass_desc{
+      GRANIT_RENDER_GRAPH_PASS_DESC_VERSION_1_SIZE,
+      GRANIT_RENDER_GRAPH_PASS_SIDE_EFFECT_BIT,
+      "Fail Once",
+      9,
+      nullptr,
+      0,
+      0};
+  failure_state state;
+  granit_render_graph_pass pass = GRANIT_RENDER_GRAPH_INVALID_PASS;
+  REQUIRE(granit_render_graph_add_pass(graph, &pass_desc, fail_once, &state, &pass) ==
+          GRANIT_SUCCESS);
+
+  granit_render_graph_execution_result execution = GRANIT_RENDER_GRAPH_EXECUTION_RESULT_INIT;
+  REQUIRE(granit_render_graph_execute(graph, renderer.native_handle(), GRANIT_NULL_HANDLE,
+                                      UINT32_MAX, &execution) == GRANIT_ERROR_UNSUPPORTED);
+  CHECK(execution.phase == GRANIT_RENDER_GRAPH_EXECUTION_PHASE_RECORD_PASS);
+  CHECK(execution.recorder == GRANIT_NULL_HANDLE);
+  CHECK(std::string_view{execution.error_pass_name, execution.error_pass_name_length} == "Fail Once");
+
+  execution = GRANIT_RENDER_GRAPH_EXECUTION_RESULT_INIT;
+  REQUIRE(granit_render_graph_execute(graph, renderer.native_handle(), GRANIT_NULL_HANDLE,
+                                      UINT32_MAX, &execution) == GRANIT_SUCCESS);
+  REQUIRE(execution.recorder != GRANIT_NULL_HANDLE);
+  REQUIRE(granit_command_recorder_destroy(renderer.native_handle(), execution.recorder) ==
+          GRANIT_SUCCESS);
   REQUIRE(granit_render_graph_destroy(graph) == GRANIT_SUCCESS);
 }
 
