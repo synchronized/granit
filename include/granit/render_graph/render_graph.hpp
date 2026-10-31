@@ -24,7 +24,7 @@ public:
   graph() noexcept = default;
   ~graph() { static_cast<void>(reset()); }
 
-  [[nodiscard]] result initialize(const render_graph_desc& desc = {}) noexcept {
+  [[nodiscard]] result initialize(const graph_desc& desc = {}) noexcept {
     static_cast<void>(reset());
     const granit_render_graph_desc native_desc{
         .struct_size = GRANIT_RENDER_GRAPH_DESC_VERSION_1_SIZE,
@@ -47,23 +47,22 @@ public:
   }
 
   [[nodiscard]] bool valid() const noexcept { return handle_ != GRANIT_NULL_HANDLE; }
-  [[nodiscard]] render_graph_native_handle native_handle() const noexcept { return handle_; }
+  [[nodiscard]] handle native_handle() const noexcept { return handle_; }
 
   [[nodiscard]] result import_buffer(buffer_ref buffer, bool exported, std::string_view name,
-                                     render_graph_resource& resource) noexcept {
+                                     resource_id& resource) noexcept {
     return from_native(granit_render_graph_import_buffer(
         handle_, buffer.native_handle(), exported ? 1U : 0U, name.data(),
         static_cast<std::uint32_t>(name.size()), &resource));
   }
   [[nodiscard]] result import_texture_view(texture_view_ref view, bool exported,
-                                           std::string_view name,
-                                           render_graph_resource& resource) noexcept {
+                                           std::string_view name, resource_id& resource) noexcept {
     return from_native(granit_render_graph_import_texture_view(
         handle_, view.native_handle(), exported ? 1U : 0U, name.data(),
         static_cast<std::uint32_t>(name.size()), &resource));
   }
   [[nodiscard]] result create_transient_buffer(const buffer_desc& desc, std::string_view name,
-                                               render_graph_resource& resource) noexcept {
+                                               resource_id& resource) noexcept {
     const granit_buffer_desc native_desc{
         .struct_size = GRANIT_BUFFER_DESC_VERSION_1_SIZE,
         .usage = static_cast<granit_buffer_usage>(desc.usage),
@@ -76,7 +75,7 @@ public:
         handle_, &native_desc, name.data(), static_cast<std::uint32_t>(name.size()), &resource));
   }
   [[nodiscard]] result create_transient_texture(const texture_desc& desc, std::string_view name,
-                                                render_graph_resource& resource) noexcept {
+                                                resource_id& resource) noexcept {
     const granit_texture_desc native_desc{
         .struct_size = GRANIT_TEXTURE_DESC_VERSION_1_SIZE,
         .dimension = static_cast<granit_texture_dimension>(desc.dimension),
@@ -94,8 +93,7 @@ public:
     return from_native(granit_render_graph_create_transient_texture(
         handle_, &native_desc, name.data(), static_cast<std::uint32_t>(name.size()), &resource));
   }
-  [[nodiscard]] result
-  update_transient_texture(const render_graph_transient_texture_update& update) noexcept {
+  [[nodiscard]] result update_transient_texture(const transient_texture_update& update) noexcept {
     const granit_texture_desc native_desc{
         .struct_size = GRANIT_TEXTURE_DESC_VERSION_1_SIZE,
         .dimension = static_cast<granit_texture_dimension>(update.desc.dimension),
@@ -118,9 +116,8 @@ public:
     };
     return from_native(granit_render_graph_update_transient_texture(handle_, &native_update));
   }
-  [[nodiscard]] result add_pass(const render_graph_pass_desc& desc,
-                                render_graph_record_callback callback, void* user_data,
-                                render_graph_pass& pass) noexcept {
+  [[nodiscard]] result add_pass(const pass_desc& desc, record_callback callback, void* user_data,
+                                pass_id& pass) noexcept {
     try {
       const auto native_accesses = make_native_accesses(desc.accesses);
       const granit_render_graph_pass_desc native_desc{
@@ -138,15 +135,14 @@ public:
       return result::out_of_memory;
     }
   }
-  [[nodiscard]] result add_dependency(render_graph_pass before, render_graph_pass after) noexcept {
+  [[nodiscard]] result add_dependency(pass_id before, pass_id after) noexcept {
     return from_native(granit_render_graph_add_dependency(handle_, before, after));
   }
   [[nodiscard]] result compile() noexcept {
     return from_native(granit_render_graph_compile(handle_));
   }
   [[nodiscard]] result execute(granit_renderer renderer, granit_frame frame,
-                               std::uint32_t frame_slot,
-                               render_graph_execution_result& output) noexcept {
+                               std::uint32_t frame_slot, execution_result& output) noexcept {
     granit_render_graph_execution_result native_output = GRANIT_RENDER_GRAPH_EXECUTION_RESULT_INIT;
     const auto value =
         granit_render_graph_execute(handle_, renderer, frame, frame_slot, &native_output);
@@ -172,18 +168,18 @@ public:
 
 private:
   [[nodiscard]] static std::vector<granit_render_graph_access_desc>
-  make_native_accesses(std::span<const render_graph_access_desc> accesses) {
+  make_native_accesses(std::span<const access_desc> accesses) {
     std::vector<granit_render_graph_access_desc> native;
     native.reserve(accesses.size());
     for (const auto& access : accesses) {
       native.push_back({GRANIT_RENDER_GRAPH_ACCESS_DESC_VERSION_1_SIZE, access.resource,
-                        static_cast<std::uint32_t>(access.access),
-                        static_cast<std::uint32_t>(access.usage), 0});
+                        static_cast<std::uint32_t>(access.direction),
+                        static_cast<std::uint32_t>(access.kind), 0});
     }
     return native;
   }
 
-  render_graph_native_handle handle_ = GRANIT_NULL_HANDLE;
+  handle handle_ = GRANIT_NULL_HANDLE;
 };
 
 } // namespace granit::render_graph
