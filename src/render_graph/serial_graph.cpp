@@ -10,8 +10,9 @@
 namespace granit::render_graph {
 namespace {
 
-execution_result fail(granit_result result, execution_phase phase, pass_id pass = invalid_pass_id) {
-  execution_result failure;
+serial_execution_result fail(granit_result result, execution_phase phase,
+                             pass_id pass = invalid_pass_id) {
+  serial_execution_result failure;
   failure.result = result;
   failure.phase = phase;
   failure.error_pass = pass;
@@ -99,7 +100,7 @@ bool serial_graph::update_transient_texture(resource_id resource, const granit_t
   return true;
 }
 
-pass_id serial_graph::add_pass(pass_desc desc, pass_callback callback, std::string name) {
+pass_id serial_graph::add_pass(compiled_pass_desc desc, pass_callback callback, std::string name) {
   const auto pass = compiler_.add_pass(desc);
   passes_.push_back(std::move(desc));
   callbacks_.push_back(std::move(callback));
@@ -111,19 +112,20 @@ bool serial_graph::add_dependency(pass_id before, pass_id after) {
   return compiler_.add_dependency(before, after);
 }
 
-execution_result serial_graph::execute(granit_renderer renderer) const {
+serial_execution_result serial_graph::execute(granit_renderer renderer) const {
   return execute_internal(renderer, GRANIT_NULL_HANDLE, UINT32_MAX);
 }
 
-execution_result serial_graph::execute_frame(granit_renderer renderer, granit_frame frame) const {
+serial_execution_result serial_graph::execute_frame(granit_renderer renderer,
+                                                    granit_frame frame) const {
   if (frame == GRANIT_NULL_HANDLE) {
     return fail(GRANIT_ERROR_INVALID_HANDLE, execution_phase::submit);
   }
   return execute_internal(renderer, frame, UINT32_MAX);
 }
 
-execution_result serial_graph::execute_frame(granit_renderer renderer, granit_frame frame,
-                                             std::uint32_t frame_slot) const {
+serial_execution_result serial_graph::execute_frame(granit_renderer renderer, granit_frame frame,
+                                                    std::uint32_t frame_slot) const {
   if (frame == GRANIT_NULL_HANDLE || frame_slot == UINT32_MAX)
     return fail(GRANIT_ERROR_INVALID_ARGUMENT, execution_phase::submit);
   return execute_internal(renderer, frame, frame_slot);
@@ -135,8 +137,9 @@ diagnostic_graph serial_graph::diagnostics() const {
           .resource_names = resource_names_};
 }
 
-execution_result serial_graph::execute_internal(granit_renderer renderer, granit_frame frame,
-                                                std::uint32_t frame_slot) const {
+serial_execution_result serial_graph::execute_internal(granit_renderer renderer,
+                                                        granit_frame frame,
+                                                        std::uint32_t frame_slot) const {
   if (renderer == GRANIT_NULL_HANDLE) {
     return fail(GRANIT_ERROR_INVALID_HANDLE, execution_phase::create_recorder);
   }
@@ -279,7 +282,7 @@ execution_result serial_graph::execute_internal(granit_renderer renderer, granit
     destroy_recorder(renderer, recorder);
     return fail(result, execution_phase::destroy_resources);
   }
-  execution_result success;
+  serial_execution_result success;
   success.recorder = recorder;
   return success;
 }

@@ -42,7 +42,7 @@ struct resource_access {
   std::uint32_t usage = 0;
 };
 
-struct pass_desc {
+struct compiled_pass_desc {
   bool side_effect = false;
   std::vector<resource_access> accesses;
 };
@@ -72,7 +72,7 @@ struct compile_result {
 class graph_compiler {
 public:
   [[nodiscard]] resource_id add_resource(resource_desc desc = {});
-  [[nodiscard]] pass_id add_pass(pass_desc desc = {});
+  [[nodiscard]] pass_id add_pass(compiled_pass_desc desc = {});
   [[nodiscard]] bool add_dependency(pass_id before, pass_id after);
   [[nodiscard]] compile_result compile() const;
 
@@ -83,7 +83,7 @@ private:
   };
 
   std::vector<resource_desc> resources_;
-  std::vector<pass_desc> passes_;
+  std::vector<compiled_pass_desc> passes_;
   std::vector<dependency> explicit_dependencies_;
 };
 

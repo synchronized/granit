@@ -538,7 +538,7 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
       return GRANIT_ERROR_INTERNAL;
     }
   }
-  granit::render_graph::execution_result execution;
+  granit::render_graph::serial_execution_result execution;
   if (frame == GRANIT_NULL_HANDLE) {
     execution = graph.execute(state.renderer);
   } else {

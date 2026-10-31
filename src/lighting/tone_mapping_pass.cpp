@@ -37,7 +37,7 @@ render_graph::pass_id add_tone_mapping_graph_pass(render_graph::serial_graph& gr
                          ? UINT32_C(1)
                          : UINT32_C(0),
       .enable_fxaa = desc.tone_mapping.enable_fxaa ? UINT32_C(1) : UINT32_C(0)};
-  render_graph::pass_desc pass{.side_effect = true,
+  render_graph::compiled_pass_desc pass{.side_effect = true,
                                .accesses = {{desc.hdr_color, render_graph::access_type::read},
                                             {desc.output, render_graph::access_type::write}}};
   return graph.add_pass(

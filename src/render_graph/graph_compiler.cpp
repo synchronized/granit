@@ -64,7 +64,7 @@ resource_id graph_compiler::add_resource(resource_desc desc) {
   return id;
 }
 
-pass_id graph_compiler::add_pass(pass_desc desc) {
+pass_id graph_compiler::add_pass(compiled_pass_desc desc) {
   const auto id = static_cast<pass_id>(passes_.size());
   passes_.push_back(std::move(desc));
   return id;

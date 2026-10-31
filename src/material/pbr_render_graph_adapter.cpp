@@ -30,7 +30,7 @@ render_graph::pass_id add_pbr_graph_pass(render_graph::serial_graph& graph,
     return render_graph::invalid_pass_id;
   }
 
-  render_graph::pass_desc pass{.side_effect = true,
+  render_graph::compiled_pass_desc pass{.side_effect = true,
                                .accesses = {{desc.color, render_graph::access_type::write}}};
   if (desc.resolve_color != render_graph::invalid_resource_id)
     pass.accesses.push_back({desc.resolve_color, render_graph::access_type::write});

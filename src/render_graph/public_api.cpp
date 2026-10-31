@@ -135,7 +135,7 @@ granit_result public_graph::add_pass(const granit_render_graph_pass_desc& desc,
   if (desc.name_length != 0 && desc.name == nullptr)
     return GRANIT_ERROR_INVALID_ARGUMENT;
 
-  pass_desc internal;
+  compiled_pass_desc internal;
   internal.side_effect = (desc.flags & GRANIT_RENDER_GRAPH_PASS_SIDE_EFFECT_BIT) != 0;
   internal.accesses.reserve(desc.access_count);
   for (std::uint32_t index = 0; index < desc.access_count; ++index) {

@@ -10,7 +10,7 @@
 using granit::render_graph::access_type;
 using granit::render_graph::compile_error;
 using granit::render_graph::graph_compiler;
-using granit::render_graph::pass_desc;
+using granit::render_graph::compiled_pass_desc;
 using granit::render_graph::resource_access;
 using granit::render_graph::resource_desc;
 

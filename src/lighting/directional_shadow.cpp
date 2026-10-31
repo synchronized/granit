@@ -98,7 +98,7 @@ render_graph::pass_id add_directional_shadow_graph_pass(render_graph::serial_gra
                                                         std::string name) {
   if (desc.depth == render_graph::invalid_resource_id || !callback)
     return render_graph::invalid_pass_id;
-  render_graph::pass_desc pass{.side_effect = true,
+  render_graph::compiled_pass_desc pass{.side_effect = true,
                                .accesses = {{desc.depth, render_graph::access_type::write}}};
   return graph.add_pass(
       std::move(pass),

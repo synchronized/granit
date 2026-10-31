@@ -69,7 +69,7 @@ enum class execution_phase : std::uint8_t {
   destroy_resources,
 };
 
-struct execution_result {
+struct serial_execution_result {
   granit_result result = GRANIT_SUCCESS;
   execution_phase phase = execution_phase::none;
   compile_error graph_error = compile_error::none;
@@ -100,21 +100,24 @@ public:
                                                      std::string name = {});
   [[nodiscard]] bool update_transient_texture(resource_id resource,
                                                const granit_texture_desc& desc);
-  [[nodiscard]] pass_id add_pass(pass_desc desc, pass_callback callback, std::string name = {});
+  [[nodiscard]] pass_id add_pass(compiled_pass_desc desc, pass_callback callback,
+                                 std::string name = {});
   [[nodiscard]] bool add_dependency(pass_id before, pass_id after);
-  [[nodiscard]] execution_result execute(granit_renderer renderer) const;
-  [[nodiscard]] execution_result execute_frame(granit_renderer renderer, granit_frame frame) const;
-  [[nodiscard]] execution_result execute_frame(granit_renderer renderer, granit_frame frame,
-                                               std::uint32_t frame_slot) const;
+  [[nodiscard]] serial_execution_result execute(granit_renderer renderer) const;
+  [[nodiscard]] serial_execution_result execute_frame(granit_renderer renderer,
+                                                      granit_frame frame) const;
+  [[nodiscard]] serial_execution_result execute_frame(granit_renderer renderer, granit_frame frame,
+                                                      std::uint32_t frame_slot) const;
   [[nodiscard]] diagnostic_graph diagnostics() const;
 
 private:
-  [[nodiscard]] execution_result execute_internal(granit_renderer renderer, granit_frame frame,
-                                                  std::uint32_t frame_slot) const;
+  [[nodiscard]] serial_execution_result execute_internal(granit_renderer renderer,
+                                                          granit_frame frame,
+                                                          std::uint32_t frame_slot) const;
 
   graph_compiler compiler_;
   std::vector<imported_resource> resources_;
-  std::vector<pass_desc> passes_;
+  std::vector<compiled_pass_desc> passes_;
   std::vector<pass_callback> callbacks_;
   std::vector<std::string> resource_names_;
   std::vector<std::string> pass_names_;
