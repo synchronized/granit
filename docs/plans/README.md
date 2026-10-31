@@ -9,6 +9,9 @@
 
 ## 当前计划
 
+[S-113：面向外部引擎的公共 Render Graph API](S-113-public-render-graph-api.md) 已进入提案阶段，
+目标是建立独立于 RenderPipeline 的公共 Graph component，并以 toy-engine 风格外部 Consumer 验证。
+
 [S-112：0.70.0 Window 原生句柄与 Surface 解耦](S-112-0.70.0-window-native-surface-decoupling.md) 已完成实现，
 等待最终 CI 和版本发布收口。
 

@@ -32,6 +32,10 @@ Vulkan 内部实验。
 
 ## 当前计划
 
+S-113 提案正在规划面向外部引擎的公共 Render Graph component：独立依赖核心 Renderer，提供资源
+导入、临时资源、Pass 依赖、录制回调、错误诊断和安装 SDK Consumer。首期不公开 Vulkan、不自动
+合并 Subpass，也不要求外部引擎接入 Granit 参考 RenderPipeline。
+
 [v0.69.0](versions/v0.69.0.md) 已完成跨工具链验收与本地长测的调整范围收口。
 S-108 验证入口、S-109 手动兼容矩阵、S-110 本地长测已完成，证据与限制见版本验收记录。
 PR 保留快速反馈，关键版本手动验收，长测在本地显式运行；release 分支工程版本已准备为 0.69.0。
