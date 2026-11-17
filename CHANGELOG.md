@@ -8,6 +8,9 @@
 
 ## Unreleased
 
+- 新增 `GRANIT_CMAKE_TARGET_FOLDER`，允许父项目将 Granit 的 IDE 目标挂到统一父目录，同时保留
+  `Modules`、`Tests`、`Examples` 等现有子分类；默认值为空，不改变现有布局。
+
 ## 0.71.0 - 2026-10-31
 
 - 新增实验性的公共 Render Graph component，可独立依赖核心 Renderer，支持外部资源导入、临时资源、

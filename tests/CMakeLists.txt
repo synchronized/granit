@@ -8,6 +8,16 @@ add_test(NAME granit.tooling.validation_runner COMMAND "${CMAKE_COMMAND}"
   -P "${PROJECT_SOURCE_DIR}/tests/cmake/check_validation_runner.cmake")
 set_tests_properties(granit.tooling.validation_runner PROPERTIES LABELS "unit;tooling" TIMEOUT 60)
 
+add_test(
+  NAME granit.cmake.target_folders
+  COMMAND
+    "${CMAKE_COMMAND}"
+    "-DGRANIT_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
+    "-DGRANIT_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/target-folders"
+    -P "${PROJECT_SOURCE_DIR}/tests/cmake/check_target_folders.cmake"
+)
+set_property(TEST granit.cmake.target_folders APPEND PROPERTY LABELS "unit;tooling")
+
 add_subdirectory(core)
 add_subdirectory(window)
 

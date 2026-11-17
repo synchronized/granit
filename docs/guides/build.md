@@ -35,6 +35,7 @@
 | `GRANIT_ENABLE_WARNINGS` | `ON` | 为 Granit 自有目标启用编译警告 |
 | `GRANIT_ENABLE_PEDANTIC_WARNINGS` | `OFF` | 启用 `-Wpedantic` 等严格标准扩展警告 |
 | `GRANIT_WARNINGS_AS_ERRORS` | `OFF` | 将 Granit 自有源码警告视为错误 |
+| `GRANIT_CMAKE_TARGET_FOLDER` | 空 | 为 IDE 中的 Granit 自有目标添加统一父目录；已有 `FOLDER` 分类会保留为子路径 |
 
 第三方依赖的查找优先级、获取策略、父项目 target 复用和缓存布局见[第三方依赖与缓存](third-party-dependencies.md)。
 仓库提供的开发 presets 会将第三方依赖获取策略 `GRANIT_DEPENDENCY_POLICY` 和 Shader 工具链模式
@@ -42,6 +43,15 @@
 这样全新 Debug/Release preset 会共享同一套已校验工具链，不会因为本机没有系统 Tint 而跳过示例目标。
 作为子项目手动
 引入时，依赖策略与警告选项默认保持 `auto` / `OFF`；所有警告选项均为目标私有属性，不会传递给使用者。
+
+如果希望 IDE 将 Granit 目标集中到一个父文件夹，可以在配置时指定：
+
+```sh
+cmake -S . -B build -DGRANIT_CMAKE_TARGET_FOLDER=Granit
+```
+
+例如现有的 `Tests/Smoke` 会显示为 `Granit/Tests/Smoke`；未设置 `FOLDER` 的目标会直接显示在
+`Granit` 下。变量为空时保持现有目标文件夹布局。
 
 Shader Toolchain 使用同一个缓存根目录，但归档和已校验工具链分别位于
 `vendor/cache/archives/shader-toolchain` 与 `vendor/cache/toolchains/shader-toolchain`；其锁定信息见

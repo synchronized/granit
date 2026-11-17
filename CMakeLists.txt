@@ -72,4 +72,7 @@ endif()
 if(GRANIT_BUILD_BENCHMARKS)
   add_subdirectory(benchmarks)
 endif()
+
+granit_apply_cmake_target_folder("${CMAKE_CURRENT_SOURCE_DIR}")
+
 include(granit_package)

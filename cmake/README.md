@@ -12,7 +12,7 @@
 | 文件 | 角色 |
 | --- | --- |
 | `granit_version.cmake` | 工程版本唯一来源，并派生 major、minor、patch 与兼容版本 |
-| `granit_options.cmake` | 构建选项（`BUILD_SHARED_LIBS`、`GRANIT_BUILD_*` 等） |
+| `granit_options.cmake` | 构建选项（`BUILD_SHARED_LIBS`、`GRANIT_BUILD_*`、IDE 目标父目录等） |
 | `granit_dependency_catalog.cmake` | 下载型第三方源码的锁定版本、URL、SHA-256 和 marker |
 | `granit_dependency_cache.cmake` | 下载型第三方源码的共享缓存、校验和解压辅助函数 |
 | `granit_platform.cmake` | 平台探测（Emscripten / XCB / Wayland 能力） |

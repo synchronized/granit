@@ -12,12 +12,13 @@
 
 ## 当前版本
 
-[v0.70.0：Window 原生句柄与 Surface 解耦](v0.70.0.md) 为上一发布版本；v0.71.0 正在准备中。
+[v0.71.0：公共 Render Graph API](v0.71.0.md) 为当前发布版本；v0.72.0 正在规划中。
 
 ## 候选版本
 
 - [v0.70.0：Window 原生句柄与 Surface 解耦](v0.70.0.md)
 - [v0.71.0：公共 Render Graph API](v0.71.0.md)
+- [v0.72.0：CMake IDE 目标组织](v0.72.0.md)
 
 ## 已发布版本
 

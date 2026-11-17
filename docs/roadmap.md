@@ -32,6 +32,9 @@ Vulkan 内部实验。
 
 ## 当前计划
 
+S-114 规划在 v0.72.0 增加可选的 `GRANIT_CMAKE_TARGET_FOLDER`，将现有 Granit IDE 目标分类挂到父项目指定
+的目录下；默认值为空，不改变现有布局，也不影响第三方目标和安装导出。
+
 S-113 已完成面向外部引擎的公共 Render Graph component 首期实现，进入 v0.71.0 最终候选验收：
 独立依赖核心 Renderer，提供资源导入、临时资源、Pass 依赖、录制回调、错误诊断和安装 SDK
 Consumer。当前已完成 Windows 真实离屏/窗口执行验证；首期不公开 Vulkan、不自动合并 Subpass，

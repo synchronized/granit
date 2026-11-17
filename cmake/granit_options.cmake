@@ -18,6 +18,8 @@ option(GRANIT_BUILD_WEB_IMGUI_EXAMPLE "构建浏览器 SDL3 + ImGui 示例" ON)
 option(GRANIT_VERIFY_SHADER_ASSET_SNAPSHOTS "校验源码生成 Shader 资产与嵌入快照一致" ON)
 option(GRANIT_ENABLE_XCB "在 Linux 上启用 XCB Surface 与 Window 后端" ON)
 option(GRANIT_ENABLE_WAYLAND "在 Linux 上启用 Wayland Surface 与 Window 后端" ON)
+set(GRANIT_CMAKE_TARGET_FOLDER "" CACHE STRING
+    "Granit 自有 CMake 目标的 IDE 文件夹父路径；为空表示不添加父路径")
 
 # 第三方依赖获取策略：全局默认 + 每依赖覆盖。
 #   system   —— 只用 find_package，找不到即报错（离线 / 发行版打包）
