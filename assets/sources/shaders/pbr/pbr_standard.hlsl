@@ -102,7 +102,7 @@ struct vertex_output {
 };
 
 [[vk::binding(1, 3)]] Texture2D<float> shadow_texture;
-[[vk::binding(2, 3)]] SamplerState shadow_sampler;
+[[vk::binding(2, 3)]] SamplerComparisonState shadow_sampler;
 
 vertex_output vertex_main(vertex_input input) {
   vertex_output output;
@@ -173,8 +173,8 @@ float evaluate_directional_shadow(vertex_output input, float3 normal) {
   const float2 shadow_uv = projected.xy * float2(0.5, -0.5) + 0.5;
   if (any(shadow_uv < 0.0) || any(shadow_uv > 1.0) || projected.z < 0.0 || projected.z > 1.0)
     return 1.0;
-  const float shadow_depth = shadow_texture.SampleLevel(shadow_sampler, shadow_uv, 0.0);
-  return (projected.z - shadow_depth_bias) <= shadow_depth ? 1.0 : 0.0;
+  return shadow_texture.SampleCmpLevelZero(shadow_sampler, shadow_uv,
+                                           projected.z - shadow_depth_bias);
 }
 
 float4 fragment_main(vertex_output input, bool is_front_face : SV_IsFrontFace) : SV_Target0 {

@@ -77,7 +77,8 @@ granit_result shadow_ibl_resources::initialize(
     result = shadow_sampler_.initialize(renderer_view,
                                         {.address_u = granit::address_mode::clamp_to_edge,
                                          .address_v = granit::address_mode::clamp_to_edge,
-                                         .address_w = granit::address_mode::clamp_to_edge});
+                                         .address_w = granit::address_mode::clamp_to_edge,
+                                         .compare = granit::compare_operation::less_equal});
   }
   if (result.ok() && features.ibl) {
     result =
@@ -109,7 +110,7 @@ granit_result shadow_ibl_resources::initialize(
       layout_entries.push_back(
           {shadow_binding_texture, granit::binding_type::sampled_depth_texture, 1, fragment});
       layout_entries.push_back(
-          {shadow_binding_sampler, granit::binding_type::sampler, 1, fragment});
+          {shadow_binding_sampler, granit::binding_type::comparison_sampler, 1, fragment});
     }
     if (features.ibl) {
       layout_entries.push_back(
