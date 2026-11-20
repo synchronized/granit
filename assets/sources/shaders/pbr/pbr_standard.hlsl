@@ -94,6 +94,16 @@ struct vertex_output {
 [[vk::binding(6, 3)]] Texture2D<float4> brdf_lut_texture;
 [[vk::binding(7, 3)]] SamplerState environment_sampler;
 
+[[vk::binding(0, 3)]] cbuffer ShadowConstants {
+  column_major float4x4 light_view_projection;
+  float shadow_depth_bias;
+  float shadow_normal_bias;
+  float2 shadow_texel_size;
+};
+
+[[vk::binding(1, 3)]] Texture2D<float> shadow_texture;
+[[vk::binding(2, 3)]] SamplerComparisonState shadow_sampler;
+
 vertex_output vertex_main(vertex_input input) {
   vertex_output output;
   const float4 resolved_world_position = mul(model, float4(input.position, 1.0));
@@ -153,6 +163,20 @@ float4 encode_output(float3 color, float alpha) {
 #endif
 }
 
+float evaluate_directional_shadow(vertex_output input, float3 normal) {
+  const float3 biased_world_position = input.world_position + normal * shadow_normal_bias;
+  const float4 shadow_position = mul(light_view_projection,
+                                     float4(biased_world_position, 1.0));
+  if (shadow_position.w <= 0.0)
+    return 1.0;
+  const float3 projected = shadow_position.xyz / shadow_position.w;
+  const float2 shadow_uv = projected.xy * float2(0.5, -0.5) + 0.5;
+  if (any(shadow_uv < 0.0) || any(shadow_uv > 1.0) || projected.z < 0.0 || projected.z > 1.0)
+    return 1.0;
+  return shadow_texture.SampleCmpLevelZero(shadow_sampler, shadow_uv,
+                                           projected.z - shadow_depth_bias);
+}
+
 float4 fragment_main(vertex_output input, bool is_front_face : SV_IsFrontFace) : SV_Target0 {
   float2 base_color_uv = input.texture_coordinate;
   float2 metallic_roughness_uv = input.texture_coordinate;
@@ -199,6 +223,9 @@ float4 fragment_main(vertex_output input, bool is_front_face : SV_IsFrontFace) :
 
   const float3 view_direction = normalize(camera_position.xyz - input.world_position);
   const float3 light_direction = normalize(direction_to_light.xyz);
+  const float shadow = (render_flags & 1U) == 0
+                          ? evaluate_directional_shadow(input, normal)
+                          : 1.0;
   const float3 halfway = normalize(view_direction + light_direction);
   const float normal_dot_light = max(dot(normal, light_direction), 0.0);
   const float normal_dot_view = max(dot(normal, view_direction), 0.0);
@@ -232,7 +259,8 @@ float4 fragment_main(vertex_output input, bool is_front_face : SV_IsFrontFace) :
                            environment_specular * (environment_fresnel * brdf.x + brdf.y)) *
                           environment_intensity * occlusion);
   const float3 color =
-      ambient + (diffuse + specular) * light_radiance.rgb * normal_dot_light + resolved_emissive;
+      ambient + (diffuse + specular) * light_radiance.rgb * normal_dot_light * shadow +
+      resolved_emissive;
 #if GRANIT_PBR_ALPHA_MASK
   clip(resolved_base_color.a - alpha_cutoff);
 #endif
