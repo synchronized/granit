@@ -78,7 +78,8 @@ struct vertex_output {
   column_major float4x4 normal_matrix;
   uint object_id;
   float transform_handedness;
-  uint2 object_reserved;
+  uint render_flags;
+  uint object_reserved;
 };
 
 [[vk::binding(3, 3)]] cbuffer IblConstants {

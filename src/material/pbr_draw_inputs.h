@@ -23,6 +23,7 @@ struct pbr_object_input {
   pbr_matrix4 model{};
   pbr_matrix4 normal_matrix{};
   std::uint32_t object_id = 0;
+  bool receive_shadow = true;
 };
 
 struct pbr_directional_light_input {
@@ -51,7 +52,8 @@ struct alignas(16) pbr_object_constants {
   pbr_matrix4 normal_matrix;
   std::uint32_t object_id;
   float transform_handedness;
-  std::array<std::uint32_t, 2> reserved;
+  std::uint32_t render_flags;
+  std::uint32_t reserved;
 };
 
 [[nodiscard]] pbr_draw_input_error

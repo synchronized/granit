@@ -155,7 +155,8 @@ TEST_CASE("Unlit Opaque与Alpha Cutoff产生预期像素") {
                                                       .normal_matrix = identity(),
                                                       .object_id = 0,
                                                       .transform_handedness = 1.0F,
-                                                      .reserved = {}};
+                                                      .render_flags = 0,
+                                                      .reserved = 0};
         REQUIRE(granit::pipeline::detail::record_unlit_pass(
                     native, recorder.native_handle(),
                     {.color = color_view.native_handle(),

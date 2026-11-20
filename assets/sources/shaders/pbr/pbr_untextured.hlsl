@@ -8,6 +8,10 @@ static const float MINIMUM_PERCEPTUAL_ROUGHNESS = 0.045;
 #define GRANIT_PBR_TEXTURE_MASK 0
 #endif
 
+#ifndef GRANIT_PBR_OBJECT_FLAGS
+#define GRANIT_PBR_OBJECT_FLAGS 0
+#endif
+
 #ifndef GRANIT_PBR_SHADOWS
 #define GRANIT_PBR_SHADOWS 0
 #endif
@@ -27,6 +31,9 @@ struct vertex_output {
   float2 uv : TEXCOORD2;
 #if GRANIT_PBR_SHADOWS || GRANIT_PBR_LIGHTS
   float3 world_position : TEXCOORD3;
+#endif
+#if GRANIT_PBR_OBJECT_FLAGS
+  nointerpolation uint render_flags : TEXCOORD4;
 #endif
 };
 
@@ -99,6 +106,17 @@ struct spot_light_data {
   float reserved_value;
 };
 
+#if GRANIT_PBR_OBJECT_FLAGS
+[[vk::binding(0, 2)]] cbuffer ObjectConstants {
+  column_major float4x4 model;
+  column_major float4x4 normal_matrix;
+  uint object_id;
+  float transform_handedness;
+  uint render_flags;
+  uint object_reserved;
+};
+#endif
+
 #if (GRANIT_PBR_TEXTURE_MASK & 1)
 [[vk::binding(1, 1)]] Texture2D<float4> base_color_texture;
 #endif
@@ -128,6 +146,9 @@ vertex_output vertex_main(uint vertex_id : SV_VertexID) {
   output.uv = positions[vertex_id] * 0.5 + 0.5;
 #if GRANIT_PBR_SHADOWS || GRANIT_PBR_LIGHTS
   output.world_position = float3(positions[vertex_id], 0.5);
+#endif
+#if GRANIT_PBR_OBJECT_FLAGS
+  output.render_flags = render_flags;
 #endif
   return output;
 }
@@ -271,7 +292,13 @@ float4 fragment_main(vertex_output input) : SV_Target0 {
   [loop]
   for (uint index = 0; index < min(directional_light_count, 16U); ++index) {
 #if GRANIT_PBR_SHADOWS
-    const float directional_shadow = index == 0 ? evaluate_directional_shadow(input, normal) : 1.0;
+    const float directional_shadow =
+#if GRANIT_PBR_OBJECT_FLAGS
+        index == 0 && (input.render_flags & 1U) == 0 ? evaluate_directional_shadow(input, normal)
+                                                    : 1.0;
+#else
+        index == 0 ? evaluate_directional_shadow(input, normal) : 1.0;
+#endif
 #else
     const float directional_shadow = 1.0;
 #endif
@@ -311,7 +338,13 @@ float4 fragment_main(vertex_output input) : SV_Target0 {
 #else
   const float3 light = float3(0.0, 0.0, 1.0);
 #if GRANIT_PBR_SHADOWS
+#if GRANIT_PBR_OBJECT_FLAGS
+  const float shadow = (input.render_flags & 1U) == 0
+                           ? evaluate_directional_shadow(input, normal)
+                           : 1.0;
+#else
   const float shadow = evaluate_directional_shadow(input, normal);
+#endif
 #else
   const float shadow = 1.0;
 #endif

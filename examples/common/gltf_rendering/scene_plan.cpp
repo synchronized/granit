@@ -197,7 +197,7 @@ scene_plan_error build_scene_plan(const gltf::scene& source, scene_plan& output)
              .sort_key = (static_cast<std::uint64_t>(draw.material) << 32U) | draw.primitive,
              .payload = draw.payload,
              .object_id = static_cast<std::uint32_t>(candidate.draws.size()),
-             .reserved = 0});
+             .shadow_flags = GRANIT_SCENE_RENDERABLE_SHADOW_DEFAULT});
       }
     }
     for (const auto& material : source.materials) {

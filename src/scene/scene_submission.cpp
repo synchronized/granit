@@ -44,6 +44,8 @@ submission_error validate_view(const view_input& view) noexcept {
 }
 
 submission_error validate_renderable(const renderable_input& value) noexcept {
+  if ((value.shadow_flags & ~GRANIT_SCENE_RENDERABLE_SHADOW_KNOWN_MASK) != 0)
+    return submission_error::invalid_shadow_flags;
   if (!finite(value.model) || !finite(value.normal_matrix) || !finite(value.bounds.center) ||
       !std::isfinite(value.bounds.radius)) {
     return submission_error::non_finite_value;

@@ -100,6 +100,13 @@ TEST_CASE("场景帧快照拒绝非法 View 与 Renderable") {
   submission.renderables = std::span{&singular, 1};
   CHECK(granit::scene::build_frame_snapshot(submission, snapshot) ==
         granit::scene::submission_error::singular_model_transform);
+
+  auto invalid_shadow_flags = invalid;
+  invalid_shadow_flags.bounds.radius = 1;
+  invalid_shadow_flags.shadow_flags = UINT32_C(4);
+  submission.renderables = std::span{&invalid_shadow_flags, 1};
+  CHECK(granit::scene::build_frame_snapshot(submission, snapshot) ==
+        granit::scene::submission_error::invalid_shadow_flags);
 }
 
 TEST_CASE("场景帧快照拒绝非法光源并保持旧快照") {

@@ -136,13 +136,16 @@ extern "C" granit_result granit_scene_snapshot_create(granit_renderer renderer,
     }
     for (uint32_t index = 0; index < desc->renderable_count; ++index) {
       const auto& source = desc->renderables[index];
+      if ((source.shadow_flags & ~GRANIT_SCENE_RENDERABLE_SHADOW_KNOWN_MASK) != 0)
+        return GRANIT_ERROR_INVALID_ARGUMENT;
       renderables.push_back({.model = convert(source.model),
                              .normal_matrix = convert(source.normal_matrix),
                              .bounds = {convert(source.bounds_center), source.bounds_radius},
                              .layer_mask = source.layer_mask,
                              .sort_key = source.sort_key,
                              .payload = source.payload,
-                             .object_id = source.object_id});
+                             .object_id = source.object_id,
+                             .shadow_flags = source.shadow_flags});
     }
     for (uint32_t index = 0; index < desc->directional_light_count; ++index) {
       const auto& source = desc->directional_lights[index];

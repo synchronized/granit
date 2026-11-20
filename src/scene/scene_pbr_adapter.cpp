@@ -42,7 +42,10 @@ scene_pbr_error build_scene_pbr_pass_desc(const multi_view_snapshot& snapshot,
       const auto& renderable = snapshot.renderables()[index];
       candidate.pbr.objects.push_back({.model = renderable.model,
                                        .normal_matrix = renderable.normal_matrix,
-                                       .object_id = renderable.object_id});
+                                       .object_id = renderable.object_id,
+                                       .receive_shadow =
+                                           (renderable.shadow_flags &
+                                            GRANIT_SCENE_RENDERABLE_SHADOW_DISABLE_RECEIVE) == 0});
     }
     output = std::move(candidate);
     return scene_pbr_error::none;

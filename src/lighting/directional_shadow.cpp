@@ -80,6 +80,8 @@ directional_shadow_error build_directional_shadow_pass_desc(
     candidate.casters.reserve(visible.indices().size());
     for (const auto index : visible.indices()) {
       const auto& renderable = snapshot.renderables()[index];
+      if ((renderable.shadow_flags & GRANIT_SCENE_RENDERABLE_SHADOW_DISABLE_CAST) != 0)
+        continue;
       candidate.casters.push_back({.model = renderable.model,
                                    .payload = renderable.payload,
                                    .object_id = renderable.object_id,

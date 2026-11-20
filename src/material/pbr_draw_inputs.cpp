@@ -52,7 +52,8 @@ pbr_draw_input_error pack_pbr_draw_inputs(const pbr_view_input& view,
                       .transform_handedness = math::linear_determinant(object.model) < 0.0F
                                                   ? -1.0F
                                                   : 1.0F,
-                      .reserved = {0, 0}};
+                      .render_flags = object.receive_shadow ? 0U : 1U,
+                      .reserved = 0};
   return pbr_draw_input_error::none;
 }
 

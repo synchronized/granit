@@ -11,8 +11,9 @@
 
 namespace {
 
-granit::scene::multi_view_snapshot make_shadow_snapshot(std::uint64_t light_layer = 1,
-                                                        bool include_renderables = true) {
+granit::scene::multi_view_snapshot make_shadow_snapshot(
+    std::uint64_t light_layer = 1, bool include_renderables = true,
+    std::uint32_t first_shadow_flags = GRANIT_SCENE_RENDERABLE_SHADOW_DEFAULT) {
   const auto identity = granit::math::identity_matrix4;
   granit::scene::view_input view{.view = identity,
                                  .projection = identity,
@@ -26,7 +27,8 @@ granit::scene::multi_view_snapshot make_shadow_snapshot(std::uint64_t light_laye
                                                          .layer_mask = 1,
                                                          .sort_key = 2,
                                                          .payload = 11,
-                                                         .object_id = 22},
+                                                         .object_id = 22,
+                                                         .shadow_flags = first_shadow_flags},
                          granit::scene::renderable_input{.model = identity,
                                                          .normal_matrix = identity,
                                                          .bounds = {{3, 0, 0}, 0.5F},
@@ -91,6 +93,20 @@ TEST_CASE("方向光阴影从独立光源视锥筛选全部投影者") {
   CHECK(focus_clip.y == Catch::Approx(0.0F));
   CHECK(focus_clip.z > 0.0F);
   CHECK(focus_clip.z < 1.0F);
+}
+
+TEST_CASE("方向光阴影跳过禁用投射的 Renderable") {
+  const auto snapshot = make_shadow_snapshot(
+      1, true, GRANIT_SCENE_RENDERABLE_SHADOW_DISABLE_CAST);
+  granit::lighting::directional_shadow_pass_desc desc;
+  REQUIRE(granit::lighting::build_directional_shadow_pass_desc(
+              snapshot, 0, 0,
+              {.focus = {}, .half_width = 5, .half_height = 5, .near_plane = 1,
+               .far_plane = 20, .light_distance = 10},
+              7, desc) == granit::lighting::directional_shadow_error::none);
+  REQUIRE(desc.casters.size() == 1);
+  CHECK(desc.casters.front().object_id == 44);
+  CHECK(desc.casters.front().payload == 33);
 }
 
 TEST_CASE("方向光阴影拒绝不可见光源和非法描述") {

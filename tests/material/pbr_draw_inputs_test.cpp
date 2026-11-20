@@ -31,7 +31,15 @@ TEST_CASE("PBR 显式 Draw 输入规范化方向光并打包固定布局") {
   CHECK(frame.render_options == std::array<std::uint32_t, 4>{0, 0, 0, 0});
   CHECK(object_constants.object_id == 42);
   CHECK(object_constants.transform_handedness == 1.0F);
-  CHECK(object_constants.reserved == std::array<std::uint32_t, 2>{0, 0});
+  CHECK(object_constants.render_flags == 0);
+  CHECK(object_constants.reserved == 0);
+
+  auto no_shadow_receive = object;
+  no_shadow_receive.receive_shadow = false;
+  REQUIRE(granit::material::pack_pbr_draw_inputs(view, no_shadow_receive, light, frame,
+                                                 object_constants) ==
+          granit::material::pbr_draw_input_error::none);
+  CHECK(object_constants.render_flags == 1);
 
   auto reflected = object;
   reflected.model[0] = -1.0F;

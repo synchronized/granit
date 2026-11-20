@@ -393,7 +393,7 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
                                         .sort_key = source.sort_key,
                                         .payload = source.payload,
                                         .object_id = source.object_id,
-                                        .reserved = 0});
+                                        .shadow_flags = source.shadow_flags});
         }
         if (state.record == nullptr) {
           std::vector<granit::lighting::shadow_caster> opaque_casters;

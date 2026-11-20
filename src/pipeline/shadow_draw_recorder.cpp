@@ -129,7 +129,8 @@ granit_result record_shadow_draws(render_pipeline_state& state, granit_command_r
              .object_id = casters[index].object_id,
              .transform_handedness =
                  granit::math::linear_determinant(casters[index].model) < 0.0F ? -1.0F : 1.0F,
-             .reserved = {0, 0}});
+             .render_flags = 0,
+             .reserved = 0});
         requests.push_back({.material = &arena_materials[index],
                             .frame = std::as_bytes(std::span{&unused_frame, 1}),
                             .object = std::as_bytes(std::span{&arena_objects.back(), 1})});
@@ -185,7 +186,8 @@ granit_result record_shadow_draws(render_pipeline_state& state, granit_command_r
                   .object_id = casters[index].object_id,
                   .transform_handedness =
                       granit::math::linear_determinant(casters[index].model) < 0.0F ? -1.0F : 1.0F,
-                  .reserved = {0, 0}};
+                  .render_flags = 0,
+                  .reserved = 0};
     if (index == state.shadow_draw_bindings.size())
       state.shadow_draw_bindings.emplace_back();
     auto& cached = state.shadow_draw_bindings[index];

@@ -351,7 +351,8 @@ extern "C" granit_result granit_canvas_draw_list_record(granit_renderer renderer
       .normal_matrix = identity_matrix(),
       .object_id = 0,
       .transform_handedness = 1.0F,
-      .reserved = {}};
+      .render_flags = 0,
+      .reserved = 0};
   if (result == GRANIT_SUCCESS) {
     result = granit::pipeline::detail::record_canvas_pass(
         renderer, recorder,

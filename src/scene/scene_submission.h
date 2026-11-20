@@ -5,6 +5,7 @@
 #define GRANIT_SCENE_SCENE_SUBMISSION_H
 
 #include <granit/math/functions.hpp>
+#include <granit/pipeline/scene.h>
 
 #include <cstdint>
 #include <span>
@@ -44,6 +45,7 @@ struct renderable_input {
   std::uint64_t sort_key = 0;
   std::uint64_t payload = 0;
   std::uint32_t object_id = 0;
+  std::uint32_t shadow_flags = GRANIT_SCENE_RENDERABLE_SHADOW_DEFAULT;
 };
 
 struct directional_light_input {
@@ -82,6 +84,7 @@ enum class submission_error : std::uint8_t {
   non_finite_value,
   invalid_viewport,
   invalid_layer_mask,
+  invalid_shadow_flags,
   invalid_bounds,
   singular_model_transform,
   invalid_direction,

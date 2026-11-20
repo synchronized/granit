@@ -51,10 +51,13 @@ granit_result build_render_view_submission(
                                     .sort_key = source.sort_key,
                                     .payload = source.payload,
                                     .object_id = source.object_id,
-                                    .reserved = 0});
+                                    .shadow_flags = source.shadow_flags});
       result.pbr_objects.push_back({.model = source.model,
                                     .normal_matrix = source.normal_matrix,
-                                    .object_id = source.object_id});
+                                    .object_id = source.object_id,
+                                    .receive_shadow =
+                                        (source.shadow_flags &
+                                         GRANIT_SCENE_RENDERABLE_SHADOW_DISABLE_RECEIVE) == 0});
     }
     result.view = {.view = convert(visible.view.view),
                    .projection = convert(visible.view.projection),

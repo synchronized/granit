@@ -28,6 +28,12 @@ typedef struct granit_scene_view {
   uint64_t layer_mask;
 } granit_scene_view;
 
+#define GRANIT_SCENE_RENDERABLE_SHADOW_DEFAULT UINT32_C(0)
+#define GRANIT_SCENE_RENDERABLE_SHADOW_DISABLE_CAST UINT32_C(1)
+#define GRANIT_SCENE_RENDERABLE_SHADOW_DISABLE_RECEIVE UINT32_C(2)
+#define GRANIT_SCENE_RENDERABLE_SHADOW_KNOWN_MASK                                      \
+  (GRANIT_SCENE_RENDERABLE_SHADOW_DISABLE_CAST | GRANIT_SCENE_RENDERABLE_SHADOW_DISABLE_RECEIVE)
+
 typedef struct granit_scene_renderable {
   granit_matrix4 model;
   granit_matrix4 normal_matrix;
@@ -37,7 +43,8 @@ typedef struct granit_scene_renderable {
   uint64_t sort_key;
   uint64_t payload;
   uint32_t object_id;
-  uint32_t reserved;
+  /** 阴影控制位；零值表示投射和接收均开启。 */
+  uint32_t shadow_flags;
 } granit_scene_renderable;
 
 typedef struct granit_scene_directional_light {
