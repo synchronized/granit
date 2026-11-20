@@ -122,6 +122,34 @@ function(granit_prepare_runtime_shader_libraries)
     )
     set(GRANIT_PBR_RESOURCE_TABLE_SHADER_LIBRARY
         "${output_root}/pbr_resource_table.grshlib" PARENT_SCOPE)
+    set(pbr_standard_material
+        "${output_root}/../runtime-materials/pbr_standard.grmat")
+    set(pbr_standard_material_stamp "${pbr_standard_material}.verified")
+    set(pbr_standard_material_commands
+        COMMAND "${CMAKE_COMMAND}" -E make_directory "${output_root}/../runtime-materials"
+        COMMAND "$<TARGET_FILE:granit_asset_tool>" material build
+                "${granit_asset_sources_dir}/materials/pbr_standard.grmat.json"
+                --output "${pbr_standard_material}"
+                --shader-library-implementation 1
+                --shader-library "${output_root}/pbr_standard.grshlib"
+                --shader-library-implementation 2
+                --shader-library "${output_root}/pbr_resource_table.grshlib")
+    if(GRANIT_VERIFY_SHADER_ASSET_SNAPSHOTS)
+      list(APPEND pbr_standard_material_commands
+           COMMAND "${CMAKE_COMMAND}" -E compare_files "${pbr_standard_material}"
+                   "${granit_installed_asset_snapshot_dir}/materials/pbr_standard.grmat")
+    endif()
+    add_custom_command(
+      OUTPUT "${pbr_standard_material_stamp}"
+      ${pbr_standard_material_commands}
+      COMMAND "${CMAKE_COMMAND}" -E touch "${pbr_standard_material_stamp}"
+      DEPENDS granit_pbr_shader_library granit_pbr_resource_table_shader_library
+              "${granit_asset_sources_dir}/materials/pbr_standard.grmat.json"
+              "${granit_installed_asset_snapshot_dir}/materials/pbr_standard.grmat"
+      COMMENT "构建并校验标准 PBR 材质"
+      VERBATIM)
+    add_custom_target(granit_pbr_standard_material ALL
+                      DEPENDS "${pbr_standard_material_stamp}")
     set(pbr_resource_table_material
         "${output_root}/../runtime-materials/pbr_resource_table_probe.grmat")
     set(pbr_resource_table_material_stamp "${pbr_resource_table_material}.verified")
