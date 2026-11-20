@@ -438,7 +438,6 @@ int main(int argc, char** argv) {
   granit_scene_snapshot scene = GRANIT_NULL_HANDLE;
   if (!check(granit_scene_snapshot_create(native_renderer, &scene_desc, &scene), "创建 Scene"))
     return 1;
-#ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
   granit_scene_snapshot no_light_scene = GRANIT_NULL_HANDLE;
   scene_desc.directional_lights = nullptr;
   scene_desc.directional_light_count = 0;
@@ -448,7 +447,6 @@ int main(int argc, char** argv) {
              "创建无光照 Scene")) {
     return 1;
   }
-#endif
 
   granit_render_pipeline pipeline = GRANIT_NULL_HANDLE;
   const granit_render_pipeline_desc pipeline_desc = GRANIT_RENDER_PIPELINE_DESC_INIT;
@@ -505,6 +503,40 @@ int main(int argc, char** argv) {
     render_desc.scene = selected_scene == GRANIT_NULL_HANDLE ? scene : selected_scene;
     return granit_render_pipeline_render(native_renderer, selected, &render_desc);
   };
+
+#ifndef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
+  const auto metrics_enable_result =
+      granit_render_pipeline_metrics_enable(native_renderer, pipeline);
+  if (metrics_enable_result != GRANIT_SUCCESS &&
+      metrics_enable_result != GRANIT_ERROR_UNSUPPORTED)
+    return 1;
+  if (metrics_enable_result == GRANIT_SUCCESS) {
+    std::uint64_t previous_sequence = 0;
+    bool observed_zero_shadow = false;
+    bool observed_progress = false;
+    for (std::uint32_t iteration = 0; iteration < 10; ++iteration) {
+      const auto selected_scene = iteration % 2 == 0 ? scene : no_light_scene;
+      if (!check(render_once(pipeline, selected_scene), "GPU 指标交替渲染"))
+        return 1;
+      granit_render_pipeline_metrics metrics = GRANIT_RENDER_PIPELINE_METRICS_INIT;
+      const auto metrics_result =
+          granit_render_pipeline_get_metrics(native_renderer, pipeline, &metrics);
+      if (metrics_result == GRANIT_SUCCESS) {
+        observed_progress = observed_progress || metrics.sample_sequence > previous_sequence;
+        previous_sequence = metrics.sample_sequence;
+        observed_zero_shadow = observed_zero_shadow || metrics.shadow_gpu_ns == 0;
+      } else if (metrics_result != GRANIT_ERROR_NOT_READY) {
+        return 1;
+      }
+    }
+    if (!observed_progress || !observed_zero_shadow) {
+      std::cerr << "GPU 指标回归失败：progress=" << observed_progress
+                << ", zero_shadow=" << observed_zero_shadow
+                << ", sequence=" << previous_sequence << '\n';
+      return 1;
+    }
+  }
+#endif
 
   // 同进程保留 Renderer 与 Pipeline，每轮渲染并回读；避免重复进程掩盖累积问题。
   granit::result result;
@@ -690,8 +722,8 @@ int main(int argc, char** argv) {
 
 #ifdef GRANIT_RENDER_PIPELINE_CPU_BENCHMARK
   static_cast<void>(granit_render_pipeline_destroy(native_renderer, callback_pipeline));
-  static_cast<void>(granit_scene_snapshot_destroy(native_renderer, no_light_scene));
 #endif
+  static_cast<void>(granit_scene_snapshot_destroy(native_renderer, no_light_scene));
   static_cast<void>(granit_render_pipeline_destroy(native_renderer, pipeline));
   static_cast<void>(granit_scene_snapshot_destroy(native_renderer, scene));
   for (const auto material : materials)

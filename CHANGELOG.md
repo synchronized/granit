@@ -10,6 +10,8 @@
 
 - 新增 `GRANIT_CMAKE_TARGET_FOLDER`，允许父项目将 Granit 的 IDE 目标挂到统一父目录，同时保留
   `Modules`、`Tests`、`Examples` 等现有子分类；默认值为空，不改变现有布局。
+- 修复 RenderPipeline 没有阴影通道时固定 Timestamp 查询组长期 pending，导致 GPU 指标样本停止更新；
+  无阴影场景现在会提交零耗时阴影查询对，并补充有光照/无光照交替回归。
 
 ## 0.71.0 - 2026-10-31
 

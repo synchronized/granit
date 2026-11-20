@@ -21,6 +21,8 @@
 
 ## 稳定化与跨平台
 
+- [2026-11-20 S-115 RenderPipeline 可选通道 GPU 计时验收](2026-11-20-s115-gpu-timestamp-acceptance.md)
+
 - [2026-11-17 v0.72.0 CMake IDE 目标父目录验收](2026-11-17-v0.72.0-acceptance.md)
 
 - [2026-10-31 v0.71.0 公共 Render Graph API 验收](2026-10-31-v0.71.0-acceptance.md)

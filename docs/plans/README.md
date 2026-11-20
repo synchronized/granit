@@ -9,6 +9,10 @@
 
 ## 当前计划
 
+[S-115：RenderPipeline 可选通道 GPU 计时收敛](S-115-0.72.0-render-pipeline-timestamp-optional-channel.md)
+已完成本地实现与验证，待 v0.72.0 发布候选验收；修复缺省阴影通道导致固定 Timestamp 查询组长期
+pending 的问题。
+
 [S-114：0.72.0 CMake IDE 目标父目录](S-114-0.72.0-cmake-target-folder.md) 已完成实现，待 v0.72.0
 发布候选验收；负责为父项目提供可选的 Granit 目标 IDE 父目录，不改变现有目标和安装边界。
 

@@ -31,6 +31,7 @@ struct render_pipeline_state {
     granit_timestamp_query_pool pool = GRANIT_NULL_HANDLE;
     granit_async_operation operation = GRANIT_NULL_HANDLE;
     std::uint64_t submission_sequence = 0;
+    bool has_shadow_pass = false;
   };
   struct shadow_pipeline_entry {
     granit_pipeline_layout layout = GRANIT_NULL_HANDLE;

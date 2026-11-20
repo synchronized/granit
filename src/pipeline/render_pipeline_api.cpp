@@ -275,6 +275,7 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
           ? granit::lighting::tone_mapping_output_transfer::attachment_srgb
           : granit::lighting::tone_mapping_output_transfer::shader_srgb;
 
+  const bool has_shadow_pass = graph_desc.shadow.has_value();
   bool metrics_reset = false;
   const auto measure = [&](granit_command_recorder recorder, uint32_t first, auto&& operation) {
     if (metrics_pool == GRANIT_NULL_HANDLE)
@@ -287,6 +288,12 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
       if (result == GRANIT_SUCCESS)
         result = granit_command_recorder_write_timestamp(state.renderer, recorder, metrics_pool,
                                                          GRANIT_TIMESTAMP_STAGE_TOP, 6);
+      if (result == GRANIT_SUCCESS && !has_shadow_pass)
+        result = granit_command_recorder_write_timestamp(state.renderer, recorder, metrics_pool,
+                                                         GRANIT_TIMESTAMP_STAGE_TOP, 0);
+      if (result == GRANIT_SUCCESS && !has_shadow_pass)
+        result = granit_command_recorder_write_timestamp(state.renderer, recorder, metrics_pool,
+                                                         GRANIT_TIMESTAMP_STAGE_TOP, 1);
     }
     if (result == GRANIT_SUCCESS)
       result = granit_command_recorder_write_timestamp(state.renderer, recorder, metrics_pool,
@@ -550,6 +557,7 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
   if (destroy_result != GRANIT_SUCCESS || metrics_pool == GRANIT_NULL_HANDLE)
     return destroy_result;
   auto& slot = state.metrics_slots[metrics_slot_index];
+  slot.has_shadow_pass = has_shadow_pass;
   granit::pipeline::detail::begin_render_pipeline_metrics_read(state, slot);
   // 可选指标回读不能改变已经成功提交的渲染结果。
   return GRANIT_SUCCESS;

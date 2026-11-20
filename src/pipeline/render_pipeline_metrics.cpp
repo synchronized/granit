@@ -48,7 +48,7 @@ void poll_slot(render_pipeline_state& state, render_pipeline_state::metrics_slot
     return;
   }
   state.metrics.sample_sequence += 1;
-  state.metrics.shadow_gpu_ns = values[1] - values[0];
+  state.metrics.shadow_gpu_ns = slot.has_shadow_pass ? values[1] - values[0] : 0;
   state.metrics.opaque_gpu_ns = values[3] - values[2];
   state.metrics.tone_mapping_gpu_ns = values[5] - values[4];
   state.metrics.total_gpu_ns = values[7] - values[6];
