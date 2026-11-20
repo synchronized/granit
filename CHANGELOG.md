@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+## 0.73.2 - 2026-11-20
+
 ## 0.73.1 - 2026-11-20
 
 - 重新生成并发布与当前 `pbr_standard.grshlib` 匹配的 `pbr_standard.grmat`，同步公共 PBR
