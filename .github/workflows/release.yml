@@ -266,7 +266,8 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update -qq
-          sudo apt-get install -y -qq ninja-build pkg-config libxcb1-dev zstd
+          sudo apt-get install -y -qq ninja-build pkg-config libxcb1-dev libx11-dev \
+            libx11-xcb-dev libwayland-dev zstd
       - name: 恢复 Linux Vulkan Runtime 缓存
         id: runtime-cache
         uses: actions/cache/restore@v5
