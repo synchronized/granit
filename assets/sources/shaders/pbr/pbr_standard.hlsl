@@ -24,11 +24,12 @@ struct vertex_output {
   float2 texture_coordinate : TEXCOORD3;
   float3 vertex_normal : TEXCOORD4;
   float3 vertex_tangent : TEXCOORD5;
+  nointerpolation uint render_flags : TEXCOORD6;
 #if GRANIT_PBR_HAS_UV1
-  float2 texture_coordinate_1 : TEXCOORD6;
+  float2 texture_coordinate_1 : TEXCOORD7;
 #endif
 #if GRANIT_PBR_HAS_VERTEX_COLOR
-  float4 color : TEXCOORD7;
+  float4 color : TEXCOORD8;
 #endif
 };
 
@@ -124,6 +125,7 @@ vertex_output vertex_main(vertex_input input) {
 #endif
   output.vertex_normal = input.normal;
   output.vertex_tangent = input.tangent.xyz;
+  output.render_flags = render_flags;
   return output;
 }
 
@@ -223,7 +225,7 @@ float4 fragment_main(vertex_output input, bool is_front_face : SV_IsFrontFace) :
 
   const float3 view_direction = normalize(camera_position.xyz - input.world_position);
   const float3 light_direction = normalize(direction_to_light.xyz);
-  const float shadow = (render_flags & 1U) == 0
+  const float shadow = (input.render_flags & 1U) == 0
                           ? evaluate_directional_shadow(input, normal)
                           : 1.0;
   const float3 halfway = normalize(view_direction + light_direction);
