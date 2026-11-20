@@ -9,6 +9,9 @@
 
 ## 当前计划
 
+[S-118：标准 PBR 阴影接收](S-118-0.73.2-standard-pbr-shadow-receiving.md) 已完成本地实现与验证，
+待 v0.73.2 发布候选验收；补齐标准 PBR 材质的方向光阴影采样。
+
 [S-117：公共 PBR 资产重新同步](S-117-0.73.1-public-pbr-asset-resync.md) 已完成本地实现与验证，
 待 v0.73.1 发布候选验收；修复标准 PBR Material 与 Shader Library 不匹配。
 
