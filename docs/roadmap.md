@@ -32,6 +32,10 @@ Vulkan 内部实验。
 
 ## 当前计划
 
+S-116 规划在 v0.73.0 增加 Renderable 实例级阴影投射/接收控制：零值保持默认投射和接收，关闭投射只
+从 Shadow Caster 集合移除实例，关闭接收只跳过该实例的阴影采样。实现范围包括 Scene Snapshot、
+RenderPipeline 阴影收集、PBR Object 常量、Shader 变体和 C/C++ 回归测试。
+
 S-115 纳入 v0.72.0 发布阻塞项：修复 RenderPipeline 缺省阴影通道仍固定回读 8 个 Timestamp 查询，
 导致指标槽位长期 pending、样本序号停止增长的问题。计划保持现有指标 ABI，在无阴影时写入零耗时查询对，
 并通过有光照/无光照交替离屏回归验证。

@@ -9,6 +9,10 @@
 
 ## 当前计划
 
+[S-116：Renderable 阴影投射与接收控制](S-116-0.73.0-renderable-shadow-flags.md) 规划在 v0.73.0
+增加实例级阴影投射/接收开关，默认行为保持不变；涉及 Scene Snapshot、Shadow Caster 收集和 PBR
+Shader 接收路径。
+
 [S-115：RenderPipeline 可选通道 GPU 计时收敛](S-115-0.72.0-render-pipeline-timestamp-optional-channel.md)
 已完成本地实现与验证，待 v0.72.0 发布候选验收；修复缺省阴影通道导致固定 Timestamp 查询组长期
 pending 的问题。
