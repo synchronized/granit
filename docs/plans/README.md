@@ -9,6 +9,9 @@
 
 ## 当前计划
 
+[S-117：公共 PBR 资产重新同步](S-117-0.73.1-public-pbr-asset-resync.md) 已完成本地实现与验证，
+待 v0.73.1 发布候选验收；修复标准 PBR Material 与 Shader Library 不匹配。
+
 [S-116：Renderable 阴影投射与接收控制](S-116-0.73.0-renderable-shadow-flags.md) 已完成本地实现，
 待 v0.73.0 发布候选验收；增加实例级阴影投射/接收开关，默认行为保持不变。
 
