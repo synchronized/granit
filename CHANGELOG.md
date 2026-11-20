@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+## 0.73.1 - 2026-11-20
+
 ## 0.73.0 - 2026-11-20
 
 - 新增 `GRANIT_CMAKE_TARGET_FOLDER`，允许父项目将 Granit 的 IDE 目标挂到统一父目录，同时保留
