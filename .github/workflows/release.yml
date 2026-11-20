@@ -159,7 +159,20 @@ jobs:
             sleep 0.1
           done
           [[ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]]
+          set +e
           xvfb-run -a ctest --preset "${{ steps.package.outputs.preset }}"
+          test_status=$?
+          if (( test_status != 0 )) && command -v gdb >/dev/null 2>&1; then
+            for tutorial in 02_pbr_assets 12_resource_table_scene 14_pbr_attributes; do
+              executable="build/${{ steps.package.outputs.preset }}/bin/granit_tutorial_${tutorial}"
+              if [[ -x "$executable" ]]; then
+                echo "运行失败教程的 CPU backtrace: $executable"
+                xvfb-run -a gdb -batch \
+                  -ex 'set pagination off' -ex run -ex bt --args "$executable" --smoke-test
+              fi
+            done
+          fi
+          exit "$test_status"
       - name: 安装并打包
         shell: bash
         run: |
