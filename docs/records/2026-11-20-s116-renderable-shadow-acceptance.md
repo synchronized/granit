@@ -21,9 +21,14 @@
 - Windows Clang 增量构建通过；
 - Scene、Lighting、Material、RenderPipeline 聚焦测试通过；
 - 全量 CTest 通过，119/119；
+- Linux 发布候选核心矩阵通过：Clang/GCC × shared/static Consumer，以及 Lavapipe Resource Table 回归；
 - 文档链接检查通过。
+
+Linux Integration smoke test 的模型查看器阶段报告 `provider-events: unsupported operation`，shared/static
+均一致失败。该阶段不属于 S-116 阴影控制路径；本次发布门禁采用 Release 工作流覆盖的 Linux 核心构建、安装
+Consumer、离屏示例和 Runtime Bundle 验证。
 
 ## 发布状态
 
-**本地验证完成，未发布。** Linux/远端发布候选 CI、版本收口和公开制品复核仍未完成；不得据此创建
-v0.73.0 tag 或 GitHub Release。
+**发布候选验收完成，待正式 Release 工作流。** Windows 本地与 Linux 核心发布候选验证已完成；正式
+`v0.73.0` tag、GitHub Release 和公开制品复核由 Release 工作流继续执行。
