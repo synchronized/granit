@@ -147,6 +147,9 @@ jobs:
             -DGRANIT_BUILD_ASSET_TOOLS=ON \
             -DGRANIT_VERIFY_SHADER_ASSET_SNAPSHOTS=OFF
           cmake --build --preset "${{ steps.package.outputs.preset }}"
+          # Linux 发布容器默认不带调试器；GPU 教程崩溃时收集 CPU 回溯以定位驱动或宿主代码问题。
+          apt-get update -qq
+          apt-get install -y -qq gdb
           export XDG_RUNTIME_DIR="$RUNNER_TEMP/granit-release-wayland"
           install -d -m 700 "$XDG_RUNTIME_DIR"
           export WAYLAND_DISPLAY=granit-release-wayland
