@@ -21,7 +21,7 @@
 
 ## 稳定化与跨平台
 
-- [2026-11-20 S-116 Renderable 阴影投射与接收验收](2026-11-20-s116-renderable-shadow-acceptance.md)
+- [2026-11-20 S-116 Renderable 阴影投射与接收验收](2026-11-20-s116-v0.73.0-renderable-shadow-acceptance.md)
 
 - [2026-11-20 S-115 RenderPipeline 可选通道 GPU 计时验收](2026-11-20-s115-gpu-timestamp-acceptance.md)
 
