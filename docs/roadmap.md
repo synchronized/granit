@@ -32,6 +32,9 @@ Vulkan 内部实验。
 
 ## 当前计划
 
+S-119 已完成并进入 v0.74.0 发布流程：RenderPipeline 标准 Opaque/MASK 路径支持可选对象 ID 输出、
+`R32_UINT` 异步像素回读和真实 GPU 回归验证。透明、UI/debug、MSAA resolve 与自定义 record 路径仍不在本版本范围内。
+
 S-116 已完成本地实现，待 v0.73.0 发布候选验收。它增加 Renderable 实例级阴影投射/接收控制：零值保持默认投射和接收，关闭投射只
 从 Shadow Caster 集合移除实例，关闭接收只跳过该实例的阴影采样。实现范围包括 Scene Snapshot、
 RenderPipeline 阴影收集、PBR Object 常量、Shader 变体和 C/C++ 回归测试。

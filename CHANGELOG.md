@@ -8,10 +8,17 @@
 
 ## Unreleased
 
-### 计划中的 v0.74.0
+暂无计划中的变更。
 
-- 规划可选对象 ID 输出和 `R32_UINT` 异步像素回读，首期覆盖标准 Opaque/MASK 路径；详见
-  [S-119 计划](docs/plans/S-119-0.74.0-object-picking.md)。
+## 0.74.0 - 2026-11-21
+
+- 新增 RenderPipeline 可选对象 ID 输出，标准 Opaque/MASK 路径写入 `R32_UINT` attachment，背景和
+  不可拾取像素保持为 0。
+- 新增 Texture View 异步回读入口，可读取 1x1 原始整数像素，不做颜色转换或 Y 翻转。
+- 修复 object constants 片元阶段绑定可见性，确保对象 ID 从 GPU uniform 正确传递到 picking attachment。
+- 补充对象 ID 生命周期、无输出回归和真实 GPU 像素回读测试；详见
+  [S-119 计划](docs/plans/S-119-0.74.0-object-picking.md)和
+  [v0.74.0 验收记录](docs/records/2026-11-21-s119-v0.74.0-object-picking-acceptance.md)。
 
 ## 0.73.2 - 2026-11-20
 
