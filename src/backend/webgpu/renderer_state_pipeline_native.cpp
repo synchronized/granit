@@ -79,6 +79,8 @@ std::uint32_t to_webgpu_format(granit_texture_format format) noexcept {
     return GRANIT_WEBGPU_TEXTURE_FORMAT_D16_UNORM;
   case GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT:
     return GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA16_FLOAT;
+  case GRANIT_TEXTURE_FORMAT_R32_UINT:
+    return GRANIT_WEBGPU_TEXTURE_FORMAT_R32_UINT;
   default:
     return 0;
   }

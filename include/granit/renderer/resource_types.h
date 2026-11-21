@@ -73,6 +73,7 @@ typedef uint32_t granit_texture_format;
 #define GRANIT_TEXTURE_FORMAT_ETC2_RGBA8_SRGB UINT32_C(20)
 #define GRANIT_TEXTURE_FORMAT_ASTC_4X4_UNORM UINT32_C(21)
 #define GRANIT_TEXTURE_FORMAT_ASTC_4X4_SRGB UINT32_C(22)
+#define GRANIT_TEXTURE_FORMAT_R32_UINT UINT32_C(23)
 
 /** 一个格式块的紧密排列信息；当前非压缩格式的块宽高均为 1。 */
 typedef struct granit_texture_format_footprint {

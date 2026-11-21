@@ -226,6 +226,10 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
                       use_msaa ? GRANIT_SAMPLE_COUNT_4 : GRANIT_SAMPLE_COUNT_1),
       "Reference Depth");
   const auto output = graph.import_texture_view(render_output.view, true, "Reference Output");
+  const auto object_id = render_output.object_id_view == GRANIT_NULL_HANDLE
+                             ? granit::render_graph::invalid_resource_id
+                             : graph.import_texture_view(render_output.object_id_view, true,
+                                                         "Reference Object ID");
 
   std::optional<granit::render_graph::resource_id> shadow = graph.import_texture_view(
       state.shadow_view.native_handle(), false, "Reference Directional Shadow");
@@ -234,6 +238,7 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
   graph_desc.pbr.color = use_msaa ? msaa_color : hdr;
   graph_desc.pbr.resolve_color = use_msaa ? hdr : granit::render_graph::invalid_resource_id;
   graph_desc.pbr.depth = depth;
+  graph_desc.pbr.object_id = object_id;
   graph_desc.pbr.shadow = *shadow;
   graph_desc.pbr.view.view_projection = visible.view.view_projection;
   graph_desc.pbr.view.camera_position = visible.view.camera_position;
@@ -332,16 +337,26 @@ render_view(pipeline_state& state, const granit_render_pipeline_render_desc& des
             lighting_submission.ibl_constants(), use_uniform_arena, desc.clear_color,
             granit::pipeline::detail::forward_draw_phase::opaque,
             transparent_submission.draw_bindings.empty());
-        if (opaque_result != GRANIT_SUCCESS || transparent_submission.draw_bindings.empty())
+        if (opaque_result != GRANIT_SUCCESS)
           return opaque_result;
-        return granit::pipeline::detail::record_forward_draws(
-            state, context.recorder(), context.texture_view(use_msaa ? msaa_color : hdr),
-            use_msaa ? context.texture_view(hdr) : GRANIT_NULL_HANDLE, context.texture_view(depth),
-            shadow ? context.texture_view(*shadow) : GRANIT_NULL_HANDLE, render_output.width,
-            render_output.height, configured_frame, transparent_objects,
-            transparent_submission.draw_bindings, lighting_submission.lights, shadow_constants,
-            lighting_submission.ibl_views, lighting_submission.ibl_constants(), use_uniform_arena,
-            desc.clear_color, granit::pipeline::detail::forward_draw_phase::transparent, true);
+        if (!transparent_submission.draw_bindings.empty()) {
+          const auto transparent_result = granit::pipeline::detail::record_forward_draws(
+              state, context.recorder(), context.texture_view(use_msaa ? msaa_color : hdr),
+              use_msaa ? context.texture_view(hdr) : GRANIT_NULL_HANDLE, context.texture_view(depth),
+              shadow ? context.texture_view(*shadow) : GRANIT_NULL_HANDLE, render_output.width,
+              render_output.height, configured_frame, transparent_objects,
+              transparent_submission.draw_bindings, lighting_submission.lights, shadow_constants,
+              lighting_submission.ibl_views, lighting_submission.ibl_constants(), use_uniform_arena,
+              desc.clear_color, granit::pipeline::detail::forward_draw_phase::transparent, true);
+          if (transparent_result != GRANIT_SUCCESS)
+            return transparent_result;
+        }
+        if (object_id != granit::render_graph::invalid_resource_id)
+          return granit::pipeline::detail::record_object_id_draws(
+              state, context.recorder(), context.texture_view(object_id),
+              context.texture_view(depth), render_output.width, render_output.height,
+              configured_frame, opaque_objects, opaque_submission.draw_bindings);
+        return GRANIT_SUCCESS;
       }
       const granit_render_pipeline_record_info info{
           .struct_size = sizeof(granit_render_pipeline_record_info),
@@ -622,6 +637,10 @@ extern "C" granit_result granit_render_pipeline_create(granit_renderer renderer,
         state->shadow_fragment_shader);
     if (resource_result.failed())
       return static_cast<granit_result>(resource_result);
+    resource_result = state->shader_library.create_shader(
+        granit::pipeline::detail::object_id_fragment_shader_name(), state->object_id_fragment_shader);
+    if (resource_result.failed())
+      return static_cast<granit_result>(resource_result);
     for (std::uint32_t color = 0; color < 2; ++color) {
       for (std::uint32_t uv1 = 0; uv1 < 2; ++uv1) {
         resource_result = state->shader_library.create_shader(
@@ -633,6 +652,11 @@ extern "C" granit_result granit_render_pipeline_create(granit_renderer renderer,
       resource_result = state->shader_library.create_shader(
           granit::pipeline::detail::shadow_depth_mask_fragment_shader_name(color != 0),
           state->shadow_mask_fragment_shaders[color]);
+      if (resource_result.failed())
+        return static_cast<granit_result>(resource_result);
+      resource_result = state->shader_library.create_shader(
+          granit::pipeline::detail::object_id_mask_fragment_shader_name(color != 0),
+          state->object_id_mask_fragment_shaders[color]);
       if (resource_result.failed())
         return static_cast<granit_result>(resource_result);
     }
@@ -711,15 +735,14 @@ granit_render_pipeline_render(granit_renderer renderer, granit_render_pipeline p
   auto state = find_pipeline(renderer, pipeline);
   if (state == nullptr)
     return GRANIT_ERROR_INVALID_HANDLE;
-  if (desc->output_count == 0) {
-    if (legacy_output.object_id_view != GRANIT_NULL_HANDLE)
-      return GRANIT_ERROR_UNSUPPORTED;
-  } else {
-    for (uint32_t index = 0; index < desc->output_count; ++index) {
-      if (desc->outputs[index].object_id_view != GRANIT_NULL_HANDLE)
-        return GRANIT_ERROR_UNSUPPORTED;
-    }
-  }
+  if (state->record != nullptr &&
+      ((desc->output_count == 0 && legacy_output.object_id_view != GRANIT_NULL_HANDLE) ||
+       (desc->output_count != 0 &&
+        std::any_of(desc->outputs, desc->outputs + desc->output_count,
+                    [](const auto& output) {
+                      return output.object_id_view != GRANIT_NULL_HANDLE;
+                    }))))
+    return GRANIT_ERROR_UNSUPPORTED;
   try {
     std::unique_lock lock{state->mutex, std::try_to_lock};
     if (!lock.owns_lock())

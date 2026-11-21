@@ -25,6 +25,8 @@ WGPUTextureFormat to_native_texture_format(webgpu_texture_format format) noexcep
     return WGPUTextureFormat_Depth16Unorm;
   case GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA16_FLOAT:
     return WGPUTextureFormat_RGBA16Float;
+  case GRANIT_WEBGPU_TEXTURE_FORMAT_R32_UINT:
+    return WGPUTextureFormat_R32Uint;
   case GRANIT_WEBGPU_TEXTURE_FORMAT_BC1_RGBA_UNORM:
     return WGPUTextureFormat_BC1RGBAUnorm;
   case GRANIT_WEBGPU_TEXTURE_FORMAT_BC1_RGBA_SRGB:
@@ -148,6 +150,8 @@ texture_block_info texture_block(webgpu_texture_format format) noexcept {
     return {1, 1, 2};
   case GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA16_FLOAT:
     return {1, 1, 8};
+  case GRANIT_WEBGPU_TEXTURE_FORMAT_R32_UINT:
+    return {1, 1, 4};
   default:
     return {};
   }

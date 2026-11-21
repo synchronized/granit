@@ -11,5 +11,12 @@ namespace granit::pipeline::detail {
     render_pipeline_state& state, granit_command_recorder recorder, granit_texture_view depth,
     const lighting::shadow_frame_constants& frame, std::span<const lighting::shadow_caster> casters,
     std::span<const granit_render_pipeline_draw_binding> draws, bool use_uniform_arena);
+
+[[nodiscard]] granit_result record_object_id_draws(
+    render_pipeline_state& state, granit_command_recorder recorder, granit_texture_view color,
+    granit_texture_view depth, std::uint32_t width, std::uint32_t height,
+    const material::pbr_frame_constants& frame,
+    std::span<const material::pbr_object_constants> objects,
+    std::span<const granit_render_pipeline_draw_binding> draws);
 }
 #endif

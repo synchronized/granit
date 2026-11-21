@@ -20,6 +20,10 @@ float4 vertex_main(float3 position : POSITION) : SV_Position {
 
 void fragment_main() {}
 
+uint object_id_fragment_main() : SV_Target0 {
+  return object_id.x;
+}
+
 struct mask_vertex_input {
   [[vk::location(0)]] float3 position : POSITION;
   [[vk::location(3)]] float2 texture_coordinate : TEXCOORD0;
@@ -77,4 +81,14 @@ void mask_fragment_main(mask_vertex_output input) {
   alpha *= input.color.a;
 #endif
   clip(alpha - alpha_cutoff);
+}
+
+uint object_id_mask_fragment_main(mask_vertex_output input) : SV_Target0 {
+  float alpha =
+      base_color.a * base_color_texture.Sample(base_color_sampler, input.texture_coordinate).a;
+#if GRANIT_PBR_HAS_VERTEX_COLOR
+  alpha *= input.color.a;
+#endif
+  clip(alpha - alpha_cutoff);
+  return object_id.x;
 }

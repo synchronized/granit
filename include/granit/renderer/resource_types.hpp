@@ -92,6 +92,7 @@ enum class texture_format : std::uint32_t {
   etc2_rgba8_srgb = GRANIT_TEXTURE_FORMAT_ETC2_RGBA8_SRGB,
   astc_4x4_unorm = GRANIT_TEXTURE_FORMAT_ASTC_4X4_UNORM,
   astc_4x4_srgb = GRANIT_TEXTURE_FORMAT_ASTC_4X4_SRGB,
+  r32_uint = GRANIT_TEXTURE_FORMAT_R32_UINT,
 };
 
 enum class sample_count : std::uint32_t {

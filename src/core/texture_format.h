@@ -49,6 +49,8 @@ texture_format_block(granit_texture_format format) noexcept {
   case GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT:
   case GRANIT_TEXTURE_FORMAT_D32_FLOAT_S8_UINT:
     return {1, 1, 8};
+  case GRANIT_TEXTURE_FORMAT_R32_UINT:
+    return {1, 1, 4};
   default:
     return {};
   }

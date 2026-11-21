@@ -36,6 +36,8 @@ render_graph::pass_id add_pbr_graph_pass(render_graph::serial_graph& graph,
     pass.accesses.push_back({desc.resolve_color, render_graph::access_type::write});
   if (desc.depth != render_graph::invalid_resource_id)
     pass.accesses.push_back({desc.depth, render_graph::access_type::write});
+  if (desc.object_id != render_graph::invalid_resource_id)
+    pass.accesses.push_back({desc.object_id, render_graph::access_type::write});
   if (desc.shadow != render_graph::invalid_resource_id)
     pass.accesses.push_back({desc.shadow, render_graph::access_type::read});
   return graph.add_pass(

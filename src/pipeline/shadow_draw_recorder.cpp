@@ -283,4 +283,180 @@ granit_result record_shadow_draws(render_pipeline_state& state, granit_command_r
   return result;
 }
 
+namespace {
+
+granit_result acquire_object_id_pipeline(
+    render_pipeline_state& state, const material_draw_state& material, granit_mesh mesh,
+    bool reflected, bool alpha_mask, bool uses_uv1, bool vertex_color,
+    granit_graphics_pipeline& pipeline) {
+  const auto found = std::ranges::find_if(state.object_id_pipelines, [&](const auto& entry) {
+    return entry.layout == material.pipeline_layout && entry.mesh == mesh &&
+           entry.reflected == reflected && entry.alpha_mask == alpha_mask &&
+           entry.uses_uv1 == uses_uv1 && entry.vertex_color == vertex_color;
+  });
+  if (found != state.object_id_pipelines.end()) {
+    pipeline = found->pipeline;
+    return GRANIT_SUCCESS;
+  }
+  mesh_pipeline_state mesh_state;
+  auto result = copy_mesh_pipeline_state(state.renderer, mesh, mesh_state);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  std::vector<granit_vertex_buffer_layout> layouts;
+  layouts.reserve(mesh_state.vertex_buffers.size());
+  for (const auto& source : mesh_state.vertex_buffers) {
+    layouts.push_back({source.stride, source.step_mode,
+                       static_cast<std::uint32_t>(source.attributes.size()), 0,
+                       source.attributes.data()});
+  }
+  const granit_depth_state depth_state{1, 1, GRANIT_COMPARE_OPERATION_LESS_EQUAL, 0};
+  granit_graphics_pipeline_desc desc = GRANIT_GRAPHICS_PIPELINE_DESC_INIT;
+  desc.layout = material.pipeline_layout;
+  const auto mask_vertex_index = (vertex_color ? 2U : 0U) + (uses_uv1 ? 1U : 0U);
+  desc.vertex_shader = alpha_mask
+                          ? state.shadow_mask_vertex_shaders[mask_vertex_index].native_handle()
+                          : state.shadow_vertex_shader.native_handle();
+  desc.fragment_shader =
+      alpha_mask ? state.object_id_mask_fragment_shaders[vertex_color ? 1U : 0U].native_handle()
+                 : state.object_id_fragment_shader.native_handle();
+  const auto id_format = GRANIT_TEXTURE_FORMAT_R32_UINT;
+  desc.color_format_count = 1;
+  desc.color_formats = &id_format;
+  desc.depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT;
+  desc.sample_count = GRANIT_SAMPLE_COUNT_1;
+  desc.vertex_buffer_layout_count = static_cast<std::uint32_t>(layouts.size());
+  desc.vertex_buffer_layouts = layouts.data();
+  desc.primitive.topology = mesh_state.topology;
+  desc.primitive.front_face =
+      reflected ? GRANIT_FRONT_FACE_COUNTER_CLOCKWISE : GRANIT_FRONT_FACE_CLOCKWISE;
+  desc.primitive.cull_mode = GRANIT_CULL_MODE_BACK;
+  desc.depth = &depth_state;
+  result = granit_graphics_pipeline_create(state.renderer, &desc, &pipeline);
+  if (result != GRANIT_SUCCESS)
+    return result;
+  try {
+    state.object_id_pipelines.push_back(
+        {material.pipeline_layout, mesh, reflected, alpha_mask, uses_uv1, vertex_color, pipeline});
+  } catch (const std::bad_alloc&) {
+    static_cast<void>(granit_graphics_pipeline_destroy(state.renderer, pipeline));
+    pipeline = GRANIT_NULL_HANDLE;
+    return GRANIT_ERROR_OUT_OF_MEMORY;
+  }
+  return GRANIT_SUCCESS;
+}
+
+} // namespace
+
+granit_result record_object_id_draws(
+    render_pipeline_state& state, granit_command_recorder recorder, granit_texture_view color,
+    granit_texture_view depth, std::uint32_t width, std::uint32_t height,
+    const material::pbr_frame_constants& frame,
+    std::span<const material::pbr_object_constants> objects,
+    std::span<const granit_render_pipeline_draw_binding> draws) {
+  if (color == GRANIT_NULL_HANDLE || depth == GRANIT_NULL_HANDLE || objects.size() != draws.size())
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  if (draws.empty())
+    return GRANIT_SUCCESS;
+  if (state.opaque_draw_bindings.size() < draws.size())
+    return GRANIT_ERROR_NOT_READY;
+
+  granit_color_attachment_desc color_attachment = GRANIT_COLOR_ATTACHMENT_DESC_INIT;
+  color_attachment.view = color;
+  color_attachment.clear_value = {0.0F, 0.0F, 0.0F, 0.0F};
+  granit_depth_stencil_attachment_desc depth_attachment = GRANIT_DEPTH_STENCIL_ATTACHMENT_DESC_INIT;
+  depth_attachment.view = depth;
+  depth_attachment.depth_load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD;
+  granit_rendering_desc rendering = GRANIT_RENDERING_DESC_INIT;
+  rendering.color_attachment_count = 1;
+  rendering.color_attachments = &color_attachment;
+  rendering.depth_stencil_attachment = &depth_attachment;
+  rendering.area = {0, 0, width, height};
+  const granit_viewport viewport{0, 0, static_cast<float>(width), static_cast<float>(height), 0, 1};
+  const granit_scissor scissor{0, 0, width, height};
+  auto result = GRANIT_SUCCESS;
+  for (std::size_t index = 0; index < draws.size() && result == GRANIT_SUCCESS; ++index) {
+    material_draw_state material;
+    result = acquire_material_draw_state(
+        state.renderer, draws[index].material,
+        {.pass = granit::material::make_feature_id("opaque"),
+         .variant = draws[index].variant,
+         .draw_feature = {},
+         .color_format = GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT,
+         .depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT},
+        material);
+    if (result != GRANIT_SUCCESS)
+      break;
+    bool vertex_color = false;
+    bool uses_uv1 = false;
+    bool alpha_mask = false;
+    result = material_variant_has_feature(
+        state.renderer, draws[index].material, granit::material::make_feature_id("opaque"),
+        draws[index].variant,
+        granit::material::make_feature_id(GRANIT_PBR_VERTEX_COLOR_FEATURE_NAME), 1, vertex_color);
+    if (result == GRANIT_SUCCESS)
+      result = material_variant_has_feature(
+          state.renderer, draws[index].material, granit::material::make_feature_id("opaque"),
+          draws[index].variant, granit::material::make_feature_id(GRANIT_PBR_UV1_FEATURE_NAME), 1,
+          uses_uv1);
+    if (result == GRANIT_SUCCESS)
+      result = material_variant_has_feature(
+          state.renderer, draws[index].material, granit::material::make_feature_id("opaque"),
+          draws[index].variant,
+          granit::material::make_feature_id(GRANIT_PBR_ALPHA_MODE_FEATURE_NAME),
+          GRANIT_PBR_ALPHA_MODE_MASK, alpha_mask);
+    if (result != GRANIT_SUCCESS)
+      break;
+    auto& cached = state.opaque_draw_bindings[index];
+    if (!cached.bindings.initialized()) {
+      result = cached.bindings.initialize(state.renderer, material, frame, objects[index]);
+    } else {
+      result = cached.bindings.update(frame, objects[index]);
+    }
+    if (result != GRANIT_SUCCESS || !cached.lighting.initialized())
+      break;
+    result = cached.lighting.update_shadow(
+        {.light_view_projection = frame.view_projection, .texel_size = {1.0F, 1.0F}});
+    if (result != GRANIT_SUCCESS)
+      break;
+    granit_graphics_pipeline pipeline = GRANIT_NULL_HANDLE;
+    result = acquire_object_id_pipeline(
+        state, material, draws[index].mesh,
+        objects[index].transform_handedness < 0.0F, alpha_mask, uses_uv1, vertex_color, pipeline);
+    if (result != GRANIT_SUCCESS)
+      break;
+    result = granit_command_recorder_bind_graphics_pipeline(state.renderer, recorder, pipeline);
+    const std::array groups{cached.bindings.frame_group(), material.material_group,
+                            cached.bindings.object_group(), cached.lighting.group()};
+    const granit_bind_groups_desc bind_desc{GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE,
+                                            0,
+                                            groups.data(),
+                                            static_cast<std::uint32_t>(groups.size()),
+                                            0,
+                                            nullptr};
+    if (result == GRANIT_SUCCESS)
+      result = granit_command_recorder_bind_graphics_groups(
+          state.renderer, recorder, material.pipeline_layout, &bind_desc);
+    if (result == GRANIT_SUCCESS && material.resource_table != GRANIT_NULL_HANDLE)
+      result = granit_command_recorder_bind_graphics_resource_table(
+          state.renderer, recorder, material.pipeline_layout, material.resource_table);
+    if (result == GRANIT_SUCCESS)
+      result = granit_command_recorder_set_viewports(state.renderer, recorder, 0, &viewport, 1);
+    if (result == GRANIT_SUCCESS)
+      result = granit_command_recorder_set_scissors(state.renderer, recorder, 0, &scissor, 1);
+    if (result == GRANIT_SUCCESS)
+      result = bind_mesh_buffers(state.renderer, recorder, draws[index].mesh);
+    if (result == GRANIT_SUCCESS) {
+      if (index != 0)
+        color_attachment.load_operation = GRANIT_ATTACHMENT_LOAD_OPERATION_LOAD;
+      result = granit_command_recorder_begin_rendering(state.renderer, recorder, &rendering);
+      if (result == GRANIT_SUCCESS) {
+        const auto draw_result = draw_mesh(state.renderer, recorder, draws[index].mesh);
+        const auto end_result = granit_command_recorder_end_rendering(state.renderer, recorder);
+        result = draw_result == GRANIT_SUCCESS ? end_result : draw_result;
+      }
+    }
+  }
+  return result;
+}
+
 }

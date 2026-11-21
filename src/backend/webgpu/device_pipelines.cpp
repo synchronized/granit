@@ -98,7 +98,8 @@ bool is_color_target_format(webgpu_texture_format format) noexcept {
          format == GRANIT_WEBGPU_TEXTURE_FORMAT_BGRA8_UNORM ||
          format == GRANIT_WEBGPU_TEXTURE_FORMAT_BGRA8_SRGB ||
          format == GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA8_SRGB ||
-         format == GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA16_FLOAT;
+         format == GRANIT_WEBGPU_TEXTURE_FORMAT_RGBA16_FLOAT ||
+         format == GRANIT_WEBGPU_TEXTURE_FORMAT_R32_UINT;
 }
 
 void receive_render_pipeline_warmup(WGPUCreatePipelineAsyncStatus status,
