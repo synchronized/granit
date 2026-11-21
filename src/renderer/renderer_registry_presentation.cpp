@@ -391,6 +391,7 @@ granit_result renderer_registry::install_swapchain_backbuffers(
       }
       record->textures.push_back(texture_handle);
       record->views.push_back(view_handle);
+      textures[index]->handle = texture_handle;
       textures_.emplace(texture_handle, textures[index]);
       texture_views_.emplace(view_handle, views[index]);
     }

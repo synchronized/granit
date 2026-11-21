@@ -131,10 +131,13 @@ typedef struct granit_render_pipeline_output {
   granit_canvas_draw_list canvas;
   /** Tone Mapping 后、Canvas 前录制的可选世界 Debug Draw List。 */
   granit_debug_draw_list debug_draw;
+  /** 可选对象 ID 输出；零值表示不启用。由调用方创建并负责销毁。 */
+  granit_texture_view object_id_view;
 } granit_render_pipeline_output;
 
 #define GRANIT_RENDER_PIPELINE_OUTPUT_VERSION_1_SIZE                                               \
-  ((uint32_t)(offsetof(granit_render_pipeline_output, debug_draw) + sizeof(granit_debug_draw_list)))
+  ((uint32_t)(offsetof(granit_render_pipeline_output, object_id_view) +                         \
+              sizeof(granit_texture_view)))
 
 #define GRANIT_RENDER_PIPELINE_OUTPUT_INIT                                                         \
   {(uint32_t)sizeof(granit_render_pipeline_output),                                                \
@@ -144,6 +147,7 @@ typedef struct granit_render_pipeline_output {
    UINT32_C(0),                                                                                    \
    UINT32_C(0),                                                                                    \
    UINT32_C(0),                                                                                    \
+   GRANIT_NULL_HANDLE,                                                                             \
    GRANIT_NULL_HANDLE,                                                                             \
    GRANIT_NULL_HANDLE}
 

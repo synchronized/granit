@@ -38,6 +38,16 @@ extern "C" granit_result granit_readback_batch_read_texture(
       renderer, batch, texture, *region, *result_index);
 }
 
+extern "C" granit_result granit_readback_batch_read_texture_view(
+    granit_renderer renderer, granit_readback_batch batch, granit_texture_view view,
+    const granit_texture_write_region* region, uint32_t* result_index) {
+  if (renderer == GRANIT_NULL_HANDLE || batch == GRANIT_NULL_HANDLE ||
+      view == GRANIT_NULL_HANDLE || region == nullptr || result_index == nullptr)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  return granit::detail::renderer_registry::instance().readback_batch_read_texture_view(
+      renderer, batch, view, *region, *result_index);
+}
+
 extern "C" granit_result granit_readback_batch_get_info(granit_renderer renderer,
                                                         granit_readback_batch batch,
                                                         granit_readback_batch_info* info) {

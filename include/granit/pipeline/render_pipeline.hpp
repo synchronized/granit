@@ -54,6 +54,7 @@ struct render_pipeline_output {
   std::uint32_t height{};
   canvas_draw_list_ref canvas;
   debug_draw_list_ref debug_draw;
+  texture_view_ref object_id_view;
 };
 
 struct render_pipeline_environment {
@@ -236,7 +237,8 @@ private:
             .height = output.height,
             .reserved_tail = 0,
             .canvas = output.canvas.native_handle(),
-            .debug_draw = output.debug_draw.native_handle()};
+            .debug_draw = output.debug_draw.native_handle(),
+            .object_id_view = output.object_id_view.native_handle()};
   }
 
   [[nodiscard]] static constexpr granit_render_pipeline_environment

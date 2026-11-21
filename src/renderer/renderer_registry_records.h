@@ -50,6 +50,7 @@ struct renderer_registry::buffer_record {
   std::uint64_t mapped_size{};
 };
 struct renderer_registry::texture_record {
+  granit_texture handle{GRANIT_NULL_HANDLE};
   resource_metadata metadata;
   std::shared_ptr<backend_renderer> owner;
   std::shared_ptr<backend_resource_renderer> resource_api;

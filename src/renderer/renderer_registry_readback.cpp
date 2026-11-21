@@ -179,6 +179,36 @@ granit_result renderer_registry::readback_batch_read_texture(
   }
 }
 
+granit_result renderer_registry::readback_batch_read_texture_view(
+    granit_renderer renderer, granit_readback_batch batch, granit_texture_view view,
+    const granit_texture_write_region& region, std::uint32_t& result_index) {
+  std::shared_ptr<texture_view_record> view_record;
+  {
+    std::lock_guard lock{mutex_};
+    const auto owner = backend_renderers_.find(renderer);
+    if (owner == backend_renderers_.end() ||
+        handles_.find(view, resource_type::texture_view, owner->second->domain()) == nullptr)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    const auto found = texture_views_.find(view);
+    if (found == texture_views_.end() || found->second->owner != owner->second)
+      return GRANIT_ERROR_INVALID_HANDLE;
+    view_record = found->second;
+  }
+  if (view_record->desc.range.mip_level_count != 1 ||
+      view_record->desc.range.array_layer_count == 0)
+    return GRANIT_ERROR_UNSUPPORTED;
+  if (region.mip_level != 0 || region.base_array_layer >= view_record->desc.range.array_layer_count ||
+      region.array_layer_count == 0 ||
+      region.array_layer_count > view_record->desc.range.array_layer_count -
+                                     region.base_array_layer)
+    return GRANIT_ERROR_INVALID_ARGUMENT;
+  auto translated = region;
+  translated.mip_level = view_record->desc.range.base_mip_level;
+  translated.base_array_layer += view_record->desc.range.base_array_layer;
+  return readback_batch_read_texture(renderer, batch, view_record->texture->handle, translated,
+                                     result_index);
+}
+
 granit_result renderer_registry::get_readback_batch_info(granit_renderer renderer,
                                                          granit_readback_batch batch,
                                                          granit_readback_batch_info& info) {

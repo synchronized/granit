@@ -437,6 +437,9 @@ public:
                                                           granit_texture texture,
                                                           const granit_texture_write_region& region,
                                                           std::uint32_t& result_index);
+  [[nodiscard]] granit_result readback_batch_read_texture_view(
+      granit_renderer renderer, granit_readback_batch batch, granit_texture_view view,
+      const granit_texture_write_region& region, std::uint32_t& result_index);
   [[nodiscard]] granit_result get_readback_batch_info(granit_renderer renderer,
                                                       granit_readback_batch batch,
                                                       granit_readback_batch_info& info);

@@ -97,6 +97,10 @@ GRANIT_API granit_result granit_readback_batch_read_buffer(
 GRANIT_API granit_result granit_readback_batch_read_texture(
     granit_renderer renderer, granit_readback_batch batch, granit_texture texture,
     const granit_texture_write_region* region, uint32_t* result_index);
+/** 记录 Texture View 区域；区域坐标相对于 View 的首个 mip 和数组层。 */
+GRANIT_API granit_result granit_readback_batch_read_texture_view(
+    granit_renderer renderer, granit_readback_batch batch, granit_texture_view view,
+    const granit_texture_write_region* region, uint32_t* result_index);
 GRANIT_API granit_result granit_readback_batch_get_info(granit_renderer renderer,
                                                         granit_readback_batch batch,
                                                         granit_readback_batch_info* info);

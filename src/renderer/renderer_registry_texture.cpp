@@ -55,6 +55,7 @@ granit_result renderer_registry::create_texture(granit_renderer renderer,
       static_cast<void>(handles_.erase(handle, resource_type::texture, owner->domain()));
       throw;
     }
+    textures_.at(handle)->handle = handle;
     texture = handle;
     const auto creation_sequence = textures_.at(handle)->metadata.creation_sequence;
     trace_resource_event("create", "texture", texture, creation_sequence, 0, GRANIT_NULL_HANDLE,

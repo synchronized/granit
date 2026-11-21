@@ -116,6 +116,23 @@ public:
                                            &result_index));
   }
 
+  [[nodiscard]] result read_texture_view(texture_view_ref view, const texture_write_region& region,
+                                         std::uint32_t& result_index) noexcept {
+    const granit_texture_write_region native{.mip_level = region.mip_level,
+                                             .base_array_layer = region.base_array_layer,
+                                             .array_layer_count = region.array_layer_count,
+                                             .aspect =
+                                                 static_cast<granit_texture_aspect>(region.aspect),
+                                             .x = region.x,
+                                             .y = region.y,
+                                             .z = region.z,
+                                             .width = region.width,
+                                             .height = region.height,
+                                             .depth = region.depth};
+    return from_native(granit_readback_batch_read_texture_view(
+        renderer_, handle_, view.native_handle(), &native, &result_index));
+  }
+
   [[nodiscard]] result get_info(readback_batch_info& info) const noexcept {
     granit_readback_batch_info native = GRANIT_READBACK_BATCH_INFO_INIT;
     const auto value = granit_readback_batch_get_info(renderer_, handle_, &native);

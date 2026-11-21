@@ -700,7 +700,8 @@ granit_render_pipeline_render(granit_renderer renderer, granit_render_pipeline p
                                                     desc->height,
                                                     0,
                                                     desc->canvas,
-                                                    desc->debug_draw};
+                                                    desc->debug_draw,
+                                                    GRANIT_NULL_HANDLE};
   if (desc->output_count == 0 && !valid_output(legacy_output))
     return GRANIT_ERROR_INVALID_ARGUMENT;
   for (uint32_t index = 0; index < desc->output_count; ++index) {
@@ -710,6 +711,15 @@ granit_render_pipeline_render(granit_renderer renderer, granit_render_pipeline p
   auto state = find_pipeline(renderer, pipeline);
   if (state == nullptr)
     return GRANIT_ERROR_INVALID_HANDLE;
+  if (desc->output_count == 0) {
+    if (legacy_output.object_id_view != GRANIT_NULL_HANDLE)
+      return GRANIT_ERROR_UNSUPPORTED;
+  } else {
+    for (uint32_t index = 0; index < desc->output_count; ++index) {
+      if (desc->outputs[index].object_id_view != GRANIT_NULL_HANDLE)
+        return GRANIT_ERROR_UNSUPPORTED;
+    }
+  }
   try {
     std::unique_lock lock{state->mutex, std::try_to_lock};
     if (!lock.owns_lock())
