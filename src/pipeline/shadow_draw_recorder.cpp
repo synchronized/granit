@@ -355,9 +355,7 @@ granit_result record_object_id_draws(
     std::span<const granit_render_pipeline_draw_binding> draws) {
   if (color == GRANIT_NULL_HANDLE || depth == GRANIT_NULL_HANDLE || objects.size() != draws.size())
     return GRANIT_ERROR_INVALID_ARGUMENT;
-  if (draws.empty())
-    return GRANIT_SUCCESS;
-  if (state.opaque_draw_bindings.size() < draws.size())
+  if (!draws.empty() && state.opaque_draw_bindings.size() < draws.size())
     return GRANIT_ERROR_NOT_READY;
 
   granit_color_attachment_desc color_attachment = GRANIT_COLOR_ATTACHMENT_DESC_INIT;
@@ -371,6 +369,12 @@ granit_result record_object_id_draws(
   rendering.color_attachments = &color_attachment;
   rendering.depth_stencil_attachment = &depth_attachment;
   rendering.area = {0, 0, width, height};
+  if (draws.empty()) {
+    auto result = granit_command_recorder_begin_rendering(state.renderer, recorder, &rendering);
+    if (result != GRANIT_SUCCESS)
+      return result;
+    return granit_command_recorder_end_rendering(state.renderer, recorder);
+  }
   const granit_viewport viewport{0, 0, static_cast<float>(width), static_cast<float>(height), 0, 1};
   const granit_scissor scissor{0, 0, width, height};
   auto result = GRANIT_SUCCESS;
