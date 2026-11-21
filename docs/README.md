@@ -47,7 +47,7 @@
 1. [开发规范](guides/development.md)
 2. [项目文档规范](../DOCUMENTATION_GUIDE.md)
 3. [路线图](roadmap.md)
-4. [当前版本规划](versions/README.md)，当前正在实施 [v0.74.0](versions/v0.74.0.md)
+4. [当前版本规划](versions/README.md)，当前正在实施 [v0.74.1](versions/v0.74.1.md)
 5. [开发计划与完成历史](plans/README.md)
 6. [实施记录](records/README.md)
 7. [第三方依赖](../3rd/README.md)

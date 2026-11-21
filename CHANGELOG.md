@@ -10,6 +10,12 @@
 
 暂无计划中的变更。
 
+## 0.74.1 - 2026-11-21
+
+- 修复 RenderPipeline 销毁时遗漏释放 object-ID graphics pipeline 的问题，避免 Gneiss 等调用方在
+  首次拾取后关闭 Renderer 时残留 GPU 资源。
+- 补充 object-ID pipeline 生命周期资源统计回归。
+
 ## 0.74.0 - 2026-11-21
 
 - 新增 RenderPipeline 可选对象 ID 输出，标准 Opaque/MASK 路径写入 `R32_UINT` attachment，背景和

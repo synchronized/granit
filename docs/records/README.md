@@ -21,6 +21,8 @@
 
 ## 稳定化与跨平台
 
+- [2026-11-21 S-120 v0.74.1 对象 ID Pipeline 生命周期验收](2026-11-21-s120-v0.74.1-object-picking-lifetime-acceptance.md)
+
 - [2026-11-21 S-119 v0.74.0 对象 ID 输出与异步像素拾取验收](2026-11-21-s119-v0.74.0-object-picking-acceptance.md)
 
 - [2026-11-20 S-118 标准 PBR 阴影接收验收](2026-11-20-s118-v0.73.2-standard-pbr-shadow-acceptance.md)

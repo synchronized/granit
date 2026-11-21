@@ -1153,7 +1153,13 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   CHECK(automatic_pixel[3] == 255);
   REQUIRE(manual_readback.unmap() == granit::result::success);
 
+  granit::renderer_resource_stats pipeline_live_stats;
+  REQUIRE(renderer.get_resource_stats(pipeline_live_stats) == granit::result::success);
   REQUIRE(granit_render_pipeline_destroy(renderer.native_handle(), pipeline) == GRANIT_SUCCESS);
+  granit::renderer_resource_stats pipeline_destroy_stats;
+  REQUIRE(renderer.get_resource_stats(pipeline_destroy_stats) == granit::result::success);
+  // 销毁必须至少释放本次缓存的标准绘制或 object-ID graphics pipeline；其余资源可能仍在退休队列中。
+  CHECK(pipeline_destroy_stats.graphics_pipeline_count < pipeline_live_stats.graphics_pipeline_count);
   constexpr std::uint32_t pipeline_lifecycle_iterations = 8;
   for (std::uint32_t iteration = 0; iteration < pipeline_lifecycle_iterations; ++iteration) {
     pipeline = GRANIT_NULL_HANDLE;

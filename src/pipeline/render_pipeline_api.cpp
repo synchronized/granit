@@ -850,6 +850,12 @@ extern "C" granit_result granit_render_pipeline_destroy(granit_renderer renderer
       result = pipeline_result;
   }
   removed->shadow_pipelines.clear();
+  for (const auto& entry : removed->object_id_pipelines) {
+    const auto pipeline_result = granit_graphics_pipeline_destroy(renderer, entry.pipeline);
+    if (result == GRANIT_SUCCESS)
+      result = pipeline_result;
+  }
+  removed->object_id_pipelines.clear();
   const auto placeholder_view_result = removed->shadow_placeholder_view.reset();
   if (result == GRANIT_SUCCESS)
     result = static_cast<granit_result>(placeholder_view_result);
@@ -866,6 +872,14 @@ extern "C" granit_result granit_render_pipeline_destroy(granit_renderer renderer
     if (result == GRANIT_SUCCESS)
       result = static_cast<granit_result>(reset_result);
   }
+  for (auto& shader : removed->object_id_mask_fragment_shaders) {
+    const auto reset_result = shader.reset();
+    if (result == GRANIT_SUCCESS)
+      result = static_cast<granit_result>(reset_result);
+  }
+  const auto object_id_fragment_result = removed->object_id_fragment_shader.reset();
+  if (result == GRANIT_SUCCESS)
+    result = static_cast<granit_result>(object_id_fragment_result);
   const auto fragment_result = removed->shadow_fragment_shader.reset();
   if (result == GRANIT_SUCCESS)
     result = static_cast<granit_result>(fragment_result);

@@ -9,7 +9,10 @@
 
 ## 当前计划
 
-[S-119：对象 ID 输出与异步像素拾取](S-119-0.74.0-object-picking.md) 正在实施，目标是为外部引擎提供
+[S-120：对象 ID Pipeline 生命周期修复](S-120-0.74.1-object-picking-lifetime.md) 已完成，目标版本为
+`v0.74.1`；修复对象 ID graphics pipeline 在 RenderPipeline 销毁时遗漏释放的问题。
+
+[S-119：对象 ID 输出与异步像素拾取](S-119-0.74.0-object-picking.md) 已完成，目标是为外部引擎提供
 可选的 `R32_UINT` 对象 ID 输出和安全的异步 1x1 Texture View 回读；首期限制为标准 Opaque/MASK 路径。
 
 [S-118：标准 PBR 阴影接收](S-118-0.73.2-standard-pbr-shadow-receiving.md) 已完成本地实现与验证，
