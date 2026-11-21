@@ -834,6 +834,7 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   renderable.bounds_radius = 0.25F;
   renderable.layer_mask = UINT64_MAX;
   renderable.payload = 91;
+  renderable.object_id = UINT32_C(0x12345678);
   granit_scene_snapshot_desc scene_desc = GRANIT_SCENE_SNAPSHOT_DESC_INIT;
   scene_desc.views = &view;
   scene_desc.view_count = 1;
@@ -1010,6 +1011,25 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
           GRANIT_ERROR_NOT_READY);
   granit_render_pipeline_draw_binding automatic_binding{91, mesh, material, 0};
   render_desc.draw_bindings = &automatic_binding;
+  granit::texture object_id_texture;
+  granit::texture_view object_id_view;
+  REQUIRE(object_id_texture.initialize(
+              renderer,
+              {.format = granit::texture_format::r32_uint,
+               .usage = granit::texture_usage::color_attachment |
+                        granit::texture_usage::transfer_source,
+               .width = size,
+               .height = size}) == granit::result::success);
+  REQUIRE(object_id_view.initialize(renderer.ref(), object_id_texture.ref()) ==
+          granit::result::success);
+  granit_render_pipeline_output object_id_output = GRANIT_RENDER_PIPELINE_OUTPUT_INIT;
+  object_id_output.view = output_view;
+  object_id_output.format = GRANIT_TEXTURE_FORMAT_RGBA8_UNORM;
+  object_id_output.width = size;
+  object_id_output.height = size;
+  object_id_output.object_id_view = object_id_view.native_handle();
+  render_desc.output_count = 1;
+  render_desc.outputs = &object_id_output;
   REQUIRE(granit_render_pipeline_render(renderer.native_handle(), pipeline, &render_desc) ==
           GRANIT_SUCCESS);
   if (metrics_enable_result == GRANIT_SUCCESS) {
@@ -1039,6 +1059,24 @@ TEST_CASE("公共Render Pipeline ABI输出可回读的Tone Mapping像素") {
   pixel = static_cast<const uint8_t*>(mapped) + (size / 2 * size + size / 2) * 4;
   const std::array<uint8_t, 4> automatic_pixel{pixel[0], pixel[1], pixel[2], pixel[3]};
   REQUIRE(readback.unmap() == granit::result::success);
+
+  granit::buffer object_id_readback;
+  REQUIRE(object_id_readback.initialize(renderer,
+                                        {.size = size * size * sizeof(std::uint32_t),
+                                         .usage = granit::buffer_usage::transfer_destination,
+                                         .location = granit::memory_location::readback}) ==
+          granit::result::success);
+  REQUIRE(recorder.begin() == granit::result::success);
+  REQUIRE(recorder.copy_texture_to_buffer(object_id_texture.ref(), object_id_readback.ref(),
+                                          layout, region) == granit::result::success);
+  REQUIRE(recorder.end() == granit::result::success);
+  REQUIRE(recorder.submit() == granit::result::success);
+  REQUIRE(recorder.reset() == granit::result::success);
+  REQUIRE(object_id_readback.map(0, size * size * sizeof(std::uint32_t), &mapped) ==
+          granit::result::success);
+  const auto* object_ids = static_cast<const std::uint32_t*>(mapped);
+  CHECK(object_ids[size / 2 * size + size / 2] == UINT32_C(0x12345678));
+  REQUIRE(object_id_readback.unmap() == granit::result::success);
 
   // 用 H-05 资源手工执行相同的 HDR -> Tone Mapping，验证统一门面没有改变输出。
   granit::texture manual_hdr;
