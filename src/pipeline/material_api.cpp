@@ -398,7 +398,8 @@ extern "C" granit_result granit_material_create(granit_renderer renderer,
         granit::bind_group_layout_entry{.binding = 0,
                                         .type = granit::binding_type::dynamic_uniform_buffer,
                                         .array_count = 1,
-                                        .visibility = granit::shader_stage_flags::vertex}};
+                                        .visibility = granit::shader_stage_flags::vertex |
+                                                      granit::shader_stage_flags::fragment}};
     auto renderer_ref = granit::renderer_ref::from_native(renderer);
     const auto object_result = state->object_layout.initialize(renderer_ref, object_entries);
     if (object_result.failed())
