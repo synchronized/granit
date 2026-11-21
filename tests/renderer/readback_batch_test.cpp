@@ -99,6 +99,8 @@ TEST_CASE("Readback Batch 异步返回紧密 Texture 内容", "[readback_batch][
     expected[index] = static_cast<std::byte>(index * 3 + 1);
   REQUIRE(texture.write(expected, {.bytes_per_row = 12, .rows_per_image = 2},
                         {.width = 3, .height = 2}) == granit::result::success);
+  granit::texture_view view;
+  REQUIRE(view.initialize(renderer, texture) == granit::result::success);
   granit::readback_batch batch;
   REQUIRE(batch.create(renderer) == granit::result::success);
   std::uint32_t index{};
@@ -112,7 +114,7 @@ TEST_CASE("Readback Batch 异步返回紧密 Texture 内容", "[readback_batch][
                                             .width = 3,
                                             .height = 2,
                                             .depth = 1};
-  REQUIRE(batch.read_texture(texture.ref(), region, index) == granit::result::success);
+  REQUIRE(batch.read_texture_view(view.ref(), region, index) == granit::result::success);
   REQUIRE(texture.reset() == granit::result::success);
   granit::async_operation operation;
   REQUIRE(batch.submit_async(operation) == granit::result::success);
