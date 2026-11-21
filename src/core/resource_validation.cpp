@@ -32,7 +32,8 @@ bool valid_memory_location(granit_memory_location location) noexcept {
 }
 
 bool valid_texture_format(granit_texture_format format) noexcept {
-  return format >= GRANIT_TEXTURE_FORMAT_R8_UNORM && format <= GRANIT_TEXTURE_FORMAT_ASTC_4X4_SRGB;
+  return format >= GRANIT_TEXTURE_FORMAT_R8_UNORM &&
+         format <= GRANIT_TEXTURE_FORMAT_R32_UINT;
 }
 
 bool valid_texture_dimension(granit_texture_dimension dimension) noexcept {

@@ -4,7 +4,10 @@
 [[vk::binding(0, 2)]] cbuffer ObjectConstants {
   column_major float4x4 model;
   column_major float4x4 normal_matrix;
-  uint4 object_id;
+  uint object_id;
+  float transform_handedness;
+  uint render_flags;
+  uint reserved;
 };
 
 [[vk::binding(0, 3)]] cbuffer ShadowConstants {
@@ -21,7 +24,7 @@ float4 vertex_main(float3 position : POSITION) : SV_Position {
 void fragment_main() {}
 
 uint object_id_fragment_main() : SV_Target0 {
-  return object_id.x;
+  return object_id;
 }
 
 struct mask_vertex_input {
@@ -90,5 +93,5 @@ uint object_id_mask_fragment_main(mask_vertex_output input) : SV_Target0 {
   alpha *= input.color.a;
 #endif
   clip(alpha - alpha_cutoff);
-  return object_id.x;
+  return object_id;
 }

@@ -384,7 +384,13 @@ granit_result record_object_id_draws(
         state.renderer, draws[index].material,
         {.pass = granit::material::make_feature_id("opaque"),
          .variant = draws[index].variant,
-         .draw_feature = {},
+         .draw_feature =
+             objects[index].transform_handedness < 0.0F
+                 ? granit::material::material_feature_value{
+                       granit::material::make_feature_id(
+                           GRANIT_PBR_TRANSFORM_REFLECTED_FEATURE_NAME),
+                       1}
+                 : granit::material::material_feature_value{},
          .color_format = GRANIT_TEXTURE_FORMAT_RGBA16_FLOAT,
          .depth_stencil_format = GRANIT_TEXTURE_FORMAT_D32_FLOAT},
         material);
@@ -431,12 +437,13 @@ granit_result record_object_id_draws(
     result = granit_command_recorder_bind_graphics_pipeline(state.renderer, recorder, pipeline);
     const std::array groups{cached.bindings.frame_group(), material.material_group,
                             cached.bindings.object_group(), cached.lighting.group()};
+    const std::array<std::uint32_t, 2> dynamic_offsets{0, 0};
     const granit_bind_groups_desc bind_desc{GRANIT_BIND_GROUPS_DESC_VERSION_1_SIZE,
                                             0,
                                             groups.data(),
                                             static_cast<std::uint32_t>(groups.size()),
-                                            0,
-                                            nullptr};
+                                            static_cast<std::uint32_t>(dynamic_offsets.size()),
+                                            dynamic_offsets.data()};
     if (result == GRANIT_SUCCESS)
       result = granit_command_recorder_bind_graphics_groups(
           state.renderer, recorder, material.pipeline_layout, &bind_desc);

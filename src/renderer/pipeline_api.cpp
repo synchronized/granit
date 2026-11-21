@@ -12,7 +12,8 @@
 namespace {
 
 bool valid_format(granit_texture_format format) noexcept {
-  return format >= GRANIT_TEXTURE_FORMAT_R8_UNORM && format <= GRANIT_TEXTURE_FORMAT_ASTC_4X4_SRGB;
+  return format >= GRANIT_TEXTURE_FORMAT_R8_UNORM &&
+         format <= GRANIT_TEXTURE_FORMAT_R32_UINT;
 }
 
 uint32_t vertex_format_size(granit_vertex_format format) noexcept {
